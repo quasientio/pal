@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.lang.FieldOpType;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
@@ -29,6 +30,7 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class InterceptRequestTest {
@@ -292,5 +294,144 @@ public class InterceptRequestTest {
         ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY,
         deserialized.getExceptionPropagationPolicy());
     assertEquals(CheckedExceptionPolicy.REJECT, deserialized.getCheckedExceptionPolicy());
+  }
+
+  /**
+   * Test specification for storing priority value.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldStorePriority] Priority value stored
+   * and returned by getter
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1067")
+  public void shouldStorePriority() {
+    // Given: InterceptRequest constructed with priority=42 via the new full constructor
+    // When: Calling getPriority()
+    // Then: Returns 42
+
+    // TODO(#1067): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for default priority value.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldDefaultPriorityToZero] Default
+   * priority is 0 when using existing constructors
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1067")
+  public void shouldDefaultPriorityToZero() {
+    // Given: InterceptRequest constructed with the existing 7-arg convenience constructor
+    //        (no priority param)
+    // When: Calling getPriority()
+    // Then: Returns 0
+
+    // TODO(#1067): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for serialization round-trip with positive priority.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldSerializeAndDeserializePriority]
+   * Serialization round-trip preserves positive priority
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1067")
+  public void shouldSerializeAndDeserializePriority() {
+    // Given: InterceptRequest with priority=42
+    // When: toBytes() then fromBytes()
+    // Then: Deserialized request has priority=42
+
+    // TODO(#1067): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for serialization round-trip with negative priority.
+   *
+   * <p>Acceptance Criterion:
+   * [TEST:InterceptRequestTest.shouldSerializeAndDeserializeNegativePriority] Serialization
+   * round-trip preserves negative priority
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1067")
+  public void shouldSerializeAndDeserializeNegativePriority() {
+    // Given: InterceptRequest with priority=-10
+    // When: toBytes() then fromBytes()
+    // Then: Deserialized request has priority=-10
+
+    // TODO(#1067): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for backward-compatible deserialization of old format.
+   *
+   * <p>Acceptance Criterion:
+   * [TEST:InterceptRequestTest.shouldDeserializeOldFormatWithoutPriorityAsZero] Old format
+   * deserializes with priority=0
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1067")
+  public void shouldDeserializeOldFormatWithoutPriorityAsZero() {
+    // Given: Byte array serialized in old 13-field format (no priority field at index 13)
+    // When: fromBytes()
+    // Then: Deserialized request has priority=0
+
+    // TODO(#1067): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for priority inclusion in equals.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldIncludePriorityInEquals] Equality
+   * considers priority
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1067")
+  public void shouldIncludePriorityInEquals() {
+    // Given: Two InterceptRequests identical except for priority (one p=0, one p=5)
+    // When: Comparing with equals()
+    // Then: They are NOT equal
+
+    // TODO(#1067): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for priority inclusion in hashCode.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldIncludePriorityInHashCode]
+   * Same-priority requests have same hashCode
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1067")
+  public void shouldIncludePriorityInHashCode() {
+    // Given: Two InterceptRequests identical including same priority
+    // When: Comparing hashCode()
+    // Then: Hash codes are equal
+
+    // TODO(#1067): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for priority inclusion in toString.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldIncludePriorityInToString] toString
+   * includes priority
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1067")
+  public void shouldIncludePriorityInToString() {
+    // Given: InterceptRequest with priority=7
+    // When: Calling toString()
+    // Then: Output contains "priority=7"
+
+    // TODO(#1067): Implement test logic
+    fail("Not yet implemented");
   }
 }
