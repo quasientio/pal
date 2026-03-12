@@ -23,6 +23,7 @@ import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class InterceptRequestsTest {
@@ -136,5 +137,97 @@ public class InterceptRequestsTest {
     // now unregister
     interceptRequests.unregisterInterceptRequest(interceptMessage.getMessageId());
     assertThat(interceptRequests.getRegisteredRequestsSize(), is(0));
+  }
+
+  // ===== Tests for priority-based ordering in cloneListWithNewRequest() =====
+
+  /**
+   * [TEST:InterceptRequestsTest.testDefaultPriorityPreservesRegistrationOrder] All-default-priority
+   * preserves insertion order.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1069")
+  public void testDefaultPriorityPreservesRegistrationOrder() {
+    // Given: Three InterceptMessages A, B, C all with priority=0 (default)
+    // When: Registered in order A, B, C; then match
+    // Then: Matches returned in order A, B, C (stable sort preserves insertion order)
+
+    // TODO(#1069): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * [TEST:InterceptRequestsTest.testExplicitPrioritySortsCorrectly] Explicit priorities sort
+   * ascending.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1069")
+  public void testExplicitPrioritySortsCorrectly() {
+    // Given: Three InterceptMessages A(p=10), B(p=1), C(p=5)
+    // When: Registered in order A, B, C; then match
+    // Then: Matches returned in order B, C, A (ascending priority)
+
+    // TODO(#1069): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * [TEST:InterceptRequestsTest.testSamePriorityPreservesRegistrationOrder] Same priority preserves
+   * insertion order (stable sort).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1069")
+  public void testSamePriorityPreservesRegistrationOrder() {
+    // Given: Three InterceptMessages A(p=1), B(p=1), C(p=1)
+    // When: Registered in order A, B, C; then match
+    // Then: Matches returned in order A, B, C (stable sort, same priority = insertion order)
+
+    // TODO(#1069): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * [TEST:InterceptRequestsTest.testNegativePriorityExecutesFirst] Negative priority sorts before
+   * zero.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1069")
+  public void testNegativePriorityExecutesFirst() {
+    // Given: Two InterceptMessages A(p=0), B(p=-1)
+    // When: Registered in order A, B; then match
+    // Then: Matches returned in order B, A (lower priority first)
+
+    // TODO(#1069): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * [TEST:InterceptRequestsTest.testMixedPriorityAndDefault] Mixed priorities sort correctly with
+   * stable tie-breaking.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1069")
+  public void testMixedPriorityAndDefault() {
+    // Given: Four InterceptMessages A(p=0), B(p=-5), C(p=3), D(p=0)
+    // When: Registered in order A, B, C, D; then match
+    // Then: Matches returned in order B, A, D, C
+
+    // TODO(#1069): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * [TEST:InterceptRequestsTest.testUnregisterPreservesPriorityOrder] Unregister preserves sorted
+   * order of remaining entries.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1069")
+  public void testUnregisterPreservesPriorityOrder() {
+    // Given: Three InterceptMessages A(p=2), B(p=1), C(p=3) registered (sorted to B, A, C)
+    // When: Unregister B; then match
+    // Then: Matches returned in order A, C (priority order preserved)
+
+    // TODO(#1069): Implement test logic
+    fail("Not yet implemented");
   }
 }
