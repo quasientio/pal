@@ -12,6 +12,7 @@ package io.quasient.pal.intercept.order;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.InterceptEndToEndTestSuite;
 import io.quasient.pal.apps.quantized.intercept.InterceptableApp;
@@ -33,6 +34,7 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -498,5 +500,106 @@ public class InterceptExecutionOrderIT extends AbstractInterceptIT {
     assertThat("Position 1: Remote BEFORE", order.get(1), is("REMOTE_BEFORE_A"));
     assertThat("Position 2: Local AFTER", order.get(2), is("LOCAL_AFTER_A"));
     assertThat("Position 3: Remote AFTER", order.get(3), is("REMOTE_AFTER_A"));
+  }
+
+  // ==================== Tests: Priority-Based Ordering ====================
+
+  /**
+   * Tests that local BEFORE callbacks are sorted by ascending priority, overriding registration
+   * order.
+   *
+   * <p>Registers three local BEFORE callbacks with priorities 2, 1, 0 (in that order). Verifies
+   * execution order is C(p=0), B(p=1), A(p=2) — ascending priority.
+   *
+   * @throws Exception if test fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1071")
+  public void testLocalBeforePriorityOverridesRegistrationOrder() throws Exception {
+    // Given: Register local BEFORE A(p=2), B(p=1), C(p=0) in that order
+    // When: Invoke intercepted method
+    // Then: Execution order is C, B, A (ascending priority)
+
+    // TODO(#1071): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that remote BEFORE callbacks are sorted by ascending priority, overriding registration
+   * order.
+   *
+   * <p>Registers two remote BEFORE callbacks with priorities 10, 5 (in that order). Verifies
+   * execution order is B(p=5), A(p=10) — ascending priority.
+   *
+   * @throws Exception if test fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1071")
+  public void testRemoteBeforePriorityOverridesRegistrationOrder() throws Exception {
+    // Given: Register remote BEFORE A(p=10), B(p=5) in that order
+    // When: Invoke intercepted method
+    // Then: Execution order is B, A (ascending priority)
+
+    // TODO(#1071): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that local AFTER callbacks are sorted by ascending priority.
+   *
+   * <p>Registers two local AFTER callbacks with priorities 3, 1 (in that order). Verifies execution
+   * order is B(p=1), A(p=3) — ascending priority.
+   *
+   * @throws Exception if test fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1071")
+  public void testLocalAfterPriorityOrder() throws Exception {
+    // Given: Register local AFTER A(p=3), B(p=1) in that order
+    // When: Invoke intercepted method
+    // Then: Execution order is B, A (ascending priority)
+
+    // TODO(#1071): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests mixed priority values with stable tie-breaking on registration order.
+   *
+   * <p>Registers three local BEFORE callbacks: A(p=0), B(p=-1), C(p=0). Verifies execution order is
+   * B(p=-1), A(p=0), C(p=0) — B first due to lower priority, then A before C due to stable sort
+   * preserving registration order among equal priorities.
+   *
+   * @throws Exception if test fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1071")
+  public void testMixedPriorityAndDefaultRegistrationOrder() throws Exception {
+    // Given: Register local BEFORE A(p=0), B(p=-1), C(p=0) in that order
+    // When: Invoke intercepted method
+    // Then: Execution order is B, A, C (B first due to -1, then A before C due to stable sort)
+
+    // TODO(#1071): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that the local-before-remote invariant is preserved regardless of priority values.
+   *
+   * <p>Registers a remote BEFORE with very low priority (-100) and a local BEFORE with very high
+   * priority (100). Verifies that the local callback still executes before the remote callback,
+   * because the local-before-remote invariant takes precedence over priority ordering.
+   *
+   * @throws Exception if test fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1071")
+  public void testPriorityDoesNotAffectLocalBeforeRemoteInvariant() throws Exception {
+    // Given: Register remote BEFORE A(p=-100), local BEFORE B(p=100)
+    // When: Invoke intercepted method
+    // Then: B (local) executes before A (remote) — local-before-remote invariant holds
+
+    // TODO(#1071): Implement test logic
+    fail("Not yet implemented");
   }
 }
