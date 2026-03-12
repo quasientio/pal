@@ -14,7 +14,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.lang.FieldOpType;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
@@ -30,7 +29,6 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class InterceptRequestTest {
@@ -182,6 +180,8 @@ public class InterceptRequestTest {
                           + '\''
                           + ", forceImmediate="
                           + interceptRequest.isForceImmediate()
+                          + ", priority="
+                          + interceptRequest.getPriority()
                           + ", ctime="
                           + OffsetDateTime.ofInstant(Instant.ofEpochMilli(ctime), ZoneOffset.UTC)
                           + ", mtime="
@@ -303,14 +303,24 @@ public class InterceptRequestTest {
    * and returned by getter
    */
   @Test
-  @Ignore("Awaiting implementation in #1067")
   public void shouldStorePriority() {
     // Given: InterceptRequest constructed with priority=42 via the new full constructor
-    // When: Calling getPriority()
-    // Then: Returns 42
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            42);
 
-    // TODO(#1067): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: Calling getPriority() returns 42
+    assertThat(request.getPriority(), is(42));
   }
 
   /**
@@ -320,15 +330,10 @@ public class InterceptRequestTest {
    * priority is 0 when using existing constructors
    */
   @Test
-  @Ignore("Awaiting implementation in #1067")
   public void shouldDefaultPriorityToZero() {
     // Given: InterceptRequest constructed with the existing 7-arg convenience constructor
-    //        (no priority param)
-    // When: Calling getPriority()
-    // Then: Returns 0
-
-    // TODO(#1067): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: Calling getPriority() returns 0
+    assertThat(methodInterceptRequest.getPriority(), is(0));
   }
 
   /**
@@ -338,14 +343,29 @@ public class InterceptRequestTest {
    * Serialization round-trip preserves positive priority
    */
   @Test
-  @Ignore("Awaiting implementation in #1067")
   public void shouldSerializeAndDeserializePriority() {
     // Given: InterceptRequest with priority=42
-    // When: toBytes() then fromBytes()
-    // Then: Deserialized request has priority=42
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            42);
 
-    // TODO(#1067): Implement test logic
-    fail("Not yet implemented");
+    // When: toBytes() then fromBytes()
+    byte[] bytes = request.toBytes(StandardCharsets.UTF_8);
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
+
+    // Then: Deserialized request has priority=42
+    assertThat(deserialized.getPriority(), is(42));
+    assertEquals(request, deserialized);
   }
 
   /**
@@ -356,14 +376,29 @@ public class InterceptRequestTest {
    * round-trip preserves negative priority
    */
   @Test
-  @Ignore("Awaiting implementation in #1067")
   public void shouldSerializeAndDeserializeNegativePriority() {
     // Given: InterceptRequest with priority=-10
-    // When: toBytes() then fromBytes()
-    // Then: Deserialized request has priority=-10
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            -10);
 
-    // TODO(#1067): Implement test logic
-    fail("Not yet implemented");
+    // When: toBytes() then fromBytes()
+    byte[] bytes = request.toBytes(StandardCharsets.UTF_8);
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
+
+    // Then: Deserialized request has priority=-10
+    assertThat(deserialized.getPriority(), is(-10));
+    assertEquals(request, deserialized);
   }
 
   /**
@@ -374,14 +409,42 @@ public class InterceptRequestTest {
    * deserializes with priority=0
    */
   @Test
-  @Ignore("Awaiting implementation in #1067")
   public void shouldDeserializeOldFormatWithoutPriorityAsZero() {
     // Given: Byte array serialized in old 13-field format (no priority field at index 13)
-    // When: fromBytes()
-    // Then: Deserialized request has priority=0
+    // Construct old format manually: 13 fields (indices 0-12), no priority at index 13
+    String oldFormat =
+        uuid
+            + "##"
+            + peer
+            + "##"
+            + type.toByte()
+            + "##"
+            + clazz
+            + "##"
+            + callbackClass
+            + "##"
+            + callbackMethod
+            + "##"
+            + interceptableMethod.getType().toByte()
+            + "##"
+            + interceptableMethod.toSerializedString()
+            + "##"
+            + false
+            + "##"
+            + "null"
+            + "##"
+            + "null"
+            + "##"
+            + "null"
+            + "##"
+            + "null";
+    byte[] bytes = oldFormat.getBytes(StandardCharsets.UTF_8);
 
-    // TODO(#1067): Implement test logic
-    fail("Not yet implemented");
+    // When: fromBytes()
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
+
+    // Then: Deserialized request has priority=0
+    assertThat(deserialized.getPriority(), is(0));
   }
 
   /**
@@ -391,14 +454,37 @@ public class InterceptRequestTest {
    * considers priority
    */
   @Test
-  @Ignore("Awaiting implementation in #1067")
   public void shouldIncludePriorityInEquals() {
     // Given: Two InterceptRequests identical except for priority (one p=0, one p=5)
-    // When: Comparing with equals()
-    // Then: They are NOT equal
+    InterceptRequest<InterceptableMethodCall> a =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0);
+    InterceptRequest<InterceptableMethodCall> b =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            5);
 
-    // TODO(#1067): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: They are NOT equal
+    assertNotEquals(a, b);
   }
 
   /**
@@ -408,14 +494,37 @@ public class InterceptRequestTest {
    * Same-priority requests have same hashCode
    */
   @Test
-  @Ignore("Awaiting implementation in #1067")
   public void shouldIncludePriorityInHashCode() {
     // Given: Two InterceptRequests identical including same priority
-    // When: Comparing hashCode()
-    // Then: Hash codes are equal
+    InterceptRequest<InterceptableMethodCall> a =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            7);
+    InterceptRequest<InterceptableMethodCall> b =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            7);
 
-    // TODO(#1067): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: Hash codes are equal
+    assertThat(a.hashCode(), is(b.hashCode()));
   }
 
   /**
@@ -425,13 +534,23 @@ public class InterceptRequestTest {
    * includes priority
    */
   @Test
-  @Ignore("Awaiting implementation in #1067")
   public void shouldIncludePriorityInToString() {
     // Given: InterceptRequest with priority=7
-    // When: Calling toString()
-    // Then: Output contains "priority=7"
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            7);
 
-    // TODO(#1067): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: Output contains "priority=7"
+    assertThat(request.toString(), org.hamcrest.Matchers.containsString("priority=7"));
   }
 }

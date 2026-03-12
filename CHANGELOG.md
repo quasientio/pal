@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Feature] Add `priority` field to `InterceptRequest` data model with full constructor support, serialization, and property access
 - [Feature] Add `priority int32` field to `InterceptMessage` Colfer schema and regenerate Java class
 - [Doc] Update developer architecture documentation for deterministic replay: document conditional span-skip logic, phantom stub handling, ReplayInputInjector wait-for-completion behavior, isPendingInjection/hasInjectorForThread methods, --shield-fx flag, expanded --shield-io java.time coverage, and --no-wal-incoming-cli testing requirement
 - [Fix] Make entry-point span-skip conditional on injector presence in dispatchReplay — only skip entire span when the entry point's thread has a ReplayInputInjector; otherwise skip only the OPERATION entry, leaving nested operations available for cursor matching. Reinstates COMPLETION skip loop for operation-only skip path.
