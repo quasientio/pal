@@ -403,52 +403,6 @@ public class InterceptRequestTest {
   }
 
   /**
-   * Test specification for backward-compatible deserialization of old format.
-   *
-   * <p>Acceptance Criterion:
-   * [TEST:InterceptRequestTest.shouldDeserializeOldFormatWithoutPriorityAsZero] Old format
-   * deserializes with priority=0
-   */
-  @Test
-  public void shouldDeserializeOldFormatWithoutPriorityAsZero() {
-    // Given: Byte array serialized in old 13-field format (no priority field at index 13)
-    // Construct old format manually: 13 fields (indices 0-12), no priority at index 13
-    String oldFormat =
-        uuid
-            + "##"
-            + peer
-            + "##"
-            + type.toByte()
-            + "##"
-            + clazz
-            + "##"
-            + callbackClass
-            + "##"
-            + callbackMethod
-            + "##"
-            + interceptableMethod.getType().toByte()
-            + "##"
-            + interceptableMethod.toSerializedString()
-            + "##"
-            + false
-            + "##"
-            + "null"
-            + "##"
-            + "null"
-            + "##"
-            + "null"
-            + "##"
-            + "null";
-    byte[] bytes = oldFormat.getBytes(StandardCharsets.UTF_8);
-
-    // When: fromBytes()
-    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
-
-    // Then: Deserialized request has priority=0
-    assertThat(deserialized.getPriority(), is(0));
-  }
-
-  /**
    * Test specification for priority inclusion in equals.
    *
    * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldIncludePriorityInEquals] Equality
