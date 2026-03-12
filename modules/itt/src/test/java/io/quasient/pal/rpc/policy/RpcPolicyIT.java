@@ -18,6 +18,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,6 +55,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -514,6 +516,81 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
     }
   }
 
+  /**
+   * Verifies that the {@code deny-nonpublic} preset blocks non-public methods while allowing public
+   * ones.
+   *
+   * <p>Uses {@code staticStringWithStringArg} (public) and {@code doSomethingStatically}
+   * (package-private) from the {@code Methods} test application as targets.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1106")
+  public void shouldDenyNonPublicMethodsWithDenyNonpublicPreset() throws Exception {
+    // Given: Peer started with --rpc-policy-preset deny-nonpublic
+    // When: RPC call to a public static method (staticStringWithStringArg)
+    // Then: Call succeeds
+    // When: RPC call to a package-private static method (doSomethingStatically)
+    // Then: RPC access denied
+
+    // TODO(#1106): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that a YAML rule with {@code visibility: ALL} allows non-public methods even when the
+   * default action is DENY.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1106")
+  public void shouldAllowNonPublicWhenYamlRuleGrantsAllVisibility() throws Exception {
+    // Given: YAML policy with visibility: ALL for Methods class, default DENY
+    // When: RPC call to a package-private method (doSomethingStatically)
+    // Then: Call succeeds
+
+    // TODO(#1106): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that the metadata endpoint excludes non-public members when the {@code deny-nonpublic}
+   * preset is active.
+   *
+   * <p>Metadata is always queried via ZMQ (binary Colfer protocol). The response should contain
+   * only public methods, constructors, and fields from the {@code Methods} class — non-public
+   * members like {@code doSomething} and {@code testArg} must be absent.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1106")
+  public void shouldFilterMetadataByVisibilityWithPreset() throws Exception {
+    // Given: Peer started with --rpc-policy-preset deny-nonpublic and metadata endpoint enabled
+    // When: Metadata requested for Methods class
+    // Then: Response contains only public methods/constructors/fields
+    // And: Non-public methods (e.g., doSomething, testArg) are absent from metadata
+
+    // TODO(#1106): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that a user-defined YAML rule allowing a specific non-public method overrides the
+   * {@code deny-nonpublic} preset's blanket denial.
+   *
+   * <p>The first-match-wins rule evaluation means user rules (evaluated before presets) can grant
+   * access to specific non-public members even when the preset would deny them.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1106")
+  public void shouldAllowPublicWithDenyNonpublicAndExplicitOverride() throws Exception {
+    // Given: YAML policy with:
+    //   - Rule 1: ALLOW for specific non-public method with visibility: [PACKAGE_PRIVATE]
+    //   - Preset: deny-nonpublic
+    // When: RPC call to that specific non-public method (doSomethingStatically)
+    // Then: Call succeeds (user rule overrides preset)
+
+    // TODO(#1106): Implement test logic
+    fail("Not yet implemented");
+  }
+
   // ===========================================================================================
   // Policy YAML helpers
   // ===========================================================================================
@@ -599,6 +676,62 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
         rules:
           - class: "io.quasient.pal.apps.quantized.rpc.Methods"
             method: "main"
+            action: ALLOW
+        """;
+  }
+
+  /**
+   * Policy that uses the {@code deny-nonpublic} preset to block all non-public members.
+   *
+   * @return YAML policy content
+   */
+  @SuppressWarnings("UnusedMethod") // Will be used when #1106 implements the @Ignore'd tests
+  private String denyNonpublicPresetPolicy() {
+    return """
+        version: 1
+        defaultAction: ALLOW
+        presets:
+          - deny-nonpublic
+        """;
+  }
+
+  /**
+   * Policy with {@code visibility: ALL} for the {@code Methods} class, allowing methods of any
+   * visibility, with a default action of DENY.
+   *
+   * @return YAML policy content
+   */
+  @SuppressWarnings("UnusedMethod") // Will be used when #1106 implements the @Ignore'd tests
+  private String visibilityAllPolicy() {
+    return """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "io.quasient.pal.apps.quantized.rpc.Methods"
+            method: "**"
+            visibility: ALL
+            action: ALLOW
+        """;
+  }
+
+  /**
+   * Policy that combines the {@code deny-nonpublic} preset with an explicit override allowing a
+   * specific package-private method. The user rule should take precedence over the preset.
+   *
+   * @return YAML policy content
+   */
+  @SuppressWarnings("UnusedMethod") // Will be used when #1106 implements the @Ignore'd tests
+  private String visibilityOverridePolicy() {
+    return """
+        version: 1
+        defaultAction: ALLOW
+        presets:
+          - deny-nonpublic
+        rules:
+          - class: "io.quasient.pal.apps.quantized.rpc.Methods"
+            method: "doSomethingStatically"
+            visibility:
+              - PACKAGE_PRIVATE
             action: ALLOW
         """;
   }
