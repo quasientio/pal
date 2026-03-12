@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -189,6 +190,22 @@ public class RpcPolicyDispatchTest {
     assertThat(response.getResponseToId(), is(incomingMessage.getMessageId()));
     assertNull(response.getRaisedThrowable());
     assertThat(response.getReturnValue(), is(notNullValue()));
+  }
+
+  /**
+   * Verifies that a dispatcher wired with a deny-all policy checker reflects a reloaded allow-all
+   * policy after the underlying {@link RpcPolicyHolder} is swapped.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1133")
+  public void shouldDispatchReflectReloadedPolicy() {
+    // Given: A dispatcher wired with an RpcPolicyChecker backed by an RpcPolicyHolder
+    //        initialized with a deny-all policy
+    // When: The holder is swapped to allow-all, and dispatchIncoming() is called
+    // Then: Execution proceeds normally (no RpcAccessDeniedException)
+
+    // TODO(#1133): Implement test logic
+    fail("Not yet implemented");
   }
 
   /**

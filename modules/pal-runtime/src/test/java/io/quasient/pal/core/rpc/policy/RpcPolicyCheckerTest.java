@@ -28,6 +28,7 @@ import java.util.EnumSet;
 import java.util.List;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -422,6 +423,23 @@ public class RpcPolicyCheckerTest {
         createInstanceMethodMessageWithModifiers("com.example.Foo", "bar", Modifier.PRIVATE);
     // No exception: REPLAY_INJECTION channel is exempt from all policy checks
     checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.REPLAY_INJECTION);
+  }
+
+  /**
+   * Verifies that {@link RpcPolicyChecker} picks up an updated policy after the underlying {@link
+   * RpcPolicyHolder} is swapped from deny-all to allow-all.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1133")
+  public void shouldPickUpUpdatedPolicyAfterHolderSwap() {
+    // Given: An RpcPolicyHolder initialized with a deny-all policy, and an RpcPolicyChecker
+    //        constructed with that holder
+    // When: The holder's policy is swapped to an allow-all policy via updatePolicy()
+    // Then: checkAccess() with the same message that was previously denied now passes
+    //       without throwing RpcAccessDeniedException
+
+    // TODO(#1133): Implement test logic
+    fail("Not yet implemented");
   }
 
   /**
