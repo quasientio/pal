@@ -84,7 +84,12 @@ public class RpcPolicyChecker {
     String memberName = ExecMessageUtils.getExecutableName(msg);
     MemberCategory category = MemberCategory.fromMessageType(type);
 
-    RpcPolicyAction action = policy.evaluate(className, memberName, channel, category, null);
+    MemberVisibility visibility =
+        policy.hasVisibilityRules()
+            ? MemberVisibility.fromModifiers(ExecMessageUtils.getModifiers(msg))
+            : null;
+
+    RpcPolicyAction action = policy.evaluate(className, memberName, channel, category, visibility);
 
     switch (action) {
       case ALLOW -> {}
@@ -114,7 +119,31 @@ public class RpcPolicyChecker {
    */
   public boolean isAccessible(
       String className, String memberName, MessageChannelType channel, MemberCategory category) {
-    RpcPolicyAction action = policy.evaluate(className, memberName, channel, category, null);
+    return isAccessible(className, memberName, channel, category, null);
+  }
+
+  /**
+   * Returns whether the given class member is accessible under the current policy for the specified
+   * channel, category, and visibility.
+   *
+   * <p>This variant accepts a {@link MemberVisibility} parameter for callers that have modifiers
+   * available (e.g. from ClassGraph or reflection). When {@code visibility} is {@code null}, the
+   * visibility dimension is not checked.
+   *
+   * @param className the fully-qualified class name (e.g. {@code "com.example.Foo"})
+   * @param memberName the method or field name (e.g. {@code "bar"})
+   * @param channel the message channel to evaluate against
+   * @param category the member category to evaluate against
+   * @param visibility the visibility of the member, or {@code null} to skip visibility checks
+   * @return {@code true} if the policy allows access, {@code false} if it denies
+   */
+  public boolean isAccessible(
+      String className,
+      String memberName,
+      MessageChannelType channel,
+      MemberCategory category,
+      MemberVisibility visibility) {
+    RpcPolicyAction action = policy.evaluate(className, memberName, channel, category, visibility);
     return action == RpcPolicyAction.ALLOW || action == RpcPolicyAction.LOG_AND_ALLOW;
   }
 }

@@ -23,11 +23,11 @@ import io.quasient.pal.messages.colfer.ConstructorCall;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.types.MessageType;
+import java.lang.reflect.Modifier;
 import java.util.EnumSet;
 import java.util.List;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -304,7 +304,7 @@ public class RpcPolicyCheckerTest {
   }
 
   // ---------------------------------------------------------------------------
-  // Visibility-aware policy evaluation tests (awaiting implementation in #1100)
+  // Visibility-aware policy evaluation tests
   // ---------------------------------------------------------------------------
 
   /**
@@ -312,15 +312,29 @@ public class RpcPolicyCheckerTest {
    * {@link MemberVisibility#PUBLIC} visibility with a default DENY action.
    */
   @Test
-  @Ignore("Awaiting implementation in #1100")
   public void shouldDenyNonPublicMethodWhenPolicyRequiresPublicVisibility() {
-    // Given: Policy with ALLOW rule restricted to visibilities = EnumSet.of(PUBLIC), default DENY
-    // And: ExecMessage for an instance method with modifiers = Modifier.PROTECTED
-    // When: checkAccess() called with ZMQ_SOCKET_RPC channel
-    // Then: Throws RpcAccessDeniedException
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.**",
+                    null,
+                    RpcPolicyAction.ALLOW,
+                    null,
+                    null,
+                    EnumSet.of(MemberVisibility.PUBLIC))),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#1100): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg =
+        createInstanceMethodMessageWithModifiers("com.example.Foo", "bar", Modifier.PROTECTED);
+    try {
+      checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getClassName(), is("com.example.Foo"));
+      assertThat(e.getMemberName(), is("bar"));
+    }
   }
 
   /**
@@ -328,15 +342,23 @@ public class RpcPolicyCheckerTest {
    * MemberVisibility#PUBLIC} visibility with a default DENY action.
    */
   @Test
-  @Ignore("Awaiting implementation in #1100")
   public void shouldAllowPublicMethodWhenPolicyRequiresPublicVisibility() {
-    // Given: Policy with ALLOW rule restricted to visibilities = EnumSet.of(PUBLIC), default DENY
-    // And: ExecMessage for an instance method with modifiers = Modifier.PUBLIC
-    // When: checkAccess() called with ZMQ_SOCKET_RPC channel
-    // Then: No exception thrown
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.**",
+                    null,
+                    RpcPolicyAction.ALLOW,
+                    null,
+                    null,
+                    EnumSet.of(MemberVisibility.PUBLIC))),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#1100): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg =
+        createInstanceMethodMessageWithModifiers("com.example.Foo", "bar", Modifier.PUBLIC);
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
   }
 
   /**
@@ -344,15 +366,18 @@ public class RpcPolicyCheckerTest {
    * private methods.
    */
   @Test
-  @Ignore("Awaiting implementation in #1100")
   public void shouldSkipVisibilityCheckWhenNoVisibilityRules() {
-    // Given: Policy with ALLOW rule and no visibility restrictions (visibilities = null)
-    // And: ExecMessage for a private method (modifiers = Modifier.PRIVATE)
-    // When: checkAccess() called
-    // Then: No exception thrown (visibility not checked)
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null)),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#1100): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg =
+        createInstanceMethodMessageWithModifiers("com.example.Foo", "bar", Modifier.PRIVATE);
+    // No exception: visibility is not checked because no rules have visibility constraints
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
   }
 
   /**
@@ -360,15 +385,18 @@ public class RpcPolicyCheckerTest {
    * = 0).
    */
   @Test
-  @Ignore("Awaiting implementation in #1100")
   public void shouldDenyPackagePrivateConstructorWhenDenyNonpublicPreset() {
-    // Given: Policy built with deny-nonpublic preset rules
-    // And: ExecMessage for a constructor with modifiers = 0 (package-private)
-    // When: checkAccess() called
-    // Then: Throws RpcAccessDeniedException
+    List<RpcPolicyRule> presetRules = RpcPolicyPresets.getDenyNonpublicRules();
+    RpcPolicy policy = new RpcPolicy(presetRules, RpcPolicyAction.ALLOW);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#1100): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = createConstructorMessageWithModifiers("com.example.Foo", 0);
+    try {
+      checker.checkAccess(msg, MessageType.EXEC_CONSTRUCTOR, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getClassName(), is("com.example.Foo"));
+    }
   }
 
   /**
@@ -376,15 +404,24 @@ public class RpcPolicyCheckerTest {
    * all policy checks, even when visibility rules are active.
    */
   @Test
-  @Ignore("Awaiting implementation in #1100")
   public void shouldStillExemptReplayInjectionChannel() {
-    // Given: Policy requiring PUBLIC visibility
-    // And: ExecMessage for a private method
-    // When: checkAccess() called with REPLAY_INJECTION channel
-    // Then: No exception (exempt channels still bypass all checks)
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.**",
+                    null,
+                    RpcPolicyAction.ALLOW,
+                    null,
+                    null,
+                    EnumSet.of(MemberVisibility.PUBLIC))),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    // TODO(#1100): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg =
+        createInstanceMethodMessageWithModifiers("com.example.Foo", "bar", Modifier.PRIVATE);
+    // No exception: REPLAY_INJECTION channel is exempt from all policy checks
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.REPLAY_INJECTION);
   }
 
   /**
@@ -417,11 +454,51 @@ public class RpcPolicyCheckerTest {
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes") // Class conflicts with java.lang.Class
   private static ExecMessage createConstructorMessage(String className) {
+    return createConstructorMessageWithModifiers(className, 0);
+  }
+
+  /**
+   * Creates an {@link ExecMessage} containing an {@link InstanceMethodCall} with the given class
+   * name, method name, and Java modifiers.
+   *
+   * @param className the fully-qualified class name
+   * @param methodName the method name
+   * @param modifiers the Java modifier bitmask (from {@link Modifier})
+   * @return the constructed message
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes") // Class conflicts with java.lang.Class
+  private static ExecMessage createInstanceMethodMessageWithModifiers(
+      String className, String methodName, int modifiers) {
+    io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();
+    clazz.name = className;
+
+    InstanceMethodCall call = new InstanceMethodCall();
+    call.clazz = clazz;
+    call.name = methodName;
+    call.modifiers = modifiers;
+
+    ExecMessage msg = new ExecMessage();
+    msg.instanceMethodCall = call;
+    return msg;
+  }
+
+  /**
+   * Creates an {@link ExecMessage} containing a {@link ConstructorCall} with the given class name
+   * and Java modifiers.
+   *
+   * @param className the fully-qualified class name
+   * @param modifiers the Java modifier bitmask (from {@link Modifier})
+   * @return the constructed message
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes") // Class conflicts with java.lang.Class
+  private static ExecMessage createConstructorMessageWithModifiers(
+      String className, int modifiers) {
     io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();
     clazz.name = className;
 
     ConstructorCall call = new ConstructorCall();
     call.clazz = clazz;
+    call.modifiers = modifiers;
 
     ExecMessage msg = new ExecMessage();
     msg.constructorCall = call;
