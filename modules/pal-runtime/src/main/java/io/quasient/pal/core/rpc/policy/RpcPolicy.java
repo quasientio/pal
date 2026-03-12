@@ -38,6 +38,13 @@ public class RpcPolicy {
   private final RpcPolicyAction defaultAction;
 
   /**
+   * Whether any rule in this policy has a non-null visibility constraint. When {@code false},
+   * callers can skip modifiers extraction and pass {@code null} for the visibility parameter,
+   * avoiding unnecessary work on the hot path.
+   */
+  private final boolean hasVisibilityRules;
+
+  /**
    * Creates a policy with the given rules and default action.
    *
    * @param rules the ordered list of rules (defensively copied)
@@ -46,6 +53,7 @@ public class RpcPolicy {
   public RpcPolicy(List<RpcPolicyRule> rules, RpcPolicyAction defaultAction) {
     this.rules = Collections.unmodifiableList(List.copyOf(rules));
     this.defaultAction = defaultAction;
+    this.hasVisibilityRules = rules.stream().anyMatch(r -> r.getVisibilities() != null);
   }
 
   /**
@@ -59,23 +67,27 @@ public class RpcPolicy {
    * Evaluates an incoming RPC operation against this policy's rules.
    *
    * <p>Builds the match path as {@code className + "." + memberName}, then iterates the rules in
-   * order. The first rule whose pattern, channel filter, and member-category filter all match
-   * determines the action. If no rule matches, the {@link #defaultAction} is returned.
+   * order. The first rule whose pattern, channel filter, member-category filter, and visibility
+   * filter all match determines the action. If no rule matches, the {@link #defaultAction} is
+   * returned.
    *
    * @param className the fully-qualified class name of the target (e.g. {@code "com.example.Foo"})
    * @param memberName the method or field name being accessed (e.g. {@code "bar"})
    * @param channel the message channel the operation arrived on
    * @param memberCategory the category of the member being accessed
+   * @param visibility the visibility of the member being accessed, or {@code null} to skip
+   *     visibility checks (appropriate when {@link #hasVisibilityRules()} is {@code false})
    * @return the action determined by the first matching rule, or the default action
    */
   public RpcPolicyAction evaluate(
       String className,
       String memberName,
       MessageChannelType channel,
-      MemberCategory memberCategory) {
+      MemberCategory memberCategory,
+      MemberVisibility visibility) {
     String path = className + "." + memberName;
     for (RpcPolicyRule rule : rules) {
-      if (rule.matches(path, channel, memberCategory, null)) {
+      if (rule.matches(path, channel, memberCategory, visibility)) {
         return rule.getAction();
       }
     }
@@ -93,13 +105,18 @@ public class RpcPolicy {
    * @param className the fully-qualified class name of the target
    * @param memberName the method or field name being accessed
    * @param memberCategory the category of the member being accessed
+   * @param visibility the visibility of the member being accessed, or {@code null} to skip
+   *     visibility checks
    * @return the action determined by the first matching rule, or the default action
    */
   public RpcPolicyAction evaluateForMetadata(
-      String className, String memberName, MemberCategory memberCategory) {
+      String className,
+      String memberName,
+      MemberCategory memberCategory,
+      MemberVisibility visibility) {
     String path = className + "." + memberName;
     for (RpcPolicyRule rule : rules) {
-      if (rule.matchesForMetadata(path, memberCategory, null)) {
+      if (rule.matchesForMetadata(path, memberCategory, visibility)) {
         return rule.getAction();
       }
     }
@@ -112,11 +129,16 @@ public class RpcPolicy {
    * @param className the fully-qualified class name
    * @param memberName the method, field, or constructor name
    * @param memberCategory the category of the member
+   * @param visibility the visibility of the member being accessed, or {@code null} to skip
+   *     visibility checks
    * @return {@code true} if the policy allows access (ignoring channel)
    */
   public boolean isAccessibleForMetadata(
-      String className, String memberName, MemberCategory memberCategory) {
-    RpcPolicyAction action = evaluateForMetadata(className, memberName, memberCategory);
+      String className,
+      String memberName,
+      MemberCategory memberCategory,
+      MemberVisibility visibility) {
+    RpcPolicyAction action = evaluateForMetadata(className, memberName, memberCategory, visibility);
     return action == RpcPolicyAction.ALLOW || action == RpcPolicyAction.LOG_AND_ALLOW;
   }
 
@@ -136,5 +158,18 @@ public class RpcPolicy {
    */
   public RpcPolicyAction getDefaultAction() {
     return defaultAction;
+  }
+
+  /**
+   * Returns whether any rule in this policy has a non-null visibility constraint.
+   *
+   * <p>When this returns {@code false}, callers can safely pass {@code null} for the visibility
+   * parameter in {@link #evaluate} and {@link #evaluateForMetadata}, avoiding unnecessary modifiers
+   * extraction on the hot path.
+   *
+   * @return {@code true} if at least one rule filters by visibility
+   */
+  public boolean hasVisibilityRules() {
+    return hasVisibilityRules;
   }
 }

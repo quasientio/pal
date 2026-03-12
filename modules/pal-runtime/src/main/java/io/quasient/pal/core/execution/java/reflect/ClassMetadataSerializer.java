@@ -277,7 +277,8 @@ public class ClassMetadataSerializer {
       if (isAspectWeaverMethod(constructorInfo)) {
         continue;
       }
-      if (!rpcPolicy.isAccessibleForMetadata(className, "<init>", MemberCategory.CONSTRUCTOR)) {
+      if (!rpcPolicy.isAccessibleForMetadata(
+          className, "<init>", MemberCategory.CONSTRUCTOR, null)) {
         continue;
       }
       ObjectNode constructorObject = createConstructorJson(mapper, constructorInfo);
@@ -305,7 +306,7 @@ public class ClassMetadataSerializer {
       }
       MemberCategory category =
           methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
-      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category)) {
+      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category, null)) {
         continue;
       }
       String sig = methodSignature(methodInfo);
@@ -370,7 +371,7 @@ public class ClassMetadataSerializer {
         }
         MemberCategory category =
             methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
-        if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category)) {
+        if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category, null)) {
           continue;
         }
         String sig = methodSignature(methodInfo);
@@ -391,7 +392,7 @@ public class ClassMetadataSerializer {
       }
       MemberCategory category =
           methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
-      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category)) {
+      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category, null)) {
         continue;
       }
       String sig = methodSignature(methodInfo);
@@ -481,8 +482,8 @@ public class ClassMetadataSerializer {
    * @return {@code true} if the field is accessible for either get or set
    */
   private boolean isFieldAccessibleForMetadata(String className, String fieldName) {
-    return rpcPolicy.isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_GET)
-        || rpcPolicy.isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_SET);
+    return rpcPolicy.isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_GET, null)
+        || rpcPolicy.isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_SET, null);
   }
 
   /**
@@ -559,7 +560,7 @@ public class ClassMetadataSerializer {
           Modifier.isStatic(m.getModifiers())
               ? MemberCategory.STATIC_METHOD
               : MemberCategory.METHOD;
-      if (!rpcPolicy.isAccessibleForMetadata(className, m.getName(), category)) {
+      if (!rpcPolicy.isAccessibleForMetadata(className, m.getName(), category, null)) {
         continue;
       }
       String sig = reflectionMethodSignature(m);

@@ -84,7 +84,7 @@ public class RpcPolicyChecker {
     String memberName = ExecMessageUtils.getExecutableName(msg);
     MemberCategory category = MemberCategory.fromMessageType(type);
 
-    RpcPolicyAction action = policy.evaluate(className, memberName, channel, category);
+    RpcPolicyAction action = policy.evaluate(className, memberName, channel, category, null);
 
     switch (action) {
       case ALLOW -> {}
@@ -114,7 +114,7 @@ public class RpcPolicyChecker {
    */
   public boolean isAccessible(
       String className, String memberName, MessageChannelType channel, MemberCategory category) {
-    RpcPolicyAction action = policy.evaluate(className, memberName, channel, category);
+    RpcPolicyAction action = policy.evaluate(className, memberName, channel, category, null);
     return action == RpcPolicyAction.ALLOW || action == RpcPolicyAction.LOG_AND_ALLOW;
   }
 }

@@ -11,13 +11,11 @@ package io.quasient.pal.core.rpc.policy;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.transport.MessageChannelType;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -37,7 +35,11 @@ public class RpcPolicyTest {
 
     RpcPolicyAction result =
         policy.evaluate(
-            "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+            "com.example.Foo",
+            "bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null);
 
     assertThat(result, is(RpcPolicyAction.DENY));
   }
@@ -56,7 +58,11 @@ public class RpcPolicyTest {
 
     RpcPolicyAction result =
         policy.evaluate(
-            "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+            "com.example.Foo",
+            "bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null);
 
     assertThat(result, is(RpcPolicyAction.ALLOW));
   }
@@ -78,7 +84,8 @@ public class RpcPolicyTest {
             "com.example.internal.Foo",
             "bar",
             MessageChannelType.ZMQ_SOCKET_RPC,
-            MemberCategory.METHOD);
+            MemberCategory.METHOD,
+            null);
 
     assertThat(result, is(RpcPolicyAction.DENY));
   }
@@ -103,7 +110,11 @@ public class RpcPolicyTest {
 
     RpcPolicyAction result =
         policy.evaluate(
-            "com.example.Foo", "bar", MessageChannelType.WEBSOCKET_RPC, MemberCategory.METHOD);
+            "com.example.Foo",
+            "bar",
+            MessageChannelType.WEBSOCKET_RPC,
+            MemberCategory.METHOD,
+            null);
 
     assertThat(result, is(RpcPolicyAction.DENY));
   }
@@ -132,7 +143,8 @@ public class RpcPolicyTest {
             "com.example.Config",
             "debugMode",
             MessageChannelType.ZMQ_SOCKET_RPC,
-            MemberCategory.FIELD_SET);
+            MemberCategory.FIELD_SET,
+            null);
 
     assertThat(result, is(RpcPolicyAction.DENY));
   }
@@ -144,7 +156,11 @@ public class RpcPolicyTest {
 
     RpcPolicyAction result =
         policy.evaluate(
-            "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+            "com.example.Foo",
+            "bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null);
 
     assertThat(result, is(RpcPolicyAction.ALLOW));
   }
@@ -160,7 +176,11 @@ public class RpcPolicyTest {
 
     RpcPolicyAction result =
         policy.evaluate(
-            "java.lang.System", "exit", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+            "java.lang.System",
+            "exit",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null);
 
     assertThat(result, is(RpcPolicyAction.DENY));
   }
@@ -179,7 +199,11 @@ public class RpcPolicyTest {
 
     RpcPolicyAction result =
         policy.evaluate(
-            "java.lang.Class", "forName", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+            "java.lang.Class",
+            "forName",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null);
 
     assertThat(result, is(RpcPolicyAction.ALLOW));
   }
@@ -198,7 +222,8 @@ public class RpcPolicyTest {
             "java.lang.ProcessBuilder",
             "command",
             MessageChannelType.ZMQ_SOCKET_RPC,
-            MemberCategory.FIELD_GET),
+            MemberCategory.FIELD_GET,
+            null),
         is(RpcPolicyAction.DENY));
 
     assertThat(
@@ -206,7 +231,8 @@ public class RpcPolicyTest {
             "java.lang.ProcessBuilder",
             "start",
             MessageChannelType.ZMQ_SOCKET_RPC,
-            MemberCategory.CONSTRUCTOR),
+            MemberCategory.CONSTRUCTOR,
+            null),
         is(RpcPolicyAction.DENY));
 
     assertThat(
@@ -214,7 +240,8 @@ public class RpcPolicyTest {
             "java.lang.ProcessBuilder",
             "start",
             MessageChannelType.ZMQ_SOCKET_RPC,
-            MemberCategory.METHOD),
+            MemberCategory.METHOD,
+            null),
         is(RpcPolicyAction.DENY));
   }
 
@@ -231,7 +258,11 @@ public class RpcPolicyTest {
 
     RpcPolicyAction result =
         policy.evaluate(
-            "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
+            "com.example.Foo",
+            "bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null);
 
     assertThat(result, is(RpcPolicyAction.ALLOW));
   }
@@ -241,17 +272,35 @@ public class RpcPolicyTest {
    * operations with other visibilities fall through to the default action.
    */
   @Test
-  @Ignore("Awaiting implementation in #1094")
   public void shouldFilterByVisibilityInRules() {
-    // Given: Policy with one ALLOW rule requiring visibilities = EnumSet.of(PUBLIC)
-    //        and default DENY
-    // When: evaluate() called with PUBLIC visibility
-    // Then: Returns ALLOW
-    // When: evaluate() called with PRIVATE visibility
-    // Then: Returns DENY (falls through to default)
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule(
+                "com.example.**",
+                null,
+                RpcPolicyAction.ALLOW,
+                null,
+                null,
+                EnumSet.of(MemberVisibility.PUBLIC)));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
-    // TODO(#1094): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        policy.evaluate(
+            "com.example.Foo",
+            "bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PUBLIC),
+        is(RpcPolicyAction.ALLOW));
+
+    assertThat(
+        policy.evaluate(
+            "com.example.Foo",
+            "bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PRIVATE),
+        is(RpcPolicyAction.DENY));
   }
 
   /**
@@ -259,16 +308,29 @@ public class RpcPolicyTest {
    * continues to subsequent rules that match all visibilities (null constraint).
    */
   @Test
-  @Ignore("Awaiting implementation in #1094")
   public void shouldFallThroughWhenVisibilityDoesNotMatch() {
-    // Given: Policy with two rules:
-    //        Rule 1: ALLOW, visibilities = EnumSet.of(PUBLIC)
-    //        Rule 2: LOG_AND_ALLOW, visibilities = null (match all)
-    // When: evaluate() called with PRIVATE visibility
-    // Then: Returns LOG_AND_ALLOW (Rule 1 skipped, Rule 2 matched)
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule(
+                "com.example.**",
+                null,
+                RpcPolicyAction.ALLOW,
+                null,
+                null,
+                EnumSet.of(MemberVisibility.PUBLIC)),
+            new RpcPolicyRule(
+                "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null, null));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
-    // TODO(#1094): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicyAction result =
+        policy.evaluate(
+            "com.example.Foo",
+            "bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PRIVATE);
+
+    assertThat(result, is(RpcPolicyAction.LOG_AND_ALLOW));
   }
 
   /**
@@ -276,14 +338,20 @@ public class RpcPolicyTest {
    * visibilities constraint.
    */
   @Test
-  @Ignore("Awaiting implementation in #1094")
   public void shouldReportHasVisibilityRulesTrue() {
-    // Given: Policy with at least one rule that has non-null visibilities
-    // When: hasVisibilityRules() called
-    // Then: Returns true
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null),
+            new RpcPolicyRule(
+                "com.internal.**",
+                null,
+                RpcPolicyAction.DENY,
+                null,
+                null,
+                EnumSet.of(MemberVisibility.PRIVATE)));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
-    // TODO(#1094): Implement test logic
-    fail("Not yet implemented");
+    assertThat(policy.hasVisibilityRules(), is(true));
   }
 
   /**
@@ -291,14 +359,14 @@ public class RpcPolicyTest {
    * constraints.
    */
   @Test
-  @Ignore("Awaiting implementation in #1094")
   public void shouldReportHasVisibilityRulesFalse() {
-    // Given: Policy with all rules having null visibilities
-    // When: hasVisibilityRules() called
-    // Then: Returns false
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null),
+            new RpcPolicyRule("com.**", null, RpcPolicyAction.DENY, null, null, null));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
-    // TODO(#1094): Implement test logic
-    fail("Not yet implemented");
+    assertThat(policy.hasVisibilityRules(), is(false));
   }
 
   /**
@@ -306,16 +374,31 @@ public class RpcPolicyTest {
    * are excluded from metadata when the policy restricts visibility.
    */
   @Test
-  @Ignore("Awaiting implementation in #1094")
   public void shouldFilterByVisibilityInMetadata() {
-    // Given: Policy with DENY rule for non-public visibilities
-    // When: isAccessibleForMetadata() called with PROTECTED visibility
-    // Then: Returns false
-    // When: isAccessibleForMetadata() called with PUBLIC visibility
-    // Then: Returns true
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule(
+                "com.example.**",
+                null,
+                RpcPolicyAction.DENY,
+                null,
+                null,
+                EnumSet.of(
+                    MemberVisibility.PROTECTED,
+                    MemberVisibility.PACKAGE_PRIVATE,
+                    MemberVisibility.PRIVATE)),
+            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
-    // TODO(#1094): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        policy.isAccessibleForMetadata(
+            "com.example.Foo", "bar", MemberCategory.METHOD, MemberVisibility.PROTECTED),
+        is(false));
+
+    assertThat(
+        policy.isAccessibleForMetadata(
+            "com.example.Foo", "bar", MemberCategory.METHOD, MemberVisibility.PUBLIC),
+        is(true));
   }
 
   /**
@@ -323,13 +406,21 @@ public class RpcPolicyTest {
    * evaluate()} allows rules to match normally (the visibility filter is skipped).
    */
   @Test
-  @Ignore("Awaiting implementation in #1094")
   public void shouldPassNullVisibilityWhenNoVisibilityRules() {
-    // Given: Policy with no visibility rules (hasVisibilityRules() == false)
-    // When: evaluate() called with null visibility
-    // Then: Rules match normally (visibility filter is skipped)
+    List<RpcPolicyRule> rules =
+        List.of(new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
-    // TODO(#1094): Implement test logic
-    fail("Not yet implemented");
+    assertThat(policy.hasVisibilityRules(), is(false));
+
+    RpcPolicyAction result =
+        policy.evaluate(
+            "com.example.Foo",
+            "bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null);
+
+    assertThat(result, is(RpcPolicyAction.ALLOW));
   }
 }
