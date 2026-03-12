@@ -27,6 +27,7 @@ import java.util.EnumSet;
 import java.util.List;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -300,6 +301,90 @@ public class RpcPolicyCheckerTest {
         checker.isAccessible(
             "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
         is(true));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Visibility-aware policy evaluation tests (awaiting implementation in #1100)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Verifies that a non-public method is denied when the policy has an ALLOW rule restricted to
+   * {@link MemberVisibility#PUBLIC} visibility with a default DENY action.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1100")
+  public void shouldDenyNonPublicMethodWhenPolicyRequiresPublicVisibility() {
+    // Given: Policy with ALLOW rule restricted to visibilities = EnumSet.of(PUBLIC), default DENY
+    // And: ExecMessage for an instance method with modifiers = Modifier.PROTECTED
+    // When: checkAccess() called with ZMQ_SOCKET_RPC channel
+    // Then: Throws RpcAccessDeniedException
+
+    // TODO(#1100): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that a public method is allowed when the policy has an ALLOW rule restricted to {@link
+   * MemberVisibility#PUBLIC} visibility with a default DENY action.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1100")
+  public void shouldAllowPublicMethodWhenPolicyRequiresPublicVisibility() {
+    // Given: Policy with ALLOW rule restricted to visibilities = EnumSet.of(PUBLIC), default DENY
+    // And: ExecMessage for an instance method with modifiers = Modifier.PUBLIC
+    // When: checkAccess() called with ZMQ_SOCKET_RPC channel
+    // Then: No exception thrown
+
+    // TODO(#1100): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that visibility is not checked when no rules specify visibility restrictions, even for
+   * private methods.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1100")
+  public void shouldSkipVisibilityCheckWhenNoVisibilityRules() {
+    // Given: Policy with ALLOW rule and no visibility restrictions (visibilities = null)
+    // And: ExecMessage for a private method (modifiers = Modifier.PRIVATE)
+    // When: checkAccess() called
+    // Then: No exception thrown (visibility not checked)
+
+    // TODO(#1100): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that the {@code deny-nonpublic} preset denies a package-private constructor (modifiers
+   * = 0).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1100")
+  public void shouldDenyPackagePrivateConstructorWhenDenyNonpublicPreset() {
+    // Given: Policy built with deny-nonpublic preset rules
+    // And: ExecMessage for a constructor with modifiers = 0 (package-private)
+    // When: checkAccess() called
+    // Then: Throws RpcAccessDeniedException
+
+    // TODO(#1100): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that exempt channels (e.g. {@link MessageChannelType#REPLAY_INJECTION}) still bypass
+   * all policy checks, even when visibility rules are active.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1100")
+  public void shouldStillExemptReplayInjectionChannel() {
+    // Given: Policy requiring PUBLIC visibility
+    // And: ExecMessage for a private method
+    // When: checkAccess() called with REPLAY_INJECTION channel
+    // Then: No exception (exempt channels still bypass all checks)
+
+    // TODO(#1100): Implement test logic
+    fail("Not yet implemented");
   }
 
   /**
