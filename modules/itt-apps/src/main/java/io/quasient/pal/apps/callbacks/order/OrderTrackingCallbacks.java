@@ -127,6 +127,34 @@ public final class OrderTrackingCallbacks {
     return new InterceptCallbackResponse();
   }
 
+  /**
+   * Local BEFORE callback with identifier D.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse localBeforeD(InterceptContext ctx) {
+    int seq = sequenceCounter.incrementAndGet();
+    String id = "LOCAL_BEFORE_D";
+    invocationOrder.add(id);
+    logger.info("ORDER_CALLBACK: id={}, seq={}, phase=BEFORE", id, seq);
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local BEFORE callback with identifier E.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse localBeforeE(InterceptContext ctx) {
+    int seq = sequenceCounter.incrementAndGet();
+    String id = "LOCAL_BEFORE_E";
+    invocationOrder.add(id);
+    logger.info("ORDER_CALLBACK: id={}, seq={}, phase=BEFORE", id, seq);
+    return new InterceptCallbackResponse();
+  }
+
   // ==================== LOCAL AFTER Callbacks ====================
 
   /**
@@ -152,6 +180,20 @@ public final class OrderTrackingCallbacks {
   public static InterceptCallbackResponse localAfterB(InterceptContext ctx) {
     int seq = sequenceCounter.incrementAndGet();
     String id = "LOCAL_AFTER_B";
+    invocationOrder.add(id);
+    logger.info("ORDER_CALLBACK: id={}, seq={}, phase=AFTER", id, seq);
+    return new InterceptCallbackResponse();
+  }
+
+  /**
+   * Local AFTER callback with identifier C.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse localAfterC(InterceptContext ctx) {
+    int seq = sequenceCounter.incrementAndGet();
+    String id = "LOCAL_AFTER_C";
     invocationOrder.add(id);
     logger.info("ORDER_CALLBACK: id={}, seq={}, phase=AFTER", id, seq);
     return new InterceptCallbackResponse();

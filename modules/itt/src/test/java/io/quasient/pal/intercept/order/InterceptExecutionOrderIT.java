@@ -12,7 +12,6 @@ package io.quasient.pal.intercept.order;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.InterceptEndToEndTestSuite;
 import io.quasient.pal.apps.quantized.intercept.InterceptableApp;
@@ -34,7 +33,6 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -502,6 +500,56 @@ public class InterceptExecutionOrderIT extends AbstractInterceptIT {
     assertThat("Position 3: Remote AFTER", order.get(3), is("REMOTE_AFTER_A"));
   }
 
+  // ==================== Helper Methods: Priority ====================
+
+  /**
+   * Creates a local intercept request with an explicit priority.
+   *
+   * @param type the intercept type
+   * @param callbackMethod the callback method name
+   * @param priority the execution priority (lower executes first)
+   * @return the intercept request
+   */
+  private InterceptRequest<InterceptableMethodCall> createLocalInterceptWithPriority(
+      InterceptType type, String callbackMethod, int priority) {
+    return new InterceptRequest<>(
+        UUID.randomUUID(),
+        INTERCEPTABLE_PEER_UUID,
+        type,
+        TARGET_CLASS,
+        LOCAL_CALLBACK_CLASS,
+        callbackMethod,
+        new InterceptableMethodCall("multiplyBy", Collections.singletonList("java.lang.Integer")),
+        false,
+        null,
+        null,
+        priority);
+  }
+
+  /**
+   * Creates a remote intercept request with an explicit priority.
+   *
+   * @param type the intercept type
+   * @param callbackMethod the callback method name
+   * @param priority the execution priority (lower executes first)
+   * @return the intercept request
+   */
+  private InterceptRequest<InterceptableMethodCall> createRemoteInterceptWithPriority(
+      InterceptType type, String callbackMethod, int priority) {
+    return new InterceptRequest<>(
+        UUID.randomUUID(),
+        INTERCEPTOR_PEER_UUID,
+        type,
+        TARGET_CLASS,
+        REMOTE_CALLBACK_CLASS,
+        callbackMethod,
+        new InterceptableMethodCall("multiplyBy", Collections.singletonList("java.lang.Integer")),
+        false,
+        null,
+        null,
+        priority);
+  }
+
   // ==================== Tests: Priority-Based Ordering ====================
 
   /**
@@ -514,14 +562,37 @@ public class InterceptExecutionOrderIT extends AbstractInterceptIT {
    * @throws Exception if test fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1071")
   public void testLocalBeforePriorityOverridesRegistrationOrder() throws Exception {
-    // Given: Register local BEFORE A(p=2), B(p=1), C(p=0) in that order
-    // When: Invoke intercepted method
-    // Then: Execution order is C, B, A (ascending priority)
+    logger.info("===== testLocalBeforePriorityOverridesRegistrationOrder [{}] =====", path);
 
-    // TODO(#1071): Implement test logic
-    fail("Not yet implemented");
+    // Register local BEFORE A(p=2), B(p=1), C(p=0)
+    InterceptRequest<?> localA =
+        createLocalInterceptWithPriority(InterceptType.BEFORE, "localBeforeA", 2);
+    InterceptRequest<?> localB =
+        createLocalInterceptWithPriority(InterceptType.BEFORE, "localBeforeB", 1);
+    InterceptRequest<?> localC =
+        createLocalInterceptWithPriority(InterceptType.BEFORE, "localBeforeC", 0);
+
+    register(localA);
+    register(localB);
+    register(localC);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // Create instance and invoke method
+    ObjectRef appInstance = createInterceptableApp();
+    ExecMessage response = invokeMultiplyBy(appInstance, 3);
+
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // Verify order: C(p=0), B(p=1), A(p=2)
+    waitForCallbackCount(3, 5);
+    List<String> order = extractOrderFromLog();
+
+    assertThat("Should have exactly 3 callbacks", order.size(), is(3));
+    assertThat("First callback should be C (p=0)", order.get(0), is("LOCAL_BEFORE_C"));
+    assertThat("Second callback should be B (p=1)", order.get(1), is("LOCAL_BEFORE_B"));
+    assertThat("Third callback should be A (p=2)", order.get(2), is("LOCAL_BEFORE_A"));
   }
 
   /**
@@ -534,14 +605,33 @@ public class InterceptExecutionOrderIT extends AbstractInterceptIT {
    * @throws Exception if test fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1071")
   public void testRemoteBeforePriorityOverridesRegistrationOrder() throws Exception {
-    // Given: Register remote BEFORE A(p=10), B(p=5) in that order
-    // When: Invoke intercepted method
-    // Then: Execution order is B, A (ascending priority)
+    logger.info("===== testRemoteBeforePriorityOverridesRegistrationOrder [{}] =====", path);
 
-    // TODO(#1071): Implement test logic
-    fail("Not yet implemented");
+    // Register remote BEFORE A(p=10), B(p=5)
+    InterceptRequest<?> remoteA =
+        createRemoteInterceptWithPriority(InterceptType.BEFORE, "remoteBeforeA", 10);
+    InterceptRequest<?> remoteB =
+        createRemoteInterceptWithPriority(InterceptType.BEFORE, "remoteBeforeB", 5);
+
+    register(remoteA);
+    register(remoteB);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // Create instance and invoke method
+    ObjectRef appInstance = createInterceptableApp();
+    ExecMessage response = invokeMultiplyBy(appInstance, 3);
+
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // Verify order: B(p=5), A(p=10)
+    waitForCallbackCount(2, 5);
+    List<String> order = extractOrderFromLog();
+
+    assertThat("Should have exactly 2 callbacks", order.size(), is(2));
+    assertThat("First callback should be B (p=5)", order.get(0), is("REMOTE_BEFORE_B"));
+    assertThat("Second callback should be A (p=10)", order.get(1), is("REMOTE_BEFORE_A"));
   }
 
   /**
@@ -553,14 +643,33 @@ public class InterceptExecutionOrderIT extends AbstractInterceptIT {
    * @throws Exception if test fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1071")
   public void testLocalAfterPriorityOrder() throws Exception {
-    // Given: Register local AFTER A(p=3), B(p=1) in that order
-    // When: Invoke intercepted method
-    // Then: Execution order is B, A (ascending priority)
+    logger.info("===== testLocalAfterPriorityOrder [{}] =====", path);
 
-    // TODO(#1071): Implement test logic
-    fail("Not yet implemented");
+    // Register local AFTER A(p=3), B(p=1)
+    InterceptRequest<?> localA =
+        createLocalInterceptWithPriority(InterceptType.AFTER, "localAfterA", 3);
+    InterceptRequest<?> localB =
+        createLocalInterceptWithPriority(InterceptType.AFTER, "localAfterB", 1);
+
+    register(localA);
+    register(localB);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // Create instance and invoke method
+    ObjectRef appInstance = createInterceptableApp();
+    ExecMessage response = invokeMultiplyBy(appInstance, 3);
+
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // Verify order: B(p=1), A(p=3)
+    waitForCallbackCount(2, 5);
+    List<String> order = extractOrderFromLog();
+
+    assertThat("Should have exactly 2 callbacks", order.size(), is(2));
+    assertThat("First callback should be B (p=1)", order.get(0), is("LOCAL_AFTER_B"));
+    assertThat("Second callback should be A (p=3)", order.get(1), is("LOCAL_AFTER_A"));
   }
 
   /**
@@ -573,14 +682,37 @@ public class InterceptExecutionOrderIT extends AbstractInterceptIT {
    * @throws Exception if test fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1071")
   public void testMixedPriorityAndDefaultRegistrationOrder() throws Exception {
-    // Given: Register local BEFORE A(p=0), B(p=-1), C(p=0) in that order
-    // When: Invoke intercepted method
-    // Then: Execution order is B, A, C (B first due to -1, then A before C due to stable sort)
+    logger.info("===== testMixedPriorityAndDefaultRegistrationOrder [{}] =====", path);
 
-    // TODO(#1071): Implement test logic
-    fail("Not yet implemented");
+    // Register local BEFORE A(p=0), B(p=-1), C(p=0)
+    InterceptRequest<?> localA =
+        createLocalInterceptWithPriority(InterceptType.BEFORE, "localBeforeA", 0);
+    InterceptRequest<?> localB =
+        createLocalInterceptWithPriority(InterceptType.BEFORE, "localBeforeB", -1);
+    InterceptRequest<?> localC =
+        createLocalInterceptWithPriority(InterceptType.BEFORE, "localBeforeC", 0);
+
+    register(localA);
+    register(localB);
+    register(localC);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // Create instance and invoke method
+    ObjectRef appInstance = createInterceptableApp();
+    ExecMessage response = invokeMultiplyBy(appInstance, 3);
+
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // Verify order: B(p=-1), A(p=0), C(p=0)
+    waitForCallbackCount(3, 5);
+    List<String> order = extractOrderFromLog();
+
+    assertThat("Should have exactly 3 callbacks", order.size(), is(3));
+    assertThat("First callback should be B (p=-1)", order.get(0), is("LOCAL_BEFORE_B"));
+    assertThat("Second callback should be A (p=0)", order.get(1), is("LOCAL_BEFORE_A"));
+    assertThat("Third callback should be C (p=0)", order.get(2), is("LOCAL_BEFORE_C"));
   }
 
   /**
@@ -593,13 +725,38 @@ public class InterceptExecutionOrderIT extends AbstractInterceptIT {
    * @throws Exception if test fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1071")
   public void testPriorityDoesNotAffectLocalBeforeRemoteInvariant() throws Exception {
-    // Given: Register remote BEFORE A(p=-100), local BEFORE B(p=100)
-    // When: Invoke intercepted method
-    // Then: B (local) executes before A (remote) — local-before-remote invariant holds
+    logger.info("===== testPriorityDoesNotAffectLocalBeforeRemoteInvariant [{}] =====", path);
 
-    // TODO(#1071): Implement test logic
-    fail("Not yet implemented");
+    // Register remote BEFORE A(p=-100), local BEFORE B(p=100)
+    InterceptRequest<?> remoteA =
+        createRemoteInterceptWithPriority(InterceptType.BEFORE, "remoteBeforeA", -100);
+    InterceptRequest<?> localB =
+        createLocalInterceptWithPriority(InterceptType.BEFORE, "localBeforeA", 100);
+
+    register(remoteA);
+    register(localB);
+    Thread.sleep(INTERCEPT_REGISTRATION_MAX_DELAY_MS);
+
+    // Create instance and invoke method
+    ObjectRef appInstance = createInterceptableApp();
+    ExecMessage response = invokeMultiplyBy(appInstance, 3);
+
+    assertThat(
+        "Invocation should not raise exception", response.getRaisedThrowable(), is(nullValue()));
+
+    // Verify local executes before remote despite priority values
+    waitForCallbackCount(2, 5);
+    List<String> order = extractOrderFromLog();
+
+    assertThat("Should have exactly 2 callbacks", order.size(), is(2));
+    assertThat(
+        "Local should execute first despite higher priority value",
+        order.get(0),
+        is("LOCAL_BEFORE_A"));
+    assertThat(
+        "Remote should execute second despite lower priority value",
+        order.get(1),
+        is("REMOTE_BEFORE_A"));
   }
 }

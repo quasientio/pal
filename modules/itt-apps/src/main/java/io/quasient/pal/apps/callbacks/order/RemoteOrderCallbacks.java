@@ -70,6 +70,17 @@ public final class RemoteOrderCallbacks {
     return new InterceptCallbackResponse();
   }
 
+  /**
+   * Remote BEFORE callback with identifier D.
+   *
+   * @param ctx the intercept context
+   * @return the intercept response
+   */
+  public static InterceptCallbackResponse remoteBeforeD(InterceptContext ctx) {
+    logger.info("ORDER_CALLBACK: id=REMOTE_BEFORE_D, phase=BEFORE");
+    return new InterceptCallbackResponse();
+  }
+
   // ==================== REMOTE AFTER Callbacks ====================
 
   /**
