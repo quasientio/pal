@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Doc] Update developer and user documentation for priority-based intercept ordering: document three-factor execution order, recommended priority ranges, AROUND chain layering, and deterministic ordering recommendations
 - [Feature] Add priority-based stable sorting to `InterceptRequests.cloneListWithNewRequest()` for deterministic intercept execution order
 - [Feature] Map `priority` field in `MessageBuilder.buildInterceptMessage()` and add `InterceptRequestEntry.getPriority()` convenience getter
 - [Feature] Add `priority` field to `InterceptRequest` data model with full constructor support, serialization, and property access

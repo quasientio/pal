@@ -131,27 +131,108 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
 
 ## Multiple Intercepts and Ordering
 
-When multiple intercepts match the same operation, they execute in a specific order.
+When multiple intercepts match the same operation, they execute in a specific order determined by three factors:
 
 ### Execution Order
 
 1. **Local vs Remote**: Local intercepts (callback peer = intercepted peer) always execute **before** remote intercepts
-2. **Registration order**: Within each category, intercepts execute in the order they were registered
+2. **Priority**: Within each local/remote group, intercepts with lower priority values execute first (default priority is `0`)
+3. **Registration order**: Intercepts with the same priority execute in the order they were registered (tie-breaker)
 
 ```
 BEFORE phase:
-  1. Local BEFORE callbacks
-  2. Remote BEFORE callbacks
+  1. Local BEFORE callbacks  (sorted by ascending priority)
+  2. Remote BEFORE callbacks (sorted by ascending priority)
 
 AROUND phase (onion model):
-  3. Local AROUND callbacks (outermost layers)
-  4. Remote AROUND callbacks (inner layers)
+  3. Local AROUND callbacks  (lower priority = outermost layer)
+  4. Remote AROUND callbacks (lower priority = outermost layer)
   [Method Execution - innermost]
   (Return values propagate outward)
 
 AFTER phase:
-  5. Local AFTER callbacks
-  6. Remote AFTER callbacks
+  5. Local AFTER callbacks   (sorted by ascending priority)
+  6. Remote AFTER callbacks  (sorted by ascending priority)
+```
+
+### Setting Priority
+
+Pass the `priority` parameter when creating an `InterceptRequest`. Lower values execute first. The default is `0`.
+
+```java
+// Security check: runs first (low priority value)
+InterceptRequest<InterceptableMethodCall> securityIntercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Service",
+    "com.example.SecurityCallback",
+    "handle",
+    new InterceptableMethodCall("*", Collections.emptyList()),
+    false, null, null,
+    -100);  // priority: runs before default intercepts
+
+// Application logic: runs at default priority
+InterceptRequest<InterceptableMethodCall> appIntercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Service",
+    "com.example.AppCallback",
+    "handle",
+    new InterceptableMethodCall("*", Collections.emptyList()));
+    // priority defaults to 0
+
+// Logging: runs last (high priority value)
+InterceptRequest<InterceptableMethodCall> loggingIntercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Service",
+    "com.example.LoggingCallback",
+    "handle",
+    new InterceptableMethodCall("*", Collections.emptyList()),
+    false, null, null,
+    100);  // priority: runs after default intercepts
+```
+
+**Execution order**: Security (p=-100) → Application (p=0) → Logging (p=100)
+
+### Recommended Priority Ranges
+
+Use widely-spaced values to leave room for inserting new intercepts between existing ones:
+
+| Range | Suggested Use |
+|-------|---------------|
+| -1000 | Infrastructure-level (framework internals) |
+| -100 | Security checks, authorization |
+| 0 | Default — general-purpose intercepts |
+| 100 | Logging, metrics, monitoring |
+| 1000 | Audit trail, compliance recording |
+
+**Tip**: For deterministic ordering, set priority explicitly rather than relying on registration order. Registration order depends on the timing of etcd events, which may vary.
+
+### AROUND Chain and Priority
+
+For AROUND intercepts, priority determines the layer in the onion model:
+
+- **Lower priority = outermost layer** (BEFORE logic runs first, AFTER logic runs last)
+- **Higher priority = innermost layer** (closest to the actual method)
+
+```
+┌─ AROUND priority=-100 (outermost) ──────────────────┐
+│  BEFORE logic runs FIRST                             │
+│  ctx.proceed() ─────────────────────────────────────▶│
+│    ┌─ AROUND priority=0 ────────────────────────┐    │
+│    │  ctx.proceed() ───────────────────────────▶ │    │
+│    │    ┌─ AROUND priority=100 (innermost) ──┐   │    │
+│    │    │  ctx.proceed() ──────────────────────────▶ [METHOD]
+│    │    │  AFTER logic                       │   │    │
+│    │    └────────────────────────────────────┘   │    │
+│    │  AFTER logic                                │    │
+│    └─────────────────────────────────────────────┘    │
+│  AFTER logic runs LAST                                │
+└───────────────────────────────────────────────────────┘
 ```
 
 ### AROUND Chaining (Onion Model)
