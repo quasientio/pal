@@ -9,12 +9,17 @@
  */
 package io.quasient.pal.core.rpc.policy;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.quasient.pal.core.execution.java.CustomClassloader;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.ExecMessageUtils;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,13 +47,37 @@ public class RpcPolicyChecker {
   private final RpcPolicy policy;
 
   /**
-   * Creates a new checker backed by the given policy.
+   * The classloader for resolving application classes when modifiers fallback is needed. In
+   * production this is the {@link CustomClassloader} injected by Guice; in tests it may be {@code
+   * null}, in which case the fallback uses the current thread's context classloader.
+   */
+  private final ClassLoader appClassLoader;
+
+  /**
+   * Creates a new checker backed by the given policy with the application classloader for
+   * visibility resolution.
+   *
+   * @param policy the RPC policy to evaluate operations against
+   * @param appClassLoader the classloader for loading application classes during modifiers fallback
+   */
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "Classloader is intentionally shared, not a mutable data object")
+  @Inject
+  public RpcPolicyChecker(RpcPolicy policy, CustomClassloader appClassLoader) {
+    this.policy = policy;
+    this.appClassLoader = appClassLoader;
+  }
+
+  /**
+   * Creates a new checker backed by the given policy without an explicit application classloader.
+   * Used in unit tests where the modifiers fallback resolution is not needed.
    *
    * @param policy the RPC policy to evaluate operations against
    */
-  @Inject
   public RpcPolicyChecker(RpcPolicy policy) {
     this.policy = policy;
+    this.appClassLoader = null;
   }
 
   /**
@@ -84,10 +113,14 @@ public class RpcPolicyChecker {
     String memberName = ExecMessageUtils.getExecutableName(msg);
     MemberCategory category = MemberCategory.fromMessageType(type);
 
-    MemberVisibility visibility =
-        policy.hasVisibilityRules()
-            ? MemberVisibility.fromModifiers(ExecMessageUtils.getModifiers(msg))
-            : null;
+    MemberVisibility visibility = null;
+    if (policy.hasVisibilityRules()) {
+      int modifiers = ExecMessageUtils.getModifiers(msg);
+      if (modifiers == 0) {
+        modifiers = resolveModifiersViaReflection(className, memberName, category);
+      }
+      visibility = MemberVisibility.fromModifiers(modifiers);
+    }
 
     RpcPolicyAction action = policy.evaluate(className, memberName, channel, category, visibility);
 
@@ -145,5 +178,63 @@ public class RpcPolicyChecker {
       MemberVisibility visibility) {
     RpcPolicyAction action = policy.evaluate(className, memberName, channel, category, visibility);
     return action == RpcPolicyAction.ALLOW || action == RpcPolicyAction.LOG_AND_ALLOW;
+  }
+
+  /**
+   * Resolves the Java modifiers of a class member via reflection, used as a fallback when the
+   * incoming message does not carry modifiers (e.g. from non-PAL clients like ThinPeer or JSON-RPC
+   * WebSocket).
+   *
+   * <p>When the modifiers field in an {@link ExecMessage} is zero, it is ambiguous: it may indicate
+   * a genuinely package-private member with no other modifier bits, or it may indicate that the
+   * sender simply did not populate the field. This method resolves the ambiguity by loading the
+   * class and querying the actual member modifiers via the Java reflection API.
+   *
+   * <p>For overloaded methods, this returns the modifiers of the first declared method with the
+   * matching name. This is acceptable because all overloads of a method typically share the same
+   * visibility.
+   *
+   * @param className the fully-qualified class name
+   * @param memberName the method, constructor ({@code "<init>"}), or field name
+   * @param category the member category determining whether to search methods, constructors, or
+   *     fields
+   * @return the resolved modifiers, or {@code 0} if the class or member cannot be found
+   */
+  private int resolveModifiersViaReflection(
+      String className, String memberName, MemberCategory category) {
+    ClassLoader cl = appClassLoader;
+    if (cl == null) {
+      cl = Thread.currentThread().getContextClassLoader();
+    }
+    if (cl == null) {
+      cl = RpcPolicyChecker.class.getClassLoader();
+    }
+    try {
+      Class<?> clazz = Class.forName(className, false, cl);
+      switch (category) {
+        case CONSTRUCTOR -> {
+          for (Constructor<?> c : clazz.getDeclaredConstructors()) {
+            return c.getModifiers();
+          }
+        }
+        case METHOD, STATIC_METHOD -> {
+          for (Method m : clazz.getDeclaredMethods()) {
+            if (m.getName().equals(memberName)) {
+              return m.getModifiers();
+            }
+          }
+        }
+        case FIELD_GET, FIELD_SET -> {
+          for (Field f : clazz.getDeclaredFields()) {
+            if (f.getName().equals(memberName)) {
+              return f.getModifiers();
+            }
+          }
+        }
+      }
+    } catch (ClassNotFoundException e) {
+      logger.debug("Cannot resolve modifiers for {}.{}: class not found", className, memberName);
+    }
+    return 0;
   }
 }
