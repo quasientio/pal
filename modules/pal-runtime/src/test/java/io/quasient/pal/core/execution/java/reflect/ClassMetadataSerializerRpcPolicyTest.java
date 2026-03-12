@@ -12,6 +12,7 @@ package io.quasient.pal.core.execution.java.reflect;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -272,5 +274,81 @@ public class ClassMetadataSerializerRpcPolicyTest {
     // Verify it has methods (non-public members are included because policy allows them)
     JsonNode methodsArray = root.get(0).get("methods");
     assertThat("Should have at least one method", methodsArray.size(), greaterThan(0));
+  }
+
+  /**
+   * Verifies that non-public methods are excluded from metadata when the policy restricts
+   * visibility to PUBLIC only.
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ClassMetadataSerializerRpcPolicyTest.shouldExcludeNonPublicMethodsWhenPolicyRestrictsVisibility]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1102")
+  public void shouldExcludeNonPublicMethodsWhenPolicyRestrictsVisibility() {
+    // Given: Policy with ALLOW rule restricted to visibilities = EnumSet.of(PUBLIC), default DENY
+    // And: ClassMetadataSerializer scanning a class with public and non-public methods
+    // When: scannedClasspathToJson() called
+    // Then: JSON output contains only public methods; protected/package-private/private methods
+    //       excluded
+
+    // TODO(#1102): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that non-public constructors are excluded from metadata when the policy restricts
+   * visibility to PUBLIC only.
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ClassMetadataSerializerRpcPolicyTest.shouldExcludeNonPublicConstructorsWhenPolicyRestrictsVisibility]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1102")
+  public void shouldExcludeNonPublicConstructorsWhenPolicyRestrictsVisibility() {
+    // Given: Policy with ALLOW rule restricted to visibilities = EnumSet.of(PUBLIC), default DENY
+    // And: Class with both public and package-private constructors
+    // When: Metadata generated
+    // Then: Only public constructor appears in output
+
+    // TODO(#1102): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that non-public fields are excluded from metadata when the policy restricts visibility
+   * to PUBLIC only.
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ClassMetadataSerializerRpcPolicyTest.shouldExcludeNonPublicFieldsWhenPolicyRestrictsVisibility]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1102")
+  public void shouldExcludeNonPublicFieldsWhenPolicyRestrictsVisibility() {
+    // Given: Policy with ALLOW rule restricted to visibilities = EnumSet.of(PUBLIC), default DENY
+    // And: Class with public and private fields
+    // When: Metadata generated
+    // Then: Only public fields appear in output
+
+    // TODO(#1102): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that all members appear in metadata when the policy has no visibility restriction
+   * (visibilities = null).
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ClassMetadataSerializerRpcPolicyTest.shouldIncludeAllVisibilitiesWhenNoVisibilityRestriction]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1102")
+  public void shouldIncludeAllVisibilitiesWhenNoVisibilityRestriction() {
+    // Given: Policy with ALLOW rule and no visibility restriction (visibilities = null)
+    // When: Metadata generated
+    // Then: All methods/constructors/fields appear regardless of visibility
+
+    // TODO(#1102): Implement test logic
+    fail("Not yet implemented");
   }
 }
