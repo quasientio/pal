@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Doc] Update developer architecture documentation for visibility support: MemberVisibility in core classes, visibilities field semantics, evaluation flow with visibility dimension, deny-nonpublic preset, modifier trust model, test class references
 - [Feature] Extend RpcPolicyRule with visibility filter dimension (visibilities field, matches/matchesForMetadata visibility parameter, getVisibilities accessor)
 - [Doc] Update developer and user documentation for priority-based intercept ordering: document three-factor execution order, recommended priority ranges, AROUND chain layering, and deterministic ordering recommendations
 - [Feature] Add priority-based stable sorting to `InterceptRequests.cloneListWithNewRequest()` for deterministic intercept execution order
