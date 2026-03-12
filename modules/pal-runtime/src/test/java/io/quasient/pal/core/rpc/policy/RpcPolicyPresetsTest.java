@@ -13,11 +13,10 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.transport.MessageChannelType;
 import java.util.List;
-import org.junit.Ignore;
+import java.util.Set;
 import org.junit.Test;
 
 /**
@@ -219,7 +218,10 @@ public class RpcPolicyPresetsTest {
             MemberCategory.METHOD));
   }
 
-  /** Verifies that no preset rules produce false positives on unrelated application classes. */
+  /**
+   * Verifies that no preset rules produce false positives on unrelated public application class
+   * methods.
+   */
   @Test
   public void presetRulesShouldNotBlockUnrelatedClasses() {
     for (String presetName : RpcPolicyPresets.allPresetNames()) {
@@ -230,7 +232,8 @@ public class RpcPolicyPresetsTest {
               rules,
               "com.example.MyApp.doSomething",
               MessageChannelType.ZMQ_SOCKET_RPC,
-              MemberCategory.METHOD));
+              MemberCategory.METHOD,
+              MemberVisibility.PUBLIC));
     }
   }
 
@@ -252,94 +255,89 @@ public class RpcPolicyPresetsTest {
     RpcPolicyPresets.resolvePreset("nonexistent-preset");
   }
 
-  /** Verifies that {@code allPresetNames} returns all 7 preset categories. */
-  @Test
-  public void allPresetNamesShouldReturnSevenPresets() {
-    assertThat(RpcPolicyPresets.allPresetNames().size(), is(7));
-  }
-
   /** Verifies that the deny-nonpublic preset blocks protected members. */
   @Test
-  @Ignore("Awaiting implementation in #1098")
   public void denyNonpublicShouldBlockProtectedMembers() {
-    // Given: Rules from getDenyNonpublicRules()
-    // When: Checked against MemberVisibility.PROTECTED
-    // Then: At least one rule matches (blocking the protected member)
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyNonpublicRules();
 
-    // TODO(#1098): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "com.example.MyApp.doSomething",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PROTECTED));
   }
 
   /** Verifies that the deny-nonpublic preset blocks package-private members. */
   @Test
-  @Ignore("Awaiting implementation in #1098")
   public void denyNonpublicShouldBlockPackagePrivateMembers() {
-    // Given: Rules from getDenyNonpublicRules()
-    // When: Checked against MemberVisibility.PACKAGE_PRIVATE
-    // Then: At least one rule matches (blocking the package-private member)
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyNonpublicRules();
 
-    // TODO(#1098): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "com.example.MyApp.doSomething",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PACKAGE_PRIVATE));
   }
 
   /** Verifies that the deny-nonpublic preset blocks private members. */
   @Test
-  @Ignore("Awaiting implementation in #1098")
   public void denyNonpublicShouldBlockPrivateMembers() {
-    // Given: Rules from getDenyNonpublicRules()
-    // When: Checked against MemberVisibility.PRIVATE
-    // Then: At least one rule matches (blocking the private member)
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyNonpublicRules();
 
-    // TODO(#1098): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(
+        anyRuleMatches(
+            rules,
+            "com.example.MyApp.doSomething",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PRIVATE));
   }
 
   /** Verifies that the deny-nonpublic preset does not block public members. */
   @Test
-  @Ignore("Awaiting implementation in #1098")
   public void denyNonpublicShouldNotBlockPublicMembers() {
-    // Given: Rules from getDenyNonpublicRules()
-    // When: Checked against MemberVisibility.PUBLIC
-    // Then: No rule matches (public members are not blocked)
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyNonpublicRules();
 
-    // TODO(#1098): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(
+        anyRuleMatches(
+            rules,
+            "com.example.MyApp.doSomething",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PUBLIC));
   }
 
   /** Verifies that all rules in the deny-nonpublic preset have DENY action. */
   @Test
-  @Ignore("Awaiting implementation in #1098")
   public void denyNonpublicRulesShouldHaveDenyAction() {
-    // Given: Rules from getDenyNonpublicRules()
-    // Then: Every rule has RpcPolicyAction.DENY
+    List<RpcPolicyRule> rules = RpcPolicyPresets.getDenyNonpublicRules();
 
-    // TODO(#1098): Implement test logic
-    fail("Not yet implemented");
+    for (RpcPolicyRule rule : rules) {
+      assertThat(rule.getAction(), is(RpcPolicyAction.DENY));
+    }
   }
 
   /** Verifies that {@code resolvePreset("deny-nonpublic")} returns a non-empty rule list. */
   @Test
-  @Ignore("Awaiting implementation in #1098")
   public void shouldResolveDenyNonpublicPreset() {
-    // When: RpcPolicyPresets.resolvePreset("deny-nonpublic") is called
-    // Then: Returns a non-null, non-empty list of rules
+    List<RpcPolicyRule> rules = RpcPolicyPresets.resolvePreset("deny-nonpublic");
 
-    // TODO(#1098): Implement test logic
-    fail("Not yet implemented");
+    assertFalse("deny-nonpublic preset should have rules", rules.isEmpty());
   }
 
   /**
    * Verifies that {@code allPresetNames} returns 8 preset categories after adding deny-nonpublic.
    */
   @Test
-  @Ignore("Awaiting implementation in #1098")
   public void allPresetNamesShouldReturnEightPresets() {
-    // When: RpcPolicyPresets.allPresetNames() is called
-    // Then: Returns 8 preset names (was 7, now includes deny-nonpublic)
-    // And: The set contains "deny-nonpublic"
+    Set<String> names = RpcPolicyPresets.allPresetNames();
 
-    // TODO(#1098): Implement test logic
-    fail("Not yet implemented");
+    assertThat(names.size(), is(8));
+    assertTrue("Should contain deny-nonpublic", names.contains("deny-nonpublic"));
   }
 
   /**
@@ -356,6 +354,27 @@ public class RpcPolicyPresetsTest {
       String classMethodPath,
       MessageChannelType channel,
       MemberCategory category) {
-    return rules.stream().anyMatch(rule -> rule.matches(classMethodPath, channel, category, null));
+    return anyRuleMatches(rules, classMethodPath, channel, category, null);
+  }
+
+  /**
+   * Checks whether any rule in the list matches the given path, channel, member category, and
+   * visibility.
+   *
+   * @param rules the rules to test
+   * @param classMethodPath the fully-qualified class.method path
+   * @param channel the message channel
+   * @param category the member category
+   * @param visibility the member visibility, or {@code null} to skip visibility check
+   * @return {@code true} if any rule matches
+   */
+  private static boolean anyRuleMatches(
+      List<RpcPolicyRule> rules,
+      String classMethodPath,
+      MessageChannelType channel,
+      MemberCategory category,
+      MemberVisibility visibility) {
+    return rules.stream()
+        .anyMatch(rule -> rule.matches(classMethodPath, channel, category, visibility));
   }
 }

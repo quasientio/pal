@@ -10,6 +10,7 @@
 package io.quasient.pal.core.rpc.policy;
 
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ import java.util.Set;
  *   <li><b>deny-serialization:</b> java.io.ObjectInputStream.**
  *   <li><b>deny-scripting:</b> javax.script.**
  *   <li><b>deny-pal-internals:</b> io.quasient.pal.**
+ *   <li><b>deny-nonpublic:</b> all non-public members (protected, package-private, private)
  * </ul>
  *
  * <p><b>Field access bypass prevention:</b> ProcessBuilder and Process use {@code **} for the
@@ -53,6 +55,7 @@ public final class RpcPolicyPresets {
     map.put("deny-serialization", getDenySerializationRules());
     map.put("deny-scripting", getDenyScriptingRules());
     map.put("deny-pal-internals", getDenyPalInternalRules());
+    map.put("deny-nonpublic", getDenyNonpublicRules());
     PRESET_MAP = Collections.unmodifiableMap(map);
   }
 
@@ -165,6 +168,29 @@ public final class RpcPolicyPresets {
    */
   public static List<RpcPolicyRule> getDenyPalInternalRules() {
     return List.of(deny("io.quasient.pal.**", "**"));
+  }
+
+  /**
+   * Returns a deny rule for all non-public member visibilities.
+   *
+   * <p>Blocks any RPC call targeting a protected, package-private, or private member, regardless of
+   * class pattern, channel, or member category. Since presets are evaluated after user rules,
+   * explicit ALLOW rules for specific non-public members take precedence.
+   *
+   * @return an unmodifiable list containing a single deny rule for non-public visibilities
+   */
+  public static List<RpcPolicyRule> getDenyNonpublicRules() {
+    return List.of(
+        new RpcPolicyRule(
+            "**",
+            "**",
+            RpcPolicyAction.DENY,
+            null,
+            null,
+            EnumSet.of(
+                MemberVisibility.PROTECTED,
+                MemberVisibility.PACKAGE_PRIVATE,
+                MemberVisibility.PRIVATE)));
   }
 
   /**
