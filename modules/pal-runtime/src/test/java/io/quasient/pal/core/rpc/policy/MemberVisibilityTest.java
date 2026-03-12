@@ -9,9 +9,11 @@
  */
 package io.quasient.pal.core.rpc.policy;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import java.lang.reflect.Modifier;
 import org.junit.Test;
 
 /**
@@ -24,144 +26,143 @@ import org.junit.Test;
 public class MemberVisibilityTest {
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldReturnPublicForPublicModifier() {
     // Given: java.lang.reflect.Modifier.PUBLIC bitmask
-    // When: MemberVisibility.fromModifiers(modifiers) is called
-    // Then: Returns MemberVisibility.PUBLIC
+    int modifiers = Modifier.PUBLIC;
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // When: MemberVisibility.fromModifiers(modifiers) is called
+    MemberVisibility result = MemberVisibility.fromModifiers(modifiers);
+
+    // Then: Returns MemberVisibility.PUBLIC
+    assertThat(result, is(MemberVisibility.PUBLIC));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldReturnProtectedForProtectedModifier() {
     // Given: java.lang.reflect.Modifier.PROTECTED bitmask
-    // When: MemberVisibility.fromModifiers(modifiers) is called
-    // Then: Returns MemberVisibility.PROTECTED
+    int modifiers = Modifier.PROTECTED;
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // When: MemberVisibility.fromModifiers(modifiers) is called
+    MemberVisibility result = MemberVisibility.fromModifiers(modifiers);
+
+    // Then: Returns MemberVisibility.PROTECTED
+    assertThat(result, is(MemberVisibility.PROTECTED));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldReturnPrivateForPrivateModifier() {
     // Given: java.lang.reflect.Modifier.PRIVATE bitmask
-    // When: MemberVisibility.fromModifiers(modifiers) is called
-    // Then: Returns MemberVisibility.PRIVATE
+    int modifiers = Modifier.PRIVATE;
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // When: MemberVisibility.fromModifiers(modifiers) is called
+    MemberVisibility result = MemberVisibility.fromModifiers(modifiers);
+
+    // Then: Returns MemberVisibility.PRIVATE
+    assertThat(result, is(MemberVisibility.PRIVATE));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldReturnPackagePrivateForNoAccessModifier() {
     // Given: Modifiers with no access modifier bits set (e.g., Modifier.STATIC)
-    // When: MemberVisibility.fromModifiers(modifiers) is called
-    // Then: Returns MemberVisibility.PACKAGE_PRIVATE
+    int modifiers = Modifier.STATIC;
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // When: MemberVisibility.fromModifiers(modifiers) is called
+    MemberVisibility result = MemberVisibility.fromModifiers(modifiers);
+
+    // Then: Returns MemberVisibility.PACKAGE_PRIVATE
+    assertThat(result, is(MemberVisibility.PACKAGE_PRIVATE));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldReturnPackagePrivateForZeroModifiers() {
     // Given: Modifiers value of 0
     // When: MemberVisibility.fromModifiers(0) is called
-    // Then: Returns MemberVisibility.PACKAGE_PRIVATE
+    MemberVisibility result = MemberVisibility.fromModifiers(0);
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns MemberVisibility.PACKAGE_PRIVATE
+    assertThat(result, is(MemberVisibility.PACKAGE_PRIVATE));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldHandleCombinedModifiers() {
     // Given: Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL
-    // When: MemberVisibility.fromModifiers(modifiers) is called
-    // Then: Returns MemberVisibility.PUBLIC
+    int modifiers = Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL;
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // When: MemberVisibility.fromModifiers(modifiers) is called
+    MemberVisibility result = MemberVisibility.fromModifiers(modifiers);
+
+    // Then: Returns MemberVisibility.PUBLIC
+    assertThat(result, is(MemberVisibility.PUBLIC));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldParsePublicFromString() {
     // Given: String "PUBLIC"
     // When: MemberVisibility.fromString("PUBLIC") is called
-    // Then: Returns MemberVisibility.PUBLIC
+    MemberVisibility result = MemberVisibility.fromString("PUBLIC");
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns MemberVisibility.PUBLIC
+    assertThat(result, is(MemberVisibility.PUBLIC));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldParseCaseInsensitiveFromString() {
     // Given: String "public" (lowercase)
     // When: MemberVisibility.fromString("public") is called
-    // Then: Returns MemberVisibility.PUBLIC
+    MemberVisibility result = MemberVisibility.fromString("public");
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns MemberVisibility.PUBLIC
+    assertThat(result, is(MemberVisibility.PUBLIC));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldParseDefaultAsPackagePrivate() {
     // Given: String "DEFAULT"
     // When: MemberVisibility.fromString("DEFAULT") is called
-    // Then: Returns MemberVisibility.PACKAGE_PRIVATE
+    MemberVisibility result = MemberVisibility.fromString("DEFAULT");
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns MemberVisibility.PACKAGE_PRIVATE
+    assertThat(result, is(MemberVisibility.PACKAGE_PRIVATE));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldParseLowercaseDefaultAsPackagePrivate() {
     // Given: String "default"
     // When: MemberVisibility.fromString("default") is called
-    // Then: Returns MemberVisibility.PACKAGE_PRIVATE
+    MemberVisibility result = MemberVisibility.fromString("default");
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns MemberVisibility.PACKAGE_PRIVATE
+    assertThat(result, is(MemberVisibility.PACKAGE_PRIVATE));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldReturnNullForAllString() {
     // Given: String "ALL"
     // When: MemberVisibility.fromString("ALL") is called
-    // Then: Returns null (sentinel for match-all)
+    MemberVisibility result = MemberVisibility.fromString("ALL");
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns null (sentinel for match-all)
+    assertThat(result, is(nullValue()));
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1088")
+  @Test(expected = IllegalArgumentException.class)
   public void shouldThrowForInvalidString() {
     // Given: String "INVALID"
     // When: MemberVisibility.fromString("INVALID") is called
     // Then: Throws IllegalArgumentException
-
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    MemberVisibility.fromString("INVALID");
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1088")
   public void shouldHaveFourValues() {
     // When: MemberVisibility.values() is called
-    // Then: Returns exactly 4 values: PUBLIC, PROTECTED, PACKAGE_PRIVATE, PRIVATE
+    MemberVisibility[] values = MemberVisibility.values();
 
-    // TODO(#1088): Implement test logic
-    fail("Not yet implemented");
+    // Then: Returns exactly 4 values: PUBLIC, PROTECTED, PACKAGE_PRIVATE, PRIVATE
+    assertThat(values.length, is(4));
+    assertThat(values[0], is(MemberVisibility.PUBLIC));
+    assertThat(values[1], is(MemberVisibility.PROTECTED));
+    assertThat(values[2], is(MemberVisibility.PACKAGE_PRIVATE));
+    assertThat(values[3], is(MemberVisibility.PRIVATE));
   }
 }
