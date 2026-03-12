@@ -19,6 +19,7 @@ import io.quasient.pal.messages.colfer.InterceptableMethod;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -146,6 +147,9 @@ public class InterceptRequests {
           format("InterceptMessage is already registered: %s", newRequest.getInterceptMessage()));
     } else {
       newRequestList.add(newRequest);
+      // Stable sort by ascending priority: lower values execute first.
+      // Same-priority entries retain registration (insertion) order.
+      newRequestList.sort(Comparator.comparingInt(InterceptRequestEntry::getPriority));
     }
 
     return newRequestList;

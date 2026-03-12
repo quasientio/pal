@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Feature] Add priority-based stable sorting to `InterceptRequests.cloneListWithNewRequest()` for deterministic intercept execution order
 - [Feature] Map `priority` field in `MessageBuilder.buildInterceptMessage()` and add `InterceptRequestEntry.getPriority()` convenience getter
 - [Feature] Add `priority` field to `InterceptRequest` data model with full constructor support, serialization, and property access
 - [Feature] Add `priority int32` field to `InterceptMessage` Colfer schema and regenerate Java class

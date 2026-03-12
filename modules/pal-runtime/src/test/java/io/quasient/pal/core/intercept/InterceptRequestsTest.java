@@ -23,7 +23,6 @@ import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class InterceptRequestsTest {
@@ -142,92 +141,147 @@ public class InterceptRequestsTest {
   // ===== Tests for priority-based ordering in cloneListWithNewRequest() =====
 
   /**
-   * [TEST:InterceptRequestsTest.testDefaultPriorityPreservesRegistrationOrder] All-default-priority
-   * preserves insertion order.
+   * Builds a method intercept message targeting "com.example.Foo.bar()" with the given priority.
    */
-  @Test
-  @Ignore("Awaiting implementation in #1069")
-  public void testDefaultPriorityPreservesRegistrationOrder() {
-    // Given: Three InterceptMessages A, B, C all with priority=0 (default)
-    // When: Registered in order A, B, C; then match
-    // Then: Matches returned in order A, B, C (stable sort preserves insertion order)
-
-    // TODO(#1069): Implement test logic
-    fail("Not yet implemented");
+  private InterceptMessage buildMethodInterceptWithPriority(
+      MessageBuilder msgBuilder, int priority) {
+    InterceptMessage msg =
+        msgBuilder.buildInterceptMessage(
+            UUID.randomUUID(),
+            InterceptType.BEFORE,
+            "com.example.Foo",
+            "bar",
+            Collections.emptyList(),
+            this.getClass().getName(),
+            "someCallbackMethod");
+    msg.setPriority(priority);
+    return msg;
   }
 
-  /**
-   * [TEST:InterceptRequestsTest.testExplicitPrioritySortsCorrectly] Explicit priorities sort
-   * ascending.
-   */
-  @Test
-  @Ignore("Awaiting implementation in #1069")
-  public void testExplicitPrioritySortsCorrectly() {
-    // Given: Three InterceptMessages A(p=10), B(p=1), C(p=5)
-    // When: Registered in order A, B, C; then match
-    // Then: Matches returned in order B, C, A (ascending priority)
-
-    // TODO(#1069): Implement test logic
-    fail("Not yet implemented");
+  /** Matches all method intercepts for "com.example.Foo.bar()" and returns the result list. */
+  private List<InterceptMessage> matchFooBar(InterceptRequests interceptRequests) {
+    return interceptRequests.getMatchingIntercepts(
+        "com.example.Foo", "bar", new String[0], MessageType.EXEC_INSTANCE_METHOD);
   }
 
-  /**
-   * [TEST:InterceptRequestsTest.testSamePriorityPreservesRegistrationOrder] Same priority preserves
-   * insertion order (stable sort).
-   */
+  /** All-default-priority preserves insertion order. */
   @Test
-  @Ignore("Awaiting implementation in #1069")
-  public void testSamePriorityPreservesRegistrationOrder() {
-    // Given: Three InterceptMessages A(p=1), B(p=1), C(p=1)
-    // When: Registered in order A, B, C; then match
-    // Then: Matches returned in order A, B, C (stable sort, same priority = insertion order)
+  public void testDefaultPriorityPreservesRegistrationOrder() throws Exception {
+    MessageBuilder msgBuilder = new MessageBuilder();
+    InterceptMessage a = buildMethodInterceptWithPriority(msgBuilder, 0);
+    InterceptMessage b = buildMethodInterceptWithPriority(msgBuilder, 0);
+    InterceptMessage c = buildMethodInterceptWithPriority(msgBuilder, 0);
 
-    // TODO(#1069): Implement test logic
-    fail("Not yet implemented");
+    InterceptRequests interceptRequests = new InterceptRequests();
+    interceptRequests.registerInterceptRequest(a);
+    interceptRequests.registerInterceptRequest(b);
+    interceptRequests.registerInterceptRequest(c);
+
+    List<InterceptMessage> matches = matchFooBar(interceptRequests);
+    assertThat(matches.size(), is(3));
+    assertThat(matches.get(0).getMessageId(), is(a.getMessageId()));
+    assertThat(matches.get(1).getMessageId(), is(b.getMessageId()));
+    assertThat(matches.get(2).getMessageId(), is(c.getMessageId()));
   }
 
-  /**
-   * [TEST:InterceptRequestsTest.testNegativePriorityExecutesFirst] Negative priority sorts before
-   * zero.
-   */
+  /** Explicit priorities sort ascending. */
   @Test
-  @Ignore("Awaiting implementation in #1069")
-  public void testNegativePriorityExecutesFirst() {
-    // Given: Two InterceptMessages A(p=0), B(p=-1)
-    // When: Registered in order A, B; then match
-    // Then: Matches returned in order B, A (lower priority first)
+  public void testExplicitPrioritySortsCorrectly() throws Exception {
+    MessageBuilder msgBuilder = new MessageBuilder();
+    InterceptMessage a = buildMethodInterceptWithPriority(msgBuilder, 10);
+    InterceptMessage b = buildMethodInterceptWithPriority(msgBuilder, 1);
+    InterceptMessage c = buildMethodInterceptWithPriority(msgBuilder, 5);
 
-    // TODO(#1069): Implement test logic
-    fail("Not yet implemented");
+    InterceptRequests interceptRequests = new InterceptRequests();
+    interceptRequests.registerInterceptRequest(a);
+    interceptRequests.registerInterceptRequest(b);
+    interceptRequests.registerInterceptRequest(c);
+
+    List<InterceptMessage> matches = matchFooBar(interceptRequests);
+    assertThat(matches.size(), is(3));
+    assertThat(matches.get(0).getMessageId(), is(b.getMessageId()));
+    assertThat(matches.get(1).getMessageId(), is(c.getMessageId()));
+    assertThat(matches.get(2).getMessageId(), is(a.getMessageId()));
   }
 
-  /**
-   * [TEST:InterceptRequestsTest.testMixedPriorityAndDefault] Mixed priorities sort correctly with
-   * stable tie-breaking.
-   */
+  /** Same priority preserves insertion order (stable sort). */
   @Test
-  @Ignore("Awaiting implementation in #1069")
-  public void testMixedPriorityAndDefault() {
-    // Given: Four InterceptMessages A(p=0), B(p=-5), C(p=3), D(p=0)
-    // When: Registered in order A, B, C, D; then match
-    // Then: Matches returned in order B, A, D, C
+  public void testSamePriorityPreservesRegistrationOrder() throws Exception {
+    MessageBuilder msgBuilder = new MessageBuilder();
+    InterceptMessage a = buildMethodInterceptWithPriority(msgBuilder, 1);
+    InterceptMessage b = buildMethodInterceptWithPriority(msgBuilder, 1);
+    InterceptMessage c = buildMethodInterceptWithPriority(msgBuilder, 1);
 
-    // TODO(#1069): Implement test logic
-    fail("Not yet implemented");
+    InterceptRequests interceptRequests = new InterceptRequests();
+    interceptRequests.registerInterceptRequest(a);
+    interceptRequests.registerInterceptRequest(b);
+    interceptRequests.registerInterceptRequest(c);
+
+    List<InterceptMessage> matches = matchFooBar(interceptRequests);
+    assertThat(matches.size(), is(3));
+    assertThat(matches.get(0).getMessageId(), is(a.getMessageId()));
+    assertThat(matches.get(1).getMessageId(), is(b.getMessageId()));
+    assertThat(matches.get(2).getMessageId(), is(c.getMessageId()));
   }
 
-  /**
-   * [TEST:InterceptRequestsTest.testUnregisterPreservesPriorityOrder] Unregister preserves sorted
-   * order of remaining entries.
-   */
+  /** Negative priority sorts before zero. */
   @Test
-  @Ignore("Awaiting implementation in #1069")
-  public void testUnregisterPreservesPriorityOrder() {
-    // Given: Three InterceptMessages A(p=2), B(p=1), C(p=3) registered (sorted to B, A, C)
-    // When: Unregister B; then match
-    // Then: Matches returned in order A, C (priority order preserved)
+  public void testNegativePriorityExecutesFirst() throws Exception {
+    MessageBuilder msgBuilder = new MessageBuilder();
+    InterceptMessage a = buildMethodInterceptWithPriority(msgBuilder, 0);
+    InterceptMessage b = buildMethodInterceptWithPriority(msgBuilder, -1);
 
-    // TODO(#1069): Implement test logic
-    fail("Not yet implemented");
+    InterceptRequests interceptRequests = new InterceptRequests();
+    interceptRequests.registerInterceptRequest(a);
+    interceptRequests.registerInterceptRequest(b);
+
+    List<InterceptMessage> matches = matchFooBar(interceptRequests);
+    assertThat(matches.size(), is(2));
+    assertThat(matches.get(0).getMessageId(), is(b.getMessageId()));
+    assertThat(matches.get(1).getMessageId(), is(a.getMessageId()));
+  }
+
+  /** Mixed priorities sort correctly with stable tie-breaking. */
+  @Test
+  public void testMixedPriorityAndDefault() throws Exception {
+    MessageBuilder msgBuilder = new MessageBuilder();
+    InterceptMessage a = buildMethodInterceptWithPriority(msgBuilder, 0);
+    InterceptMessage b = buildMethodInterceptWithPriority(msgBuilder, -5);
+    InterceptMessage c = buildMethodInterceptWithPriority(msgBuilder, 3);
+    InterceptMessage d = buildMethodInterceptWithPriority(msgBuilder, 0);
+
+    InterceptRequests interceptRequests = new InterceptRequests();
+    interceptRequests.registerInterceptRequest(a);
+    interceptRequests.registerInterceptRequest(b);
+    interceptRequests.registerInterceptRequest(c);
+    interceptRequests.registerInterceptRequest(d);
+
+    List<InterceptMessage> matches = matchFooBar(interceptRequests);
+    assertThat(matches.size(), is(4));
+    assertThat(matches.get(0).getMessageId(), is(b.getMessageId()));
+    assertThat(matches.get(1).getMessageId(), is(a.getMessageId()));
+    assertThat(matches.get(2).getMessageId(), is(d.getMessageId()));
+    assertThat(matches.get(3).getMessageId(), is(c.getMessageId()));
+  }
+
+  /** Unregister preserves sorted order of remaining entries. */
+  @Test
+  public void testUnregisterPreservesPriorityOrder() throws Exception {
+    MessageBuilder msgBuilder = new MessageBuilder();
+    InterceptMessage a = buildMethodInterceptWithPriority(msgBuilder, 2);
+    InterceptMessage b = buildMethodInterceptWithPriority(msgBuilder, 1);
+    InterceptMessage c = buildMethodInterceptWithPriority(msgBuilder, 3);
+
+    InterceptRequests interceptRequests = new InterceptRequests();
+    interceptRequests.registerInterceptRequest(a);
+    interceptRequests.registerInterceptRequest(b);
+    interceptRequests.registerInterceptRequest(c);
+
+    interceptRequests.unregisterInterceptRequest(b.getMessageId());
+
+    List<InterceptMessage> matches = matchFooBar(interceptRequests);
+    assertThat(matches.size(), is(2));
+    assertThat(matches.get(0).getMessageId(), is(a.getMessageId()));
+    assertThat(matches.get(1).getMessageId(), is(c.getMessageId()));
   }
 }
