@@ -24,6 +24,7 @@ import io.github.classgraph.MethodParameterInfo;
 import io.github.classgraph.ScanResult;
 import io.quasient.pal.core.execution.java.CustomClassloader;
 import io.quasient.pal.core.rpc.policy.MemberCategory;
+import io.quasient.pal.core.rpc.policy.MemberVisibility;
 import io.quasient.pal.core.rpc.policy.RpcPolicy;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -277,8 +278,9 @@ public class ClassMetadataSerializer {
       if (isAspectWeaverMethod(constructorInfo)) {
         continue;
       }
+      MemberVisibility vis = MemberVisibility.fromModifiers(constructorInfo.getModifiers());
       if (!rpcPolicy.isAccessibleForMetadata(
-          className, "<init>", MemberCategory.CONSTRUCTOR, null)) {
+          className, "<init>", MemberCategory.CONSTRUCTOR, vis)) {
         continue;
       }
       ObjectNode constructorObject = createConstructorJson(mapper, constructorInfo);
@@ -306,7 +308,8 @@ public class ClassMetadataSerializer {
       }
       MemberCategory category =
           methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
-      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category, null)) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(methodInfo.getModifiers());
+      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category, vis)) {
         continue;
       }
       String sig = methodSignature(methodInfo);
@@ -339,7 +342,8 @@ public class ClassMetadataSerializer {
       if (isAspectWeaverField(fieldInfo)) {
         continue;
       }
-      if (!isFieldAccessibleForMetadata(className, fieldInfo.getName())) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(fieldInfo.getModifiers());
+      if (!isFieldAccessibleForMetadata(className, fieldInfo.getName(), vis)) {
         continue;
       }
       ObjectNode fieldObject = createFieldJson(mapper, fieldInfo, null, false);
@@ -371,7 +375,8 @@ public class ClassMetadataSerializer {
         }
         MemberCategory category =
             methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
-        if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category, null)) {
+        MemberVisibility vis = MemberVisibility.fromModifiers(methodInfo.getModifiers());
+        if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category, vis)) {
           continue;
         }
         String sig = methodSignature(methodInfo);
@@ -392,7 +397,8 @@ public class ClassMetadataSerializer {
       }
       MemberCategory category =
           methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
-      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category, null)) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(methodInfo.getModifiers());
+      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category, vis)) {
         continue;
       }
       String sig = methodSignature(methodInfo);
@@ -436,7 +442,8 @@ public class ClassMetadataSerializer {
         if (isAspectWeaverField(fieldInfo)) {
           continue;
         }
-        if (!isFieldAccessibleForMetadata(className, fieldInfo.getName())) {
+        MemberVisibility vis = MemberVisibility.fromModifiers(fieldInfo.getModifiers());
+        if (!isFieldAccessibleForMetadata(className, fieldInfo.getName(), vis)) {
           continue;
         }
         String fieldName = fieldInfo.getName();
@@ -452,7 +459,8 @@ public class ClassMetadataSerializer {
       if (isAspectWeaverField(fieldInfo)) {
         continue;
       }
-      if (!isFieldAccessibleForMetadata(className, fieldInfo.getName())) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(fieldInfo.getModifiers());
+      if (!isFieldAccessibleForMetadata(className, fieldInfo.getName(), vis)) {
         continue;
       }
       String fieldName = fieldInfo.getName();
@@ -479,11 +487,15 @@ public class ClassMetadataSerializer {
    *
    * @param className the fully-qualified class name
    * @param fieldName the field name
+   * @param visibility the visibility of the field
    * @return {@code true} if the field is accessible for either get or set
    */
-  private boolean isFieldAccessibleForMetadata(String className, String fieldName) {
-    return rpcPolicy.isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_GET, null)
-        || rpcPolicy.isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_SET, null);
+  private boolean isFieldAccessibleForMetadata(
+      String className, String fieldName, MemberVisibility visibility) {
+    return rpcPolicy.isAccessibleForMetadata(
+            className, fieldName, MemberCategory.FIELD_GET, visibility)
+        || rpcPolicy.isAccessibleForMetadata(
+            className, fieldName, MemberCategory.FIELD_SET, visibility);
   }
 
   /**
@@ -560,7 +572,8 @@ public class ClassMetadataSerializer {
           Modifier.isStatic(m.getModifiers())
               ? MemberCategory.STATIC_METHOD
               : MemberCategory.METHOD;
-      if (!rpcPolicy.isAccessibleForMetadata(className, m.getName(), category, null)) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(m.getModifiers());
+      if (!rpcPolicy.isAccessibleForMetadata(className, m.getName(), category, vis)) {
         continue;
       }
       String sig = reflectionMethodSignature(m);

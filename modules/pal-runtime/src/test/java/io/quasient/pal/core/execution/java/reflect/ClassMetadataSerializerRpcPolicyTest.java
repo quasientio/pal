@@ -12,10 +12,10 @@ package io.quasient.pal.core.execution.java.reflect;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quasient.pal.core.rpc.policy.MemberVisibility;
 import io.quasient.pal.core.rpc.policy.RpcPolicy;
 import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
 import io.quasient.pal.core.rpc.policy.RpcPolicyPresets;
@@ -23,10 +23,10 @@ import io.quasient.pal.core.rpc.policy.RpcPolicyRule;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -284,16 +284,44 @@ public class ClassMetadataSerializerRpcPolicyTest {
    * [TEST:ClassMetadataSerializerRpcPolicyTest.shouldExcludeNonPublicMethodsWhenPolicyRestrictsVisibility]
    */
   @Test
-  @Ignore("Awaiting implementation in #1102")
-  public void shouldExcludeNonPublicMethodsWhenPolicyRestrictsVisibility() {
+  public void shouldExcludeNonPublicMethodsWhenPolicyRestrictsVisibility() throws Exception {
     // Given: Policy with ALLOW rule restricted to visibilities = EnumSet.of(PUBLIC), default DENY
-    // And: ClassMetadataSerializer scanning a class with public and non-public methods
-    // When: scannedClasspathToJson() called
-    // Then: JSON output contains only public methods; protected/package-private/private methods
-    //       excluded
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule(
+                "org.example.paltest.**",
+                null,
+                RpcPolicyAction.ALLOW,
+                null,
+                null,
+                EnumSet.of(MemberVisibility.PUBLIC)));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
+    ClassMetadataSerializer serializer = new ClassMetadataSerializer(policy);
 
-    // TODO(#1102): Implement test logic
-    fail("Not yet implemented");
+    // When: scan MixedVisibilityClass
+    Path outFile =
+        serializer.scannedClasspathToJson(
+            false, Set.of("org.example.paltest.MixedVisibilityClass"), null, false);
+    String json = Files.readString(outFile);
+    Files.delete(outFile);
+
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode root = mapper.readTree(json);
+    assertThat(root.size(), is(1));
+    JsonNode methodsArray = root.get(0).get("methods");
+
+    // Then: only public methods appear
+    Set<String> methodNames = new HashSet<>();
+    for (JsonNode methodNode : methodsArray) {
+      methodNames.add(methodNode.get("name").asText());
+    }
+    assertThat("publicMethod should be included", methodNames.contains("publicMethod"), is(true));
+    assertThat(
+        "protectedMethod should be excluded", methodNames.contains("protectedMethod"), is(false));
+    assertThat(
+        "packageMethod should be excluded", methodNames.contains("packageMethod"), is(false));
+    assertThat(
+        "privateMethod should be excluded", methodNames.contains("privateMethod"), is(false));
   }
 
   /**
@@ -304,15 +332,37 @@ public class ClassMetadataSerializerRpcPolicyTest {
    * [TEST:ClassMetadataSerializerRpcPolicyTest.shouldExcludeNonPublicConstructorsWhenPolicyRestrictsVisibility]
    */
   @Test
-  @Ignore("Awaiting implementation in #1102")
-  public void shouldExcludeNonPublicConstructorsWhenPolicyRestrictsVisibility() {
+  public void shouldExcludeNonPublicConstructorsWhenPolicyRestrictsVisibility() throws Exception {
     // Given: Policy with ALLOW rule restricted to visibilities = EnumSet.of(PUBLIC), default DENY
-    // And: Class with both public and package-private constructors
-    // When: Metadata generated
-    // Then: Only public constructor appears in output
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule(
+                "org.example.paltest.**",
+                null,
+                RpcPolicyAction.ALLOW,
+                null,
+                null,
+                EnumSet.of(MemberVisibility.PUBLIC)));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
+    ClassMetadataSerializer serializer = new ClassMetadataSerializer(policy);
 
-    // TODO(#1102): Implement test logic
-    fail("Not yet implemented");
+    // When: scan MixedVisibilityClass (has public no-arg and package-private int constructors)
+    Path outFile =
+        serializer.scannedClasspathToJson(
+            false, Set.of("org.example.paltest.MixedVisibilityClass"), null, false);
+    String json = Files.readString(outFile);
+    Files.delete(outFile);
+
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode root = mapper.readTree(json);
+    assertThat(root.size(), is(1));
+    JsonNode constructorsArray = root.get(0).get("constructors");
+
+    // Then: only the public no-arg constructor appears (1 constructor, not 2)
+    assertThat("Should have exactly 1 public constructor", constructorsArray.size(), is(1));
+    JsonNode ctor = constructorsArray.get(0);
+    assertThat(
+        "Public constructor should have no parameters", ctor.get("parameters").size(), is(0));
   }
 
   /**
@@ -323,15 +373,42 @@ public class ClassMetadataSerializerRpcPolicyTest {
    * [TEST:ClassMetadataSerializerRpcPolicyTest.shouldExcludeNonPublicFieldsWhenPolicyRestrictsVisibility]
    */
   @Test
-  @Ignore("Awaiting implementation in #1102")
-  public void shouldExcludeNonPublicFieldsWhenPolicyRestrictsVisibility() {
+  public void shouldExcludeNonPublicFieldsWhenPolicyRestrictsVisibility() throws Exception {
     // Given: Policy with ALLOW rule restricted to visibilities = EnumSet.of(PUBLIC), default DENY
-    // And: Class with public and private fields
-    // When: Metadata generated
-    // Then: Only public fields appear in output
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule(
+                "org.example.paltest.**",
+                null,
+                RpcPolicyAction.ALLOW,
+                null,
+                null,
+                EnumSet.of(MemberVisibility.PUBLIC)));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
+    ClassMetadataSerializer serializer = new ClassMetadataSerializer(policy);
 
-    // TODO(#1102): Implement test logic
-    fail("Not yet implemented");
+    // When: scan MixedVisibilityClass
+    Path outFile =
+        serializer.scannedClasspathToJson(
+            false, Set.of("org.example.paltest.MixedVisibilityClass"), null, false);
+    String json = Files.readString(outFile);
+    Files.delete(outFile);
+
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode root = mapper.readTree(json);
+    assertThat(root.size(), is(1));
+    JsonNode fieldsArray = root.get(0).get("fields");
+
+    // Then: only public field appears
+    Set<String> fieldNames = new HashSet<>();
+    for (JsonNode fieldNode : fieldsArray) {
+      fieldNames.add(fieldNode.get("name").asText());
+    }
+    assertThat("publicField should be included", fieldNames.contains("publicField"), is(true));
+    assertThat(
+        "protectedField should be excluded", fieldNames.contains("protectedField"), is(false));
+    assertThat("packageField should be excluded", fieldNames.contains("packageField"), is(false));
+    assertThat("privateField should be excluded", fieldNames.contains("privateField"), is(false));
   }
 
   /**
@@ -342,13 +419,48 @@ public class ClassMetadataSerializerRpcPolicyTest {
    * [TEST:ClassMetadataSerializerRpcPolicyTest.shouldIncludeAllVisibilitiesWhenNoVisibilityRestriction]
    */
   @Test
-  @Ignore("Awaiting implementation in #1102")
-  public void shouldIncludeAllVisibilitiesWhenNoVisibilityRestriction() {
+  public void shouldIncludeAllVisibilitiesWhenNoVisibilityRestriction() throws Exception {
     // Given: Policy with ALLOW rule and no visibility restriction (visibilities = null)
-    // When: Metadata generated
-    // Then: All methods/constructors/fields appear regardless of visibility
+    List<RpcPolicyRule> rules =
+        List.of(
+            new RpcPolicyRule(
+                "org.example.paltest.**", null, RpcPolicyAction.ALLOW, null, null, null));
+    RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
+    ClassMetadataSerializer serializer = new ClassMetadataSerializer(policy);
 
-    // TODO(#1102): Implement test logic
-    fail("Not yet implemented");
+    // When: scan MixedVisibilityClass
+    Path outFile =
+        serializer.scannedClasspathToJson(
+            false, Set.of("org.example.paltest.MixedVisibilityClass"), null, false);
+    String json = Files.readString(outFile);
+    Files.delete(outFile);
+
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode root = mapper.readTree(json);
+    assertThat(root.size(), is(1));
+    JsonNode classNode = root.get(0);
+
+    // Then: all methods appear regardless of visibility
+    Set<String> methodNames = new HashSet<>();
+    for (JsonNode methodNode : classNode.get("methods")) {
+      methodNames.add(methodNode.get("name").asText());
+    }
+    assertThat(methodNames.contains("publicMethod"), is(true));
+    assertThat(methodNames.contains("protectedMethod"), is(true));
+    assertThat(methodNames.contains("packageMethod"), is(true));
+    assertThat(methodNames.contains("privateMethod"), is(true));
+
+    // All fields appear
+    Set<String> fieldNames = new HashSet<>();
+    for (JsonNode fieldNode : classNode.get("fields")) {
+      fieldNames.add(fieldNode.get("name").asText());
+    }
+    assertThat(fieldNames.contains("publicField"), is(true));
+    assertThat(fieldNames.contains("protectedField"), is(true));
+    assertThat(fieldNames.contains("packageField"), is(true));
+    assertThat(fieldNames.contains("privateField"), is(true));
+
+    // Both constructors appear (public no-arg + package-private int)
+    assertThat(classNode.get("constructors").size(), is(2));
   }
 }
