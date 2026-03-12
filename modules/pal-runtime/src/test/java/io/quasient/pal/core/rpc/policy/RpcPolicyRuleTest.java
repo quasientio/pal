@@ -11,9 +11,11 @@ package io.quasient.pal.core.rpc.policy;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.transport.MessageChannelType;
 import java.util.EnumSet;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -185,5 +187,122 @@ public class RpcPolicyRuleTest {
             MessageChannelType.ZMQ_SOCKET_RPC,
             MemberCategory.METHOD),
         is(true));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Visibility filter tests (awaiting RpcPolicyRule visibility extension #1092)
+  // ---------------------------------------------------------------------------
+
+  @Test
+  @Ignore("Awaiting implementation in #1092")
+  public void shouldMatchWhenVisibilitiesIsNull() {
+    // Given: Rule with visibilities = null (match all)
+    // When: matches() called with MemberVisibility.PRIVATE
+    // Then: Returns true (null means no visibility restriction)
+
+    // TODO(#1092): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #1092")
+  public void shouldMatchWhenVisibilityInSet() {
+    // Given: Rule with visibilities = EnumSet.of(PUBLIC, PROTECTED)
+    // When: matches() called with MemberVisibility.PUBLIC
+    // Then: Returns true
+
+    // TODO(#1092): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #1092")
+  public void shouldNotMatchWhenVisibilityNotInSet() {
+    // Given: Rule with visibilities = EnumSet.of(PUBLIC)
+    // When: matches() called with MemberVisibility.PRIVATE
+    // Then: Returns false
+
+    // TODO(#1092): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #1092")
+  public void shouldShortCircuitOnVisibilityBeforePatternMatch() {
+    // Given: Rule with visibilities = EnumSet.of(PUBLIC) and broad pattern **.**
+    // When: matches() called with MemberVisibility.PACKAGE_PRIVATE
+    // Then: Returns false (visibility check prevents pattern evaluation)
+
+    // TODO(#1092): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #1092")
+  public void shouldFilterByVisibilityInMetadata() {
+    // Given: Rule with visibilities = EnumSet.of(PUBLIC)
+    // When: matchesForMetadata() called with MemberVisibility.PROTECTED
+    // Then: Returns false
+
+    // TODO(#1092): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #1092")
+  public void shouldMatchAllVisibilitiesInMetadataWhenNull() {
+    // Given: Rule with visibilities = null
+    // When: matchesForMetadata() called with MemberVisibility.PRIVATE
+    // Then: Returns true
+
+    // TODO(#1092): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #1092")
+  public void shouldMatchWithNullVisibilityParameter() {
+    // Given: Rule with visibilities = EnumSet.of(PUBLIC)
+    // When: matches() called with visibility = null (skip check)
+    // Then: Returns true (null visibility parameter means skip the check)
+
+    // TODO(#1092): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #1092")
+  public void shouldReturnVisibilitiesViaGetter() {
+    // Given: Rule with visibilities = EnumSet.of(PUBLIC, PROTECTED)
+    // When: getVisibilities() called
+    // Then: Returns set containing PUBLIC and PROTECTED
+
+    // TODO(#1092): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #1092")
+  public void shouldReturnNullVisibilitiesViaGetter() {
+    // Given: Rule with visibilities = null
+    // When: getVisibilities() called
+    // Then: Returns null
+
+    // TODO(#1092): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  @Test
+  @Ignore("Awaiting implementation in #1092")
+  public void shouldCombineVisibilityWithChannelAndMemberFilters() {
+    // Given: Rule with channels = EnumSet.of(ZMQ_SOCKET_RPC),
+    //        members = EnumSet.of(METHOD), visibilities = EnumSet.of(PUBLIC)
+    // When: matches() called with matching channel, member, and visibility
+    // Then: Returns true
+    // When: matches() called with matching channel/member but PRIVATE visibility
+    // Then: Returns false
+
+    // TODO(#1092): Implement test logic
+    fail("Not yet implemented");
   }
 }
