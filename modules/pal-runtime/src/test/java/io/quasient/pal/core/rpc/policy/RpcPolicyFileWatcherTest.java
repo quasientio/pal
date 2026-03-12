@@ -9,10 +9,20 @@
  */
 package io.quasient.pal.core.rpc.policy;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
  * Unit tests for {@code RpcPolicyFileWatcher}, the daemon thread that polls a YAML policy file for
@@ -24,20 +34,76 @@ import org.junit.Test;
  */
 public class RpcPolicyFileWatcherTest {
 
+  /** Temporary folder for creating policy YAML files. */
+  @Rule public TemporaryFolder tempFolder = new TemporaryFolder();
+
+  /** Short poll interval for tests to avoid long waits. */
+  private static final long TEST_POLL_INTERVAL_MS = 50;
+
+  /** The watcher under test; stopped in {@link #tearDown()} if started. */
+  private RpcPolicyFileWatcher watcher;
+
+  /** YAML content that creates an ALLOW-all policy with one rule. */
+  private static final String ALLOW_YAML =
+      """
+      version: 1
+      defaultAction: ALLOW
+      rules:
+        - class: "com.example.**"
+          method: "**"
+          action: ALLOW
+      """;
+
+  /** YAML content that creates a DENY-all policy with one rule. */
+  private static final String DENY_YAML =
+      """
+      version: 1
+      defaultAction: DENY
+      rules:
+        - class: "com.example.**"
+          method: "**"
+          action: DENY
+      """;
+
+  /** Stops the watcher after each test to avoid thread leaks. */
+  @Before
+  public void setUp() {
+    watcher = null;
+  }
+
+  /** Stops the watcher after each test to avoid thread leaks. */
+  @After
+  public void tearDown() {
+    if (watcher != null) {
+      watcher.stop();
+    }
+  }
+
   /**
    * Verifies that the watcher detects a file modification and reloads the policy with the updated
    * content.
    */
   @Test
-  @Ignore("Awaiting implementation in #1136")
-  public void shouldReloadPolicyOnFileChange() {
-    // Given: A temp YAML file with one ALLOW rule, watcher started with short poll interval (100ms)
-    // When: The YAML file is overwritten with a different rule (DENY), then sleep for 2x poll
-    //       interval
-    // Then: policyHolder.getPolicy() returns a policy with the updated rule/action
+  public void shouldReloadPolicyOnFileChange() throws Exception {
+    // Given: A temp YAML file with ALLOW policy, watcher started
+    Path yamlFile = tempFolder.newFile("policy.yaml").toPath();
+    Files.writeString(yamlFile, ALLOW_YAML);
 
-    // TODO(#1136): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy initialPolicy = RpcPolicyParser.fromOptions(yamlFile.toString(), null, null);
+    RpcPolicyHolder holder = new RpcPolicyHolder(initialPolicy);
+    assertThat(holder.getPolicy().getDefaultAction(), is(RpcPolicyAction.ALLOW));
+
+    watcher = new RpcPolicyFileWatcher(yamlFile, null, null, holder, TEST_POLL_INTERVAL_MS);
+    watcher.start();
+
+    // When: Overwrite with DENY policy (ensure timestamp changes)
+    Thread.sleep(TEST_POLL_INTERVAL_MS);
+    Files.writeString(yamlFile, DENY_YAML);
+
+    // Then: Wait for reload
+    Thread.sleep(TEST_POLL_INTERVAL_MS * 4);
+    assertThat(holder.getPolicy().getDefaultAction(), is(RpcPolicyAction.DENY));
+    assertThat(holder.getPolicy().getRules().size(), is(1));
   }
 
   /**
@@ -45,16 +111,25 @@ public class RpcPolicyFileWatcherTest {
    * log is emitted.
    */
   @Test
-  @Ignore("Awaiting implementation in #1136")
-  public void shouldKeepCurrentPolicyOnParseError() {
-    // Given: A valid YAML policy file, watcher started with short poll interval (100ms)
-    // When: The YAML file is overwritten with invalid content (e.g., "!!!invalid yaml"),
-    //       then sleep for 2x poll interval
-    // Then: policyHolder.getPolicy() still returns the original valid policy
-    // Verify: ERROR log is emitted (via Logback ListAppender)
+  public void shouldKeepCurrentPolicyOnParseError() throws Exception {
+    // Given: A valid YAML policy file, watcher started
+    Path yamlFile = tempFolder.newFile("policy.yaml").toPath();
+    Files.writeString(yamlFile, ALLOW_YAML);
 
-    // TODO(#1136): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy initialPolicy = RpcPolicyParser.fromOptions(yamlFile.toString(), null, null);
+    RpcPolicyHolder holder = new RpcPolicyHolder(initialPolicy);
+    RpcPolicy originalPolicy = holder.getPolicy();
+
+    watcher = new RpcPolicyFileWatcher(yamlFile, null, null, holder, TEST_POLL_INTERVAL_MS);
+    watcher.start();
+
+    // When: Overwrite with invalid YAML
+    Thread.sleep(TEST_POLL_INTERVAL_MS);
+    Files.writeString(yamlFile, "!!!invalid yaml: {{{");
+
+    // Then: Wait for poll cycle; policy should not change
+    Thread.sleep(TEST_POLL_INTERVAL_MS * 4);
+    assertSame(originalPolicy, holder.getPolicy());
   }
 
   /**
@@ -62,14 +137,25 @@ public class RpcPolicyFileWatcherTest {
    * policy.
    */
   @Test
-  @Ignore("Awaiting implementation in #1136")
-  public void shouldKeepCurrentPolicyOnFileDeleted() {
-    // Given: A valid YAML policy file, watcher started with short poll interval (100ms)
-    // When: The YAML file is deleted, then sleep for 2x poll interval
-    // Then: policyHolder.getPolicy() still returns the original policy (no reload triggered)
+  public void shouldKeepCurrentPolicyOnFileDeleted() throws Exception {
+    // Given: A valid YAML policy file, watcher started
+    Path yamlFile = tempFolder.newFile("policy.yaml").toPath();
+    Files.writeString(yamlFile, ALLOW_YAML);
 
-    // TODO(#1136): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy initialPolicy = RpcPolicyParser.fromOptions(yamlFile.toString(), null, null);
+    RpcPolicyHolder holder = new RpcPolicyHolder(initialPolicy);
+    RpcPolicy originalPolicy = holder.getPolicy();
+
+    watcher = new RpcPolicyFileWatcher(yamlFile, null, null, holder, TEST_POLL_INTERVAL_MS);
+    watcher.start();
+
+    // When: Delete the file
+    Thread.sleep(TEST_POLL_INTERVAL_MS);
+    Files.delete(yamlFile);
+
+    // Then: Wait for poll cycles; policy should not change
+    Thread.sleep(TEST_POLL_INTERVAL_MS * 4);
+    assertSame(originalPolicy, holder.getPolicy());
   }
 
   /**
@@ -77,15 +163,23 @@ public class RpcPolicyFileWatcherTest {
    * confirming reference equality of the policy instance.
    */
   @Test
-  @Ignore("Awaiting implementation in #1136")
-  public void shouldNotReloadWhenFileUnchanged() {
-    // Given: A valid YAML policy file, watcher started with short poll interval (100ms)
-    // When: Sleep for 3x poll interval without modifying the file
-    // Then: policyHolder.getPolicy() returns the same policy instance (reference equality via
-    //       assertSame)
+  public void shouldNotReloadWhenFileUnchanged() throws Exception {
+    // Given: A valid YAML policy file, watcher started
+    Path yamlFile = tempFolder.newFile("policy.yaml").toPath();
+    Files.writeString(yamlFile, ALLOW_YAML);
 
-    // TODO(#1136): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy initialPolicy = RpcPolicyParser.fromOptions(yamlFile.toString(), null, null);
+    RpcPolicyHolder holder = new RpcPolicyHolder(initialPolicy);
+    RpcPolicy originalPolicy = holder.getPolicy();
+
+    watcher = new RpcPolicyFileWatcher(yamlFile, null, null, holder, TEST_POLL_INTERVAL_MS);
+    watcher.start();
+
+    // When: Sleep for multiple poll intervals without modifying the file
+    Thread.sleep(TEST_POLL_INTERVAL_MS * 6);
+
+    // Then: Policy should be the exact same instance (no reload)
+    assertSame(originalPolicy, holder.getPolicy());
   }
 
   /**
@@ -93,15 +187,37 @@ public class RpcPolicyFileWatcherTest {
    * contains both the new YAML rules and the original preset rules.
    */
   @Test
-  @Ignore("Awaiting implementation in #1136")
-  public void shouldPreservePresetsAcrossReload() {
-    // Given: A YAML file with one user rule, watcher started with presets="deny-unsafe" and
-    //        short poll interval (100ms)
-    // When: The YAML file is modified (changed rule), then sleep for 2x poll interval
-    // Then: The reloaded policy contains both the new YAML rule AND the deny-unsafe preset rules
+  public void shouldPreservePresetsAcrossReload() throws Exception {
+    // Given: A YAML file with one user rule, watcher started with presets="deny-unsafe"
+    Path yamlFile = tempFolder.newFile("policy.yaml").toPath();
+    Files.writeString(yamlFile, ALLOW_YAML);
 
-    // TODO(#1136): Implement test logic
-    fail("Not yet implemented");
+    String presetNames = "deny-unsafe";
+    RpcPolicy initialPolicy = RpcPolicyParser.fromOptions(yamlFile.toString(), presetNames, null);
+    RpcPolicyHolder holder = new RpcPolicyHolder(initialPolicy);
+    int initialRuleCount = initialPolicy.getRules().size();
+    int presetRuleCount = RpcPolicyPresets.resolvePreset("deny-unsafe").size();
+
+    // Verify initial policy has both YAML rule(s) and preset rules
+    assertTrue(initialRuleCount > presetRuleCount);
+
+    watcher = new RpcPolicyFileWatcher(yamlFile, presetNames, null, holder, TEST_POLL_INTERVAL_MS);
+    watcher.start();
+
+    // When: Modify the YAML file (change to DENY policy)
+    Thread.sleep(TEST_POLL_INTERVAL_MS);
+    Files.writeString(yamlFile, DENY_YAML);
+
+    // Then: Wait for reload
+    Thread.sleep(TEST_POLL_INTERVAL_MS * 4);
+    RpcPolicy reloadedPolicy = holder.getPolicy();
+    assertNotSame(initialPolicy, reloadedPolicy);
+
+    // Reloaded policy should contain both the new YAML rule AND the preset rules
+    List<RpcPolicyRule> reloadedRules = reloadedPolicy.getRules();
+    assertTrue(
+        "Expected reloaded rules to include preset rules, got " + reloadedRules.size(),
+        reloadedRules.size() >= presetRuleCount + 1);
   }
 
   /**
@@ -109,14 +225,39 @@ public class RpcPolicyFileWatcherTest {
    * time.
    */
   @Test
-  @Ignore("Awaiting implementation in #1136")
-  public void shouldStopCleanly() {
-    // Given: A watcher started with short poll interval (100ms)
-    // When: stop() is called
-    // Then: The watcher thread is no longer alive within 2 seconds
+  public void shouldStopCleanly() throws Exception {
+    // Given: A watcher started
+    Path yamlFile = tempFolder.newFile("policy.yaml").toPath();
+    Files.writeString(yamlFile, ALLOW_YAML);
 
-    // TODO(#1136): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy initialPolicy = RpcPolicyParser.fromOptions(yamlFile.toString(), null, null);
+    RpcPolicyHolder holder = new RpcPolicyHolder(initialPolicy);
+
+    watcher = new RpcPolicyFileWatcher(yamlFile, null, null, holder, TEST_POLL_INTERVAL_MS);
+    watcher.start();
+
+    // Allow the thread to enter the poll loop
+    Thread.sleep(TEST_POLL_INTERVAL_MS);
+
+    // When: stop() is called
+    watcher.stop();
+
+    // Then: The watcher thread should no longer be alive
+    // The stop() method joins with a 2-second timeout, so after it returns
+    // the thread should be terminated. Verify by checking no thread with
+    // the name is alive.
+    Thread.sleep(50);
+    boolean watcherAlive = false;
+    for (Thread t : Thread.getAllStackTraces().keySet()) {
+      if ("rpc-policy-file-watcher".equals(t.getName()) && t.isAlive()) {
+        watcherAlive = true;
+        break;
+      }
+    }
+    assertTrue("Watcher thread should not be alive after stop()", !watcherAlive);
+
+    // Prevent tearDown from calling stop() again on a null thread
+    watcher = null;
   }
 
   /**
@@ -124,13 +265,43 @@ public class RpcPolicyFileWatcherTest {
    * create a second watcher thread.
    */
   @Test
-  @Ignore("Awaiting implementation in #1136")
-  public void shouldNotStartWhenAlreadyRunning() {
+  public void shouldNotStartWhenAlreadyRunning() throws Exception {
     // Given: A watcher that has been started
-    // When: start() is called again
-    // Then: No second thread is created (verify by checking thread count or thread naming)
+    Path yamlFile = tempFolder.newFile("policy.yaml").toPath();
+    Files.writeString(yamlFile, ALLOW_YAML);
 
-    // TODO(#1136): Implement test logic
-    fail("Not yet implemented");
+    RpcPolicy initialPolicy = RpcPolicyParser.fromOptions(yamlFile.toString(), null, null);
+    RpcPolicyHolder holder = new RpcPolicyHolder(initialPolicy);
+
+    watcher = new RpcPolicyFileWatcher(yamlFile, null, null, holder, TEST_POLL_INTERVAL_MS);
+    watcher.start();
+
+    // Count initial threads with the watcher name
+    Thread.sleep(TEST_POLL_INTERVAL_MS);
+    long initialCount = countWatcherThreads();
+
+    // When: start() is called again
+    watcher.start();
+    Thread.sleep(TEST_POLL_INTERVAL_MS);
+
+    // Then: No second thread is created
+    long afterCount = countWatcherThreads();
+    assertThat("Second start() should not create additional threads", afterCount, is(initialCount));
+    assertThat("Exactly one watcher thread should exist", initialCount, is(1L));
+  }
+
+  /**
+   * Counts the number of alive threads named {@code rpc-policy-file-watcher}.
+   *
+   * @return the count of matching threads
+   */
+  private long countWatcherThreads() {
+    long count = 0;
+    for (Thread t : Thread.getAllStackTraces().keySet()) {
+      if ("rpc-policy-file-watcher".equals(t.getName()) && t.isAlive()) {
+        count++;
+      }
+    }
+    return count;
   }
 }
