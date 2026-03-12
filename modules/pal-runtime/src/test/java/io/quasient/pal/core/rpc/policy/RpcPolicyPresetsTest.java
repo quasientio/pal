@@ -13,9 +13,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.transport.MessageChannelType;
 import java.util.List;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -254,6 +256,90 @@ public class RpcPolicyPresetsTest {
   @Test
   public void allPresetNamesShouldReturnSevenPresets() {
     assertThat(RpcPolicyPresets.allPresetNames().size(), is(7));
+  }
+
+  /** Verifies that the deny-nonpublic preset blocks protected members. */
+  @Test
+  @Ignore("Awaiting implementation in #1098")
+  public void denyNonpublicShouldBlockProtectedMembers() {
+    // Given: Rules from getDenyNonpublicRules()
+    // When: Checked against MemberVisibility.PROTECTED
+    // Then: At least one rule matches (blocking the protected member)
+
+    // TODO(#1098): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that the deny-nonpublic preset blocks package-private members. */
+  @Test
+  @Ignore("Awaiting implementation in #1098")
+  public void denyNonpublicShouldBlockPackagePrivateMembers() {
+    // Given: Rules from getDenyNonpublicRules()
+    // When: Checked against MemberVisibility.PACKAGE_PRIVATE
+    // Then: At least one rule matches (blocking the package-private member)
+
+    // TODO(#1098): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that the deny-nonpublic preset blocks private members. */
+  @Test
+  @Ignore("Awaiting implementation in #1098")
+  public void denyNonpublicShouldBlockPrivateMembers() {
+    // Given: Rules from getDenyNonpublicRules()
+    // When: Checked against MemberVisibility.PRIVATE
+    // Then: At least one rule matches (blocking the private member)
+
+    // TODO(#1098): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that the deny-nonpublic preset does not block public members. */
+  @Test
+  @Ignore("Awaiting implementation in #1098")
+  public void denyNonpublicShouldNotBlockPublicMembers() {
+    // Given: Rules from getDenyNonpublicRules()
+    // When: Checked against MemberVisibility.PUBLIC
+    // Then: No rule matches (public members are not blocked)
+
+    // TODO(#1098): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that all rules in the deny-nonpublic preset have DENY action. */
+  @Test
+  @Ignore("Awaiting implementation in #1098")
+  public void denyNonpublicRulesShouldHaveDenyAction() {
+    // Given: Rules from getDenyNonpublicRules()
+    // Then: Every rule has RpcPolicyAction.DENY
+
+    // TODO(#1098): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /** Verifies that {@code resolvePreset("deny-nonpublic")} returns a non-empty rule list. */
+  @Test
+  @Ignore("Awaiting implementation in #1098")
+  public void shouldResolveDenyNonpublicPreset() {
+    // When: RpcPolicyPresets.resolvePreset("deny-nonpublic") is called
+    // Then: Returns a non-null, non-empty list of rules
+
+    // TODO(#1098): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code allPresetNames} returns 8 preset categories after adding deny-nonpublic.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1098")
+  public void allPresetNamesShouldReturnEightPresets() {
+    // When: RpcPolicyPresets.allPresetNames() is called
+    // Then: Returns 8 preset names (was 7, now includes deny-nonpublic)
+    // And: The set contains "deny-nonpublic"
+
+    // TODO(#1098): Implement test logic
+    fail("Not yet implemented");
   }
 
   /**
