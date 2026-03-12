@@ -79,6 +79,18 @@ rules:                         # Ordered list of rules (first match wins)
 | `action` | Yes | string | -- | `ALLOW`, `DENY`, `LOG_AND_ALLOW`, `LOG_AND_DENY` |
 | `channel` | No | string or list | all channels | `ZMQ_SOCKET_RPC`, `WEBSOCKET_RPC`, `LOG_RPC`, `CLI_RPC` |
 | `members` | No | list | all types | `METHOD`, `STATIC_METHOD`, `CONSTRUCTOR`, `FIELD_GET`, `FIELD_SET` |
+| `visibility` | No | string or list | all visibilities | Java member visibility levels to match (optional, defaults to all) |
+
+### MemberVisibility Values
+
+| Value | Description |
+|-------|-------------|
+| `PUBLIC` | Public members |
+| `PROTECTED` | Protected members |
+| `PACKAGE_PRIVATE` | Package-private (default) members |
+| `DEFAULT` | Alias for `PACKAGE_PRIVATE` |
+| `PRIVATE` | Private members |
+| `ALL` | All visibility levels (no restriction) |
 
 ### Pattern Syntax
 
@@ -114,7 +126,7 @@ rules:
 Rules are evaluated in **first-match-wins** order:
 
 1. Rules are checked in the order they appear in the YAML file
-2. The first rule whose pattern, channel, and member filters all match determines the action
+2. The first rule whose pattern, channel, member, and visibility filters all match determines the action
 3. If no rule matches, the `defaultAction` applies
 
 ```yaml
@@ -144,6 +156,7 @@ Presets are predefined deny rules for common threat categories. They are evaluat
 | `deny-reflection` | `java.lang.reflect.**`, `java.lang.invoke.**` |
 | `deny-serialization` | `java.io.ObjectInputStream.*` |
 | `deny-scripting` | `javax.script.**` |
+| `deny-nonpublic` | Denies RPC access to non-public members (protected, package-private, private) |
 | `deny-pal-internals` | `io.quasient.pal.**` |
 
 Enable presets via YAML or CLI:
@@ -217,6 +230,26 @@ Available categories:
 | `CONSTRUCTOR` | Object construction |
 | `FIELD_GET` | Field or static field read |
 | `FIELD_SET` | Field or static field write |
+
+## Visibility Filtering
+
+Rules can filter by Java member visibility level, restricting which access modifiers are allowed for RPC calls:
+
+```yaml
+rules:
+  # Allow only public members on API classes
+  - class: "com.example.api.**"
+    action: ALLOW
+    visibility: PUBLIC
+
+  # Allow both public and package-private members on a specific internal class
+  - class: "com.example.internal.Helper"
+    method: "internalMethod"
+    action: ALLOW
+    visibility: [PUBLIC, PACKAGE_PRIVATE]
+```
+
+When `visibility` is omitted, the rule matches all visibility levels (same as specifying `ALL`).
 
 ## Actions
 
@@ -322,6 +355,38 @@ An attacker could try to GET a field that returns a dangerous object (e.g., a `R
 2. Calling a method on the returned object requires another RPC call -- also checked
 3. The `deny-unsafe` preset blocks **all** members on dangerous classes (`ProcessBuilder.**`, `Process.**`), including field access
 
+### Visibility-Aware Policies
+
+Non-public members (protected, package-private, private) are implementation details not intended for external access. For production deployments, use the `deny-nonpublic` preset to restrict RPC calls to public members only:
+
+```bash
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy-preset deny-nonpublic,deny-unsafe \
+  -cp app.jar com.example.Main
+```
+
+If specific non-public members must be accessible, add explicit ALLOW rules in your YAML policy. User-defined rules take precedence over presets:
+
+```yaml
+version: 1
+defaultAction: DENY
+
+presets:
+  deny-nonpublic: true
+  deny-unsafe: true
+
+rules:
+  # Allow public API
+  - class: "com.example.api.**"
+    action: ALLOW
+
+  # Explicitly allow a package-private helper method
+  - class: "com.example.internal.Helper"
+    method: "bootstrap"
+    action: ALLOW
+    visibility: PACKAGE_PRIVATE
+```
+
 ### Recommended Production Setup
 
 For production peers exposed to untrusted networks:
@@ -335,9 +400,10 @@ pal run -d localhost:2379 --zmq-rpc auto \
 With a restrictive YAML policy:
 
 - `defaultAction: DENY` -- deny by default
-- Enable all relevant presets
+- Enable all relevant presets (including `deny-nonpublic` to restrict access to public members only)
 - Explicitly ALLOW only your application's public API packages
 - Use channel-scoped rules if different transports have different trust levels
+- Use `visibility` filters to expose only the intended access level per rule
 
 ## Further Reading
 
