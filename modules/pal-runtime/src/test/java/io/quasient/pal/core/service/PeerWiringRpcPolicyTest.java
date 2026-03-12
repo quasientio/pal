@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.execution.java.CustomClassloader;
 import io.quasient.pal.core.rpc.policy.RpcPolicy;
@@ -28,6 +29,7 @@ import java.util.Properties;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.zeromq.ZContext;
 
@@ -178,6 +180,84 @@ public class PeerWiringRpcPolicyTest {
     p.setProperty("pub.queue.initial", "1024");
     p.setProperty("pub.queue.max", "2048");
     return p;
+  }
+
+  /**
+   * Verifies that {@code PeerWiring} provides a bound {@link
+   * io.quasient.pal.core.rpc.policy.RpcPolicyHolder} whose initial policy is the default deny-all
+   * policy when no RPC policy configuration is provided.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1138")
+  public void shouldProvideRpcPolicyHolder() {
+    // Given: Standard base properties with no RPC policy config
+    // When: PeerWiring is used to create a Guice injector (or the provide method is called)
+    // Then: RpcPolicyHolder is bound and its getPolicy() returns the default deny-all policy
+
+    // TODO(#1138): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code provideRpcPolicyFileWatcher()} returns {@code null} when no {@code
+   * rpc.policy.path} property is configured, since there is no file to watch.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1138")
+  public void shouldProvideNullWatcherWhenNoPolicyPath() {
+    // Given: Properties without rpc.policy.path
+    // When: provideRpcPolicyFileWatcher() is called
+    // Then: Returns null (no file to watch)
+
+    // TODO(#1138): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code provideRpcPolicyFileWatcher()} returns a non-null {@link
+   * io.quasient.pal.core.rpc.policy.RpcPolicyFileWatcher} when {@code rpc.policy.path} is set to a
+   * valid temporary YAML file.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1138")
+  public void shouldProvideWatcherWhenPolicyPathSet() {
+    // Given: Properties with rpc.policy.path set to a valid temp YAML file
+    // When: provideRpcPolicyFileWatcher() is called
+    // Then: Returns a non-null RpcPolicyFileWatcher
+
+    // TODO(#1138): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code provideRpcPolicyFileWatcher()} respects a custom poll interval configured
+   * via the {@code rpc.policy.watch.interval.ms} property.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1138")
+  public void shouldRespectCustomPollInterval() {
+    // Given: Properties with rpc.policy.path and rpc.policy.watch.interval.ms=5000
+    // When: provideRpcPolicyFileWatcher() is called
+    // Then: Returns a watcher (internal poll interval verification may require
+    //       reflection or behavioral test)
+
+    // TODO(#1138): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code provideRpcPolicyFileWatcher()} returns {@code null} when the poll interval
+   * is set to zero, effectively disabling file watching.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1138")
+  public void shouldDisableWatcherWhenPollIntervalZero() {
+    // Given: Properties with rpc.policy.path and rpc.policy.watch.interval.ms=0
+    // When: provideRpcPolicyFileWatcher() is called
+    // Then: Returns null (watching disabled)
+
+    // TODO(#1138): Implement test logic
+    fail("Not yet implemented");
   }
 
   /** Creates a PeerWiring instance with the given properties. */
