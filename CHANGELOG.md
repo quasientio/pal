@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Feature] Map `priority` field in `MessageBuilder.buildInterceptMessage()` and add `InterceptRequestEntry.getPriority()` convenience getter
 - [Feature] Add `priority` field to `InterceptRequest` data model with full constructor support, serialization, and property access
 - [Feature] Add `priority int32` field to `InterceptMessage` Colfer schema and regenerate Java class
 - [Doc] Update developer architecture documentation for deterministic replay: document conditional span-skip logic, phantom stub handling, ReplayInputInjector wait-for-completion behavior, isPendingInjection/hasInjectorForThread methods, --shield-fx flag, expanded --shield-io java.time coverage, and --no-wal-incoming-cli testing requirement

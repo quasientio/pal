@@ -10,6 +10,7 @@
 package io.quasient.pal.common.directory.nodes;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -551,6 +552,6 @@ public class InterceptRequestTest {
             7);
 
     // When/Then: Output contains "priority=7"
-    assertThat(request.toString(), org.hamcrest.Matchers.containsString("priority=7"));
+    assertThat(request.toString(), containsString("priority=7"));
   }
 }

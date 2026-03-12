@@ -192,6 +192,15 @@ public class InterceptRequestEntry {
   }
 
   /**
+   * Returns the execution priority from the underlying intercept message.
+   *
+   * @return the priority value; lower values execute first
+   */
+  public int getPriority() {
+    return interceptMessage.getPriority();
+  }
+
+  /**
    * Retrieves the intercept message associated with this interception entry.
    *
    * @return the intercept message detailing the intercepted class member

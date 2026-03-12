@@ -12,7 +12,6 @@ package io.quasient.pal.core.intercept;
 import static io.quasient.pal.serdes.colfer.ExecMessageUtils.getParameterTypes;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
 
 import io.github.azagniotov.matcher.AntPathMatcherArrays;
 import io.quasient.pal.common.lang.intercept.InterceptType;
@@ -25,7 +24,6 @@ import io.quasient.pal.serdes.colfer.ExecMessageUtils;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.List;
 import java.util.UUID;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -162,24 +160,36 @@ public class InterceptRequestEntryTest {
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1068")
   public void testGetPriorityDelegatesToMessage() {
-    // Given: InterceptMessage with priority=7, wrapped in InterceptRequestEntry
-    // When: Calling entry.getPriority()
-    // Then: Returns 7
+    InterceptMessage interceptMessage =
+        msgBuilder
+            .buildInterceptMessage(
+                UUID.randomUUID(),
+                InterceptType.BEFORE,
+                "com.example.Foo",
+                "bar",
+                List.of(),
+                "com.example.Callback",
+                "onIntercept")
+            .withPriority(7);
 
-    // TODO(#1068): Implement test logic
-    fail("Not yet implemented");
+    InterceptRequestEntry entry = new InterceptRequestEntry(interceptMessage);
+    assertThat(entry.getPriority(), is(7));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1068")
   public void testGetPriorityDefaultsToZero() {
-    // Given: InterceptMessage with default priority (0), wrapped in InterceptRequestEntry
-    // When: Calling entry.getPriority()
-    // Then: Returns 0
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
+            UUID.randomUUID(),
+            InterceptType.BEFORE,
+            "com.example.Foo",
+            "bar",
+            List.of(),
+            "com.example.Callback",
+            "onIntercept");
 
-    // TODO(#1068): Implement test logic
-    fail("Not yet implemented");
+    InterceptRequestEntry entry = new InterceptRequestEntry(interceptMessage);
+    assertThat(entry.getPriority(), is(0));
   }
 }
