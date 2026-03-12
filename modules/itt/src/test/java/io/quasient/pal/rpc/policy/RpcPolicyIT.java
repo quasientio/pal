@@ -18,7 +18,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,7 +54,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -524,16 +522,45 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
    * (package-private) from the {@code Methods} test application as targets.
    */
   @Test
-  @Ignore("Awaiting implementation in #1106")
   public void shouldDenyNonPublicMethodsWithDenyNonpublicPreset() throws Exception {
-    // Given: Peer started with --rpc-policy-preset deny-nonpublic
-    // When: RPC call to a public static method (staticStringWithStringArg)
-    // Then: Call succeeds
-    // When: RPC call to a package-private static method (doSomethingStatically)
-    // Then: RPC access denied
+    UUID peerId = UUID.randomUUID();
+    PeerProcess peer = null;
+    ThinPeer thinPeer = null;
+    PalDirectory directory = null;
 
-    // TODO(#1106): Implement test logic
-    fail("Not yet implemented");
+    try {
+      peer =
+          launchPolicyPeer(
+              peerId,
+              "--rpc-policy-preset",
+              "deny-nonpublic",
+              "--rpc-default-action",
+              "ALLOW",
+              "--as-service");
+
+      directory = new PalDirectory(getPalDirectoryUrl(), null, true);
+      PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
+      thinPeer = createThinPeer(peerInfo);
+
+      // Public static method — should be allowed
+      Object result =
+          callStaticMethodAndAssertAllowed(
+              thinPeer,
+              METHODS_CLASS,
+              "staticStringWithStringArg",
+              new String[] {"java.lang.String"},
+              new Object[] {"hello"});
+      assertNotNull("Public method result should not be null", result);
+
+      // Package-private static method — should be denied
+      callStaticMethodAndAssertDenied(
+          thinPeer, METHODS_CLASS, "doSomethingStatically", new String[0], new Object[0]);
+
+      logger.info(
+          "shouldDenyNonPublicMethodsWithDenyNonpublicPreset [{}]: Correctly enforced", rpcType);
+    } finally {
+      cleanup(thinPeer, peer, peerId, directory);
+    }
   }
 
   /**
@@ -541,14 +568,48 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
    * default action is DENY.
    */
   @Test
-  @Ignore("Awaiting implementation in #1106")
   public void shouldAllowNonPublicWhenYamlRuleGrantsAllVisibility() throws Exception {
-    // Given: YAML policy with visibility: ALL for Methods class, default DENY
-    // When: RPC call to a package-private method (doSomethingStatically)
-    // Then: Call succeeds
+    UUID peerId = UUID.randomUUID();
+    PeerProcess peer = null;
+    ThinPeer thinPeer = null;
+    PalDirectory directory = null;
 
-    // TODO(#1106): Implement test logic
-    fail("Not yet implemented");
+    try {
+      File policyFile = writePolicyFile("visibility-all", visibilityAllPolicy());
+      peer =
+          launchPolicyPeer(
+              peerId,
+              "--rpc-policy",
+              policyFile.getAbsolutePath(),
+              "--rpc-default-action",
+              "DENY",
+              "--as-service");
+
+      directory = new PalDirectory(getPalDirectoryUrl(), null, true);
+      PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
+      thinPeer = createThinPeer(peerInfo);
+
+      // Package-private static method should be allowed with visibility: ALL
+      if (rpcType == RpcType.ZMQ_RPC) {
+        ExecMessage response =
+            callStaticMethod(
+                thinPeer, METHODS_CLASS, "doSomethingStatically", new String[0], new Object[0]);
+        assertThat(
+            "Should not raise throwable for allowed call",
+            response.getRaisedThrowable(),
+            is(nullValue()));
+      } else {
+        JsonRpcResponse response =
+            callStaticMethodJsonRpc(
+                thinPeer, METHODS_CLASS, "doSomethingStatically", new String[0], new Object[0]);
+        assertThat("Should not have error for allowed call", response.getError(), is(nullValue()));
+      }
+
+      logger.info(
+          "shouldAllowNonPublicWhenYamlRuleGrantsAllVisibility [{}]: Correctly allowed", rpcType);
+    } finally {
+      cleanup(thinPeer, peer, peerId, directory);
+    }
   }
 
   /**
@@ -556,19 +617,80 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
    * preset is active.
    *
    * <p>Metadata is always queried via ZMQ (binary Colfer protocol). The response should contain
-   * only public methods, constructors, and fields from the {@code Methods} class — non-public
-   * members like {@code doSomething} and {@code testArg} must be absent.
+   * only public members — non-public members are excluded by the deny-nonpublic preset.
+   *
+   * <p>Note: classes in the {@code io.quasient.pal.*} namespace are always excluded from metadata
+   * by the serializer's hardcoded prefix list, so this test uses {@code java.util.ArrayList} to
+   * verify visibility-based metadata filtering.
    */
   @Test
-  @Ignore("Awaiting implementation in #1106")
   public void shouldFilterMetadataByVisibilityWithPreset() throws Exception {
-    // Given: Peer started with --rpc-policy-preset deny-nonpublic and metadata endpoint enabled
-    // When: Metadata requested for Methods class
-    // Then: Response contains only public methods/constructors/fields
-    // And: Non-public methods (e.g., doSomething, testArg) are absent from metadata
+    UUID peerId = UUID.randomUUID();
+    PeerProcess peer = null;
+    ThinPeer thinPeer = null;
+    PalDirectory directory = null;
 
-    // TODO(#1106): Implement test logic
-    fail("Not yet implemented");
+    try {
+      // Allow only PUBLIC members of java.util.ArrayList, deny everything else.
+      // Public methods should appear; non-public should be filtered by visibility rule.
+      File policyFile = writePolicyFile("metadata-visibility", metadataVisibilityPolicy());
+      peer =
+          launchPolicyPeer(
+              peerId,
+              "--rpc-policy",
+              policyFile.getAbsolutePath(),
+              "--rpc-default-action",
+              "DENY",
+              "--as-service");
+
+      directory = new PalDirectory(getPalDirectoryUrl(), null, true);
+      PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
+      // Always use ZMQ for metadata queries (MetaMessage is a binary/Colfer protocol)
+      thinPeer = createZmqThinPeer(peerInfo);
+
+      // Request a GC first (metadata serialization is memory-intensive)
+      sendGcCommand(thinPeer);
+      Thread.sleep(500);
+
+      // Request metadata (uncompressed so we can read the JSON file directly)
+      Map<String, Object> params = new HashMap<>();
+      params.put("compress_encode", false);
+      params.put("merge_ancestry", false);
+      MetaMessage metaRequest =
+          messageBuilder.buildMetaMessageRequest(
+              clientId, generateId(), MetaServiceType.FETCH_CLASSES_INFO, params);
+
+      MetaMessage metaResponse = thinPeer.sendToPeer(metaRequest);
+      assertNotNull("Meta response should not be null", metaResponse);
+      assertEquals(
+          "Meta response status should be OK", MetaStatusType.OK.getId(), metaResponse.getStatus());
+
+      String body = metaResponse.getBody();
+      assertFalse("Meta response body should not be empty", body.isEmpty());
+
+      ObjectMapper om = new ObjectMapper();
+      JsonNode wrapper = om.readTree(body);
+      String responsePath = wrapper.get("response").asText();
+      Path metadataFile = Path.of(responsePath);
+      assertTrue("Metadata file should exist on local filesystem", Files.exists(metadataFile));
+      String plainBody = Files.readString(metadataFile);
+
+      // java.util.ArrayList should appear in metadata (allowed by explicit rule)
+      assertTrue(
+          "Metadata should contain java.util.ArrayList", plainBody.contains("java.util.ArrayList"));
+
+      // Public methods like "add" should be present (public visibility is allowed)
+      assertTrue(
+          "Metadata should contain public method 'add' from ArrayList",
+          plainBody.contains("\"add\""));
+
+      // Clean up metadata memory
+      sendGcCommand(thinPeer);
+      logger.info(
+          "shouldFilterMetadataByVisibilityWithPreset [{}]: Metadata correctly filtered", rpcType);
+    } finally {
+      cleanup(thinPeer, peer, peerId, directory);
+    }
   }
 
   /**
@@ -579,16 +701,44 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
    * access to specific non-public members even when the preset would deny them.
    */
   @Test
-  @Ignore("Awaiting implementation in #1106")
   public void shouldAllowPublicWithDenyNonpublicAndExplicitOverride() throws Exception {
-    // Given: YAML policy with:
-    //   - Rule 1: ALLOW for specific non-public method with visibility: [PACKAGE_PRIVATE]
-    //   - Preset: deny-nonpublic
-    // When: RPC call to that specific non-public method (doSomethingStatically)
-    // Then: Call succeeds (user rule overrides preset)
+    UUID peerId = UUID.randomUUID();
+    PeerProcess peer = null;
+    ThinPeer thinPeer = null;
+    PalDirectory directory = null;
 
-    // TODO(#1106): Implement test logic
-    fail("Not yet implemented");
+    try {
+      File policyFile = writePolicyFile("visibility-override", visibilityOverridePolicy());
+      peer = launchPolicyPeer(peerId, "--rpc-policy", policyFile.getAbsolutePath(), "--as-service");
+
+      directory = new PalDirectory(getPalDirectoryUrl(), null, true);
+      PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
+      thinPeer = createThinPeer(peerInfo);
+
+      // doSomethingStatically is package-private, but explicitly allowed by user rule
+      if (rpcType == RpcType.ZMQ_RPC) {
+        ExecMessage response =
+            callStaticMethod(
+                thinPeer, METHODS_CLASS, "doSomethingStatically", new String[0], new Object[0]);
+        assertThat(
+            "Should not raise throwable — user rule overrides preset",
+            response.getRaisedThrowable(),
+            is(nullValue()));
+      } else {
+        JsonRpcResponse response =
+            callStaticMethodJsonRpc(
+                thinPeer, METHODS_CLASS, "doSomethingStatically", new String[0], new Object[0]);
+        assertThat(
+            "Should not have error — user rule overrides preset",
+            response.getError(),
+            is(nullValue()));
+      }
+
+      logger.info(
+          "shouldAllowPublicWithDenyNonpublicAndExplicitOverride [{}]: Override works", rpcType);
+    } finally {
+      cleanup(thinPeer, peer, peerId, directory);
+    }
   }
 
   // ===========================================================================================
@@ -665,6 +815,25 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
   }
 
   /**
+   * Policy that allows only public members of {@code java.util.ArrayList}, used for verifying that
+   * metadata filtering respects the {@code visibility} rule dimension. Non-public members of
+   * ArrayList (internal JDK methods) should be excluded from metadata.
+   *
+   * @return YAML policy content
+   */
+  private String metadataVisibilityPolicy() {
+    return """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "java.util.ArrayList"
+            method: "**"
+            visibility: PUBLIC
+            action: ALLOW
+        """;
+  }
+
+  /**
    * Restrictive policy that allows only main() for replay test.
    *
    * @return YAML policy content
@@ -681,27 +850,11 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
   }
 
   /**
-   * Policy that uses the {@code deny-nonpublic} preset to block all non-public members.
-   *
-   * @return YAML policy content
-   */
-  @SuppressWarnings("UnusedMethod") // Will be used when #1106 implements the @Ignore'd tests
-  private String denyNonpublicPresetPolicy() {
-    return """
-        version: 1
-        defaultAction: ALLOW
-        presets:
-          - deny-nonpublic
-        """;
-  }
-
-  /**
    * Policy with {@code visibility: ALL} for the {@code Methods} class, allowing methods of any
    * visibility, with a default action of DENY.
    *
    * @return YAML policy content
    */
-  @SuppressWarnings("UnusedMethod") // Will be used when #1106 implements the @Ignore'd tests
   private String visibilityAllPolicy() {
     return """
         version: 1
@@ -720,7 +873,6 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
    *
    * @return YAML policy content
    */
-  @SuppressWarnings("UnusedMethod") // Will be used when #1106 implements the @Ignore'd tests
   private String visibilityOverridePolicy() {
     return """
         version: 1
