@@ -11,11 +11,13 @@ package io.quasient.pal.core.rpc.policy;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.transport.MessageChannelType;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -232,5 +234,102 @@ public class RpcPolicyTest {
             "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD);
 
     assertThat(result, is(RpcPolicyAction.ALLOW));
+  }
+
+  /**
+   * Verifies that visibility-scoped rules only match operations with the specified visibility, and
+   * operations with other visibilities fall through to the default action.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1094")
+  public void shouldFilterByVisibilityInRules() {
+    // Given: Policy with one ALLOW rule requiring visibilities = EnumSet.of(PUBLIC)
+    //        and default DENY
+    // When: evaluate() called with PUBLIC visibility
+    // Then: Returns ALLOW
+    // When: evaluate() called with PRIVATE visibility
+    // Then: Returns DENY (falls through to default)
+
+    // TODO(#1094): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that evaluation falls through rules whose visibility constraint does not match, and
+   * continues to subsequent rules that match all visibilities (null constraint).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1094")
+  public void shouldFallThroughWhenVisibilityDoesNotMatch() {
+    // Given: Policy with two rules:
+    //        Rule 1: ALLOW, visibilities = EnumSet.of(PUBLIC)
+    //        Rule 2: LOG_AND_ALLOW, visibilities = null (match all)
+    // When: evaluate() called with PRIVATE visibility
+    // Then: Returns LOG_AND_ALLOW (Rule 1 skipped, Rule 2 matched)
+
+    // TODO(#1094): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code hasVisibilityRules()} returns true when at least one rule has a non-null
+   * visibilities constraint.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1094")
+  public void shouldReportHasVisibilityRulesTrue() {
+    // Given: Policy with at least one rule that has non-null visibilities
+    // When: hasVisibilityRules() called
+    // Then: Returns true
+
+    // TODO(#1094): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code hasVisibilityRules()} returns false when all rules have null visibilities
+   * constraints.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1094")
+  public void shouldReportHasVisibilityRulesFalse() {
+    // Given: Policy with all rules having null visibilities
+    // When: hasVisibilityRules() called
+    // Then: Returns false
+
+    // TODO(#1094): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that visibility filtering applies to metadata evaluation, so that non-public members
+   * are excluded from metadata when the policy restricts visibility.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1094")
+  public void shouldFilterByVisibilityInMetadata() {
+    // Given: Policy with DENY rule for non-public visibilities
+    // When: isAccessibleForMetadata() called with PROTECTED visibility
+    // Then: Returns false
+    // When: isAccessibleForMetadata() called with PUBLIC visibility
+    // Then: Returns true
+
+    // TODO(#1094): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that when no rules have visibility constraints, passing null visibility to {@code
+   * evaluate()} allows rules to match normally (the visibility filter is skipped).
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1094")
+  public void shouldPassNullVisibilityWhenNoVisibilityRules() {
+    // Given: Policy with no visibility rules (hasVisibilityRules() == false)
+    // When: evaluate() called with null visibility
+    // Then: Rules match normally (visibility filter is skipped)
+
+    // TODO(#1094): Implement test logic
+    fail("Not yet implemented");
   }
 }
