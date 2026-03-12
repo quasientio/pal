@@ -14,6 +14,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.transport.MessageChannelType;
 import java.io.IOException;
@@ -21,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -352,5 +354,141 @@ public class RpcPolicyParserTest {
     } finally {
       Files.deleteIfExists(tempFile);
     }
+  }
+
+  /**
+   * Verifies that a rule with a single string {@code visibility: PUBLIC} is parsed into a rule
+   * whose visibilities set contains only {@link MemberVisibility#PUBLIC}.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1096")
+  public void shouldParseVisibilitySingleValue() {
+    // Given: YAML rule with visibility: PUBLIC
+    // When: Parsed by RpcPolicyParser.parseYaml()
+    // Then: Rule's getVisibilities() returns EnumSet.of(PUBLIC)
+
+    // TODO(#1096): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that a rule with a list-valued {@code visibility: [PUBLIC, PROTECTED]} is parsed into
+   * a rule whose visibilities set contains both {@link MemberVisibility#PUBLIC} and {@link
+   * MemberVisibility#PROTECTED}.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1096")
+  public void shouldParseVisibilityListValue() {
+    // Given: YAML rule with visibility: [PUBLIC, PROTECTED]
+    // When: Parsed by RpcPolicyParser.parseYaml()
+    // Then: Rule's getVisibilities() returns EnumSet.of(PUBLIC, PROTECTED)
+
+    // TODO(#1096): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that a rule with {@code visibility: ALL} is parsed into a rule whose visibilities is
+   * null, meaning all visibility levels are matched.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1096")
+  public void shouldParseVisibilityAll() {
+    // Given: YAML rule with visibility: ALL
+    // When: Parsed by RpcPolicyParser.parseYaml()
+    // Then: Rule's getVisibilities() returns null (match all)
+
+    // TODO(#1096): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that a rule with {@code visibility: [PUBLIC, ALL]} is parsed into a rule whose
+   * visibilities is null, because ALL overrides any other values in the list.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1096")
+  public void shouldParseVisibilityAllInList() {
+    // Given: YAML rule with visibility: [PUBLIC, ALL]
+    // When: Parsed by RpcPolicyParser.parseYaml()
+    // Then: Rule's getVisibilities() returns null (ALL overrides list)
+
+    // TODO(#1096): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that a rule with {@code visibility: DEFAULT} is parsed as the alias for {@link
+   * MemberVisibility#PACKAGE_PRIVATE}.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1096")
+  public void shouldParseVisibilityDefault() {
+    // Given: YAML rule with visibility: DEFAULT
+    // When: Parsed by RpcPolicyParser.parseYaml()
+    // Then: Rule's getVisibilities() returns EnumSet.of(PACKAGE_PRIVATE)
+
+    // TODO(#1096): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that a rule with {@code visibility: PACKAGE_PRIVATE} is parsed directly into a rule
+   * whose visibilities set contains only {@link MemberVisibility#PACKAGE_PRIVATE}.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1096")
+  public void shouldParseVisibilityPackagePrivate() {
+    // Given: YAML rule with visibility: PACKAGE_PRIVATE
+    // When: Parsed by RpcPolicyParser.parseYaml()
+    // Then: Rule's getVisibilities() returns EnumSet.of(PACKAGE_PRIVATE)
+
+    // TODO(#1096): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that when a YAML rule does not include a {@code visibility} field, the parsed rule's
+   * visibilities is null, meaning all visibility levels are matched by default.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1096")
+  public void shouldOmitVisibilityWhenNotSpecified() {
+    // Given: YAML rule without visibility field
+    // When: Parsed by RpcPolicyParser.parseYaml()
+    // Then: Rule's getVisibilities() returns null (match all)
+
+    // TODO(#1096): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that a rule with an invalid visibility value (e.g. {@code visibility: INVALID_VALUE})
+   * causes an {@link IllegalArgumentException} to be thrown during parsing.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1096")
+  public void shouldThrowForInvalidVisibility() {
+    // Given: YAML rule with visibility: INVALID_VALUE
+    // When: Parsed by RpcPolicyParser.parseYaml()
+    // Then: Throws IllegalArgumentException
+
+    // TODO(#1096): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that visibility values are parsed case-insensitively, so {@code visibility: public}
+   * (lowercase) is equivalent to {@code visibility: PUBLIC}.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1096")
+  public void shouldParseCaseInsensitiveVisibility() {
+    // Given: YAML rule with visibility: public (lowercase)
+    // When: Parsed by RpcPolicyParser.parseYaml()
+    // Then: Rule's getVisibilities() returns EnumSet.of(PUBLIC)
+
+    // TODO(#1096): Implement test logic
+    fail("Not yet implemented");
   }
 }
