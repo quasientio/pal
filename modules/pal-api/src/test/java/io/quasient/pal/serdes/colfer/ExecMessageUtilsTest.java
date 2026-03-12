@@ -13,6 +13,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -22,6 +23,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class ExecMessageUtilsTest {
@@ -510,5 +512,127 @@ public class ExecMessageUtilsTest {
             "test", accessibleObject, ObjectRef.randomRef(), false, UUID.randomUUID().toString());
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
   }
+
+  // </editor-fold>
+
+  // <editor-fold desc="getModifiers">
+
+  /** Verifies that {@code getModifiers} returns the modifiers set on a {@code ConstructorCall}. */
+  @Test
+  @Ignore("Awaiting implementation in #1090")
+  public void shouldReturnModifiersForConstructorCall() {
+    // Given: ExecMessage with ConstructorCall where modifiers = Modifier.PUBLIC
+    // When: ExecMessageUtils.getModifiers(msg) called
+    // Then: Returns Modifier.PUBLIC
+
+    // TODO(#1090): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the modifiers set on an {@code InstanceMethodCall}.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1090")
+  public void shouldReturnModifiersForInstanceMethodCall() {
+    // Given: ExecMessage with InstanceMethodCall where modifiers = Modifier.PROTECTED
+    // When: ExecMessageUtils.getModifiers(msg) called
+    // Then: Returns Modifier.PROTECTED
+
+    // TODO(#1090): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the modifiers set on a {@code ClassMethodCall},
+   * including combined bitmasks.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1090")
+  public void shouldReturnModifiersForClassMethodCall() {
+    // Given: ExecMessage with ClassMethodCall where modifiers = Modifier.PRIVATE | Modifier.STATIC
+    // When: ExecMessageUtils.getModifiers(msg) called
+    // Then: Returns Modifier.PRIVATE | Modifier.STATIC
+
+    // TODO(#1090): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the field modifiers from an {@code
+   * InstanceFieldGet}.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1090")
+  public void shouldReturnModifiersForInstanceFieldGet() {
+    // Given: ExecMessage with InstanceFieldGet where field.modifiers = Modifier.PUBLIC
+    // When: ExecMessageUtils.getModifiers(msg) called
+    // Then: Returns Modifier.PUBLIC
+
+    // TODO(#1090): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the field modifiers from a {@code StaticFieldGet},
+   * including combined bitmasks.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1090")
+  public void shouldReturnModifiersForStaticFieldGet() {
+    // Given: ExecMessage with StaticFieldGet where field.modifiers = Modifier.PRIVATE |
+    //        Modifier.STATIC
+    // When: ExecMessageUtils.getModifiers(msg) called
+    // Then: Returns Modifier.PRIVATE | Modifier.STATIC
+
+    // TODO(#1090): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the field modifiers from an {@code
+   * InstanceFieldPut}, including zero for package-private.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1090")
+  public void shouldReturnModifiersForInstanceFieldPut() {
+    // Given: ExecMessage with InstanceFieldPut where field.modifiers = 0 (package-private)
+    // When: ExecMessageUtils.getModifiers(msg) called
+    // Then: Returns 0
+
+    // TODO(#1090): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the field modifiers from a {@code StaticFieldPut},
+   * including combined bitmasks.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1090")
+  public void shouldReturnModifiersForStaticFieldPut() {
+    // Given: ExecMessage with StaticFieldPut where field.modifiers = Modifier.PROTECTED |
+    //        Modifier.STATIC
+    // When: ExecMessageUtils.getModifiers(msg) called
+    // Then: Returns Modifier.PROTECTED | Modifier.STATIC
+
+    // TODO(#1090): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns zero for message types that do not carry modifiers.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1090")
+  public void shouldReturnZeroForUnknownMessageType() {
+    // Given: ExecMessage with a type that doesn't carry modifiers (e.g., EXEC_RETURN_VALUE)
+    // When: ExecMessageUtils.getModifiers(msg) called
+    // Then: Returns 0
+
+    // TODO(#1090): Implement test logic
+    fail("Not yet implemented");
+  }
+
   // </editor-fold>
 }
