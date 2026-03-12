@@ -12,13 +12,13 @@ package io.quasient.pal.core.execution.java.reflect;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quasient.pal.core.rpc.policy.MemberVisibility;
 import io.quasient.pal.core.rpc.policy.RpcPolicy;
 import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
+import io.quasient.pal.core.rpc.policy.RpcPolicyHolder;
 import io.quasient.pal.core.rpc.policy.RpcPolicyPresets;
 import io.quasient.pal.core.rpc.policy.RpcPolicyRule;
 import java.nio.file.Files;
@@ -28,7 +28,6 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -474,13 +473,35 @@ public class ClassMetadataSerializerRpcPolicyTest {
    * [TEST:ClassMetadataSerializerRpcPolicyTest.shouldReflectUpdatedPolicyAfterHolderSwap]
    */
   @Test
-  @Ignore("Awaiting implementation in #1134")
-  public void shouldReflectUpdatedPolicyAfterHolderSwap() {
+  public void shouldReflectUpdatedPolicyAfterHolderSwap() throws Exception {
     // Given: A ClassMetadataSerializer constructed with a deny-all policy (wrapped in a holder)
-    // When: Metadata is scanned — all classes denied
-    // Then: Holder is swapped to allow-all policy, metadata is scanned again — classes now included
+    RpcPolicy denyAll = new RpcPolicy(List.of(), RpcPolicyAction.DENY);
+    RpcPolicyHolder holder = new RpcPolicyHolder(denyAll);
+    ClassMetadataSerializer serializer = new ClassMetadataSerializer(null, holder);
 
-    // TODO(#1134): Implement test logic
-    fail("Not yet implemented");
+    // When: Metadata is scanned — all classes denied
+    Path outFile =
+        serializer.scannedClasspathToJson(
+            false, Set.of("org.example.paltest.SubClass"), null, false);
+    String json = Files.readString(outFile);
+    Files.delete(outFile);
+
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode root = mapper.readTree(json);
+    assertThat("With deny-all policy, no classes should appear", root.size(), is(0));
+
+    // Then: Holder is swapped to allow-all policy, metadata is scanned again — classes now included
+    RpcPolicy allowAll = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
+    holder.updatePolicy(allowAll);
+
+    Path outFile2 =
+        serializer.scannedClasspathToJson(
+            false, Set.of("org.example.paltest.SubClass"), null, false);
+    String json2 = Files.readString(outFile2);
+    Files.delete(outFile2);
+
+    JsonNode root2 = mapper.readTree(json2);
+    assertThat("With allow-all policy, SubClass should appear", root2.size(), is(1));
+    assertThat(root2.get(0).get("className").asText(), is("org.example.paltest.SubClass"));
   }
 }
