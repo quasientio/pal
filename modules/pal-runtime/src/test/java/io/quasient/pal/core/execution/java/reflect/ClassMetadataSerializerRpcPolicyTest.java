@@ -12,6 +12,7 @@ package io.quasient.pal.core.execution.java.reflect;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +28,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -462,5 +464,23 @@ public class ClassMetadataSerializerRpcPolicyTest {
 
     // Both constructors appear (public no-arg + package-private int)
     assertThat(classNode.get("constructors").size(), is(2));
+  }
+
+  /**
+   * Verifies that the serializer reads through the {@code RpcPolicyHolder} on each scan, so that a
+   * policy swap on the holder is immediately visible without reconstructing the serializer.
+   *
+   * <p>Acceptance criteria:
+   * [TEST:ClassMetadataSerializerRpcPolicyTest.shouldReflectUpdatedPolicyAfterHolderSwap]
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1134")
+  public void shouldReflectUpdatedPolicyAfterHolderSwap() {
+    // Given: A ClassMetadataSerializer constructed with a deny-all policy (wrapped in a holder)
+    // When: Metadata is scanned — all classes denied
+    // Then: Holder is swapped to allow-all policy, metadata is scanned again — classes now included
+
+    // TODO(#1134): Implement test logic
+    fail("Not yet implemented");
   }
 }
