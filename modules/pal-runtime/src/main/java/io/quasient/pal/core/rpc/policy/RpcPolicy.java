@@ -75,7 +75,7 @@ public class RpcPolicy {
       MemberCategory memberCategory) {
     String path = className + "." + memberName;
     for (RpcPolicyRule rule : rules) {
-      if (rule.matches(path, channel, memberCategory)) {
+      if (rule.matches(path, channel, memberCategory, null)) {
         return rule.getAction();
       }
     }
@@ -99,7 +99,7 @@ public class RpcPolicy {
       String className, String memberName, MemberCategory memberCategory) {
     String path = className + "." + memberName;
     for (RpcPolicyRule rule : rules) {
-      if (rule.matchesForMetadata(path, memberCategory)) {
+      if (rule.matchesForMetadata(path, memberCategory, null)) {
         return rule.getAction();
       }
     }

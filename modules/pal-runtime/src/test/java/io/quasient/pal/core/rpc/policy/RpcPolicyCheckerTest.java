@@ -70,7 +70,8 @@ public class RpcPolicyCheckerTest {
   public void shouldPassWhenPolicyReturnsAllow() {
     RpcPolicy policy =
         new RpcPolicy(
-            List.of(new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null)),
+            List.of(
+                new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -108,7 +109,7 @@ public class RpcPolicyCheckerTest {
         new RpcPolicy(
             List.of(
                 new RpcPolicyRule(
-                    "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null)),
+                    "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -132,7 +133,7 @@ public class RpcPolicyCheckerTest {
         new RpcPolicy(
             List.of(
                 new RpcPolicyRule(
-                    "com.example.**", null, RpcPolicyAction.LOG_AND_DENY, null, null)),
+                    "com.example.**", null, RpcPolicyAction.LOG_AND_DENY, null, null, null)),
             RpcPolicyAction.ALLOW);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -159,7 +160,8 @@ public class RpcPolicyCheckerTest {
     RpcPolicy policy =
         new RpcPolicy(
             List.of(
-                new RpcPolicyRule("com.example.Foo.**", null, RpcPolicyAction.ALLOW, null, null)),
+                new RpcPolicyRule(
+                    "com.example.Foo.**", null, RpcPolicyAction.ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -180,7 +182,7 @@ public class RpcPolicyCheckerTest {
         new RpcPolicy(
             List.of(
                 new RpcPolicyRule(
-                    "com.example.Foo", "specificMethod", RpcPolicyAction.ALLOW, null, null)),
+                    "com.example.Foo", "specificMethod", RpcPolicyAction.ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -214,7 +216,8 @@ public class RpcPolicyCheckerTest {
                     null,
                     RpcPolicyAction.ALLOW,
                     null,
-                    EnumSet.of(MemberCategory.CONSTRUCTOR))),
+                    EnumSet.of(MemberCategory.CONSTRUCTOR),
+                    null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -264,7 +267,8 @@ public class RpcPolicyCheckerTest {
   public void shouldReturnCorrectAccessibilityForIsAccessible() {
     RpcPolicy policy =
         new RpcPolicy(
-            List.of(new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null)),
+            List.of(
+                new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -288,7 +292,7 @@ public class RpcPolicyCheckerTest {
         new RpcPolicy(
             List.of(
                 new RpcPolicyRule(
-                    "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null)),
+                    "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 

@@ -48,7 +48,7 @@ public class ClassMetadataSerializerRpcPolicyTest {
     List<RpcPolicyRule> rules =
         List.of(
             new RpcPolicyRule(
-                "org.example.paltest.SubClass", null, RpcPolicyAction.DENY, null, null));
+                "org.example.paltest.SubClass", null, RpcPolicyAction.DENY, null, null, null));
     RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.ALLOW);
     ClassMetadataSerializer serializer = new ClassMetadataSerializer(policy);
 
@@ -88,7 +88,8 @@ public class ClassMetadataSerializerRpcPolicyTest {
     // Given: Policy that allows org.example.paltest.** but denies everything else
     List<RpcPolicyRule> rules =
         List.of(
-            new RpcPolicyRule("org.example.paltest.**", null, RpcPolicyAction.ALLOW, null, null));
+            new RpcPolicyRule(
+                "org.example.paltest.**", null, RpcPolicyAction.ALLOW, null, null, null));
     RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
     ClassMetadataSerializer serializer = new ClassMetadataSerializer(policy);
 
@@ -130,8 +131,9 @@ public class ClassMetadataSerializerRpcPolicyTest {
     List<RpcPolicyRule> rules =
         List.of(
             new RpcPolicyRule(
-                "org.example.paltest.SubClass", "getA", RpcPolicyAction.DENY, null, null),
-            new RpcPolicyRule("org.example.paltest.**", null, RpcPolicyAction.ALLOW, null, null));
+                "org.example.paltest.SubClass", "getA", RpcPolicyAction.DENY, null, null, null),
+            new RpcPolicyRule(
+                "org.example.paltest.**", null, RpcPolicyAction.ALLOW, null, null, null));
     RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
     ClassMetadataSerializer serializer = new ClassMetadataSerializer(policy);
 
@@ -248,7 +250,8 @@ public class ClassMetadataSerializerRpcPolicyTest {
     // always scans with full visibility and relies on the policy for filtering.
     List<RpcPolicyRule> rules =
         List.of(
-            new RpcPolicyRule("org.example.paltest.**", null, RpcPolicyAction.ALLOW, null, null));
+            new RpcPolicyRule(
+                "org.example.paltest.**", null, RpcPolicyAction.ALLOW, null, null, null));
     RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
     ClassMetadataSerializer serializer = new ClassMetadataSerializer(policy);
 

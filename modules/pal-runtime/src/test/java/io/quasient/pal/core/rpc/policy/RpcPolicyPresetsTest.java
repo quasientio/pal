@@ -270,6 +270,6 @@ public class RpcPolicyPresetsTest {
       String classMethodPath,
       MessageChannelType channel,
       MemberCategory category) {
-    return rules.stream().anyMatch(rule -> rule.matches(classMethodPath, channel, category));
+    return rules.stream().anyMatch(rule -> rule.matches(classMethodPath, channel, category, null));
   }
 }

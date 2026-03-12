@@ -48,8 +48,8 @@ public class RpcPolicyTest {
   public void shouldReturnFirstMatchingRuleAction() {
     List<RpcPolicyRule> rules =
         List.of(
-            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null),
-            new RpcPolicyRule("com.**", null, RpcPolicyAction.DENY, null, null));
+            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null),
+            new RpcPolicyRule("com.**", null, RpcPolicyAction.DENY, null, null, null));
     RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
     RpcPolicyAction result =
@@ -67,8 +67,8 @@ public class RpcPolicyTest {
   public void shouldFallThroughToSecondRule() {
     List<RpcPolicyRule> rules =
         List.of(
-            new RpcPolicyRule("com.example.api.**", null, RpcPolicyAction.ALLOW, null, null),
-            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.DENY, null, null));
+            new RpcPolicyRule("com.example.api.**", null, RpcPolicyAction.ALLOW, null, null, null),
+            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.DENY, null, null, null));
     RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.ALLOW);
 
     RpcPolicyAction result =
@@ -94,8 +94,9 @@ public class RpcPolicyTest {
                 null,
                 RpcPolicyAction.ALLOW,
                 EnumSet.of(MessageChannelType.ZMQ_SOCKET_RPC),
+                null,
                 null),
-            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.DENY, null, null));
+            new RpcPolicyRule("com.example.**", null, RpcPolicyAction.DENY, null, null, null));
     RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.ALLOW);
 
     RpcPolicyAction result =
@@ -118,8 +119,10 @@ public class RpcPolicyTest {
                 null,
                 RpcPolicyAction.ALLOW,
                 null,
-                EnumSet.of(MemberCategory.FIELD_GET)),
-            new RpcPolicyRule("com.example.Config.**", null, RpcPolicyAction.DENY, null, null));
+                EnumSet.of(MemberCategory.FIELD_GET),
+                null),
+            new RpcPolicyRule(
+                "com.example.Config.**", null, RpcPolicyAction.DENY, null, null, null));
     RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.ALLOW);
 
     RpcPolicyAction result =
@@ -167,7 +170,8 @@ public class RpcPolicyTest {
   @Test
   public void shouldAllowUserRulesToOverridePresets() {
     List<RpcPolicyRule> rules = new ArrayList<>();
-    rules.add(new RpcPolicyRule("java.lang.Class", "forName", RpcPolicyAction.ALLOW, null, null));
+    rules.add(
+        new RpcPolicyRule("java.lang.Class", "forName", RpcPolicyAction.ALLOW, null, null, null));
     rules.addAll(RpcPolicyPresets.getDenyClassloadingRules());
     RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
@@ -219,7 +223,8 @@ public class RpcPolicyTest {
   @Test
   public void shouldBuildClassMethodPath() {
     List<RpcPolicyRule> rules =
-        List.of(new RpcPolicyRule("com.example.Foo", "bar", RpcPolicyAction.ALLOW, null, null));
+        List.of(
+            new RpcPolicyRule("com.example.Foo", "bar", RpcPolicyAction.ALLOW, null, null, null));
     RpcPolicy policy = new RpcPolicy(rules, RpcPolicyAction.DENY);
 
     RpcPolicyAction result =

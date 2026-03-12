@@ -245,7 +245,7 @@ public final class RpcPolicyParser {
     Set<MessageChannelType> channels = parseChannels(ruleMap.get("channel"));
     Set<MemberCategory> members = parseMembers(ruleMap.get("members"));
 
-    return new RpcPolicyRule(classPattern, memberPattern, ruleAction, channels, members);
+    return new RpcPolicyRule(classPattern, memberPattern, ruleAction, channels, members, null);
   }
 
   /**

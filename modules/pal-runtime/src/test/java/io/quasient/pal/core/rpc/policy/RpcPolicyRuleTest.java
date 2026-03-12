@@ -11,11 +11,9 @@ package io.quasient.pal.core.rpc.policy;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.core.transport.MessageChannelType;
 import java.util.EnumSet;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -29,52 +27,63 @@ public class RpcPolicyRuleTest {
   @Test
   public void shouldMatchExactClassAndMethod() {
     RpcPolicyRule rule =
-        new RpcPolicyRule("com.example.Calculator", "add", RpcPolicyAction.ALLOW, null, null);
+        new RpcPolicyRule("com.example.Calculator", "add", RpcPolicyAction.ALLOW, null, null, null);
 
     assertThat(
         rule.matches(
-            "com.example.Calculator.add", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+            "com.example.Calculator.add",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null),
         is(true));
   }
 
   @Test
   public void shouldNotMatchDifferentMethod() {
     RpcPolicyRule rule =
-        new RpcPolicyRule("com.example.Calculator", "add", RpcPolicyAction.ALLOW, null, null);
+        new RpcPolicyRule("com.example.Calculator", "add", RpcPolicyAction.ALLOW, null, null, null);
 
     assertThat(
         rule.matches(
             "com.example.Calculator.subtract",
             MessageChannelType.ZMQ_SOCKET_RPC,
-            MemberCategory.METHOD),
+            MemberCategory.METHOD,
+            null),
         is(false));
   }
 
   @Test
   public void shouldMatchWildcardMethod() {
     RpcPolicyRule rule =
-        new RpcPolicyRule("com.example.Calculator", "**", RpcPolicyAction.ALLOW, null, null);
+        new RpcPolicyRule("com.example.Calculator", "**", RpcPolicyAction.ALLOW, null, null, null);
 
     assertThat(
         rule.matches(
-            "com.example.Calculator.add", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+            "com.example.Calculator.add",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null),
         is(true));
     assertThat(
         rule.matches(
             "com.example.Calculator.subtract",
             MessageChannelType.ZMQ_SOCKET_RPC,
-            MemberCategory.METHOD),
+            MemberCategory.METHOD,
+            null),
         is(true));
   }
 
   @Test
   public void shouldMatchWildcardPackage() {
     RpcPolicyRule rule =
-        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null);
+        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null, null);
 
     assertThat(
         rule.matches(
-            "com.example.sub.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+            "com.example.sub.Foo.bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null),
         is(true));
   }
 
@@ -85,19 +94,23 @@ public class RpcPolicyRuleTest {
     // But to test * specifically: use it in a terminal position via the memberPattern.
     // Here classPattern="com.example.Calculator" and memberPattern="*" (single-segment).
     RpcPolicyRule rule =
-        new RpcPolicyRule("com.example.Calculator", "*", RpcPolicyAction.ALLOW, null, null);
+        new RpcPolicyRule("com.example.Calculator", "*", RpcPolicyAction.ALLOW, null, null, null);
 
     // Matches exactly one method segment
     assertThat(
         rule.matches(
-            "com.example.Calculator.add", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+            "com.example.Calculator.add",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null),
         is(true));
     // Does not match when there are extra segments after Calculator
     assertThat(
         rule.matches(
             "com.example.Calculator.add.extra",
             MessageChannelType.ZMQ_SOCKET_RPC,
-            MemberCategory.METHOD),
+            MemberCategory.METHOD,
+            null),
         is(false));
   }
 
@@ -109,15 +122,16 @@ public class RpcPolicyRuleTest {
             "**",
             RpcPolicyAction.ALLOW,
             EnumSet.of(MessageChannelType.ZMQ_SOCKET_RPC),
+            null,
             null);
 
     assertThat(
         rule.matches(
-            "com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+            "com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD, null),
         is(true));
     assertThat(
         rule.matches(
-            "com.example.Foo.bar", MessageChannelType.WEBSOCKET_RPC, MemberCategory.METHOD),
+            "com.example.Foo.bar", MessageChannelType.WEBSOCKET_RPC, MemberCategory.METHOD, null),
         is(false));
   }
 
@@ -129,36 +143,41 @@ public class RpcPolicyRuleTest {
             "**",
             RpcPolicyAction.ALLOW,
             null,
-            EnumSet.of(MemberCategory.METHOD, MemberCategory.STATIC_METHOD));
+            EnumSet.of(MemberCategory.METHOD, MemberCategory.STATIC_METHOD),
+            null);
 
     assertThat(
         rule.matches(
-            "com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+            "com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD, null),
         is(true));
     assertThat(
         rule.matches(
-            "com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.CONSTRUCTOR),
+            "com.example.Foo.bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.CONSTRUCTOR,
+            null),
         is(false));
   }
 
   @Test
   public void shouldMatchAllChannelsWhenNull() {
     RpcPolicyRule rule =
-        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null);
+        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null, null);
 
     for (MessageChannelType channel : MessageChannelType.values()) {
-      assertThat(rule.matches("com.example.Foo.bar", channel, MemberCategory.METHOD), is(true));
+      assertThat(
+          rule.matches("com.example.Foo.bar", channel, MemberCategory.METHOD, null), is(true));
     }
   }
 
   @Test
   public void shouldMatchAllMembersWhenNull() {
     RpcPolicyRule rule =
-        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null);
+        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null, null);
 
     for (MemberCategory category : MemberCategory.values()) {
       assertThat(
-          rule.matches("com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, category),
+          rule.matches("com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, category, null),
           is(true));
     }
   }
@@ -166,18 +185,21 @@ public class RpcPolicyRuleTest {
   @Test
   public void shouldBeCaseInsensitive() {
     RpcPolicyRule rule =
-        new RpcPolicyRule("com.example.Calculator", "Add", RpcPolicyAction.ALLOW, null, null);
+        new RpcPolicyRule("com.example.Calculator", "Add", RpcPolicyAction.ALLOW, null, null, null);
 
     assertThat(
         rule.matches(
-            "com.example.calculator.add", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
+            "com.example.calculator.add",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            null),
         is(true));
   }
 
   @Test
   public void shouldDefaultMethodPatternToDoubleWildcard() {
     RpcPolicyRule rule =
-        new RpcPolicyRule("com.example.Calculator", null, RpcPolicyAction.ALLOW, null, null);
+        new RpcPolicyRule("com.example.Calculator", null, RpcPolicyAction.ALLOW, null, null, null);
 
     assertThat(rule.getMemberPattern(), is("**"));
     assertThat(rule.getFullPattern(), is("com.example.Calculator.**"));
@@ -185,124 +207,177 @@ public class RpcPolicyRuleTest {
         rule.matches(
             "com.example.Calculator.anyMethod",
             MessageChannelType.ZMQ_SOCKET_RPC,
-            MemberCategory.METHOD),
+            MemberCategory.METHOD,
+            null),
         is(true));
   }
 
   // ---------------------------------------------------------------------------
-  // Visibility filter tests (awaiting RpcPolicyRule visibility extension #1092)
+  // Visibility filter tests
   // ---------------------------------------------------------------------------
 
   @Test
-  @Ignore("Awaiting implementation in #1092")
   public void shouldMatchWhenVisibilitiesIsNull() {
-    // Given: Rule with visibilities = null (match all)
-    // When: matches() called with MemberVisibility.PRIVATE
-    // Then: Returns true (null means no visibility restriction)
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null, null);
 
-    // TODO(#1092): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PRIVATE),
+        is(true));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1092")
   public void shouldMatchWhenVisibilityInSet() {
-    // Given: Rule with visibilities = EnumSet.of(PUBLIC, PROTECTED)
-    // When: matches() called with MemberVisibility.PUBLIC
-    // Then: Returns true
+    RpcPolicyRule rule =
+        new RpcPolicyRule(
+            "com.example.**",
+            "**",
+            RpcPolicyAction.ALLOW,
+            null,
+            null,
+            EnumSet.of(MemberVisibility.PUBLIC, MemberVisibility.PROTECTED));
 
-    // TODO(#1092): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PUBLIC),
+        is(true));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1092")
   public void shouldNotMatchWhenVisibilityNotInSet() {
-    // Given: Rule with visibilities = EnumSet.of(PUBLIC)
-    // When: matches() called with MemberVisibility.PRIVATE
-    // Then: Returns false
+    RpcPolicyRule rule =
+        new RpcPolicyRule(
+            "com.example.**",
+            "**",
+            RpcPolicyAction.ALLOW,
+            null,
+            null,
+            EnumSet.of(MemberVisibility.PUBLIC));
 
-    // TODO(#1092): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PRIVATE),
+        is(false));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1092")
   public void shouldShortCircuitOnVisibilityBeforePatternMatch() {
-    // Given: Rule with visibilities = EnumSet.of(PUBLIC) and broad pattern **.**
-    // When: matches() called with MemberVisibility.PACKAGE_PRIVATE
-    // Then: Returns false (visibility check prevents pattern evaluation)
+    RpcPolicyRule rule =
+        new RpcPolicyRule(
+            "**", "**", RpcPolicyAction.ALLOW, null, null, EnumSet.of(MemberVisibility.PUBLIC));
 
-    // TODO(#1092): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PACKAGE_PRIVATE),
+        is(false));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1092")
   public void shouldFilterByVisibilityInMetadata() {
-    // Given: Rule with visibilities = EnumSet.of(PUBLIC)
-    // When: matchesForMetadata() called with MemberVisibility.PROTECTED
-    // Then: Returns false
+    RpcPolicyRule rule =
+        new RpcPolicyRule(
+            "com.example.**",
+            "**",
+            RpcPolicyAction.ALLOW,
+            null,
+            null,
+            EnumSet.of(MemberVisibility.PUBLIC));
 
-    // TODO(#1092): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matchesForMetadata(
+            "com.example.Foo.bar", MemberCategory.METHOD, MemberVisibility.PROTECTED),
+        is(false));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1092")
   public void shouldMatchAllVisibilitiesInMetadataWhenNull() {
-    // Given: Rule with visibilities = null
-    // When: matchesForMetadata() called with MemberVisibility.PRIVATE
-    // Then: Returns true
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null, null);
 
-    // TODO(#1092): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matchesForMetadata(
+            "com.example.Foo.bar", MemberCategory.METHOD, MemberVisibility.PRIVATE),
+        is(true));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1092")
   public void shouldMatchWithNullVisibilityParameter() {
-    // Given: Rule with visibilities = EnumSet.of(PUBLIC)
-    // When: matches() called with visibility = null (skip check)
-    // Then: Returns true (null visibility parameter means skip the check)
+    RpcPolicyRule rule =
+        new RpcPolicyRule(
+            "com.example.**",
+            "**",
+            RpcPolicyAction.ALLOW,
+            null,
+            null,
+            EnumSet.of(MemberVisibility.PUBLIC));
 
-    // TODO(#1092): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD, null),
+        is(true));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1092")
   public void shouldReturnVisibilitiesViaGetter() {
-    // Given: Rule with visibilities = EnumSet.of(PUBLIC, PROTECTED)
-    // When: getVisibilities() called
-    // Then: Returns set containing PUBLIC and PROTECTED
+    RpcPolicyRule rule =
+        new RpcPolicyRule(
+            "com.example.**",
+            "**",
+            RpcPolicyAction.ALLOW,
+            null,
+            null,
+            EnumSet.of(MemberVisibility.PUBLIC, MemberVisibility.PROTECTED));
 
-    // TODO(#1092): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.getVisibilities(),
+        is(EnumSet.of(MemberVisibility.PUBLIC, MemberVisibility.PROTECTED)));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1092")
   public void shouldReturnNullVisibilitiesViaGetter() {
-    // Given: Rule with visibilities = null
-    // When: getVisibilities() called
-    // Then: Returns null
+    RpcPolicyRule rule =
+        new RpcPolicyRule("com.example.**", "**", RpcPolicyAction.ALLOW, null, null, null);
 
-    // TODO(#1092): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.getVisibilities() == null, is(true));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1092")
   public void shouldCombineVisibilityWithChannelAndMemberFilters() {
-    // Given: Rule with channels = EnumSet.of(ZMQ_SOCKET_RPC),
-    //        members = EnumSet.of(METHOD), visibilities = EnumSet.of(PUBLIC)
-    // When: matches() called with matching channel, member, and visibility
-    // Then: Returns true
-    // When: matches() called with matching channel/member but PRIVATE visibility
-    // Then: Returns false
+    RpcPolicyRule rule =
+        new RpcPolicyRule(
+            "com.example.**",
+            "**",
+            RpcPolicyAction.ALLOW,
+            EnumSet.of(MessageChannelType.ZMQ_SOCKET_RPC),
+            EnumSet.of(MemberCategory.METHOD),
+            EnumSet.of(MemberVisibility.PUBLIC));
 
-    // TODO(#1092): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PUBLIC),
+        is(true));
+    assertThat(
+        rule.matches(
+            "com.example.Foo.bar",
+            MessageChannelType.ZMQ_SOCKET_RPC,
+            MemberCategory.METHOD,
+            MemberVisibility.PRIVATE),
+        is(false));
   }
 }

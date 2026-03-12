@@ -72,6 +72,15 @@ public class RpcPolicyRule {
   private final Set<MemberCategory> members;
 
   /**
+   * The set of member visibilities this rule applies to, or {@code null} to match all visibilities.
+   *
+   * <p>When non-null, only operations targeting a member with one of the specified visibility
+   * levels will match. This enables rules like "only allow public methods" or "deny private
+   * fields."
+   */
+  private final Set<MemberVisibility> visibilities;
+
+  /**
    * Creates a new RPC policy rule.
    *
    * @param classPattern Ant-style pattern for matching class names (e.g. {@code "com.example.**"})
@@ -81,38 +90,52 @@ public class RpcPolicyRule {
    * @param channels the set of channels this rule applies to, or {@code null} to match all channels
    * @param members the set of member categories this rule applies to, or {@code null} to match all
    *     categories
+   * @param visibilities the set of member visibilities this rule applies to, or {@code null} to
+   *     match all visibilities
    */
   public RpcPolicyRule(
       String classPattern,
       String memberPattern,
       RpcPolicyAction action,
       Set<MessageChannelType> channels,
-      Set<MemberCategory> members) {
+      Set<MemberCategory> members,
+      Set<MemberVisibility> visibilities) {
     this.classPattern = classPattern;
     this.memberPattern = memberPattern != null ? memberPattern : "**";
     this.action = action;
     this.channels = channels != null ? EnumSet.copyOf(channels) : null;
     this.members = members != null ? EnumSet.copyOf(members) : null;
+    this.visibilities = visibilities != null ? EnumSet.copyOf(visibilities) : null;
     this.fullPattern = this.classPattern + "." + this.memberPattern;
   }
 
   /**
-   * Tests whether this rule matches the given class-method path, channel, and member category.
+   * Tests whether this rule matches the given class-method path, channel, member category, and
+   * visibility.
    *
    * <p>Matching is multi-dimensional: the channel filter is checked first (short-circuit), then the
-   * member-category filter, and finally the Ant-style pattern match on the full path.
+   * member-category filter, then the visibility filter, and finally the Ant-style pattern match on
+   * the full path.
    *
    * @param classMethodPath the fully-qualified path in the form {@code "com.example.Foo.bar"}
    * @param channel the message channel the operation arrived on
    * @param memberCategory the category of the member being accessed
+   * @param visibility the visibility of the member being accessed, or {@code null} to skip the
+   *     visibility check
    * @return {@code true} if the operation matches this rule
    */
   public boolean matches(
-      String classMethodPath, MessageChannelType channel, MemberCategory memberCategory) {
+      String classMethodPath,
+      MessageChannelType channel,
+      MemberCategory memberCategory,
+      MemberVisibility visibility) {
     if (channels != null && !channels.contains(channel)) {
       return false;
     }
     if (members != null && !members.contains(memberCategory)) {
+      return false;
+    }
+    if (visibility != null && visibilities != null && !visibilities.contains(visibility)) {
       return false;
     }
     return MATCHER.isMatch(fullPattern, classMethodPath);
@@ -173,8 +196,18 @@ public class RpcPolicyRule {
   }
 
   /**
-   * Tests whether this rule matches the given class-method path and member category, ignoring the
-   * channel dimension.
+   * Returns the set of member visibilities this rule applies to, or {@code null} for all
+   * visibilities.
+   *
+   * @return the visibility set, or {@code null}
+   */
+  public Set<MemberVisibility> getVisibilities() {
+    return visibilities != null ? EnumSet.copyOf(visibilities) : null;
+  }
+
+  /**
+   * Tests whether this rule matches the given class-method path, member category, and visibility,
+   * ignoring the channel dimension.
    *
    * <p>This variant is intended for metadata serialization, where the goal is to determine if a
    * member is accessible on <em>any</em> channel. Channel-restricted rules are still evaluated
@@ -182,10 +215,16 @@ public class RpcPolicyRule {
    *
    * @param classMethodPath the fully-qualified path in the form {@code "com.example.Foo.bar"}
    * @param memberCategory the category of the member being accessed
+   * @param visibility the visibility of the member being accessed, or {@code null} to skip the
+   *     visibility check
    * @return {@code true} if the operation matches this rule (ignoring channel)
    */
-  public boolean matchesForMetadata(String classMethodPath, MemberCategory memberCategory) {
+  public boolean matchesForMetadata(
+      String classMethodPath, MemberCategory memberCategory, MemberVisibility visibility) {
     if (members != null && !members.contains(memberCategory)) {
+      return false;
+    }
+    if (visibility != null && visibilities != null && !visibilities.contains(visibility)) {
       return false;
     }
     return MATCHER.isMatch(fullPattern, classMethodPath);

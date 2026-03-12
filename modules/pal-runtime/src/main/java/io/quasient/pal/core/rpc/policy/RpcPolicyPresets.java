@@ -199,6 +199,6 @@ public final class RpcPolicyPresets {
    * @return a new deny rule matching all channels and all member categories
    */
   private static RpcPolicyRule deny(String classPattern, String memberPattern) {
-    return new RpcPolicyRule(classPattern, memberPattern, RpcPolicyAction.DENY, null, null);
+    return new RpcPolicyRule(classPattern, memberPattern, RpcPolicyAction.DENY, null, null, null);
   }
 }
