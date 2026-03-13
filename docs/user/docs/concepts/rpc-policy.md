@@ -405,6 +405,75 @@ With a restrictive YAML policy:
 - Use channel-scoped rules if different transports have different trust levels
 - Use `visibility` filters to expose only the intended access level per rule
 
+## Hot Reloading
+
+When a peer is started with an RPC policy YAML file (`--rpc-policy`), PAL automatically watches the file for changes and reloads the policy at runtime. No restart is required — edits to the YAML file take effect within seconds.
+
+### How It Works
+
+PAL polls the policy file's last-modified timestamp at a configurable interval (default: every 2 seconds). When a change is detected:
+
+1. The YAML file is re-parsed
+2. CLI presets (`--rpc-policy-preset`) and the default action (`--rpc-default-action`) are preserved
+3. The new policy atomically replaces the old one
+4. All subsequent RPC checks and metadata responses use the updated policy
+
+### Operational Workflow
+
+```bash
+# Start a peer with a policy file
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml \
+  -cp app.jar com.example.Main
+```
+
+To update the policy at runtime:
+
+1. Edit `rpc-policy.yaml` (add, remove, or modify rules)
+2. Save the file
+3. Wait for the reload confirmation in the peer's logs:
+   ```
+   INFO  RPC policy reloaded from rpc-policy.yaml (5 rules, default action: DENY)
+   ```
+4. The new policy is now active
+
+### Error Handling
+
+If the edited YAML file contains errors (invalid syntax, unknown fields), the peer keeps the **current** policy and logs an error:
+
+```
+ERROR Failed to reload RPC policy from rpc-policy.yaml; keeping current policy
+```
+
+The watcher continues polling, so fixing the YAML and saving again will trigger a successful reload.
+
+If the policy file is deleted, no reload is triggered — the last successfully loaded policy remains active.
+
+### Configuring the Poll Interval
+
+The default poll interval is 2 seconds. To change it:
+
+```bash
+# Poll every 5 seconds
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml \
+  --rpc-policy-watch-interval 5000 \
+  -cp app.jar com.example.Main
+```
+
+### Disabling File Watching
+
+To disable automatic reloading entirely, set the interval to 0:
+
+```bash
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml \
+  --rpc-policy-watch-interval 0 \
+  -cp app.jar com.example.Main
+```
+
+With watching disabled, the policy is loaded once at startup and never reloaded.
+
 ## Further Reading
 
 - [Remote Procedure Calls](rpc.md) -- RPC fundamentals

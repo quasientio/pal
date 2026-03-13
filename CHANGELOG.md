@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Doc] Document RPC policy hot reloading: user guide (behavior, poll interval, error handling, operational workflow), developer architecture (RpcPolicyHolder volatile swap pattern, RpcPolicyFileWatcher threading model), CLI reference (--rpc-policy-watch-interval flag)
 - [Doc] Update user documentation for visibility feature: visibility field in Rule Fields table, MemberVisibility values table, deny-nonpublic preset, YAML examples with visibility usage, security considerations for visibility-aware policies
 - [Doc] Update developer architecture documentation for visibility support: MemberVisibility in core classes, visibilities field semantics, evaluation flow with visibility dimension, deny-nonpublic preset, modifier trust model, test class references
 - [Feature] Extend RpcPolicyRule with visibility filter dimension (visibilities field, matches/matchesForMetadata visibility parameter, getVisibilities accessor)

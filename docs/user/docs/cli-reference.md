@@ -118,8 +118,11 @@ Control which operations remote callers can invoke via RPC. See [RPC Policy](con
 | `--rpc-policy <path>` | -- | Path to RPC access policy YAML file |
 | `--rpc-policy-preset <names>` | -- | Comma-separated preset names to enable (e.g., `deny-unsafe,deny-jdk-internals`) |
 | `--rpc-default-action <action>` | `DENY` | Default action when no rule matches: `ALLOW` or `DENY` |
+| `--rpc-policy-watch-interval <ms>` | `2000` | Poll interval in milliseconds for watching the policy YAML file for changes. When a change is detected, the policy is reloaded automatically without restarting the peer. Set to `0` to disable file watching |
 
 When no policy flags are specified, all RPC operations are denied by default. To allow RPC calls, configure a policy with explicit ALLOW rules or pass `--rpc-default-action ALLOW`. When a policy is configured, it gates every incoming RPC message before dispatch.
+
+When a policy YAML file is specified via `--rpc-policy`, the peer automatically watches the file for changes and reloads the policy at runtime. See [RPC Policy — Hot Reloading](concepts/rpc-policy.md#hot-reloading) for details.
 
 Available presets: `deny-unsafe`, `deny-jdk-internals`, `deny-classloading`, `deny-reflection`, `deny-serialization`, `deny-scripting`, `deny-pal-internals`.
 
@@ -129,7 +132,7 @@ pal run -d localhost:2379 --zmq-rpc auto \
   --rpc-policy-preset deny-unsafe,deny-jdk-internals \
   -cp app.jar com.example.Main
 
-# Use a YAML policy file
+# Use a YAML policy file (with automatic hot reloading)
 pal run -d localhost:2379 --zmq-rpc auto \
   --rpc-policy rpc-policy.yaml \
   -cp app.jar com.example.Main
@@ -137,6 +140,16 @@ pal run -d localhost:2379 --zmq-rpc auto \
 # Deny by default, allow only via policy rules
 pal run -d localhost:2379 --zmq-rpc auto \
   --rpc-policy rpc-policy.yaml --rpc-default-action DENY \
+  -cp app.jar com.example.Main
+
+# Custom poll interval (5 seconds)
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml --rpc-policy-watch-interval 5000 \
+  -cp app.jar com.example.Main
+
+# Disable file watching (load once at startup)
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml --rpc-policy-watch-interval 0 \
   -cp app.jar com.example.Main
 ```
 
