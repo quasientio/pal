@@ -43,6 +43,7 @@ import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import io.quasient.pal.core.replay.DivergenceReport;
 import io.quasient.pal.core.replay.ReplayContext;
 import io.quasient.pal.core.replay.ReplayInputInjector;
+import io.quasient.pal.core.rpc.policy.RpcPolicyFileWatcher;
 import io.quasient.pal.core.runtime.session.SessionService;
 import io.quasient.pal.core.transport.SourceLogReader;
 import io.quasient.pal.core.transport.WalWriter;
@@ -518,6 +519,17 @@ public class Main implements Callable<Integer> {
   private String rpcDefaultAction = "DENY";
 
   /**
+   * Poll interval in milliseconds for the RPC policy file watcher. When set, the peer watches the
+   * policy YAML file for changes and reloads the policy automatically. A value of {@code 0}
+   * disables file watching. When not specified, the default interval from {@link
+   * io.quasient.pal.core.rpc.policy.RpcPolicyFileWatcher#DEFAULT_POLL_INTERVAL_MS} is used.
+   */
+  @Option(
+      names = {"--rpc-policy-watch-interval"},
+      description = "policy file poll interval in ms (default: 2000, 0 = disable watching)")
+  private Integer rpcPolicyWatchInterval;
+
+  /**
    * Flag indicating whether message interception is enabled. Only applicable when registering with
    * a PAL directory.
    */
@@ -663,6 +675,9 @@ public class Main implements Callable<Integer> {
 
   /** Lease for maintaining this peer's state liveness in the pal Directory. */
   private PeerLease peerLease;
+
+  /** RPC policy file watcher, or {@code null} if file watching is not configured. */
+  @Nullable private RpcPolicyFileWatcher rpcPolicyFileWatcher;
 
   /** Latch used to prevent premature exit when running in service mode. */
   private final CountDownLatch runAsServiceLatch = new CountDownLatch(1);
@@ -1441,6 +1456,10 @@ public class Main implements Callable<Integer> {
       properties.setProperty("rpc.policy.presets", rpcPolicyPresets);
     }
     properties.setProperty("rpc.default_action", rpcDefaultAction);
+    if (rpcPolicyWatchInterval != null) {
+      properties.setProperty(
+          "rpc.policy.watch.interval.ms", String.valueOf(rpcPolicyWatchInterval));
+    }
     // in-flight tracking options
     if (drainTimeoutMs != null) {
       properties.setProperty("intercept.drain.timeout.ms", String.valueOf(drainTimeoutMs));
@@ -1708,6 +1727,11 @@ public class Main implements Callable<Integer> {
     if (logger.isInfoEnabled()) {
       logger.info("Shutting down...");
     }
+    // stop RPC policy file watcher (if running)
+    if (rpcPolicyFileWatcher != null) {
+      rpcPolicyFileWatcher.stop();
+    }
+
     ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
     try {
       // stop services
@@ -1977,6 +2001,12 @@ public class Main implements Callable<Integer> {
     }
 
     logger.info("Peer {} up and running", uuid);
+
+    // start RPC policy file watcher (if configured)
+    rpcPolicyFileWatcher = injector.getInstance(Key.get(RpcPolicyFileWatcher.class));
+    if (rpcPolicyFileWatcher != null) {
+      rpcPolicyFileWatcher.start();
+    }
 
     // start listening to intercept requests
     if (runOptions.contains(RunOptions.WITH_INTERCEPTS)) {

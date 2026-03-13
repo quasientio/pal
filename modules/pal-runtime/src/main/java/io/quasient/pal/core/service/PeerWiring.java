@@ -51,6 +51,8 @@ import io.quasient.pal.core.replay.SideEffectAnalyzer;
 import io.quasient.pal.core.rpc.policy.RpcPolicy;
 import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
 import io.quasient.pal.core.rpc.policy.RpcPolicyChecker;
+import io.quasient.pal.core.rpc.policy.RpcPolicyFileWatcher;
+import io.quasient.pal.core.rpc.policy.RpcPolicyHolder;
 import io.quasient.pal.core.rpc.policy.RpcPolicyParser;
 import io.quasient.pal.core.runtime.objects.ConcurrentHashMapObjectLookupStore;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
@@ -236,7 +238,8 @@ public class PeerWiring extends AbstractModule {
     bind(InFlightDispatchTracker.class).asEagerSingleton();
     bind(InterceptActivationCoordinator.class).asEagerSingleton();
 
-    // RPC policy checker
+    // RPC policy components
+    bind(RpcPolicyHolder.class).in(Singleton.class);
     bind(RpcPolicyChecker.class).in(Singleton.class);
 
     // AspectProxy and DispatchForwarder's fields are static
@@ -881,6 +884,40 @@ public class PeerWiring extends AbstractModule {
   @Singleton
   RpcPolicy provideRpcPolicy() {
     return buildRpcPolicy();
+  }
+
+  /**
+   * Provides a nullable {@link RpcPolicyFileWatcher} singleton.
+   *
+   * <p>Returns {@code null} when no {@code rpc.policy.path} is configured (there is no file to
+   * watch) or when the poll interval ({@code rpc.policy.watch.interval.ms}) is set to {@code 0}
+   * (watching explicitly disabled). Otherwise, constructs a watcher that will poll the policy file
+   * at the configured interval and update the given {@code policyHolder} on changes.
+   *
+   * @param policyHolder the holder whose policy is updated on successful reload
+   * @return a new watcher, or {@code null} if watching is not configured or disabled
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  @Nullable
+  RpcPolicyFileWatcher provideRpcPolicyFileWatcher(RpcPolicyHolder policyHolder) {
+    String policyPath = properties.getProperty("rpc.policy.path");
+    if (policyPath == null) {
+      return null;
+    }
+    long pollInterval =
+        Long.parseLong(
+            properties.getProperty(
+                "rpc.policy.watch.interval.ms",
+                String.valueOf(RpcPolicyFileWatcher.DEFAULT_POLL_INTERVAL_MS)));
+    if (pollInterval == 0) {
+      return null;
+    }
+    String presets = properties.getProperty("rpc.policy.presets");
+    String defaultAction = properties.getProperty("rpc.default_action");
+    return new RpcPolicyFileWatcher(
+        Path.of(policyPath), presets, defaultAction, policyHolder, pollInterval);
   }
 
   /**
