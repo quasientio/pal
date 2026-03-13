@@ -45,6 +45,7 @@ type InterceptMessage struct {
 	exceptionPropagationPolicy uint8 // 255 = null (defer to global), 0-3 = enum ordinal
 	checkedExceptionPolicy     uint8 // 255 = null (defer to global), 0-2 = enum ordinal
 	priority                   int32
+	ttlSeconds                 int64
 }
 
 type InterceptKeyMessage struct {

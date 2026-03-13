@@ -2524,7 +2524,8 @@ public final class MessageBuilder {
           .withForceImmediate(intercept.isForceImmediate())
           .withExceptionPropagationPolicy(exceptionPropagationPolicyByte)
           .withCheckedExceptionPolicy(checkedExceptionPolicyByte)
-          .withPriority(intercept.getPriority());
+          .withPriority(intercept.getPriority())
+          .withTtlSeconds(intercept.getTtlSeconds());
     }
 
     return new InterceptMessage()
@@ -2545,7 +2546,8 @@ public final class MessageBuilder {
         .withForceImmediate(intercept.isForceImmediate())
         .withExceptionPropagationPolicy(exceptionPropagationPolicyByte)
         .withCheckedExceptionPolicy(checkedExceptionPolicyByte)
-        .withPriority(intercept.getPriority());
+        .withPriority(intercept.getPriority())
+        .withTtlSeconds(intercept.getTtlSeconds());
   }
 
   /**
