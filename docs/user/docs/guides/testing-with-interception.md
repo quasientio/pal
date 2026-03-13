@@ -445,6 +445,77 @@ public void testPerformanceUnderLoad() {
 }
 ```
 
+## TTL Intercepts for Test-Scoped Behavior
+
+Use TTL intercepts to ensure test intercepts are automatically cleaned up, even if a test crashes or `tearDown` is not called. This prevents leaked intercepts from affecting subsequent tests.
+
+### Pattern: Self-Cleaning Test Intercepts
+
+```java
+@Test
+public void testWithTTLIntercept() throws Exception {
+    // Create intercept with 30-second TTL — auto-expires if test crashes
+    InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+        UUID.randomUUID(),
+        callbackPeerUuid,
+        InterceptType.BEFORE,
+        "com.example.Service",
+        "com.example.ServiceCallback",
+        "handle",
+        new InterceptableMethodCall("process", Collections.emptyList()));
+
+    try (InterceptLease lease = directory.createIntercept(intercept, 30)) {
+        // Intercept is active for the duration of this block
+
+        // Trigger application behavior
+        triggerApplication();
+
+        // Verify callback was received
+        waitForCallbacks(1);
+        assertEquals("process", callbacks.get(0).getMethod());
+
+    } // lease.close() called automatically — intercept removed immediately
+}
+```
+
+### Pattern: Long-Running Test with Auto-Refresh
+
+For tests that run longer than the TTL, use auto-refresh to keep the intercept alive:
+
+```java
+@Test
+public void testLongRunningWithAutoRefresh() throws Exception {
+    InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+        UUID.randomUUID(),
+        callbackPeerUuid,
+        InterceptType.AROUND,
+        "com.example.SlowService",
+        "com.example.MockCallback",
+        "handle",
+        new InterceptableMethodCall("longOperation", Collections.emptyList()));
+
+    try (InterceptLease lease = directory.createIntercept(intercept, 10)) {
+        lease.startAutoRefresh(); // keeps alive every ~3 seconds
+
+        // Run a long test that takes more than 10 seconds
+        for (int i = 0; i < 20; i++) {
+            triggerApplication();
+            Thread.sleep(1000);
+        }
+
+        // Intercept stayed alive throughout the test
+        waitForCallbacks(20);
+
+    } // auto-refresh stopped and lease revoked on close
+}
+```
+
+### Why Use TTL for Tests?
+
+- **Crash safety**: If a test process dies, the TTL ensures intercepts expire and are cleaned up by etcd
+- **No leaked state**: Prevents intercepts from one test run affecting the next
+- **Complements tearDown**: Acts as a safety net alongside explicit cleanup in `@After`
+
 ## Best Practices
 
 ### 1. Clean Up After Tests

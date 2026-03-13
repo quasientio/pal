@@ -201,6 +201,15 @@ public class InterceptRequestEntry {
   }
 
   /**
+   * Returns the TTL in seconds from the underlying intercept message.
+   *
+   * @return the TTL in seconds; zero means no TTL
+   */
+  public long getTtlSeconds() {
+    return interceptMessage.getTtlSeconds();
+  }
+
+  /**
    * Retrieves the intercept message associated with this interception entry.
    *
    * @return the intercept message detailing the intercepted class member

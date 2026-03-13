@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1712,13 +1713,13 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   // ==========================================================================
-  // isPeerAlive() Tests - Issue #421
+  // isPeerAlive() Tests
   // ==========================================================================
 
   /**
    * Tests that isPeerAlive returns true for a peer with an active lease.
    *
-   * <p>Specification from Issue #421:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: Peer created with active lease (60s TTL)
@@ -1752,7 +1753,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that isPeerAlive returns false for a peer whose lease has been revoked.
    *
-   * <p>Specification from Issue #421:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: Peer created; lease created then revoked via close()
@@ -1795,7 +1796,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that isPeerAlive returns false for a non-existent peer.
    *
-   * <p>Specification from Issue #421:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: Random UUID not in directory
@@ -1819,13 +1820,13 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   // ==========================================================================
-  // getIntercept() Tests - Issue #421
+  // getIntercept() Tests
   // ==========================================================================
 
   /**
    * Tests that getIntercept returns the intercept request for a valid path.
    *
-   * <p>Specification from Issue #421:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: Intercept created for peer
@@ -1876,7 +1877,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that getIntercept returns null for an invalid path.
    *
-   * <p>Specification from Issue #421:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: No intercept at path
@@ -1897,13 +1898,13 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   // ==========================================================================
-  // deletePeers() Tests - Issue #421
+  // deletePeers() Tests
   // ==========================================================================
 
   /**
    * Tests that deletePeers removes all peers from the directory.
    *
-   * <p>Specification from Issue #421:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: 3 peers created in directory
@@ -1939,13 +1940,13 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   // ==========================================================================
-  // close() Tests - Issue #421
+  // close() Tests
   // ==========================================================================
 
   /**
    * Tests that close() is safe to call multiple times and resources are released.
    *
-   * <p>Specification from Issue #421:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: Active PalDirectory instance
@@ -1982,13 +1983,13 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   // ==========================================================================
-  // Constructor Tests - Issue #421
+  // Constructor Tests
   // ==========================================================================
 
   /**
    * Tests that PalDirectory with a custom namespace uses that namespace.
    *
-   * <p>Specification from Issue #421:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: PalDirectory created with custom namespace
@@ -2037,7 +2038,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that PalDirectory constructor with short timeout fails fast for invalid endpoint.
    *
-   * <p>Specification from Issue #421:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: PalDirectory created with 1ms timeout and invalid endpoint
@@ -2071,14 +2072,13 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   // ==========================================================================
-  // Test Specifications for Issue #636
-  // Awaiting implementation in #638
+  // Test Specifications for Intercept TTL
   // ==========================================================================
 
   /**
    * Tests that peerExists returns true for a registered peer.
    *
-   * <p>Specification #1 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: A registered peer in the directory
@@ -2101,7 +2101,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that peerExists returns false for a non-existent peer.
    *
-   * <p>Specification #2 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: A random UUID not registered in the directory
@@ -2121,7 +2121,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that updatePeer with a lease ID updates the peer's state and mtime.
    *
-   * <p>Specification #3 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: A registered peer with an active lease
@@ -2168,7 +2168,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that getSourceLogId returns the UUID for a peer with a registered source log.
    *
-   * <p>Specification #4 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: A peer with a registered source log
@@ -2196,7 +2196,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that getSourceLogId returns null for a peer without a source log.
    *
-   * <p>Specification #5 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: A peer without a source log
@@ -2219,7 +2219,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that getWalId returns the UUID for a peer with a registered WAL.
    *
-   * <p>Specification #6 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: A peer with a registered WAL (write-ahead log)
@@ -2247,7 +2247,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that getWalId returns null for a peer without a WAL.
    *
-   * <p>Specification #7 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: A peer without a WAL
@@ -2270,7 +2270,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that countLogsWithPrefix returns the correct count for matching logs.
    *
-   * <p>Specification #8 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: 3 logs created with the same prefix
@@ -2295,7 +2295,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that deleteLogsWithPrefix deletes all matching logs.
    *
-   * <p>Specification #9 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: Multiple logs with a shared prefix
@@ -2328,7 +2328,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
    * Tests that createIntercept with a non-zero TTL creates the intercept with its own dedicated
    * lease.
    *
-   * <p>Specification #10 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: A registered peer
@@ -2366,7 +2366,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that createIntercept with TTL=0 and no peer lease persists without any lease.
    *
-   * <p>Specification #11 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: A registered peer with no active lease
@@ -2407,7 +2407,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that deleteIntercept removes an existing intercept.
    *
-   * <p>Specification #12 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: A peer with an existing intercept
@@ -2446,7 +2446,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that listAllIntercepts returns all intercepts across multiple peers.
    *
-   * <p>Specification #13 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: 3 intercepts spread across multiple peers
@@ -2513,7 +2513,7 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   /**
    * Tests that listAllIntercepts returns an empty set when no intercepts exist.
    *
-   * <p>Specification #14 from Issue #636:
+   * <p>Specification:
    *
    * <ul>
    *   <li>Given: No intercepts in the directory
@@ -2526,5 +2526,474 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // Given: No intercepts in directory (clean state from @Before)
     // When/Then: listAllIntercepts returns empty set
     assertTrue(palDirectory.listAllIntercepts().isEmpty());
+  }
+
+  // ==========================================================================
+  // InterceptLease management tests
+  // ==========================================================================
+
+  /**
+   * Tests that createIntercept with a TTL returns a valid InterceptLease.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: A registered peer
+   *   <li>When: createIntercept(request, 10) called with TTL=10
+   *   <li>Then: Returns non-null InterceptLease (not NONE); leaseId > 0; interceptUuid matches
+   *       request UUID; ttlSeconds == 10
+   * </ul>
+   */
+  @Test
+  public void createIntercept_withTTL_returnsInterceptLease() throws Exception {
+    // Given: A registered peer
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "ttl-lease-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+
+    // When: createIntercept(request, 10) called with TTL=10
+    InterceptLease lease = palDirectory.createIntercept(req, 10);
+
+    // Then: Returns non-null InterceptLease (not NONE); leaseId > 0;
+    //       interceptUuid matches request UUID; ttlSeconds == 10
+    assertNotNull(lease);
+    assertTrue("Should not be NONE sentinel", lease != InterceptLease.NONE);
+    assertTrue("leaseId should be > 0", lease.getLeaseId() > 0);
+    assertEquals(interceptUuid, lease.getInterceptUuid());
+    assertEquals(10, lease.getTtlSeconds());
+
+    lease.close();
+  }
+
+  /**
+   * Tests that createIntercept without TTL returns the NONE sentinel lease.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: A registered peer with no peer lease
+   *   <li>When: createIntercept(request) called (0 TTL convenience overload)
+   *   <li>Then: Returns InterceptLease.NONE (leaseId == 0, ttlSeconds == 0)
+   * </ul>
+   */
+  @Test
+  public void createIntercept_noTTL_returnsNoneLease() throws Exception {
+    // Given: A registered peer with no peer lease
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "no-ttl-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+
+    // When: createIntercept(request) called (0 TTL convenience overload)
+    InterceptLease lease = palDirectory.createIntercept(req);
+
+    // Then: Returns InterceptLease.NONE (leaseId == 0, ttlSeconds == 0)
+    assertTrue("Should be NONE sentinel", lease == InterceptLease.NONE);
+    assertEquals(0, lease.getLeaseId());
+    assertEquals(0, lease.getTtlSeconds());
+  }
+
+  /**
+   * Tests that manual keepAlive extends an intercept's lifetime beyond its original TTL.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=5 seconds
+   *   <li>When: keepAlive() called at 3 seconds
+   *   <li>Then: Intercept still exists at 7 seconds (would have expired at ~5s without refresh)
+   * </ul>
+   */
+  @Test
+  public void interceptLease_keepAlive_extendsLifetime() throws Exception {
+    // Given: Intercept created with TTL=5 seconds
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "ka-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+
+    InterceptLease lease = palDirectory.createIntercept(req, 5);
+
+    // When: keepAlive() called at 3 seconds
+    TimeUnit.SECONDS.sleep(3);
+    lease.keepAlive();
+
+    // Then: Intercept still exists at 7 seconds (would have expired at ~5s without refresh)
+    TimeUnit.SECONDS.sleep(4);
+    assertEquals(
+        "Intercept should still exist after keep-alive",
+        1,
+        palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    lease.close();
+  }
+
+  /**
+   * Tests that auto-refresh prevents an intercept from expiring past its TTL.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=5 seconds; startAutoRefresh() called
+   *   <li>When: Wait 8 seconds (beyond original TTL)
+   *   <li>Then: Intercept still exists; stopAutoRefresh() and close() cleanup
+   * </ul>
+   */
+  @Test
+  public void interceptLease_autoRefresh_preventsExpiry() throws Exception {
+    // Given: Intercept created with TTL=5 seconds; startAutoRefresh() called
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "autorefresh-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+
+    InterceptLease lease = palDirectory.createIntercept(req, 5);
+    lease.startAutoRefresh();
+
+    // When: Wait 8 seconds (beyond original TTL)
+    TimeUnit.SECONDS.sleep(8);
+
+    // Then: Intercept still exists
+    assertEquals(
+        "Intercept should still exist with auto-refresh",
+        1,
+        palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    // cleanup
+    lease.stopAutoRefresh();
+    lease.close();
+  }
+
+  /**
+   * Tests that stopping auto-refresh allows an intercept to expire naturally.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=5 seconds; auto-refresh started then stopped
+   *   <li>When: Wait for TTL to expire (~6 seconds)
+   *   <li>Then: Intercept is removed from directory
+   * </ul>
+   */
+  @Test
+  public void interceptLease_stopAutoRefresh_allowsExpiry() throws Exception {
+    // Given: Intercept created with TTL=5 seconds; auto-refresh started then stopped
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "stop-autorefresh-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+
+    InterceptLease lease = palDirectory.createIntercept(req, 5);
+    lease.startAutoRefresh();
+    assertTrue(lease.isAutoRefreshing());
+
+    // Stop auto-refresh after 1 second
+    TimeUnit.SECONDS.sleep(1);
+    lease.stopAutoRefresh();
+    assertFalse(lease.isAutoRefreshing());
+
+    // When: Wait for TTL to expire (~6 seconds from creation)
+    TimeUnit.SECONDS.sleep(6);
+
+    // Then: Intercept is removed from directory
+    assertTrue(
+        "Intercept should expire after stopping auto-refresh",
+        palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty());
+  }
+
+  /**
+   * Tests that closing an InterceptLease immediately revokes the intercept.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=30 seconds (long TTL)
+   *   <li>When: close() called immediately
+   *   <li>Then: Intercept removed from directory within 2 seconds
+   * </ul>
+   */
+  @Test
+  public void interceptLease_close_immediatelyRevokes() throws Exception {
+    // Given: Intercept created with TTL=30 seconds (long TTL)
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "close-revoke-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+
+    InterceptLease lease = palDirectory.createIntercept(req, 30);
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    // When: close() called immediately
+    lease.close();
+
+    // Then: Intercept removed from directory within 2 seconds
+    for (int i = 0; i < 4; i++) {
+      if (palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty()) {
+        break;
+      }
+      TimeUnit.MILLISECONDS.sleep(500);
+    }
+    assertTrue(
+        "Intercept should be removed after lease close",
+        palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty());
+  }
+
+  /**
+   * Tests that getInterceptLease returns the active lease for a TTL intercept.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=10
+   *   <li>When: getInterceptLease(interceptUuid) called
+   *   <li>Then: Returns Optional containing the InterceptLease
+   * </ul>
+   */
+  @Test
+  public void getInterceptLease_existingLease_returnsLease() throws Exception {
+    // Given: Intercept created with TTL=10
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "get-lease-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+
+    InterceptLease createdLease = palDirectory.createIntercept(req, 10);
+
+    // When: getInterceptLease(interceptUuid) called
+    Optional<InterceptLease> result = palDirectory.getInterceptLease(interceptUuid);
+
+    // Then: Returns Optional containing the InterceptLease
+    assertTrue("Should contain a lease", result.isPresent());
+    assertEquals(createdLease, result.get());
+    assertEquals(interceptUuid, result.get().getInterceptUuid());
+
+    createdLease.close();
+  }
+
+  /**
+   * Tests that getInterceptLease returns empty for a no-TTL intercept.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created without TTL
+   *   <li>When: getInterceptLease(interceptUuid) called
+   *   <li>Then: Returns Optional.empty()
+   * </ul>
+   */
+  @Test
+  public void getInterceptLease_noTTL_returnsEmpty() throws Exception {
+    // Given: Intercept created without TTL
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "no-ttl-lookup-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+
+    palDirectory.createIntercept(req);
+
+    // When: getInterceptLease(interceptUuid) called
+    Optional<InterceptLease> result = palDirectory.getInterceptLease(interceptUuid);
+
+    // Then: Returns Optional.empty()
+    assertFalse("Should be empty for no-TTL intercept", result.isPresent());
+  }
+
+  /**
+   * Tests that deleteIntercept also closes the tracked InterceptLease.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=30; lease tracked in activeInterceptLeases
+   *   <li>When: deleteIntercept(peerUuid, interceptUuid) called
+   *   <li>Then: InterceptLease is closed; getInterceptLease returns empty
+   * </ul>
+   */
+  @Test
+  public void deleteIntercept_closesTrackedLease() throws Exception {
+    // Given: Intercept created with TTL=30; lease tracked in activeInterceptLeases
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "delete-lease-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    InterceptLease lease = palDirectory.createIntercept(req, 30);
+    assertFalse(lease.isClosed());
+    assertTrue(palDirectory.getInterceptLease(interceptUuid).isPresent());
+
+    // When: deleteIntercept(peerUuid, interceptUuid) called
+    palDirectory.deleteIntercept(peer.getUuid(), interceptUuid);
+
+    // Then: InterceptLease is closed; getInterceptLease returns empty
+    assertTrue("Lease should be closed after deleteIntercept", lease.isClosed());
+    assertFalse(
+        "getInterceptLease should return empty after delete",
+        palDirectory.getInterceptLease(interceptUuid).isPresent());
+  }
+
+  /**
+   * Tests that closing a PalDirectory closes all active InterceptLease handles.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Multiple intercepts with TTL created; separate PalDirectory instance
+   *   <li>When: palDirectory.close() called
+   *   <li>Then: All InterceptLease handles are closed (leases revoked)
+   * </ul>
+   */
+  @Test
+  public void close_closesAllActiveInterceptLeases() throws Exception {
+    // Given: Multiple intercepts with TTL created; separate PalDirectory instance
+    PalDirectory separateDir = new PalDirectory(getPalDirectoryUrl());
+
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "close-all-peer");
+    separateDir.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid1 = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req1 =
+        new InterceptRequest<>(
+            interceptUuid1,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    UUID interceptUuid2 = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req2 =
+        new InterceptRequest<>(
+            interceptUuid2,
+            peer.getUuid(),
+            InterceptType.AFTER,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("nanoTime", List.of()));
+
+    InterceptLease lease1 = separateDir.createIntercept(req1, 30);
+    InterceptLease lease2 = separateDir.createIntercept(req2, 30);
+
+    assertFalse(lease1.isClosed());
+    assertFalse(lease2.isClosed());
+
+    // When: palDirectory.close() called
+    separateDir.close();
+
+    // Then: All InterceptLease handles are closed (leases revoked)
+    assertTrue("Lease 1 should be closed after directory close", lease1.isClosed());
+    assertTrue("Lease 2 should be closed after directory close", lease2.isClosed());
+
+    // Verify intercepts are removed from directory (leases revoked)
+    for (int i = 0; i < 12; i++) {
+      if (palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty()) {
+        break;
+      }
+      TimeUnit.MILLISECONDS.sleep(500);
+    }
+    assertTrue(
+        "Intercepts should be removed after directory close",
+        palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty());
   }
 }

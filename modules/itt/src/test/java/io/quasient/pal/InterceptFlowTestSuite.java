@@ -13,6 +13,7 @@ import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.cxn.ThinPeer;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
+import io.quasient.pal.intercept.InterceptTtlIT;
 import io.quasient.pal.intercept.complex.MethodInterceptInFlightVerificationIT;
 import io.quasient.pal.intercept.mechanism.AroundProceedIT;
 import io.quasient.pal.intercept.mechanism.constructor.ConstructorAroundCallbackIT;
@@ -129,7 +130,10 @@ import org.slf4j.LoggerFactory;
   MethodInterceptInFlightVerificationIT.class,
 
   // AROUND proceed() mechanism tests (issue #477)
-  AroundProceedIT.class
+  AroundProceedIT.class,
+
+  // TTL lifecycle tests
+  InterceptTtlIT.class
 })
 public class InterceptFlowTestSuite extends AbstractIntegrationTest {
 

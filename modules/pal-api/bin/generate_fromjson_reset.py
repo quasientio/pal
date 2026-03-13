@@ -162,6 +162,10 @@ def generate_fromjson_for_field(field):
           code += f'      if (json.has("{field_name}")) {{\n'
           code += f'        this.{field_name} = json.get("{field_name}").getAsByte();\n'
           code += '      }\n\n'
+      elif field_type == 'long':
+          code += f'      if (json.has("{field_name}")) {{\n'
+          code += f'        this.{field_name} = json.get("{field_name}").getAsLong();\n'
+          code += '      }\n\n'
       elif field_type == 'boolean':
           code += f'      if (json.has("{field_name}")) {{\n'
           code += f'        this.{field_name} = json.get("{field_name}").getAsBoolean();\n'

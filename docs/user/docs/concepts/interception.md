@@ -587,11 +587,107 @@ Disable in-flight tracking (`--in-flight-tracking=false`) when:
 - Performance is critical and you accept the small risk of partial activation
 - All your intercepts are `BEFORE_ASYNC` or `AFTER_ASYNC` (fire-and-forget)
 
+## Intercept TTL and Lease Management
+
+Intercepts can be created with a **TTL (Time-To-Live)** so they automatically expire after a specified duration. This is useful for temporary intercepts that should clean up after themselves — for example, test-scoped intercepts or time-limited monitoring.
+
+### Creating Intercepts with a TTL
+
+Pass a `ttlSeconds` parameter to `createIntercept()`. The method returns an `InterceptLease` handle for managing the lease:
+
+```java
+// Create intercept with 5-minute TTL
+InterceptLease lease = directory.createIntercept(intercept, 300);
+```
+
+When the TTL expires, etcd automatically deletes the intercept key. The peer's `InterceptInformer` detects the deletion via its watch, relays it to the `InterceptMatcher`, and the intercept is unregistered — no more callbacks will fire.
+
+Without a TTL (or with `ttlSeconds = 0`), the intercept is attached to the owning peer's lease and lives as long as the peer is running:
+
+```java
+// No dedicated TTL — lives as long as the peer
+InterceptLease lease = directory.createIntercept(intercept);
+// lease == InterceptLease.NONE (a no-op sentinel)
+```
+
+### Manual Lease Refresh
+
+Call `keepAlive()` to send a single keep-alive to etcd, extending the lease by its original TTL:
+
+```java
+InterceptLease lease = directory.createIntercept(intercept, 30); // 30-second TTL
+
+// ... some time later, before TTL expires ...
+lease.keepAlive(); // extends by another 30 seconds
+```
+
+This is useful when you want explicit control over when the lease is refreshed — for example, refreshing only when a condition is met.
+
+### Auto-Refresh
+
+For intercepts that should stay alive indefinitely (but still have a TTL as a safety net), use `startAutoRefresh()`. This schedules periodic keep-alive calls at `ttlSeconds / 3` intervals:
+
+```java
+InterceptLease lease = directory.createIntercept(intercept, 300); // 5-minute TTL
+lease.startAutoRefresh(); // refreshes every ~100 seconds
+
+// ... intercept stays alive until you stop it ...
+
+lease.stopAutoRefresh(); // stop refreshing (lease will expire after TTL)
+```
+
+`stopAutoRefresh()` cancels the periodic refresh but does **not** revoke the lease — the intercept remains active until the remaining TTL expires.
+
+### Revoking a Lease (Immediate Removal)
+
+Call `close()` to immediately revoke the lease and remove the intercept:
+
+```java
+lease.close(); // intercept removed immediately
+```
+
+`close()` is idempotent — calling it multiple times is safe.
+
+### Resource Management with try-with-resources
+
+`InterceptLease` implements `AutoCloseable`, so you can use try-with-resources for automatic cleanup:
+
+```java
+try (InterceptLease lease = directory.createIntercept(intercept, 300)) {
+    lease.startAutoRefresh();
+
+    // ... intercept is active for the duration of this block ...
+
+} // lease.close() called automatically — intercept removed
+```
+
+### Behavior When TTL Expires
+
+When a TTL expires without being refreshed:
+
+1. etcd deletes the intercept key
+2. The peer's `InterceptInformer` receives a DELETE watch event
+3. `InterceptMatcher` unregisters the intercept
+4. No further callbacks fire for the expired intercept
+5. The corresponding `InterceptLease` entry is removed from `PalDirectory`
+
+This is the same deletion path used for manual removal — the system does not distinguish between TTL expiry and explicit deletion.
+
 ## Managing Intercepts
 
 ### List Active Intercepts
 
-Intercepts are managed via the etcd directory and Java API. The `pal ls` command does not support listing intercepts directly. Use the Java API to query registered intercepts:
+List intercepts via the CLI or Java API:
+
+```bash
+# List all intercepts
+pal ls -d localhost:2379 -I
+
+# List with details (includes TTL column)
+pal ls -d localhost:2379 -I -l
+```
+
+Or query programmatically:
 
 ```java
 List<InterceptRequest> intercepts = directory.listIntercepts();

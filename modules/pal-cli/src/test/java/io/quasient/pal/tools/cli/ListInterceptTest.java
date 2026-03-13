@@ -9,18 +9,25 @@
  */
 package io.quasient.pal.tools.cli;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.fail;
 
+import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.FieldOpType;
+import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableFieldOp;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
@@ -197,5 +204,139 @@ public class ListInterceptTest {
     } catch (RuntimeException e) {
       assertThat(e.getMessage(), not(is("")));
     }
+  }
+
+  /**
+   * Tests that an intercept with a TTL displays the TTL value in long format.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void print_interceptWithTtl_showsTtlInLongFormat() throws Exception {
+    // Given: InterceptRequest with ttlSeconds=300, long listing mode enabled
+    List listInstance = new List();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream printStream = new PrintStream(baos);
+
+    Field outField = List.class.getSuperclass().getDeclaredField("out");
+    outField.setAccessible(true);
+    outField.set(listInstance, printStream);
+
+    Field longListingField = List.class.getDeclaredField("longListing");
+    longListingField.setAccessible(true);
+    longListingField.setBoolean(listInstance, true);
+
+    InterceptableMethodCall method =
+        new InterceptableMethodCall("add", Arrays.asList("int", "int"));
+    InterceptRequest<InterceptableMethodCall> intercept =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            InterceptType.BEFORE,
+            "com.example.Calculator",
+            "com.example.Handler",
+            "onAdd",
+            method,
+            false,
+            null,
+            null,
+            0,
+            300);
+
+    // When: print(intercept) called via reflection
+    Method printMethod = List.class.getDeclaredMethod("print", InterceptRequest.class);
+    printMethod.setAccessible(true);
+    printMethod.invoke(listInstance, intercept);
+
+    // Then: Output line contains "300s" in the TTL column position
+    String output = baos.toString(UTF_8);
+    assertThat(output, containsString("300s"));
+  }
+
+  /**
+   * Tests that an intercept with zero TTL displays a dash in long format.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void print_interceptWithZeroTtl_showsDashInLongFormat() throws Exception {
+    // Given: InterceptRequest with ttlSeconds=0 (no TTL), long listing mode enabled
+    List listInstance = new List();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream printStream = new PrintStream(baos);
+
+    Field outField = List.class.getSuperclass().getDeclaredField("out");
+    outField.setAccessible(true);
+    outField.set(listInstance, printStream);
+
+    Field longListingField = List.class.getDeclaredField("longListing");
+    longListingField.setAccessible(true);
+    longListingField.setBoolean(listInstance, true);
+
+    InterceptableMethodCall method =
+        new InterceptableMethodCall("add", Arrays.asList("int", "int"));
+    InterceptRequest<InterceptableMethodCall> intercept =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            InterceptType.BEFORE,
+            "com.example.Calculator",
+            "com.example.Handler",
+            "onAdd",
+            method);
+
+    // When: print(intercept) called via reflection
+    Method printMethod = List.class.getDeclaredMethod("print", InterceptRequest.class);
+    printMethod.setAccessible(true);
+    printMethod.invoke(listInstance, intercept);
+
+    // Then: Output line contains "-" for no-TTL in the TTL column
+    String output = baos.toString(UTF_8);
+    assertThat(output, containsString("-"));
+    assertThat(output, not(containsString("0s")));
+  }
+
+  /**
+   * Tests that short format output does not include TTL information.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  public void print_interceptShortFormat_noTtl() throws Exception {
+    // Given: InterceptRequest with ttlSeconds=300, short listing mode (no -l flag)
+    UUID interceptUuid = UUID.randomUUID();
+    List listInstance = new List();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream printStream = new PrintStream(baos);
+
+    Field outField = List.class.getSuperclass().getDeclaredField("out");
+    outField.setAccessible(true);
+    outField.set(listInstance, printStream);
+
+    InterceptableMethodCall method =
+        new InterceptableMethodCall("add", Arrays.asList("int", "int"));
+    InterceptRequest<InterceptableMethodCall> intercept =
+        new InterceptRequest<>(
+            interceptUuid,
+            UUID.randomUUID(),
+            InterceptType.BEFORE,
+            "com.example.Calculator",
+            "com.example.Handler",
+            "onAdd",
+            method,
+            false,
+            null,
+            null,
+            0,
+            300);
+
+    // When: print(intercept) called via reflection (longListing defaults to false)
+    Method printMethod = List.class.getDeclaredMethod("print", InterceptRequest.class);
+    printMethod.setAccessible(true);
+    printMethod.invoke(listInstance, intercept);
+
+    // Then: Output only contains UUID (no TTL displayed)
+    String output = baos.toString(UTF_8).trim();
+    assertThat(output, is(interceptUuid.toString()));
   }
 }

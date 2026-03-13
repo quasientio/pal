@@ -111,8 +111,59 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
   /** Execution priority within local/remote group. Lower values execute first. Default 0. */
   private final int priority;
 
+  /** TTL in seconds for this intercept. 0 = no dedicated TTL. */
+  private final long ttlSeconds;
+
   /**
-   * Constructs a new {@code InterceptRequest} with all parameters including priority.
+   * Constructs a new {@code InterceptRequest} with all parameters including priority and TTL.
+   *
+   * @param uuid the unique identifier for this request; must not be {@code null}
+   * @param peer the identifier of the peer initiating the request; must not be {@code null}
+   * @param type the type of interception; must not be {@code null}
+   * @param clazz the target class name for interception; must not be {@code null}
+   * @param callbackClass the callback class name; must not be {@code null}
+   * @param callbackMethod the callback method name; must not be {@code null}
+   * @param interceptable the interceptable action; must not be {@code null}
+   * @param forceImmediate whether to force immediate application without waiting for in-flight
+   *     calls
+   * @param exceptionPropagationPolicy exception propagation policy for this intercept, or {@code
+   *     null} to defer to global configuration
+   * @param checkedExceptionPolicy checked exception policy for this intercept, or {@code null} to
+   *     defer to global configuration
+   * @param priority execution priority within local/remote group; lower values execute first
+   * @param ttlSeconds TTL in seconds for this intercept; 0 means no dedicated TTL
+   * @throws NullPointerException if any of the required object parameters are {@code null}
+   */
+  public InterceptRequest(
+      @Nonnull UUID uuid,
+      @Nonnull UUID peer,
+      @Nonnull InterceptType type,
+      @Nonnull String clazz,
+      @Nonnull String callbackClass,
+      @Nonnull String callbackMethod,
+      @Nonnull T interceptable,
+      boolean forceImmediate,
+      @Nullable ExceptionPropagationPolicy exceptionPropagationPolicy,
+      @Nullable CheckedExceptionPolicy checkedExceptionPolicy,
+      int priority,
+      long ttlSeconds) {
+    this.uuid = Objects.requireNonNull(uuid, "uuid must not be null");
+    this.peer = Objects.requireNonNull(peer, "peer must not be null");
+    this.type = Objects.requireNonNull(type, "type must not be null");
+    this.clazz = Objects.requireNonNull(clazz, "clazz must not be null");
+    this.callbackClass = Objects.requireNonNull(callbackClass, "callbackClass must not be null");
+    this.callbackMethod = Objects.requireNonNull(callbackMethod, "callbackMethod must not be null");
+    this.interceptable = Objects.requireNonNull(interceptable, "interceptable must not be null");
+    this.forceImmediate = forceImmediate;
+    this.exceptionPropagationPolicy = exceptionPropagationPolicy;
+    this.checkedExceptionPolicy = checkedExceptionPolicy;
+    this.priority = priority;
+    this.ttlSeconds = ttlSeconds;
+  }
+
+  /**
+   * Constructs a new {@code InterceptRequest} with all parameters including priority and default
+   * TTL of 0.
    *
    * @param uuid the unique identifier for this request; must not be {@code null}
    * @param peer the identifier of the peer initiating the request; must not be {@code null}
@@ -142,17 +193,19 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
       @Nullable ExceptionPropagationPolicy exceptionPropagationPolicy,
       @Nullable CheckedExceptionPolicy checkedExceptionPolicy,
       int priority) {
-    this.uuid = Objects.requireNonNull(uuid, "uuid must not be null");
-    this.peer = Objects.requireNonNull(peer, "peer must not be null");
-    this.type = Objects.requireNonNull(type, "type must not be null");
-    this.clazz = Objects.requireNonNull(clazz, "clazz must not be null");
-    this.callbackClass = Objects.requireNonNull(callbackClass, "callbackClass must not be null");
-    this.callbackMethod = Objects.requireNonNull(callbackMethod, "callbackMethod must not be null");
-    this.interceptable = Objects.requireNonNull(interceptable, "interceptable must not be null");
-    this.forceImmediate = forceImmediate;
-    this.exceptionPropagationPolicy = exceptionPropagationPolicy;
-    this.checkedExceptionPolicy = checkedExceptionPolicy;
-    this.priority = priority;
+    this(
+        uuid,
+        peer,
+        type,
+        clazz,
+        callbackClass,
+        callbackMethod,
+        interceptable,
+        forceImmediate,
+        exceptionPropagationPolicy,
+        checkedExceptionPolicy,
+        priority,
+        0);
   }
 
   /**
@@ -381,6 +434,15 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
   }
 
   /**
+   * Retrieves the TTL in seconds for this intercept.
+   *
+   * @return the TTL in seconds; 0 means no dedicated TTL
+   */
+  public long getTtlSeconds() {
+    return ttlSeconds;
+  }
+
+  /**
    * Compares this {@code InterceptRequest} to the specified object.
    *
    * @param o the object to compare this {@code InterceptRequest} against
@@ -399,6 +461,7 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
     InterceptRequest<?> that = (InterceptRequest<?>) o;
     return forceImmediate == that.forceImmediate
         && priority == that.priority
+        && ttlSeconds == that.ttlSeconds
         && uuid.equals(that.uuid)
         && peer.equals(that.peer)
         && type == that.type
@@ -429,7 +492,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         forceImmediate,
         exceptionPropagationPolicy,
         checkedExceptionPolicy,
-        priority);
+        priority,
+        ttlSeconds);
   }
 
   /**
@@ -469,7 +533,9 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
                 + LINE_SEP // 11. ctime (epoch millis)
                 + "%s"
                 + LINE_SEP // 12. mtime (epoch millis)
-                + "%d", // 13. priority
+                + "%d"
+                + LINE_SEP // 13. priority
+                + "%d", // 14. ttlSeconds
             uuid,
             peer,
             type.toByte(),
@@ -483,7 +549,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
             checkedExceptionPolicy != null ? checkedExceptionPolicy.name() : "null",
             getCtimeMillis() != null ? getCtimeMillis() : "null",
             getMtimeMillis() != null ? getMtimeMillis() : "null",
-            priority);
+            priority,
+            ttlSeconds);
     return s.getBytes(charset);
   }
 
@@ -530,6 +597,11 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
       priority = Integer.parseInt(parts[13]);
     }
 
+    long ttlSeconds = 0;
+    if (parts.length > 14) {
+      ttlSeconds = Long.parseLong(parts[14]);
+    }
+
     InterceptRequest<?> request =
         new InterceptRequest<>(
             uuid,
@@ -542,7 +614,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
             forceImmediate,
             exceptionPropagationPolicy,
             checkedExceptionPolicy,
-            priority);
+            priority,
+            ttlSeconds);
 
     // ctime/mtime fields added after the original 11 fields
     if (parts.length > 11 && !parts[11].equals("null")) {
@@ -584,6 +657,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         + forceImmediate
         + ", priority="
         + priority
+        + ", ttlSeconds="
+        + ttlSeconds
         + ", ctime="
         + getCTime()
         + ", mtime="
