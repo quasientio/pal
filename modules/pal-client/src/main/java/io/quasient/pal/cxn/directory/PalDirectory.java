@@ -51,6 +51,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -147,6 +148,10 @@ public class PalDirectory {
 
   /** Maps peer UUID's to the leaseId they hold. */
   private final Map<UUID, Long> peerToLeaseIdCache = new ConcurrentHashMap<>();
+
+  /** Tracks active intercept leases by intercept UUID for lifecycle management. */
+  private final ConcurrentHashMap<UUID, InterceptLease> activeInterceptLeases =
+      new ConcurrentHashMap<>();
 
   /** Gson serializer. */
   private static final Gson gson = new Gson();
@@ -761,10 +766,10 @@ public class PalDirectory {
   }
 
   /**
-   * Grants a TTL lease, attaches the peer’s /state key to it, and starts automatic keep-alive's.
+   * Grants a TTL lease, attaches the peer's /state key to it, and starts automatic keep-alive's.
    * Call once right after {@code createPeer()}.
    *
-   * @param peerUuid the peer’s UUID
+   * @param peerUuid the peer's UUID
    * @param ttlSeconds desired TTL in seconds (e.g. 60)
    * @return handle you must {@code close()} on graceful shutdown
    * @throws ExecutionException on etcd errors
@@ -890,6 +895,16 @@ public class PalDirectory {
           final InterceptEvent interceptEvent = createInterceptEvent(event);
           if (interceptEvent != null) {
             interceptListeners.forEach(l -> l.interceptEvent(interceptEvent));
+
+            // On DELETE events (e.g. lease expiry), remove the tracked lease
+            if (event.getEventType() == WatchEvent.EventType.DELETE) {
+              try {
+                UUID interceptUuid = UUID.fromString(interceptEvent.interceptId());
+                activeInterceptLeases.remove(interceptUuid);
+              } catch (IllegalArgumentException ignored) {
+                // Malformed intercept ID - skip cleanup
+              }
+            }
           }
         }
         case UNRECOGNIZED ->
@@ -905,18 +920,20 @@ public class PalDirectory {
 
   /**
    * Creates an intercept; if ttlSeconds &gt; 0 a dedicated lease with that TTL is granted. If
-   * ttlSeconds == 0, the intercept is attached to the peer’s live lease. If ttlSeconds == 0 and the
+   * ttlSeconds == 0, the intercept is attached to the peer's live lease. If ttlSeconds == 0 and the
    * peer has no lease, the intercept is created without a lease.
    *
    * @param intercept the intercept request to create
    * @param ttlSeconds the value in seconds for the TTL assigned to this intercept; 0 == use the
    *     peer's lease.
+   * @return an {@link InterceptLease} handle for the dedicated lease when {@code ttlSeconds > 0},
+   *     or {@link InterceptLease#NONE} when no dedicated TTL was requested
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws NoPeerInfoNodeException if the associated peer does not exist in the directory
    * @throws IllegalArgumentException if the intercept request is already created for this peer
    */
-  public void createIntercept(InterceptRequest<?> intercept, long ttlSeconds)
+  public InterceptLease createIntercept(InterceptRequest<?> intercept, long ttlSeconds)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
 
     long now = System.currentTimeMillis();
@@ -971,6 +988,15 @@ public class PalDirectory {
             : (leaseId != 0) ? "peer lease " + leaseId : "no lease";
 
     logger.info("Created intercept {} for peer {} — {}", interceptUuid, peerUuid, leaseDesc);
+
+    if (ttlSeconds > 0) {
+      InterceptLease interceptLease =
+          new InterceptLease(
+              leaseId, interceptUuid, ttlSeconds, client.getLeaseClient(), leasePool);
+      activeInterceptLeases.put(interceptUuid, interceptLease);
+      return interceptLease;
+    }
+    return InterceptLease.NONE;
   }
 
   /**
@@ -978,14 +1004,28 @@ public class PalDirectory {
    * an intercept that uses the peer lease.
    *
    * @param interceptRequest the intercept request to create
+   * @return {@link InterceptLease#NONE} since no dedicated TTL is requested
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    * @throws NoPeerInfoNodeException if the associated peer does not exist in the directory
    * @throws IllegalArgumentException if the intercept request is already created for this peer
    */
-  public void createIntercept(InterceptRequest<?> interceptRequest)
+  public InterceptLease createIntercept(InterceptRequest<?> interceptRequest)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
-    createIntercept(interceptRequest, 0);
+    return createIntercept(interceptRequest, 0);
+  }
+
+  /**
+   * Returns the active {@link InterceptLease} for the given intercept, if one exists.
+   *
+   * <p>Only intercepts created with a dedicated TTL ({@code ttlSeconds > 0}) have tracked leases.
+   * Intercepts created without a TTL or with the peer's lease will not appear in this lookup.
+   *
+   * @param interceptUuid the UUID of the intercept
+   * @return an {@link Optional} containing the lease handle, or empty if no dedicated lease exists
+   */
+  public Optional<InterceptLease> getInterceptLease(UUID interceptUuid) {
+    return Optional.ofNullable(activeInterceptLeases.get(interceptUuid));
   }
 
   /**
@@ -1085,6 +1125,16 @@ public class PalDirectory {
     if (logger.isDebugEnabled()) {
       logger.debug("Deleting all intercept requests for peer w/uuid: {}", peerUuid);
     }
+
+    // Close tracked leases for this peer's intercepts before deleting from etcd
+    Set<InterceptRequest<?>> peerIntercepts = listInterceptsForPeer(peerUuid);
+    for (InterceptRequest<?> req : peerIntercepts) {
+      InterceptLease lease = activeInterceptLeases.remove(req.getUuid());
+      if (lease != null) {
+        lease.close();
+      }
+    }
+
     final String peerInterceptsPath = getInterceptsPathForPeer(peerUuid);
     final DeleteResponse deleteResponse =
         kvClient
@@ -1130,6 +1180,12 @@ public class PalDirectory {
           "Deleted intercept request w/uuid: {} for peer w/uuid: {}",
           interceptRequestUuid,
           peerUuid);
+    }
+
+    // Close and remove tracked lease if present
+    InterceptLease lease = activeInterceptLeases.remove(interceptRequestUuid);
+    if (lease != null) {
+      lease.close();
     }
   }
 
@@ -1852,7 +1908,24 @@ public class PalDirectory {
       logger.warn("Failed to close intercepts watcher", e);
     }
 
-    // 2) Stop keep-alive executor *before* we close the etcd client
+    // 2a) Close all active intercept leases while leasePool is still accepting tasks.
+    //     Revoke synchronously so leases are revoked before the gRPC client is torn down.
+    if (!activeInterceptLeases.isEmpty() && client != null) {
+      Lease leaseClientRef = client.getLeaseClient();
+      for (InterceptLease lease : activeInterceptLeases.values()) {
+        try {
+          lease.stopAutoRefresh();
+          leaseClientRef.revoke(lease.getLeaseId()).get(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+          logger.warn("Failed to revoke intercept lease {}", lease.getInterceptUuid(), e);
+        } finally {
+          lease.close(); // mark as closed (revoke inside is a no-op if already revoked)
+        }
+      }
+      activeInterceptLeases.clear();
+    }
+
+    // 2b) Stop keep-alive executor *before* we close the etcd client
     try {
       leasePool.shutdownNow(); // cancels KA tasks immediately
       if (!leasePool.awaitTermination(5, TimeUnit.SECONDS) && logger.isDebugEnabled()) {
@@ -2077,10 +2150,10 @@ public class PalDirectory {
   }
 
   /**
-   * Builds the etcd key path for a peer’s info node.
+   * Builds the etcd key path for a peer's info node.
    *
    * @param uuid the UUID of the peer
-   * @return the string path under which the peer’s info is stored (i.e. "{@code
+   * @return the string path under which the peer's info is stored (i.e. "{@code
    *     /<peers-path>/<uuid>/info}")
    */
   private String getPeerInfoPath(UUID uuid) {
@@ -2088,10 +2161,10 @@ public class PalDirectory {
   }
 
   /**
-   * Builds the etcd key path for a peer’s state node.
+   * Builds the etcd key path for a peer's state node.
    *
    * @param uuid the UUID of the peer
-   * @return the string path under which the peer’s state is stored (i.e. "{@code
+   * @return the string path under which the peer's state is stored (i.e. "{@code
    *     /<peers-path>/<uuid>/state}")
    */
   private String getPeerStatePath(UUID uuid) {
@@ -2102,7 +2175,7 @@ public class PalDirectory {
    * Creates a {@link ByteSequence} for the peer info key, using UTF-8 encoding.
    *
    * @param uuid the UUID of the peer
-   * @return a {@code ByteSequence} representing the key for the peer’s info node
+   * @return a {@code ByteSequence} representing the key for the peer's info node
    */
   private ByteSequence peerInfoKey(UUID uuid) {
     return ByteSequence.from(getPeerInfoPath(uuid), UTF8);
@@ -2112,7 +2185,7 @@ public class PalDirectory {
    * Creates a {@link ByteSequence} for the peer state key, using UTF-8 encoding.
    *
    * @param uuid the UUID of the peer
-   * @return a {@code ByteSequence} representing the key for the peer’s state node
+   * @return a {@code ByteSequence} representing the key for the peer's state node
    */
   private ByteSequence peerStateKey(UUID uuid) {
     return ByteSequence.from(getPeerStatePath(uuid), UTF8);
@@ -2185,7 +2258,7 @@ public class PalDirectory {
      * Creates a new {@code PeerStatic} instance from the given {@link PeerInfo}.
      *
      * @param p the source peer info
-     * @return a {@code PeerStatic} containing the peer’s UUID, name, and creation timestamp
+     * @return a {@code PeerStatic} containing the peer's UUID, name, and creation timestamp
      */
     static PeerStatic from(PeerInfo p) {
       return new PeerStatic(p.getUuid(), p.getName(), toMillis(p.getCTime()));
@@ -2208,7 +2281,7 @@ public class PalDirectory {
      * Creates a new {@code PeerState} instance from the given {@link PeerInfo}.
      *
      * @param p the source peer info
-     * @return a {@code PeerState} containing the peer’s mutable endpoint addresses and modification
+     * @return a {@code PeerState} containing the peer's mutable endpoint addresses and modification
      *     timestamp
      */
     static PeerState from(PeerInfo p) {
