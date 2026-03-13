@@ -42,6 +42,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2526,5 +2527,231 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     // Given: No intercepts in directory (clean state from @Before)
     // When/Then: listAllIntercepts returns empty set
     assertTrue(palDirectory.listAllIntercepts().isEmpty());
+  }
+
+  // ==========================================================================
+  // InterceptLease management tests (Issue #1164)
+  // ==========================================================================
+
+  /**
+   * Tests that createIntercept with a TTL returns a valid InterceptLease.
+   *
+   * <p>Specification from Issue #1164:
+   *
+   * <ul>
+   *   <li>Given: A registered peer
+   *   <li>When: createIntercept(request, 10) called with TTL=10
+   *   <li>Then: Returns non-null InterceptLease (not NONE); leaseId > 0; interceptUuid matches
+   *       request UUID; ttlSeconds == 10
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1165")
+  public void createIntercept_withTTL_returnsInterceptLease() throws Exception {
+    // Given: A registered peer
+    // When: createIntercept(request, 10) called with TTL=10
+    // Then: Returns non-null InterceptLease (not NONE); leaseId > 0;
+    //       interceptUuid matches request UUID; ttlSeconds == 10
+
+    // TODO(#1165): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that createIntercept without TTL returns the NONE sentinel lease.
+   *
+   * <p>Specification from Issue #1164:
+   *
+   * <ul>
+   *   <li>Given: A registered peer with no peer lease
+   *   <li>When: createIntercept(request) called (0 TTL convenience overload)
+   *   <li>Then: Returns InterceptLease.NONE (leaseId == 0, ttlSeconds == 0)
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1165")
+  public void createIntercept_noTTL_returnsNoneLease() throws Exception {
+    // Given: A registered peer with no peer lease
+    // When: createIntercept(request) called (0 TTL convenience overload)
+    // Then: Returns InterceptLease.NONE (leaseId == 0, ttlSeconds == 0)
+
+    // TODO(#1165): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that manual keepAlive extends an intercept's lifetime beyond its original TTL.
+   *
+   * <p>Specification from Issue #1164:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=5 seconds
+   *   <li>When: keepAlive() called at 3 seconds
+   *   <li>Then: Intercept still exists at 7 seconds (would have expired at ~5s without refresh)
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1165")
+  public void interceptLease_keepAlive_extendsLifetime() throws Exception {
+    // Given: Intercept created with TTL=5 seconds
+    // When: keepAlive() called at 3 seconds
+    // Then: Intercept still exists at 7 seconds (would have expired at ~5s without refresh)
+
+    // TODO(#1165): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that auto-refresh prevents an intercept from expiring past its TTL.
+   *
+   * <p>Specification from Issue #1164:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=5 seconds; startAutoRefresh() called
+   *   <li>When: Wait 8 seconds (beyond original TTL)
+   *   <li>Then: Intercept still exists; stopAutoRefresh() and close() cleanup
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1165")
+  public void interceptLease_autoRefresh_preventsExpiry() throws Exception {
+    // Given: Intercept created with TTL=5 seconds; startAutoRefresh() called
+    // When: Wait 8 seconds (beyond original TTL)
+    // Then: Intercept still exists; stopAutoRefresh() and close() cleanup
+
+    // TODO(#1165): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that stopping auto-refresh allows an intercept to expire naturally.
+   *
+   * <p>Specification from Issue #1164:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=5 seconds; auto-refresh started then stopped
+   *   <li>When: Wait for TTL to expire (~6 seconds)
+   *   <li>Then: Intercept is removed from directory
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1165")
+  public void interceptLease_stopAutoRefresh_allowsExpiry() throws Exception {
+    // Given: Intercept created with TTL=5 seconds; auto-refresh started then stopped
+    // When: Wait for TTL to expire (~6 seconds)
+    // Then: Intercept is removed from directory
+
+    // TODO(#1165): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that closing an InterceptLease immediately revokes the intercept.
+   *
+   * <p>Specification from Issue #1164:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=30 seconds (long TTL)
+   *   <li>When: close() called immediately
+   *   <li>Then: Intercept removed from directory within 2 seconds
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1165")
+  public void interceptLease_close_immediatelyRevokes() throws Exception {
+    // Given: Intercept created with TTL=30 seconds (long TTL)
+    // When: close() called immediately
+    // Then: Intercept removed from directory within 2 seconds
+
+    // TODO(#1165): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getInterceptLease returns the active lease for a TTL intercept.
+   *
+   * <p>Specification from Issue #1164:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=10
+   *   <li>When: getInterceptLease(interceptUuid) called
+   *   <li>Then: Returns Optional containing the InterceptLease
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1165")
+  public void getInterceptLease_existingLease_returnsLease() throws Exception {
+    // Given: Intercept created with TTL=10
+    // When: getInterceptLease(interceptUuid) called
+    // Then: Returns Optional containing the InterceptLease
+
+    // TODO(#1165): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that getInterceptLease returns empty for a no-TTL intercept.
+   *
+   * <p>Specification from Issue #1164:
+   *
+   * <ul>
+   *   <li>Given: Intercept created without TTL
+   *   <li>When: getInterceptLease(interceptUuid) called
+   *   <li>Then: Returns Optional.empty()
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1165")
+  public void getInterceptLease_noTTL_returnsEmpty() throws Exception {
+    // Given: Intercept created without TTL
+    // When: getInterceptLease(interceptUuid) called
+    // Then: Returns Optional.empty()
+
+    // TODO(#1165): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that deleteIntercept also closes the tracked InterceptLease.
+   *
+   * <p>Specification from Issue #1164:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL=30; lease tracked in activeInterceptLeases
+   *   <li>When: deleteIntercept(peerUuid, interceptUuid) called
+   *   <li>Then: InterceptLease is closed; getInterceptLease returns empty
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1165")
+  public void deleteIntercept_closesTrackedLease() throws Exception {
+    // Given: Intercept created with TTL=30; lease tracked in activeInterceptLeases
+    // When: deleteIntercept(peerUuid, interceptUuid) called
+    // Then: InterceptLease is closed; getInterceptLease returns empty
+
+    // TODO(#1165): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that closing a PalDirectory closes all active InterceptLease handles.
+   *
+   * <p>Specification from Issue #1164:
+   *
+   * <ul>
+   *   <li>Given: Multiple intercepts with TTL created; separate PalDirectory instance
+   *   <li>When: palDirectory.close() called
+   *   <li>Then: All InterceptLease handles are closed (leases revoked)
+   * </ul>
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1165")
+  public void close_closesAllActiveInterceptLeases() throws Exception {
+    // Given: Multiple intercepts with TTL created; separate PalDirectory instance
+    // When: palDirectory.close() called
+    // Then: All InterceptLease handles are closed (leases revoked)
+
+    // TODO(#1165): Implement test logic
+    fail("Not yet implemented");
   }
 }
