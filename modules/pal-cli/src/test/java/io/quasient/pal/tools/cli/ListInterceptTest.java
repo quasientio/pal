@@ -21,6 +21,7 @@ import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collections;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -197,5 +198,53 @@ public class ListInterceptTest {
     } catch (RuntimeException e) {
       assertThat(e.getMessage(), not(is("")));
     }
+  }
+
+  /**
+   * Tests that an intercept with a TTL displays the TTL value in long format.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1167")
+  public void print_interceptWithTtl_showsTtlInLongFormat() throws Exception {
+    // Given: InterceptRequest with ttlSeconds=300, long listing mode enabled
+    // When: print(intercept) called via reflection
+    // Then: Output line contains "300" in the TTL column position
+
+    // TODO(#1167): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that an intercept with zero TTL displays a dash in long format.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1167")
+  public void print_interceptWithZeroTtl_showsDashInLongFormat() throws Exception {
+    // Given: InterceptRequest with ttlSeconds=0 (no TTL), long listing mode enabled
+    // When: print(intercept) called via reflection
+    // Then: Output line contains "-" or similar indicator for no-TTL in the TTL column
+
+    // TODO(#1167): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that short format output does not include TTL information.
+   *
+   * @throws Exception if reflection fails
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1167")
+  public void print_interceptShortFormat_noTtl() throws Exception {
+    // Given: InterceptRequest with ttlSeconds=300, short listing mode (no -l flag)
+    // When: print(intercept) called via reflection
+    // Then: Output only contains UUID (no TTL displayed)
+
+    // TODO(#1167): Implement test logic
+    fail("Not yet implemented");
   }
 }
