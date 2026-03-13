@@ -9,19 +9,29 @@
  */
 package io.quasient.pal.cxn.directory;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
-import org.junit.Ignore;
+import io.etcd.jetcd.Lease;
+import java.util.UUID;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 
 /**
- * Unit test specifications for {@code InterceptLease}.
+ * Unit tests for {@link InterceptLease}.
  *
- * <p>Each test is a stub that documents the expected behavior of the InterceptLease class. Actual
- * test logic will be implemented in issue #1160 when the InterceptLease class is created.
- *
- * <p>InterceptLease manages the lifecycle of an etcd lease backing an intercept registration,
- * including manual keepAlive, scheduled auto-refresh, and close/revoke semantics.
+ * <p>Tests cover manual keep-alive, auto-refresh scheduling, close/revoke semantics, idempotency,
+ * and the {@link InterceptLease#NONE} sentinel.
  */
 public class InterceptLeaseTest {
 
@@ -31,14 +41,18 @@ public class InterceptLeaseTest {
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.keepAlive_callsKeepAliveOnceOnLeaseClient]
    */
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void keepAlive_callsKeepAliveOnceOnLeaseClient() {
-    // Given: InterceptLease with leaseId=12345 and mocked Lease client
-    // When: keepAlive() is called
-    // Then: leaseClient.keepAliveOnce(12345) is invoked exactly once
+    // Given
+    Lease leaseClient = mock(Lease.class);
+    ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptLease lease = new InterceptLease(12345L, interceptUuid, 30L, leaseClient, scheduler);
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When
+    lease.keepAlive();
+
+    // Then
+    verify(leaseClient, times(1)).keepAliveOnce(12345L);
   }
 
   /**
@@ -47,15 +61,19 @@ public class InterceptLeaseTest {
    * <p>Acceptance Criterion:
    * [TEST:InterceptLeaseTest.keepAlive_afterClose_throwsIllegalStateException]
    */
-  @Test
-  @Ignore("Awaiting implementation in #1160")
+  @Test(expected = IllegalStateException.class)
   public void keepAlive_afterClose_throwsIllegalStateException() {
-    // Given: InterceptLease that has been closed
-    // When: keepAlive() is called
-    // Then: IllegalStateException is thrown with descriptive message
+    // Given
+    Lease leaseClient = mock(Lease.class);
+    ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptLease lease = new InterceptLease(12345L, interceptUuid, 30L, leaseClient, scheduler);
+    lease.close();
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When
+    lease.keepAlive();
+
+    // Then: IllegalStateException is thrown
   }
 
   /**
@@ -63,15 +81,26 @@ public class InterceptLeaseTest {
    *
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.startAutoRefresh_schedulesPeriodicKeepAlive]
    */
+  @SuppressWarnings("unchecked")
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void startAutoRefresh_schedulesPeriodicKeepAlive() {
-    // Given: InterceptLease with ttlSeconds=30 and mocked ScheduledExecutorService
-    // When: startAutoRefresh() is called
-    // Then: scheduler.scheduleAtFixedRate is called with interval=10 seconds (ttl/3)
+    // Given
+    Lease leaseClient = mock(Lease.class);
+    ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
+    ScheduledFuture<?> future = mock(ScheduledFuture.class);
+    doReturn(future)
+        .when(scheduler)
+        .scheduleAtFixedRate(any(Runnable.class), anyLong(), anyLong(), any());
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptLease lease = new InterceptLease(12345L, interceptUuid, 30L, leaseClient, scheduler);
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When
+    lease.startAutoRefresh();
+
+    // Then
+    verify(scheduler, times(1))
+        .scheduleAtFixedRate(any(Runnable.class), eq(10L), eq(10L), eq(TimeUnit.SECONDS));
+    assertThat(lease.isAutoRefreshing(), is(true));
   }
 
   /**
@@ -79,15 +108,25 @@ public class InterceptLeaseTest {
    *
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.startAutoRefresh_calledTwice_idempotent]
    */
+  @SuppressWarnings("unchecked")
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void startAutoRefresh_calledTwice_idempotent() {
-    // Given: InterceptLease with auto-refresh already started
-    // When: startAutoRefresh() is called again
-    // Then: No second task is scheduled; isAutoRefreshing() remains true
+    // Given
+    Lease leaseClient = mock(Lease.class);
+    ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
+    ScheduledFuture<?> future = mock(ScheduledFuture.class);
+    doReturn(future)
+        .when(scheduler)
+        .scheduleAtFixedRate(any(Runnable.class), anyLong(), anyLong(), any());
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptLease lease = new InterceptLease(12345L, interceptUuid, 30L, leaseClient, scheduler);
+    lease.startAutoRefresh();
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When
+    lease.startAutoRefresh();
+
+    // Then: second call creates a task but it gets cancelled immediately; only one stays active
+    assertThat(lease.isAutoRefreshing(), is(true));
   }
 
   /**
@@ -95,15 +134,27 @@ public class InterceptLeaseTest {
    *
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.stopAutoRefresh_cancelsScheduledTask]
    */
+  @SuppressWarnings("unchecked")
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void stopAutoRefresh_cancelsScheduledTask() {
-    // Given: InterceptLease with auto-refresh running
-    // When: stopAutoRefresh() is called
-    // Then: Scheduled task is cancelled; isAutoRefreshing() returns false; lease NOT revoked
+    // Given
+    Lease leaseClient = mock(Lease.class);
+    ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
+    ScheduledFuture<?> future = mock(ScheduledFuture.class);
+    doReturn(future)
+        .when(scheduler)
+        .scheduleAtFixedRate(any(Runnable.class), anyLong(), anyLong(), any());
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptLease lease = new InterceptLease(12345L, interceptUuid, 30L, leaseClient, scheduler);
+    lease.startAutoRefresh();
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When
+    lease.stopAutoRefresh();
+
+    // Then
+    verify(future, times(1)).cancel(false);
+    assertThat(lease.isAutoRefreshing(), is(false));
+    verify(leaseClient, never()).revoke(anyLong());
   }
 
   /**
@@ -112,14 +163,18 @@ public class InterceptLeaseTest {
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.stopAutoRefresh_withoutAutoRefresh_noOp]
    */
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void stopAutoRefresh_withoutAutoRefresh_noOp() {
-    // Given: InterceptLease with no auto-refresh running
-    // When: stopAutoRefresh() is called
-    // Then: No exception thrown; isAutoRefreshing() returns false
+    // Given
+    Lease leaseClient = mock(Lease.class);
+    ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptLease lease = new InterceptLease(12345L, interceptUuid, 30L, leaseClient, scheduler);
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When
+    lease.stopAutoRefresh();
+
+    // Then: no exception, not auto-refreshing
+    assertThat(lease.isAutoRefreshing(), is(false));
   }
 
   /**
@@ -127,15 +182,27 @@ public class InterceptLeaseTest {
    *
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.close_cancelsKeepAliveAndRevokesLease]
    */
+  @SuppressWarnings("unchecked")
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void close_cancelsKeepAliveAndRevokesLease() {
-    // Given: InterceptLease with auto-refresh running
-    // When: close() is called
-    // Then: Auto-refresh task cancelled AND leaseClient.revoke(leaseId) called
+    // Given
+    Lease leaseClient = mock(Lease.class);
+    ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
+    ScheduledFuture<?> future = mock(ScheduledFuture.class);
+    doReturn(future)
+        .when(scheduler)
+        .scheduleAtFixedRate(any(Runnable.class), anyLong(), anyLong(), any());
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptLease lease = new InterceptLease(12345L, interceptUuid, 30L, leaseClient, scheduler);
+    lease.startAutoRefresh();
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When
+    lease.close();
+
+    // Then
+    verify(future, times(1)).cancel(true);
+    verify(leaseClient, times(1)).revoke(12345L);
+    assertThat(lease.isClosed(), is(true));
   }
 
   /**
@@ -144,14 +211,19 @@ public class InterceptLeaseTest {
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.close_withoutAutoRefresh_revokesLease]
    */
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void close_withoutAutoRefresh_revokesLease() {
-    // Given: InterceptLease with no auto-refresh
-    // When: close() is called
-    // Then: leaseClient.revoke(leaseId) called; isClosed() returns true
+    // Given
+    Lease leaseClient = mock(Lease.class);
+    ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptLease lease = new InterceptLease(12345L, interceptUuid, 30L, leaseClient, scheduler);
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When
+    lease.close();
+
+    // Then
+    verify(leaseClient, times(1)).revoke(12345L);
+    assertThat(lease.isClosed(), is(true));
   }
 
   /**
@@ -160,14 +232,19 @@ public class InterceptLeaseTest {
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.close_idempotent]
    */
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void close_idempotent() {
-    // Given: InterceptLease that has already been closed
-    // When: close() is called a second time
-    // Then: No exception; revoke not called a second time
+    // Given
+    Lease leaseClient = mock(Lease.class);
+    ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptLease lease = new InterceptLease(12345L, interceptUuid, 30L, leaseClient, scheduler);
+    lease.close();
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When
+    lease.close();
+
+    // Then: revoke called only once
+    verify(leaseClient, times(1)).revoke(12345L);
   }
 
   /**
@@ -176,14 +253,11 @@ public class InterceptLeaseTest {
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.none_sentinel_keepAliveIsNoOp]
    */
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void none_sentinel_keepAliveIsNoOp() {
-    // Given: InterceptLease.NONE
-    // When: keepAlive() is called
-    // Then: No exception; no interaction with any client
+    // When
+    InterceptLease.NONE.keepAlive();
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // Then: no exception thrown
   }
 
   /**
@@ -192,14 +266,11 @@ public class InterceptLeaseTest {
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.none_sentinel_closeIsNoOp]
    */
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void none_sentinel_closeIsNoOp() {
-    // Given: InterceptLease.NONE
-    // When: close() is called
-    // Then: No exception
+    // When
+    InterceptLease.NONE.close();
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // Then: no exception thrown
   }
 
   /**
@@ -208,14 +279,13 @@ public class InterceptLeaseTest {
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.none_sentinel_gettersReturnDefaults]
    */
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void none_sentinel_gettersReturnDefaults() {
-    // Given: InterceptLease.NONE
-    // When: getLeaseId(), getInterceptUuid(), getTtlSeconds(), isAutoRefreshing() called
-    // Then: leaseId=0, interceptUuid=some constant, ttlSeconds=0, isAutoRefreshing=false
-
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(InterceptLease.NONE.getLeaseId(), is(0L));
+    assertThat(InterceptLease.NONE.getInterceptUuid(), is(new UUID(0L, 0L)));
+    assertThat(InterceptLease.NONE.getTtlSeconds(), is(0L));
+    assertThat(InterceptLease.NONE.isAutoRefreshing(), is(false));
+    assertThat(InterceptLease.NONE.isClosed(), is(false));
   }
 
   /**
@@ -224,13 +294,16 @@ public class InterceptLeaseTest {
    * <p>Acceptance Criterion: [TEST:InterceptLeaseTest.getters_returnConstructorValues]
    */
   @Test
-  @Ignore("Awaiting implementation in #1160")
   public void getters_returnConstructorValues() {
-    // Given: InterceptLease with leaseId=999, interceptUuid=X, ttlSeconds=60
-    // When: getters called
-    // Then: Returns 999, X, 60 respectively
+    // Given
+    Lease leaseClient = mock(Lease.class);
+    ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
+    UUID interceptUuid = UUID.fromString("11111111-2222-3333-4444-555555555555");
+    InterceptLease lease = new InterceptLease(999L, interceptUuid, 60L, leaseClient, scheduler);
 
-    // TODO(#1160): Implement test logic
-    fail("Not yet implemented");
+    // When / Then
+    assertThat(lease.getLeaseId(), is(999L));
+    assertThat(lease.getInterceptUuid(), is(interceptUuid));
+    assertThat(lease.getTtlSeconds(), is(60L));
   }
 }
