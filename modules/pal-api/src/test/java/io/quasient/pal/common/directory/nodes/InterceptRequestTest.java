@@ -15,6 +15,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.lang.FieldOpType;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
@@ -30,6 +31,7 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class InterceptRequestTest {
@@ -507,5 +509,125 @@ public class InterceptRequestTest {
 
     // When/Then: Output contains "priority=7"
     assertThat(request.toString(), containsString("priority=7"));
+  }
+
+  /**
+   * Test specification for storing ttlSeconds value.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldStoreTtlSeconds] TTL stored via full
+   * constructor
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1162")
+  public void shouldStoreTtlSeconds() {
+    // Given: Full constructor with ttlSeconds=300
+    // When: getTtlSeconds() called
+    // Then: Returns 300
+
+    // TODO(#1162): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for default ttlSeconds value.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldDefaultTtlSecondsToZero] Existing
+   * constructors default TTL to 0
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1162")
+  public void shouldDefaultTtlSecondsToZero() {
+    // Given: Existing constructors (7-param, 8-param, 10-param, 11-param) that don't take
+    //        ttlSeconds
+    // When: getTtlSeconds() called
+    // Then: Returns 0
+
+    // TODO(#1162): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for serialization round-trip with positive ttlSeconds.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldSerializeAndDeserializeTtlSeconds]
+   * Round-trip serialization with TTL=300
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1162")
+  public void shouldSerializeAndDeserializeTtlSeconds() {
+    // Given: InterceptRequest with ttlSeconds=300
+    // When: toBytes() then fromBytes()
+    // Then: Deserialized request has ttlSeconds=300; all other fields match
+
+    // TODO(#1162): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for serialization round-trip with zero ttlSeconds.
+   *
+   * <p>Acceptance Criterion:
+   * [TEST:InterceptRequestTest.shouldSerializeAndDeserializeZeroTtlSeconds] Round-trip with TTL=0
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1162")
+  public void shouldSerializeAndDeserializeZeroTtlSeconds() {
+    // Given: InterceptRequest with ttlSeconds=0 (default)
+    // When: toBytes() then fromBytes()
+    // Then: Deserialized request has ttlSeconds=0
+
+    // TODO(#1162): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for ttlSeconds inclusion in equals.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldIncludeTtlSecondsInEquals] Equals
+   * considers TTL
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1162")
+  public void shouldIncludeTtlSecondsInEquals() {
+    // Given: Two InterceptRequests identical except ttlSeconds (one=300, one=0)
+    // When: equals() called
+    // Then: Returns false
+
+    // TODO(#1162): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for ttlSeconds inclusion in hashCode.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldIncludeTtlSecondsInHashCode] HashCode
+   * considers TTL
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1162")
+  public void shouldIncludeTtlSecondsInHashCode() {
+    // Given: Two InterceptRequests with same ttlSeconds
+    // When: hashCode() called on both
+    // Then: Same hash code
+
+    // TODO(#1162): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Test specification for ttlSeconds inclusion in toString.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.shouldIncludeTtlSecondsInToString] ToString
+   * includes TTL
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1162")
+  public void shouldIncludeTtlSecondsInToString() {
+    // Given: InterceptRequest with ttlSeconds=120
+    // When: toString() called
+    // Then: Output contains "ttlSeconds=120"
+
+    // TODO(#1162): Implement test logic
+    fail("Not yet implemented");
   }
 }
