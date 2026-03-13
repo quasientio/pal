@@ -264,7 +264,7 @@ Name                 UUID                                 Size       Start    --
 
 **Intercepts** (`-I -l`):
 ```
-UUID                                 Peer                                 Type         Class                          Target                    Callback                       Created
+UUID                                 Peer                                 Type         Class                          Target                    Callback                       TTL      Created
 ```
 
 - UUID: Intercept request unique identifier
@@ -273,6 +273,7 @@ UUID                                 Peer                                 Type  
 - Class: Simple name of the intercepted class
 - Target: Intercepted method signature or field operation (e.g., `add(int, int)` or `counter [GET]`)
 - Callback: Simple callback class name and method (e.g., `Handler.onAdd`)
+- TTL: Time-to-live in seconds (e.g., `300s`), or `-` if the intercept has no dedicated TTL
 - Created: Creation timestamp (MMM dd HH:mm format)
 
 ### Notes
