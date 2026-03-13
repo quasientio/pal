@@ -1045,7 +1045,10 @@ public class PalDirectory {
         kvClient.get(peerInterceptsPathKey, GetOption.builder().isPrefix(true).build()).get();
     for (KeyValue kv : response.getKvs()) {
       final String interceptPath = kv.getKey().toString(UTF8);
-      interceptRequests.add(getIntercept(interceptPath));
+      InterceptRequest<?> req = getIntercept(interceptPath);
+      if (req != null) {
+        interceptRequests.add(req);
+      }
     }
     return interceptRequests;
   }
@@ -1062,7 +1065,10 @@ public class PalDirectory {
           kvClient.get(getInterceptsPathKey(), GetOption.builder().isPrefix(true).build()).get();
       for (KeyValue kv : response.getKvs()) {
         final String interceptPath = kv.getKey().toString(UTF8);
-        interceptRequests.add(getIntercept(interceptPath));
+        InterceptRequest<?> req = getIntercept(interceptPath);
+        if (req != null) {
+          interceptRequests.add(req);
+        }
       }
     } catch (ExecutionException | InterruptedException e) {
       logger.error("Error getting all intercept requests", e);
