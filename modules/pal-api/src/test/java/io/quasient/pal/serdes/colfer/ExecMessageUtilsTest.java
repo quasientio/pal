@@ -19,6 +19,7 @@ import io.quasient.pal.messages.colfer.ExecMessage;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -510,5 +511,166 @@ public class ExecMessageUtilsTest {
             "test", accessibleObject, ObjectRef.randomRef(), false, UUID.randomUUID().toString());
     assertNull(ExecMessageUtils.getParameterTypes(execMessage));
   }
+
+  // </editor-fold>
+
+  // <editor-fold desc="getModifiers">
+
+  /** Verifies that {@code getModifiers} returns the modifiers set on a {@code ConstructorCall}. */
+  @Test
+  public void shouldReturnModifiersForConstructorCall() {
+    // Given
+    ExecMessage msg =
+        messageBuilder.buildEmptyConstructor(UUID.randomUUID(), "ModConstructorClass");
+    msg.getConstructorCall().setModifiers(Modifier.PUBLIC);
+
+    // When
+    int modifiers = ExecMessageUtils.getModifiers(msg);
+
+    // Then
+    assertEquals(Modifier.PUBLIC, modifiers);
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the modifiers set on an {@code InstanceMethodCall}.
+   */
+  @Test
+  public void shouldReturnModifiersForInstanceMethodCall() {
+    // Given
+    ExecMessage msg =
+        messageBuilder.buildInstanceMethod(
+            UUID.randomUUID(),
+            "ModInstanceMethodClass",
+            "modMethod",
+            ObjectRef.randomRef(),
+            null,
+            null);
+    msg.getInstanceMethodCall().setModifiers(Modifier.PROTECTED);
+
+    // When
+    int modifiers = ExecMessageUtils.getModifiers(msg);
+
+    // Then
+    assertEquals(Modifier.PROTECTED, modifiers);
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the modifiers set on a {@code ClassMethodCall},
+   * including combined bitmasks.
+   */
+  @Test
+  public void shouldReturnModifiersForClassMethodCall() {
+    // Given
+    int expected = Modifier.PRIVATE | Modifier.STATIC;
+    ExecMessage msg =
+        messageBuilder.buildClassMethod(
+            UUID.randomUUID(), "ModClassMethodClass", "modStaticMethod", null, null, null, null);
+    msg.getClassMethodCall().setModifiers(expected);
+
+    // When
+    int modifiers = ExecMessageUtils.getModifiers(msg);
+
+    // Then
+    assertEquals(expected, modifiers);
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the field modifiers from an {@code
+   * InstanceFieldGet}.
+   */
+  @Test
+  public void shouldReturnModifiersForInstanceFieldGet() {
+    // Given
+    ExecMessage msg =
+        messageBuilder.buildGetObject(
+            UUID.randomUUID(), "ModGetFieldClass", "modGetField", ObjectRef.randomRef());
+    msg.getInstanceFieldGet().getField().setModifiers(Modifier.PUBLIC);
+
+    // When
+    int modifiers = ExecMessageUtils.getModifiers(msg);
+
+    // Then
+    assertEquals(Modifier.PUBLIC, modifiers);
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the field modifiers from a {@code StaticFieldGet},
+   * including combined bitmasks.
+   */
+  @Test
+  public void shouldReturnModifiersForStaticFieldGet() {
+    // Given
+    int expected = Modifier.PRIVATE | Modifier.STATIC;
+    ExecMessage msg =
+        messageBuilder.buildGetStatic(UUID.randomUUID(), "ModGetStaticClass", "modStaticGetField");
+    msg.getStaticFieldGet().getField().setModifiers(expected);
+
+    // When
+    int modifiers = ExecMessageUtils.getModifiers(msg);
+
+    // Then
+    assertEquals(expected, modifiers);
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the field modifiers from an {@code
+   * InstanceFieldPut}, including zero for package-private.
+   */
+  @Test
+  public void shouldReturnModifiersForInstanceFieldPut() {
+    // Given
+    ExecMessage msg =
+        messageBuilder.buildPutObject(
+            UUID.randomUUID(),
+            "ModPutFieldClass",
+            "modPutField",
+            ObjectRef.randomRef(),
+            ObjectRef.randomRef());
+
+    // When (modifiers default to 0 = package-private)
+    int modifiers = ExecMessageUtils.getModifiers(msg);
+
+    // Then
+    assertEquals(0, modifiers);
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns the field modifiers from a {@code StaticFieldPut},
+   * including combined bitmasks.
+   */
+  @Test
+  public void shouldReturnModifiersForStaticFieldPut() {
+    // Given
+    int expected = Modifier.PROTECTED | Modifier.STATIC;
+    ExecMessage msg =
+        messageBuilder.buildPutStatic(
+            UUID.randomUUID(), "ModPutStaticClass", "modStaticPutField", ObjectRef.randomRef());
+    msg.getStaticFieldPut().getField().setModifiers(expected);
+
+    // When
+    int modifiers = ExecMessageUtils.getModifiers(msg);
+
+    // Then
+    assertEquals(expected, modifiers);
+  }
+
+  /**
+   * Verifies that {@code getModifiers} returns zero for message types that do not carry modifiers.
+   */
+  @Test
+  public void shouldReturnZeroForUnknownMessageType() throws NoSuchMethodException {
+    // Given: an EXEC_RETURN_VALUE message (does not carry modifiers)
+    Method method = ClassForTest.class.getMethod("nonVoidTestMethod");
+    ExecMessage msg =
+        messageBuilder.buildReturnValue(
+            "test", method, ObjectRef.randomRef(), false, UUID.randomUUID().toString());
+
+    // When
+    int modifiers = ExecMessageUtils.getModifiers(msg);
+
+    // Then
+    assertEquals(0, modifiers);
+  }
+
   // </editor-fold>
 }

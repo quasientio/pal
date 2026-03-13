@@ -23,6 +23,7 @@ import io.quasient.pal.messages.colfer.ConstructorCall;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.types.MessageType;
+import java.lang.reflect.Modifier;
 import java.util.EnumSet;
 import java.util.List;
 import org.junit.After;
@@ -70,7 +71,8 @@ public class RpcPolicyCheckerTest {
   public void shouldPassWhenPolicyReturnsAllow() {
     RpcPolicy policy =
         new RpcPolicy(
-            List.of(new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null)),
+            List.of(
+                new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -108,7 +110,7 @@ public class RpcPolicyCheckerTest {
         new RpcPolicy(
             List.of(
                 new RpcPolicyRule(
-                    "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null)),
+                    "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -132,7 +134,7 @@ public class RpcPolicyCheckerTest {
         new RpcPolicy(
             List.of(
                 new RpcPolicyRule(
-                    "com.example.**", null, RpcPolicyAction.LOG_AND_DENY, null, null)),
+                    "com.example.**", null, RpcPolicyAction.LOG_AND_DENY, null, null, null)),
             RpcPolicyAction.ALLOW);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -159,7 +161,8 @@ public class RpcPolicyCheckerTest {
     RpcPolicy policy =
         new RpcPolicy(
             List.of(
-                new RpcPolicyRule("com.example.Foo.**", null, RpcPolicyAction.ALLOW, null, null)),
+                new RpcPolicyRule(
+                    "com.example.Foo.**", null, RpcPolicyAction.ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -180,7 +183,7 @@ public class RpcPolicyCheckerTest {
         new RpcPolicy(
             List.of(
                 new RpcPolicyRule(
-                    "com.example.Foo", "specificMethod", RpcPolicyAction.ALLOW, null, null)),
+                    "com.example.Foo", "specificMethod", RpcPolicyAction.ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -214,7 +217,8 @@ public class RpcPolicyCheckerTest {
                     null,
                     RpcPolicyAction.ALLOW,
                     null,
-                    EnumSet.of(MemberCategory.CONSTRUCTOR))),
+                    EnumSet.of(MemberCategory.CONSTRUCTOR),
+                    null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -264,7 +268,8 @@ public class RpcPolicyCheckerTest {
   public void shouldReturnCorrectAccessibilityForIsAccessible() {
     RpcPolicy policy =
         new RpcPolicy(
-            List.of(new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null)),
+            List.of(
+                new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -288,7 +293,7 @@ public class RpcPolicyCheckerTest {
         new RpcPolicy(
             List.of(
                 new RpcPolicyRule(
-                    "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null)),
+                    "com.example.**", null, RpcPolicyAction.LOG_AND_ALLOW, null, null, null)),
             RpcPolicyAction.DENY);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
@@ -296,6 +301,156 @@ public class RpcPolicyCheckerTest {
         checker.isAccessible(
             "com.example.Foo", "bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD),
         is(true));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Visibility-aware policy evaluation tests
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Verifies that a non-public method is denied when the policy has an ALLOW rule restricted to
+   * {@link MemberVisibility#PUBLIC} visibility with a default DENY action.
+   */
+  @Test
+  public void shouldDenyNonPublicMethodWhenPolicyRequiresPublicVisibility() {
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.**",
+                    null,
+                    RpcPolicyAction.ALLOW,
+                    null,
+                    null,
+                    EnumSet.of(MemberVisibility.PUBLIC))),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
+
+    ExecMessage msg =
+        createInstanceMethodMessageWithModifiers("com.example.Foo", "bar", Modifier.PROTECTED);
+    try {
+      checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getClassName(), is("com.example.Foo"));
+      assertThat(e.getMemberName(), is("bar"));
+    }
+  }
+
+  /**
+   * Verifies that a public method is allowed when the policy has an ALLOW rule restricted to {@link
+   * MemberVisibility#PUBLIC} visibility with a default DENY action.
+   */
+  @Test
+  public void shouldAllowPublicMethodWhenPolicyRequiresPublicVisibility() {
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.**",
+                    null,
+                    RpcPolicyAction.ALLOW,
+                    null,
+                    null,
+                    EnumSet.of(MemberVisibility.PUBLIC))),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
+
+    ExecMessage msg =
+        createInstanceMethodMessageWithModifiers("com.example.Foo", "bar", Modifier.PUBLIC);
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+  }
+
+  /**
+   * Verifies that visibility is not checked when no rules specify visibility restrictions, even for
+   * private methods.
+   */
+  @Test
+  public void shouldSkipVisibilityCheckWhenNoVisibilityRules() {
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule("com.example.**", null, RpcPolicyAction.ALLOW, null, null, null)),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
+
+    ExecMessage msg =
+        createInstanceMethodMessageWithModifiers("com.example.Foo", "bar", Modifier.PRIVATE);
+    // No exception: visibility is not checked because no rules have visibility constraints
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+  }
+
+  /**
+   * Verifies that the {@code deny-nonpublic} preset denies a package-private constructor (modifiers
+   * = 0).
+   */
+  @Test
+  public void shouldDenyPackagePrivateConstructorWhenDenyNonpublicPreset() {
+    List<RpcPolicyRule> presetRules = RpcPolicyPresets.getDenyNonpublicRules();
+    RpcPolicy policy = new RpcPolicy(presetRules, RpcPolicyAction.ALLOW);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
+
+    ExecMessage msg = createConstructorMessageWithModifiers("com.example.Foo", 0);
+    try {
+      checker.checkAccess(msg, MessageType.EXEC_CONSTRUCTOR, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getClassName(), is("com.example.Foo"));
+    }
+  }
+
+  /**
+   * Verifies that exempt channels (e.g. {@link MessageChannelType#REPLAY_INJECTION}) still bypass
+   * all policy checks, even when visibility rules are active.
+   */
+  @Test
+  public void shouldStillExemptReplayInjectionChannel() {
+    RpcPolicy policy =
+        new RpcPolicy(
+            List.of(
+                new RpcPolicyRule(
+                    "com.example.**",
+                    null,
+                    RpcPolicyAction.ALLOW,
+                    null,
+                    null,
+                    EnumSet.of(MemberVisibility.PUBLIC))),
+            RpcPolicyAction.DENY);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
+
+    ExecMessage msg =
+        createInstanceMethodMessageWithModifiers("com.example.Foo", "bar", Modifier.PRIVATE);
+    // No exception: REPLAY_INJECTION channel is exempt from all policy checks
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.REPLAY_INJECTION);
+  }
+
+  /**
+   * Verifies that {@link RpcPolicyChecker} picks up an updated policy after the underlying {@link
+   * RpcPolicyHolder} is swapped from deny-all to allow-all.
+   */
+  @Test
+  public void shouldPickUpUpdatedPolicyAfterHolderSwap() {
+    // Given: An RpcPolicyHolder initialized with a deny-all policy
+    RpcPolicy denyAll = new RpcPolicy(List.of(), RpcPolicyAction.DENY);
+    RpcPolicyHolder holder = new RpcPolicyHolder(denyAll);
+    RpcPolicyChecker checker = new RpcPolicyChecker(holder, null);
+
+    ExecMessage msg = createInstanceMethodMessage("com.example.Foo", "bar");
+
+    // Verify initial deny-all policy is in effect
+    try {
+      checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getClassName(), is("com.example.Foo"));
+    }
+
+    // When: The holder's policy is swapped to an allow-all policy via updatePolicy()
+    RpcPolicy allowAll = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
+    holder.updatePolicy(allowAll);
+
+    // Then: checkAccess() with the same message now passes without throwing
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
   }
 
   /**
@@ -328,11 +483,51 @@ public class RpcPolicyCheckerTest {
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes") // Class conflicts with java.lang.Class
   private static ExecMessage createConstructorMessage(String className) {
+    return createConstructorMessageWithModifiers(className, 0);
+  }
+
+  /**
+   * Creates an {@link ExecMessage} containing an {@link InstanceMethodCall} with the given class
+   * name, method name, and Java modifiers.
+   *
+   * @param className the fully-qualified class name
+   * @param methodName the method name
+   * @param modifiers the Java modifier bitmask (from {@link Modifier})
+   * @return the constructed message
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes") // Class conflicts with java.lang.Class
+  private static ExecMessage createInstanceMethodMessageWithModifiers(
+      String className, String methodName, int modifiers) {
+    io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();
+    clazz.name = className;
+
+    InstanceMethodCall call = new InstanceMethodCall();
+    call.clazz = clazz;
+    call.name = methodName;
+    call.modifiers = modifiers;
+
+    ExecMessage msg = new ExecMessage();
+    msg.instanceMethodCall = call;
+    return msg;
+  }
+
+  /**
+   * Creates an {@link ExecMessage} containing a {@link ConstructorCall} with the given class name
+   * and Java modifiers.
+   *
+   * @param className the fully-qualified class name
+   * @param modifiers the Java modifier bitmask (from {@link Modifier})
+   * @return the constructed message
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes") // Class conflicts with java.lang.Class
+  private static ExecMessage createConstructorMessageWithModifiers(
+      String className, int modifiers) {
     io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();
     clazz.name = className;
 
     ConstructorCall call = new ConstructorCall();
     call.clazz = clazz;
+    call.modifiers = modifiers;
 
     ExecMessage msg = new ExecMessage();
     msg.constructorCall = call;

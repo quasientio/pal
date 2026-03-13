@@ -24,7 +24,9 @@ import io.github.classgraph.MethodParameterInfo;
 import io.github.classgraph.ScanResult;
 import io.quasient.pal.core.execution.java.CustomClassloader;
 import io.quasient.pal.core.rpc.policy.MemberCategory;
+import io.quasient.pal.core.rpc.policy.MemberVisibility;
 import io.quasient.pal.core.rpc.policy.RpcPolicy;
+import io.quasient.pal.core.rpc.policy.RpcPolicyHolder;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.FileOutputStream;
@@ -52,9 +54,11 @@ import org.slf4j.LoggerFactory;
  * inheritance hierarchies, constructors, methods, and fields. In addition, it supports merging of
  * inherited members from ancestor classes and interfaces.
  *
- * <p>Metadata output is filtered by the configured {@link RpcPolicy}: only classes and members that
- * the policy allows are included in the output. This ensures that RPC clients only discover methods
- * they are authorized to call.
+ * <p>Metadata output is filtered by the configured {@link RpcPolicyHolder}: only classes and
+ * members that the current policy allows are included in the output. This ensures that RPC clients
+ * only discover methods they are authorized to call. Because the policy is read through a volatile
+ * holder, policy changes via hot-reload are visible on the next scan without reconstructing the
+ * serializer.
  */
 @Singleton
 @SuppressFBWarnings(
@@ -72,8 +76,8 @@ public class ClassMetadataSerializer {
   private static final Set<String> CLASS_PREFIXES_TO_EXCLUDE =
       Set.of("com.sun.", "sun.", "jdk.", PAL_PREFIX);
 
-  /** The RPC policy used to filter metadata output. */
-  private final RpcPolicy rpcPolicy;
+  /** The holder for the current RPC policy, enabling hot-reload via volatile swap. */
+  private final RpcPolicyHolder rpcPolicyHolder;
 
   /**
    * Optional custom classloader used to load classes during scanning. Null to use the default
@@ -82,28 +86,35 @@ public class ClassMetadataSerializer {
   @Nullable private final CustomClassloader customClassloader;
 
   /**
-   * Constructs a ClassMetadataSerializer with an optional custom classloader and an RPC policy.
+   * Constructs a ClassMetadataSerializer with an optional custom classloader and an RPC policy
+   * holder.
    *
-   * <p>The policy controls which classes and members appear in the serialized metadata output. Only
-   * members that the policy allows are included.
+   * <p>The policy holder provides the current policy, which controls which classes and members
+   * appear in the serialized metadata output. Only members that the policy allows are included.
+   * Because the policy is read from the holder on each scan, hot-reloaded policies take effect
+   * without reconstructing the serializer.
    *
    * @param customClassloader optional custom classloader to be used for scanning; may be null.
-   * @param rpcPolicy the RPC policy used to filter metadata output.
+   * @param rpcPolicyHolder the holder for the current RPC policy used to filter metadata output.
    */
   @Inject
   public ClassMetadataSerializer(
-      @Nullable CustomClassloader customClassloader, RpcPolicy rpcPolicy) {
-    this.rpcPolicy = rpcPolicy;
+      @Nullable CustomClassloader customClassloader, RpcPolicyHolder rpcPolicyHolder) {
+    this.rpcPolicyHolder = rpcPolicyHolder;
     this.customClassloader = customClassloader;
   }
 
   /**
    * Constructs a ClassMetadataSerializer with the given RPC policy and no custom classloader.
    *
+   * <p>This convenience constructor wraps the given policy in an {@link RpcPolicyHolder}
+   * internally. It is intended for tests that construct the serializer directly with a known
+   * policy.
+   *
    * @param rpcPolicy the RPC policy used to filter metadata output.
    */
   ClassMetadataSerializer(RpcPolicy rpcPolicy) {
-    this.rpcPolicy = rpcPolicy;
+    this.rpcPolicyHolder = new RpcPolicyHolder(rpcPolicy);
     this.customClassloader = null;
   }
 
@@ -113,9 +124,9 @@ public class ClassMetadataSerializer {
    * using Base64. The metadata includes class details such as name, modifiers, inheritance
    * information, constructors, methods, and fields.
    *
-   * <p>Classes and members are filtered by the configured {@link RpcPolicy}. Only members that the
-   * policy allows (on any channel) are included. Classes with no accessible members after filtering
-   * are omitted entirely.
+   * <p>Classes and members are filtered by the current policy from the {@link RpcPolicyHolder}.
+   * Only members that the policy allows (on any channel) are included. Classes with no accessible
+   * members after filtering are omitted entirely.
    *
    * @param compressAndEncode if true, the output JSON is GZip-compressed and Base64-encoded.
    * @param includeClasses optional set of fully qualified class names to restrict the scan; if
@@ -277,7 +288,10 @@ public class ClassMetadataSerializer {
       if (isAspectWeaverMethod(constructorInfo)) {
         continue;
       }
-      if (!rpcPolicy.isAccessibleForMetadata(className, "<init>", MemberCategory.CONSTRUCTOR)) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(constructorInfo.getModifiers());
+      if (!rpcPolicyHolder
+          .getPolicy()
+          .isAccessibleForMetadata(className, "<init>", MemberCategory.CONSTRUCTOR, vis)) {
         continue;
       }
       ObjectNode constructorObject = createConstructorJson(mapper, constructorInfo);
@@ -305,7 +319,10 @@ public class ClassMetadataSerializer {
       }
       MemberCategory category =
           methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
-      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category)) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(methodInfo.getModifiers());
+      if (!rpcPolicyHolder
+          .getPolicy()
+          .isAccessibleForMetadata(className, methodInfo.getName(), category, vis)) {
         continue;
       }
       String sig = methodSignature(methodInfo);
@@ -338,7 +355,8 @@ public class ClassMetadataSerializer {
       if (isAspectWeaverField(fieldInfo)) {
         continue;
       }
-      if (!isFieldAccessibleForMetadata(className, fieldInfo.getName())) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(fieldInfo.getModifiers());
+      if (!isFieldAccessibleForMetadata(className, fieldInfo.getName(), vis)) {
         continue;
       }
       ObjectNode fieldObject = createFieldJson(mapper, fieldInfo, null, false);
@@ -370,7 +388,10 @@ public class ClassMetadataSerializer {
         }
         MemberCategory category =
             methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
-        if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category)) {
+        MemberVisibility vis = MemberVisibility.fromModifiers(methodInfo.getModifiers());
+        if (!rpcPolicyHolder
+            .getPolicy()
+            .isAccessibleForMetadata(className, methodInfo.getName(), category, vis)) {
           continue;
         }
         String sig = methodSignature(methodInfo);
@@ -391,7 +412,10 @@ public class ClassMetadataSerializer {
       }
       MemberCategory category =
           methodInfo.isStatic() ? MemberCategory.STATIC_METHOD : MemberCategory.METHOD;
-      if (!rpcPolicy.isAccessibleForMetadata(className, methodInfo.getName(), category)) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(methodInfo.getModifiers());
+      if (!rpcPolicyHolder
+          .getPolicy()
+          .isAccessibleForMetadata(className, methodInfo.getName(), category, vis)) {
         continue;
       }
       String sig = methodSignature(methodInfo);
@@ -435,7 +459,8 @@ public class ClassMetadataSerializer {
         if (isAspectWeaverField(fieldInfo)) {
           continue;
         }
-        if (!isFieldAccessibleForMetadata(className, fieldInfo.getName())) {
+        MemberVisibility vis = MemberVisibility.fromModifiers(fieldInfo.getModifiers());
+        if (!isFieldAccessibleForMetadata(className, fieldInfo.getName(), vis)) {
           continue;
         }
         String fieldName = fieldInfo.getName();
@@ -451,7 +476,8 @@ public class ClassMetadataSerializer {
       if (isAspectWeaverField(fieldInfo)) {
         continue;
       }
-      if (!isFieldAccessibleForMetadata(className, fieldInfo.getName())) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(fieldInfo.getModifiers());
+      if (!isFieldAccessibleForMetadata(className, fieldInfo.getName(), vis)) {
         continue;
       }
       String fieldName = fieldInfo.getName();
@@ -478,11 +504,17 @@ public class ClassMetadataSerializer {
    *
    * @param className the fully-qualified class name
    * @param fieldName the field name
+   * @param visibility the visibility of the field
    * @return {@code true} if the field is accessible for either get or set
    */
-  private boolean isFieldAccessibleForMetadata(String className, String fieldName) {
-    return rpcPolicy.isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_GET)
-        || rpcPolicy.isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_SET);
+  private boolean isFieldAccessibleForMetadata(
+      String className, String fieldName, MemberVisibility visibility) {
+    return rpcPolicyHolder
+            .getPolicy()
+            .isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_GET, visibility)
+        || rpcPolicyHolder
+            .getPolicy()
+            .isAccessibleForMetadata(className, fieldName, MemberCategory.FIELD_SET, visibility);
   }
 
   /**
@@ -559,7 +591,10 @@ public class ClassMetadataSerializer {
           Modifier.isStatic(m.getModifiers())
               ? MemberCategory.STATIC_METHOD
               : MemberCategory.METHOD;
-      if (!rpcPolicy.isAccessibleForMetadata(className, m.getName(), category)) {
+      MemberVisibility vis = MemberVisibility.fromModifiers(m.getModifiers());
+      if (!rpcPolicyHolder
+          .getPolicy()
+          .isAccessibleForMetadata(className, m.getName(), category, vis)) {
         continue;
       }
       String sig = reflectionMethodSignature(m);

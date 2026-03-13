@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quasient.pal.core.execution.java.CustomClassloader;
 import io.quasient.pal.core.rpc.policy.RpcPolicy;
 import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
+import io.quasient.pal.core.rpc.policy.RpcPolicyHolder;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
@@ -426,7 +427,7 @@ public class ClassMetadataSerializerTest {
 
     try {
       ClassMetadataSerializer serializerWithCustomLoader =
-          new ClassMetadataSerializer(customLoader, ALLOW_ALL_POLICY);
+          new ClassMetadataSerializer(customLoader, new RpcPolicyHolder(ALLOW_ALL_POLICY));
 
       // When: scannedClasspathToJson called with a specific class
       Path outFile =

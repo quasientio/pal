@@ -192,6 +192,45 @@ public class RpcPolicyDispatchTest {
   }
 
   /**
+   * Verifies that a dispatcher wired with a deny-all policy checker reflects a reloaded allow-all
+   * policy after the underlying {@link RpcPolicyHolder} is swapped.
+   */
+  @Test
+  public void shouldDispatchReflectReloadedPolicy() throws Exception {
+    // Given: A dispatcher wired with an RpcPolicyChecker backed by an RpcPolicyHolder
+    //        initialized with a deny-all policy
+    RpcPolicy denyAll = new RpcPolicy(List.of(), RpcPolicyAction.DENY);
+    RpcPolicyHolder holder = new RpcPolicyHolder(denyAll);
+    RpcPolicyChecker checker = new RpcPolicyChecker(holder, null);
+    ExecMessageDispatcher dispatcher = createDispatcher(checker);
+
+    ExecMessage incomingMessage =
+        messageBuilder.buildEmptyConstructor(peerUuid, SampleClass.class.getName());
+
+    // Verify deny-all is in effect
+    try {
+      dispatcher.dispatchIncoming(incomingMessage, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getClassName(), is(SampleClass.class.getName()));
+    }
+
+    // When: The holder is swapped to allow-all
+    RpcPolicy allowAll = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
+    holder.updatePolicy(allowAll);
+
+    // Then: Execution proceeds normally (no RpcAccessDeniedException)
+    ExecMessage freshMessage =
+        messageBuilder.buildEmptyConstructor(peerUuid, SampleClass.class.getName());
+    ExecMessage response =
+        dispatcher.dispatchIncoming(freshMessage, MessageChannelType.ZMQ_SOCKET_RPC);
+    assertNotNull(response);
+    assertThat(response.getResponseToId(), is(freshMessage.getMessageId()));
+    assertNull(response.getRaisedThrowable());
+    assertThat(response.getReturnValue(), is(notNullValue()));
+  }
+
+  /**
    * Verifies that the policy check occurs before any reflective loading (i.e., {@code
    * loadAccessibleObject()} is NOT called when the policy denies access), ensuring the check
    * short-circuits the dispatch path early.

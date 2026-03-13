@@ -244,8 +244,10 @@ public final class RpcPolicyParser {
 
     Set<MessageChannelType> channels = parseChannels(ruleMap.get("channel"));
     Set<MemberCategory> members = parseMembers(ruleMap.get("members"));
+    Set<MemberVisibility> visibilities = parseVisibilities(ruleMap.get("visibility"));
 
-    return new RpcPolicyRule(classPattern, memberPattern, ruleAction, channels, members);
+    return new RpcPolicyRule(
+        classPattern, memberPattern, ruleAction, channels, members, visibilities);
   }
 
   /**
@@ -290,6 +292,48 @@ public final class RpcPolicyParser {
       result.add(MemberCategory.valueOf(String.valueOf(value)));
     }
     return result;
+  }
+
+  /**
+   * Parses a visibility constraint from a YAML value, which may be a single string or a list.
+   *
+   * <p>Follows the same pattern as {@link #parseChannels(Object)} and {@link
+   * #parseMembers(Object)}:
+   *
+   * <ul>
+   *   <li>{@code null} input returns {@code null} (no restriction, match all visibilities)
+   *   <li>Single {@code String} is parsed via {@link MemberVisibility#fromString(String)}; returns
+   *       {@code null} if the value is {@code "ALL"}
+   *   <li>{@code List<?>} iterates each element; returns {@code null} if any element is {@code
+   *       "ALL"}
+   *   <li>Other types throw {@link IllegalArgumentException}
+   * </ul>
+   *
+   * @param value the YAML value for the {@code visibility} field, or {@code null}
+   * @return the set of visibilities, or {@code null} if no constraint (match all)
+   * @throws IllegalArgumentException if the value is not a valid visibility
+   */
+  @SuppressWarnings("unchecked")
+  private static Set<MemberVisibility> parseVisibilities(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof String s) {
+      MemberVisibility vis = MemberVisibility.fromString(s);
+      return vis != null ? EnumSet.of(vis) : null;
+    }
+    if (value instanceof List<?> list) {
+      EnumSet<MemberVisibility> result = EnumSet.noneOf(MemberVisibility.class);
+      for (Object item : list) {
+        MemberVisibility vis = MemberVisibility.fromString(String.valueOf(item).trim());
+        if (vis == null) {
+          return null;
+        }
+        result.add(vis);
+      }
+      return result;
+    }
+    throw new IllegalArgumentException("Invalid visibility value: " + value);
   }
 
   /**

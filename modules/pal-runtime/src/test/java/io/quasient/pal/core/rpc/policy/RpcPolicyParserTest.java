@@ -353,4 +353,215 @@ public class RpcPolicyParserTest {
       Files.deleteIfExists(tempFile);
     }
   }
+
+  /**
+   * Verifies that a rule with a single string {@code visibility: PUBLIC} is parsed into a rule
+   * whose visibilities set contains only {@link MemberVisibility#PUBLIC}.
+   */
+  @Test
+  public void shouldParseVisibilitySingleValue() {
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.api.**"
+            action: ALLOW
+            visibility: PUBLIC
+        """;
+
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    Set<MemberVisibility> visibilities = policy.getRules().get(0).getVisibilities();
+    assertNotNull(visibilities);
+    assertThat(visibilities.size(), is(1));
+    assertTrue(visibilities.contains(MemberVisibility.PUBLIC));
+  }
+
+  /**
+   * Verifies that a rule with a list-valued {@code visibility: [PUBLIC, PROTECTED]} is parsed into
+   * a rule whose visibilities set contains both {@link MemberVisibility#PUBLIC} and {@link
+   * MemberVisibility#PROTECTED}.
+   */
+  @Test
+  public void shouldParseVisibilityListValue() {
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.api.**"
+            action: ALLOW
+            visibility: [PUBLIC, PROTECTED]
+        """;
+
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    Set<MemberVisibility> visibilities = policy.getRules().get(0).getVisibilities();
+    assertNotNull(visibilities);
+    assertThat(visibilities.size(), is(2));
+    assertTrue(visibilities.contains(MemberVisibility.PUBLIC));
+    assertTrue(visibilities.contains(MemberVisibility.PROTECTED));
+  }
+
+  /**
+   * Verifies that a rule with {@code visibility: ALL} is parsed into a rule whose visibilities is
+   * null, meaning all visibility levels are matched.
+   */
+  @Test
+  public void shouldParseVisibilityAll() {
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.api.**"
+            action: ALLOW
+            visibility: ALL
+        """;
+
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    assertNull(policy.getRules().get(0).getVisibilities());
+  }
+
+  /**
+   * Verifies that a rule with {@code visibility: [PUBLIC, ALL]} is parsed into a rule whose
+   * visibilities is null, because ALL overrides any other values in the list.
+   */
+  @Test
+  public void shouldParseVisibilityAllInList() {
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.api.**"
+            action: ALLOW
+            visibility: [PUBLIC, ALL]
+        """;
+
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    assertNull(policy.getRules().get(0).getVisibilities());
+  }
+
+  /**
+   * Verifies that a rule with {@code visibility: DEFAULT} is parsed as the alias for {@link
+   * MemberVisibility#PACKAGE_PRIVATE}.
+   */
+  @Test
+  public void shouldParseVisibilityDefault() {
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.api.**"
+            action: ALLOW
+            visibility: DEFAULT
+        """;
+
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    Set<MemberVisibility> visibilities = policy.getRules().get(0).getVisibilities();
+    assertNotNull(visibilities);
+    assertThat(visibilities.size(), is(1));
+    assertTrue(visibilities.contains(MemberVisibility.PACKAGE_PRIVATE));
+  }
+
+  /**
+   * Verifies that a rule with {@code visibility: PACKAGE_PRIVATE} is parsed directly into a rule
+   * whose visibilities set contains only {@link MemberVisibility#PACKAGE_PRIVATE}.
+   */
+  @Test
+  public void shouldParseVisibilityPackagePrivate() {
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.api.**"
+            action: ALLOW
+            visibility: PACKAGE_PRIVATE
+        """;
+
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    Set<MemberVisibility> visibilities = policy.getRules().get(0).getVisibilities();
+    assertNotNull(visibilities);
+    assertThat(visibilities.size(), is(1));
+    assertTrue(visibilities.contains(MemberVisibility.PACKAGE_PRIVATE));
+  }
+
+  /**
+   * Verifies that when a YAML rule does not include a {@code visibility} field, the parsed rule's
+   * visibilities is null, meaning all visibility levels are matched by default.
+   */
+  @Test
+  public void shouldOmitVisibilityWhenNotSpecified() {
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.api.**"
+            action: ALLOW
+        """;
+
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    assertNull(policy.getRules().get(0).getVisibilities());
+  }
+
+  /**
+   * Verifies that a rule with an invalid visibility value (e.g. {@code visibility: INVALID_VALUE})
+   * causes an {@link IllegalArgumentException} to be thrown during parsing.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldThrowForInvalidVisibility() {
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.api.**"
+            action: ALLOW
+            visibility: INVALID_VALUE
+        """;
+
+    RpcPolicyParser.parseYaml(yaml);
+  }
+
+  /**
+   * Verifies that visibility values are parsed case-insensitively, so {@code visibility: public}
+   * (lowercase) is equivalent to {@code visibility: PUBLIC}.
+   */
+  @Test
+  public void shouldParseCaseInsensitiveVisibility() {
+    String yaml =
+        """
+        version: 1
+        defaultAction: DENY
+        rules:
+          - class: "com.example.api.**"
+            action: ALLOW
+            visibility: public
+        """;
+
+    RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
+
+    assertThat(policy.getRules().size(), is(1));
+    Set<MemberVisibility> visibilities = policy.getRules().get(0).getVisibilities();
+    assertNotNull(visibilities);
+    assertThat(visibilities.size(), is(1));
+    assertTrue(visibilities.contains(MemberVisibility.PUBLIC));
+  }
 }

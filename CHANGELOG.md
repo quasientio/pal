@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- [Test] Add integration tests for RPC policy hot reloading: deny-to-allow, allow-to-deny, invalid YAML resilience, and metadata reload verification, parameterized for both ZMQ and JSON-RPC transports
+- [Doc] Document RPC policy hot reloading: user guide (behavior, poll interval, error handling, operational workflow), developer architecture (RpcPolicyHolder volatile swap pattern, RpcPolicyFileWatcher threading model), CLI reference (--rpc-policy-watch-interval flag)
+- [Doc] Update user documentation for visibility feature: visibility field in Rule Fields table, MemberVisibility values table, deny-nonpublic preset, YAML examples with visibility usage, security considerations for visibility-aware policies
+- [Doc] Update developer architecture documentation for visibility support: MemberVisibility in core classes, visibilities field semantics, evaluation flow with visibility dimension, deny-nonpublic preset, modifier trust model, test class references
+- [Feature] Extend RpcPolicyRule with visibility filter dimension (visibilities field, matches/matchesForMetadata visibility parameter, getVisibilities accessor)
 - [Doc] Update developer and user documentation for priority-based intercept ordering: document three-factor execution order, recommended priority ranges, AROUND chain layering, and deterministic ordering recommendations
 - [Feature] Add priority-based stable sorting to `InterceptRequests.cloneListWithNewRequest()` for deterministic intercept execution order
 - [Feature] Map `priority` field in `MessageBuilder.buildInterceptMessage()` and add `InterceptRequestEntry.getPriority()` convenience getter

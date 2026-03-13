@@ -14,12 +14,17 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 import io.quasient.pal.core.execution.java.CustomClassloader;
 import io.quasient.pal.core.rpc.policy.RpcPolicy;
 import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
+import io.quasient.pal.core.rpc.policy.RpcPolicyFileWatcher;
+import io.quasient.pal.core.rpc.policy.RpcPolicyHolder;
 import io.quasient.pal.core.rpc.policy.RpcPolicyPresets;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -178,6 +183,145 @@ public class PeerWiringRpcPolicyTest {
     p.setProperty("pub.queue.initial", "1024");
     p.setProperty("pub.queue.max", "2048");
     return p;
+  }
+
+  /**
+   * Verifies that {@code PeerWiring} provides a bound {@link
+   * io.quasient.pal.core.rpc.policy.RpcPolicyHolder} whose initial policy is the default deny-all
+   * policy when no RPC policy configuration is provided.
+   */
+  @Test
+  public void shouldProvideRpcPolicyHolder() {
+    // Given: Standard base properties with no RPC policy config
+    Properties props = baseProps();
+    PeerWiring wiring = createWiring(props);
+
+    // When: Construct holder from the provided policy
+    RpcPolicy policy = wiring.provideRpcPolicy();
+    RpcPolicyHolder holder = new RpcPolicyHolder(policy);
+
+    // Then: RpcPolicyHolder is created and its getPolicy() returns the default deny-all policy
+    assertThat(holder, is(notNullValue()));
+    assertThat(holder.getPolicy(), is(notNullValue()));
+    assertThat(holder.getPolicy().getDefaultAction(), is(RpcPolicyAction.DENY));
+    assertThat(holder.getPolicy().getRules(), is(empty()));
+  }
+
+  /**
+   * Verifies that {@code provideRpcPolicyFileWatcher()} returns {@code null} when no {@code
+   * rpc.policy.path} property is configured, since there is no file to watch.
+   */
+  @Test
+  public void shouldProvideNullWatcherWhenNoPolicyPath() {
+    // Given: Properties without rpc.policy.path
+    Properties props = baseProps();
+    PeerWiring wiring = createWiring(props);
+    RpcPolicyHolder holder = new RpcPolicyHolder(wiring.provideRpcPolicy());
+
+    // When: provideRpcPolicyFileWatcher() is called
+    RpcPolicyFileWatcher watcher = wiring.provideRpcPolicyFileWatcher(holder);
+
+    // Then: Returns null (no file to watch)
+    assertThat(watcher, is(nullValue()));
+  }
+
+  /**
+   * Verifies that {@code provideRpcPolicyFileWatcher()} returns a non-null {@link
+   * io.quasient.pal.core.rpc.policy.RpcPolicyFileWatcher} when {@code rpc.policy.path} is set to a
+   * valid temporary YAML file.
+   */
+  @Test
+  public void shouldProvideWatcherWhenPolicyPathSet() throws IOException {
+    // Given: Properties with rpc.policy.path set to a valid temp YAML file
+    Path yamlFile = Files.createTempFile("rpc-policy-", ".yaml");
+    try {
+      Files.writeString(
+          yamlFile,
+          """
+              version: 1
+              defaultAction: ALLOW
+              rules: []
+              """);
+      Properties props = baseProps();
+      props.setProperty("rpc.policy.path", yamlFile.toString());
+      PeerWiring wiring = createWiring(props);
+      RpcPolicyHolder holder = new RpcPolicyHolder(wiring.provideRpcPolicy());
+
+      // When: provideRpcPolicyFileWatcher() is called
+      RpcPolicyFileWatcher watcher = wiring.provideRpcPolicyFileWatcher(holder);
+
+      // Then: Returns a non-null RpcPolicyFileWatcher
+      assertThat(watcher, is(notNullValue()));
+    } finally {
+      Files.deleteIfExists(yamlFile);
+    }
+  }
+
+  /**
+   * Verifies that {@code provideRpcPolicyFileWatcher()} respects a custom poll interval configured
+   * via the {@code rpc.policy.watch.interval.ms} property.
+   */
+  @Test
+  public void shouldRespectCustomPollInterval() throws Exception {
+    // Given: Properties with rpc.policy.path and rpc.policy.watch.interval.ms=5000
+    Path yamlFile = Files.createTempFile("rpc-policy-", ".yaml");
+    try {
+      Files.writeString(
+          yamlFile,
+          """
+              version: 1
+              defaultAction: ALLOW
+              rules: []
+              """);
+      Properties props = baseProps();
+      props.setProperty("rpc.policy.path", yamlFile.toString());
+      props.setProperty("rpc.policy.watch.interval.ms", "5000");
+      PeerWiring wiring = createWiring(props);
+      RpcPolicyHolder holder = new RpcPolicyHolder(wiring.provideRpcPolicy());
+
+      // When: provideRpcPolicyFileWatcher() is called
+      RpcPolicyFileWatcher watcher = wiring.provideRpcPolicyFileWatcher(holder);
+
+      // Then: Returns a watcher with the custom poll interval
+      assertThat(watcher, is(notNullValue()));
+      Field pollField = RpcPolicyFileWatcher.class.getDeclaredField("pollIntervalMs");
+      pollField.setAccessible(true);
+      assertThat(pollField.getLong(watcher), is(5000L));
+    } finally {
+      Files.deleteIfExists(yamlFile);
+    }
+  }
+
+  /**
+   * Verifies that {@code provideRpcPolicyFileWatcher()} returns {@code null} when the poll interval
+   * is set to zero, effectively disabling file watching.
+   */
+  @Test
+  public void shouldDisableWatcherWhenPollIntervalZero() throws IOException {
+    // Given: Properties with rpc.policy.path and rpc.policy.watch.interval.ms=0
+    Path yamlFile = Files.createTempFile("rpc-policy-", ".yaml");
+    try {
+      Files.writeString(
+          yamlFile,
+          """
+              version: 1
+              defaultAction: ALLOW
+              rules: []
+              """);
+      Properties props = baseProps();
+      props.setProperty("rpc.policy.path", yamlFile.toString());
+      props.setProperty("rpc.policy.watch.interval.ms", "0");
+      PeerWiring wiring = createWiring(props);
+      RpcPolicyHolder holder = new RpcPolicyHolder(wiring.provideRpcPolicy());
+
+      // When: provideRpcPolicyFileWatcher() is called
+      RpcPolicyFileWatcher watcher = wiring.provideRpcPolicyFileWatcher(holder);
+
+      // Then: Returns null (watching disabled)
+      assertThat(watcher, is(nullValue()));
+    } finally {
+      Files.deleteIfExists(yamlFile);
+    }
   }
 
   /** Creates a PeerWiring instance with the given properties. */

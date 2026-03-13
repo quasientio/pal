@@ -59,6 +59,31 @@ public class ExecMessageUtils {
   }
 
   /**
+   * Retrieves the Java reflection modifiers from the given {@link ExecMessage}.
+   *
+   * <p>For constructor, instance method, and class method calls, modifiers are read directly from
+   * the call message. For field access operations (get/put, instance/static), modifiers are read
+   * from the nested {@link io.quasient.pal.messages.colfer.Field Field} message.
+   *
+   * @param execMessage the execution message from which to extract the modifiers
+   * @return the modifiers bitmask as defined by {@link java.lang.reflect.Modifier}, or {@code 0} if
+   *     the message type does not carry modifiers
+   */
+  public static int getModifiers(ExecMessage execMessage) {
+    MessageType type = getMessageTypeOf(execMessage);
+    return switch (type) {
+      case EXEC_CONSTRUCTOR -> execMessage.getConstructorCall().getModifiers();
+      case EXEC_INSTANCE_METHOD -> execMessage.getInstanceMethodCall().getModifiers();
+      case EXEC_CLASS_METHOD -> execMessage.getClassMethodCall().getModifiers();
+      case EXEC_GET_FIELD -> execMessage.getInstanceFieldGet().getField().getModifiers();
+      case EXEC_GET_STATIC -> execMessage.getStaticFieldGet().getField().getModifiers();
+      case EXEC_PUT_FIELD -> execMessage.getInstanceFieldPut().getField().getModifiers();
+      case EXEC_PUT_STATIC -> execMessage.getStaticFieldPut().getField().getModifiers();
+      default -> 0;
+    };
+  }
+
+  /**
    * Retrieves the name of the executable (constructor, method, or field) from the given {@link
    * ExecMessage}.
    *
