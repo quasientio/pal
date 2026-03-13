@@ -7,6 +7,7 @@
 - [Doc] Update user documentation for visibility feature: visibility field in Rule Fields table, MemberVisibility values table, deny-nonpublic preset, YAML examples with visibility usage, security considerations for visibility-aware policies
 - [Doc] Update developer architecture documentation for visibility support: MemberVisibility in core classes, visibilities field semantics, evaluation flow with visibility dimension, deny-nonpublic preset, modifier trust model, test class references
 - [Feature] Extend RpcPolicyRule with visibility filter dimension (visibilities field, matches/matchesForMetadata visibility parameter, getVisibilities accessor)
+- [Enhancement] Add TTL column to `pal ls -I -l` long listing output, displaying configured TTL as "Ns" or "-" for no TTL
 - [Feature] Add `ttlSeconds` field to `InterceptRequest` data model with full constructor support, serialization at index 14, and backward-compatible deserialization
 - [Doc] Update developer and user documentation for priority-based intercept ordering: document three-factor execution order, recommended priority ranges, AROUND chain layering, and deterministic ordering recommendations
 - [Feature] Add priority-based stable sorting to `InterceptRequests.cloneListWithNewRequest()` for deterministic intercept execution order

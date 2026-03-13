@@ -199,11 +199,11 @@ public class List extends AbstractPalSubcommand {
   /**
    * Format string for long listing of intercepts.
    *
-   * <p>uuid peer type class target callback CTime
+   * <p>uuid peer type class target callback TTL CTime
    */
   private static final String INTERCEPTS_LONG_FORMAT =
       format(
-          "%%-36s %%-36s %%-12s %%-%ds %%-%ds %%-%ds %%-12s",
+          "%%-36s %%-36s %%-12s %%-%ds %%-%ds %%-%ds %%-8s %%-12s",
           MAX_INTERCEPT_CLASS_LEN, MAX_INTERCEPT_TARGET_LEN, MAX_INTERCEPT_CALLBACK_LEN);
 
   /**
@@ -649,6 +649,8 @@ public class List extends AbstractPalSubcommand {
               ? intercept.getClazz().substring(intercept.getClazz().lastIndexOf('.') + 1)
               : intercept.getClazz();
 
+      String ttlDisplay = intercept.getTtlSeconds() > 0 ? intercept.getTtlSeconds() + "s" : "-";
+
       out.printf(
           INTERCEPTS_LONG_FORMAT + "%n",
           intercept.getUuid(),
@@ -658,6 +660,7 @@ public class List extends AbstractPalSubcommand {
           optionallyTrim(
               formatInterceptTarget(intercept.getInterceptable()), MAX_INTERCEPT_TARGET_LEN),
           optionallyTrim(callbackDisplay, MAX_INTERCEPT_CALLBACK_LEN),
+          ttlDisplay,
           getFormattedDate(intercept.getCTime()));
     } else {
       out.printf("%s%n", intercept.getUuid());
@@ -838,6 +841,7 @@ public class List extends AbstractPalSubcommand {
               "Class",
               "Target",
               "Callback",
+              "TTL",
               "Created");
         }
       }
