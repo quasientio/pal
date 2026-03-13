@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -197,15 +196,38 @@ public class RpcPolicyDispatchTest {
    * policy after the underlying {@link RpcPolicyHolder} is swapped.
    */
   @Test
-  @Ignore("Awaiting implementation in #1133")
-  public void shouldDispatchReflectReloadedPolicy() {
+  public void shouldDispatchReflectReloadedPolicy() throws Exception {
     // Given: A dispatcher wired with an RpcPolicyChecker backed by an RpcPolicyHolder
     //        initialized with a deny-all policy
-    // When: The holder is swapped to allow-all, and dispatchIncoming() is called
-    // Then: Execution proceeds normally (no RpcAccessDeniedException)
+    RpcPolicy denyAll = new RpcPolicy(List.of(), RpcPolicyAction.DENY);
+    RpcPolicyHolder holder = new RpcPolicyHolder(denyAll);
+    RpcPolicyChecker checker = new RpcPolicyChecker(holder, null);
+    ExecMessageDispatcher dispatcher = createDispatcher(checker);
 
-    // TODO(#1133): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage incomingMessage =
+        messageBuilder.buildEmptyConstructor(peerUuid, SampleClass.class.getName());
+
+    // Verify deny-all is in effect
+    try {
+      dispatcher.dispatchIncoming(incomingMessage, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getClassName(), is(SampleClass.class.getName()));
+    }
+
+    // When: The holder is swapped to allow-all
+    RpcPolicy allowAll = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
+    holder.updatePolicy(allowAll);
+
+    // Then: Execution proceeds normally (no RpcAccessDeniedException)
+    ExecMessage freshMessage =
+        messageBuilder.buildEmptyConstructor(peerUuid, SampleClass.class.getName());
+    ExecMessage response =
+        dispatcher.dispatchIncoming(freshMessage, MessageChannelType.ZMQ_SOCKET_RPC);
+    assertNotNull(response);
+    assertThat(response.getResponseToId(), is(freshMessage.getMessageId()));
+    assertNull(response.getRaisedThrowable());
+    assertThat(response.getReturnValue(), is(notNullValue()));
   }
 
   /**

@@ -28,7 +28,6 @@ import java.util.EnumSet;
 import java.util.List;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -430,16 +429,28 @@ public class RpcPolicyCheckerTest {
    * RpcPolicyHolder} is swapped from deny-all to allow-all.
    */
   @Test
-  @Ignore("Awaiting implementation in #1133")
   public void shouldPickUpUpdatedPolicyAfterHolderSwap() {
-    // Given: An RpcPolicyHolder initialized with a deny-all policy, and an RpcPolicyChecker
-    //        constructed with that holder
-    // When: The holder's policy is swapped to an allow-all policy via updatePolicy()
-    // Then: checkAccess() with the same message that was previously denied now passes
-    //       without throwing RpcAccessDeniedException
+    // Given: An RpcPolicyHolder initialized with a deny-all policy
+    RpcPolicy denyAll = new RpcPolicy(List.of(), RpcPolicyAction.DENY);
+    RpcPolicyHolder holder = new RpcPolicyHolder(denyAll);
+    RpcPolicyChecker checker = new RpcPolicyChecker(holder, null);
 
-    // TODO(#1133): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage msg = createInstanceMethodMessage("com.example.Foo", "bar");
+
+    // Verify initial deny-all policy is in effect
+    try {
+      checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
+      fail("Expected RpcAccessDeniedException");
+    } catch (RpcAccessDeniedException e) {
+      assertThat(e.getClassName(), is("com.example.Foo"));
+    }
+
+    // When: The holder's policy is swapped to an allow-all policy via updatePolicy()
+    RpcPolicy allowAll = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
+    holder.updatePolicy(allowAll);
+
+    // Then: checkAccess() with the same message now passes without throwing
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.ZMQ_SOCKET_RPC);
   }
 
   /**

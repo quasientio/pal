@@ -25,13 +25,17 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Singleton service that performs access checks on incoming RPC messages against an {@link
- * RpcPolicy}.
+ * RpcPolicy} obtained from an {@link RpcPolicyHolder}.
  *
  * <p>This checker bridges the dispatch system and the policy engine. For each incoming execution
  * message, it extracts the class name, member name, and member category, then delegates to the
  * policy for an access decision. Operations arriving via the {@link
  * MessageChannelType#REPLAY_INJECTION} channel are exempt from policy checks because they represent
  * previously-executed operations being replayed.
+ *
+ * <p>The policy is read indirectly through an {@link RpcPolicyHolder}, which supports volatile swap
+ * for hot-reload. Each access check reads the current policy snapshot via {@link
+ * RpcPolicyHolder#getPolicy()}, ensuring that policy updates are picked up without restart.
  *
  * <p>The {@link #isAccessible(String, String, MessageChannelType, MemberCategory)} method provides
  * a boolean-returning variant for use by metadata serializers that need to filter which members are
@@ -43,8 +47,8 @@ public class RpcPolicyChecker {
   /** Logger for access-decision auditing. */
   private static final Logger logger = LoggerFactory.getLogger(RpcPolicyChecker.class);
 
-  /** The policy to evaluate incoming operations against. */
-  private final RpcPolicy policy;
+  /** The holder providing the current policy to evaluate incoming operations against. */
+  private final RpcPolicyHolder policyHolder;
 
   /**
    * The classloader for resolving application classes when modifiers fallback is needed. In
@@ -54,29 +58,30 @@ public class RpcPolicyChecker {
   private final ClassLoader appClassLoader;
 
   /**
-   * Creates a new checker backed by the given policy with the application classloader for
+   * Creates a new checker backed by the given policy holder with the application classloader for
    * visibility resolution.
    *
-   * @param policy the RPC policy to evaluate operations against
+   * @param policyHolder the holder providing the current RPC policy
    * @param appClassLoader the classloader for loading application classes during modifiers fallback
    */
   @SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
       justification = "Classloader is intentionally shared, not a mutable data object")
   @Inject
-  public RpcPolicyChecker(RpcPolicy policy, CustomClassloader appClassLoader) {
-    this.policy = policy;
+  public RpcPolicyChecker(RpcPolicyHolder policyHolder, CustomClassloader appClassLoader) {
+    this.policyHolder = policyHolder;
     this.appClassLoader = appClassLoader;
   }
 
   /**
    * Creates a new checker backed by the given policy without an explicit application classloader.
-   * Used in unit tests where the modifiers fallback resolution is not needed.
+   * Used in unit tests where the modifiers fallback resolution is not needed. The policy is wrapped
+   * in a new {@link RpcPolicyHolder} for backward compatibility.
    *
    * @param policy the RPC policy to evaluate operations against
    */
   public RpcPolicyChecker(RpcPolicy policy) {
-    this.policy = policy;
+    this.policyHolder = new RpcPolicyHolder(policy);
     this.appClassLoader = null;
   }
 
@@ -114,7 +119,7 @@ public class RpcPolicyChecker {
     MemberCategory category = MemberCategory.fromMessageType(type);
 
     MemberVisibility visibility = null;
-    if (policy.hasVisibilityRules()) {
+    if (policyHolder.hasVisibilityRules()) {
       int modifiers = ExecMessageUtils.getModifiers(msg);
       if (modifiers == 0) {
         modifiers = resolveModifiersViaReflection(className, memberName, category);
@@ -122,7 +127,8 @@ public class RpcPolicyChecker {
       visibility = MemberVisibility.fromModifiers(modifiers);
     }
 
-    RpcPolicyAction action = policy.evaluate(className, memberName, channel, category, visibility);
+    RpcPolicyAction action =
+        policyHolder.getPolicy().evaluate(className, memberName, channel, category, visibility);
 
     switch (action) {
       case ALLOW -> {}
@@ -176,7 +182,8 @@ public class RpcPolicyChecker {
       MessageChannelType channel,
       MemberCategory category,
       MemberVisibility visibility) {
-    RpcPolicyAction action = policy.evaluate(className, memberName, channel, category, visibility);
+    RpcPolicyAction action =
+        policyHolder.getPolicy().evaluate(className, memberName, channel, category, visibility);
     return action == RpcPolicyAction.ALLOW || action == RpcPolicyAction.LOG_AND_ALLOW;
   }
 

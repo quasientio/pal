@@ -12,6 +12,7 @@ package io.quasient.pal.core.rpc.policy;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,7 +123,7 @@ public class RpcPolicyFileWatcher {
     if (watcherThread != null) {
       watcherThread.interrupt();
       try {
-        watcherThread.join(java.util.concurrent.TimeUnit.SECONDS.toMillis(2));
+        watcherThread.join(TimeUnit.SECONDS.toMillis(2));
       } catch (InterruptedException ignored) {
         Thread.currentThread().interrupt();
       }
