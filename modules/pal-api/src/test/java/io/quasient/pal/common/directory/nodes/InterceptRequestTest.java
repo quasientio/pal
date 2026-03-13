@@ -15,7 +15,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
 
 import io.quasient.pal.common.lang.FieldOpType;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
@@ -31,7 +30,6 @@ import java.util.Arrays;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class InterceptRequestTest {
@@ -185,6 +183,8 @@ public class InterceptRequestTest {
                           + interceptRequest.isForceImmediate()
                           + ", priority="
                           + interceptRequest.getPriority()
+                          + ", ttlSeconds="
+                          + interceptRequest.getTtlSeconds()
                           + ", ctime="
                           + OffsetDateTime.ofInstant(Instant.ofEpochMilli(ctime), ZoneOffset.UTC)
                           + ", mtime="
@@ -518,14 +518,25 @@ public class InterceptRequestTest {
    * constructor
    */
   @Test
-  @Ignore("Awaiting implementation in #1162")
   public void shouldStoreTtlSeconds() {
     // Given: Full constructor with ttlSeconds=300
-    // When: getTtlSeconds() called
-    // Then: Returns 300
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            300);
 
-    // TODO(#1162): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: getTtlSeconds() returns 300
+    assertThat(request.getTtlSeconds(), is(300L));
   }
 
   /**
@@ -535,15 +546,27 @@ public class InterceptRequestTest {
    * constructors default TTL to 0
    */
   @Test
-  @Ignore("Awaiting implementation in #1162")
   public void shouldDefaultTtlSecondsToZero() {
-    // Given: Existing constructors (7-param, 8-param, 10-param, 11-param) that don't take
-    //        ttlSeconds
-    // When: getTtlSeconds() called
-    // Then: Returns 0
+    // Given: Existing constructors that don't take ttlSeconds
+    // When/Then: getTtlSeconds() returns 0 for all constructor variants
+    assertThat(methodInterceptRequest.getTtlSeconds(), is(0L));
+    assertThat(fieldOpInterceptRequest.getTtlSeconds(), is(0L));
 
-    // TODO(#1162): Implement test logic
-    fail("Not yet implemented");
+    // 11-param constructor
+    InterceptRequest<InterceptableMethodCall> elevenParam =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            5);
+    assertThat(elevenParam.getTtlSeconds(), is(0L));
   }
 
   /**
@@ -553,14 +576,30 @@ public class InterceptRequestTest {
    * Round-trip serialization with TTL=300
    */
   @Test
-  @Ignore("Awaiting implementation in #1162")
   public void shouldSerializeAndDeserializeTtlSeconds() {
     // Given: InterceptRequest with ttlSeconds=300
-    // When: toBytes() then fromBytes()
-    // Then: Deserialized request has ttlSeconds=300; all other fields match
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            300);
 
-    // TODO(#1162): Implement test logic
-    fail("Not yet implemented");
+    // When: toBytes() then fromBytes()
+    byte[] bytes = request.toBytes(StandardCharsets.UTF_8);
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
+
+    // Then: Deserialized request has ttlSeconds=300; all other fields match
+    assertThat(deserialized.getTtlSeconds(), is(300L));
+    assertEquals(request, deserialized);
   }
 
   /**
@@ -570,14 +609,15 @@ public class InterceptRequestTest {
    * [TEST:InterceptRequestTest.shouldSerializeAndDeserializeZeroTtlSeconds] Round-trip with TTL=0
    */
   @Test
-  @Ignore("Awaiting implementation in #1162")
   public void shouldSerializeAndDeserializeZeroTtlSeconds() {
     // Given: InterceptRequest with ttlSeconds=0 (default)
     // When: toBytes() then fromBytes()
-    // Then: Deserialized request has ttlSeconds=0
+    byte[] bytes = methodInterceptRequest.toBytes(StandardCharsets.UTF_8);
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
 
-    // TODO(#1162): Implement test logic
-    fail("Not yet implemented");
+    // Then: Deserialized request has ttlSeconds=0
+    assertThat(deserialized.getTtlSeconds(), is(0L));
+    assertEquals(methodInterceptRequest, deserialized);
   }
 
   /**
@@ -587,14 +627,39 @@ public class InterceptRequestTest {
    * considers TTL
    */
   @Test
-  @Ignore("Awaiting implementation in #1162")
   public void shouldIncludeTtlSecondsInEquals() {
     // Given: Two InterceptRequests identical except ttlSeconds (one=300, one=0)
-    // When: equals() called
-    // Then: Returns false
+    InterceptRequest<InterceptableMethodCall> a =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            300);
+    InterceptRequest<InterceptableMethodCall> b =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            0);
 
-    // TODO(#1162): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: They are NOT equal
+    assertNotEquals(a, b);
   }
 
   /**
@@ -604,14 +669,39 @@ public class InterceptRequestTest {
    * considers TTL
    */
   @Test
-  @Ignore("Awaiting implementation in #1162")
   public void shouldIncludeTtlSecondsInHashCode() {
     // Given: Two InterceptRequests with same ttlSeconds
-    // When: hashCode() called on both
-    // Then: Same hash code
+    InterceptRequest<InterceptableMethodCall> a =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            120);
+    InterceptRequest<InterceptableMethodCall> b =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            120);
 
-    // TODO(#1162): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: Hash codes are equal
+    assertThat(a.hashCode(), is(b.hashCode()));
   }
 
   /**
@@ -621,13 +711,63 @@ public class InterceptRequestTest {
    * includes TTL
    */
   @Test
-  @Ignore("Awaiting implementation in #1162")
   public void shouldIncludeTtlSecondsInToString() {
     // Given: InterceptRequest with ttlSeconds=120
-    // When: toString() called
-    // Then: Output contains "ttlSeconds=120"
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            120);
 
-    // TODO(#1162): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: Output contains "ttlSeconds=120"
+    assertThat(request.toString(), containsString("ttlSeconds=120"));
+  }
+
+  /**
+   * Test specification for backward-compatible deserialization of old format without ttlSeconds.
+   *
+   * <p>Acceptance Criterion:
+   * [TEST:InterceptRequestTest.shouldDeserializeOldFormatWithoutTtlSeconds] Backward-compatible
+   * deserialization defaults ttlSeconds to 0
+   */
+  @Test
+  public void shouldDeserializeOldFormatWithoutTtlSeconds() {
+    // Given: Serialized bytes from old format (13 fields, no ttlSeconds at index 14)
+    // Manually construct old-format serialized data (indices 0-13, without index 14)
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            5);
+    byte[] fullBytes = request.toBytes(StandardCharsets.UTF_8);
+    // Strip the last field (ttlSeconds) by removing everything after the last ##
+    String fullString = new String(fullBytes, StandardCharsets.UTF_8);
+    String oldFormatString = fullString.substring(0, fullString.lastIndexOf("##"));
+    byte[] oldFormatBytes = oldFormatString.getBytes(StandardCharsets.UTF_8);
+
+    // When: fromBytes() with old format
+    InterceptRequest<?> deserialized =
+        InterceptRequest.fromBytes(oldFormatBytes, StandardCharsets.UTF_8);
+
+    // Then: ttlSeconds defaults to 0
+    assertThat(deserialized.getTtlSeconds(), is(0L));
+    assertThat(deserialized.getPriority(), is(5));
   }
 }
