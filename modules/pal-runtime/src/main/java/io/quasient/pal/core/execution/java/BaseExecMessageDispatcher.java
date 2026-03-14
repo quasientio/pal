@@ -562,6 +562,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     String threadName = Thread.currentThread().getName();
     ReplayCursor cursor = replayContext.getCursor(threadName);
 
+    // Tracks whether an operation-only entry-point skip was used in this call. When true,
+    // gate advancement before invoke is deferred to after invoke. This prevents the gate
+    // from unblocking injection threads before the invoking thread has had a chance to
+    // execute the operation (critical for blocking calls like Application.launch that spawn
+    // threads whose entry points would otherwise race with the injector).
+    boolean deferGateBeforeInvoke = false;
+
     // Step 1: Match against WAL
     WalEntry expectedEntry = cursor.peekNext();
     OperationSignature liveSig = OperationSignature.fromJoinPoint(pjp, getBeforeExecMessageType());
@@ -639,6 +646,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
           }
         } else {
           cursor.advance();
+          deferGateBeforeInvoke = true;
         }
 
         // Only advance gate to operation offset, not completion. Advancing to completion
@@ -734,6 +742,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
               cursor.advance();
               // Track that we used operation-only skip for the COMPLETION skip loop
               hasInjector = false;
+              deferGateBeforeInvoke = true;
             }
             replayContext.getReplayGate().advanceTo(anotherSkippedOffset);
             if (logger.isDebugEnabled()) {
@@ -826,9 +835,28 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // Advance the gate after consuming the OPERATION entry so that injection threads
     // waiting on subsequent offsets can proceed even if invoke() blocks (e.g.,
     // CountDownLatch.await blocks until a shutdown entry-point is injected).
-    replayContext.getReplayGate().advanceTo(operationOffset);
+    //
+    // EXCEPTION: When the operation was matched after an operation-only entry-point skip
+    // (deferGateBeforeInvoke == true), gate advancement is deferred to AFTER invoke returns.
+    // This prevents the gate from unblocking injection threads prematurely. The key scenario
+    // is Application.launch: if the gate advances to its offset before invoke, the injector
+    // for the FX thread unblocks immediately and races to inject entry points before the FX
+    // thread has had a chance to process them naturally via dispatchReplay. By deferring,
+    // the FX thread's own dispatchReplay calls advance the gate independently (e.g., when
+    // processing FX entry points), and the injector sees them as already handled.
+    if (!deferGateBeforeInvoke) {
+      replayContext.getReplayGate().advanceTo(operationOffset);
+    }
 
     Object result = invoke(pjp, pjp.getArgs());
+
+    // Deferred gate advancement: now that invoke has returned, advance the gate.
+    // By this point, other threads (e.g., FX thread) have independently advanced the gate
+    // past operationOffset via their own dispatchReplay calls, so this is typically a no-op
+    // (the gate uses max-monotonic advancement).
+    if (deferGateBeforeInvoke) {
+      replayContext.getReplayGate().advanceTo(operationOffset);
+    }
 
     // Step 3: Verify return value against WAL completion entry
     WalEntry completionEntry = cursor.peekNext();
@@ -869,6 +897,58 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       return 0;
     }
     return obj.getRef();
+  }
+
+  /**
+   * Registers the return value of a <b>constructor</b> entry-point invocation in the {@link
+   * io.quasient.pal.core.replay.ReplayObjectStore}.
+   *
+   * <p>This is called from the {@code dispatchIncoming} chain and direct paths after an entry-point
+   * constructor completes. Registration is critical for constructors: without it, subsequent method
+   * calls on the constructed object (dispatched as later entry points) would fail to resolve the
+   * target by WAL ref, triggering the phantom stub path and corrupting replay state.
+   *
+   * <p><b>Only constructor return values should be registered.</b> Method return values (e.g.,
+   * {@code TextField.getText()}) may diverge between recording and replay. Registering a divergent
+   * live value would corrupt argument resolution for downstream entry points that reference the
+   * same WAL ref — they would receive the (wrong) live value instead of deserializing the correct
+   * value from the WAL.
+   *
+   * <p>Uses {@link io.quasient.pal.common.replay.WalIndex#getEntryAtOffset} for O(1) lookup of the
+   * completion entry by offset, since the per-thread cursor may have already been advanced through
+   * the span by nested {@code dispatchReplay} calls during the invocation.
+   *
+   * @param ctx the replay context providing access to the WAL index and object store
+   * @param completionOffset the WAL offset of the COMPLETION entry
+   * @param returnValue the live object returned by the invocation (may be {@code null})
+   * @param entryPointMessageType the message type of the entry-point operation; only {@link
+   *     MessageType#EXEC_CONSTRUCTOR} triggers registration
+   */
+  private void registerEntryPointReturnValue(
+      ReplayContext ctx,
+      long completionOffset,
+      Object returnValue,
+      MessageType entryPointMessageType) {
+    if (entryPointMessageType != MessageType.EXEC_CONSTRUCTOR) {
+      return;
+    }
+    if (returnValue == null) {
+      return;
+    }
+    WalEntry completionEntry = ctx.getWalIndex().getEntryAtOffset(completionOffset);
+    if (completionEntry == null) {
+      return;
+    }
+    int walRef = extractReturnRef(completionEntry);
+    if (walRef != 0) {
+      ctx.getObjectStore().register(walRef, returnValue);
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Registered entry-point return value in ReplayObjectStore: walRef={} -> {}",
+            walRef,
+            returnValue.getClass().getName());
+      }
+    }
   }
 
   /**
@@ -1932,10 +2012,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                               invokeIncoming(
                                   accessibleForChain, targetForChain, chainArgs, chainValue);
 
-                          // After invoke completes, advance cursor past COMPLETION and gate.
-                          // The nested operations inside the method advanced the cursor through
-                          // the span, but the COMPLETION entry is still there (reflection-invoked
-                          // methods don't trigger aspect advice for completion).
+                          // After invoke completes, register the return value in
+                          // ReplayObjectStore (critical for constructors — subsequent method
+                          // calls need to find the object by WAL ref), then advance cursor
+                          // past COMPLETION and gate.
                           if (injectedOffsetForCompletion >= 0
                               && chainReplayCursor != null
                               && chainReplayContext != null) {
@@ -1944,6 +2024,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                                     .getWalIndex()
                                     .getCompletionOffset(injectedOffsetForCompletion);
                             if (completionOffset != null) {
+                              registerEntryPointReturnValue(
+                                  chainReplayContext, completionOffset, invokeResult, messageType);
                               chainReplayCursor.advancePast(completionOffset);
                               chainReplayContext.getReplayGate().advanceTo(completionOffset);
                               logger.info(
@@ -2104,7 +2186,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                       Object invokeResult =
                           invokeIncoming(directAccessible, directTarget, directArgs, directValue);
 
-                      // After invoke completes, advance cursor past COMPLETION and gate.
+                      // After invoke completes, register the return value in
+                      // ReplayObjectStore (critical for constructors — subsequent method
+                      // calls need to find the object by WAL ref), then advance cursor
+                      // past COMPLETION and gate.
                       if (injectedOffsetForCompletion >= 0
                           && directReplayCursor != null
                           && directReplayContext != null) {
@@ -2113,6 +2198,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                                 .getWalIndex()
                                 .getCompletionOffset(injectedOffsetForCompletion);
                         if (completionOffset != null) {
+                          registerEntryPointReturnValue(
+                              directReplayContext, completionOffset, invokeResult, messageType);
                           directReplayCursor.advancePast(completionOffset);
                           directReplayContext.getReplayGate().advanceTo(completionOffset);
                           logger.info(
