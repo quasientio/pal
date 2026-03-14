@@ -83,12 +83,52 @@ public final class RpcPolicyParser {
    */
   @SuppressWarnings("unchecked")
   public static RpcPolicy parseYaml(String yamlContent) {
+    ParsedYaml parsed = parseYamlRaw(yamlContent);
+    return new RpcPolicy(parsed.rules, parsed.defaultAction);
+  }
+
+  /**
+   * Internal representation of the raw parsed YAML content, before wrapping in an {@link
+   * RpcPolicy}. Separating parsing from policy construction avoids double-wrapping when {@link
+   * #fromOptions} combines YAML and CLI preset rules into a single policy.
+   */
+  static final class ParsedYaml {
+
+    /** The parsed rules (user rules + YAML presets). */
+    final List<RpcPolicyRule> rules;
+
+    /** The default action from the YAML file. */
+    final RpcPolicyAction defaultAction;
+
+    /**
+     * Creates a new parsed YAML result.
+     *
+     * @param rules the parsed rules
+     * @param defaultAction the default action
+     */
+    ParsedYaml(List<RpcPolicyRule> rules, RpcPolicyAction defaultAction) {
+      this.rules = rules;
+      this.defaultAction = defaultAction;
+    }
+  }
+
+  /**
+   * Parses a YAML string into raw rules and a default action, without wrapping in an {@link
+   * RpcPolicy}. Used internally by {@link #fromOptions} to avoid double-prepending mandatory rules
+   * (which are added by the {@link RpcPolicy} constructor).
+   *
+   * @param yamlContent the YAML content to parse
+   * @return the parsed rules and default action
+   * @throws IllegalArgumentException if the YAML content is malformed or contains invalid values
+   */
+  @SuppressWarnings("unchecked")
+  static ParsedYaml parseYamlRaw(String yamlContent) {
     Map<String, Object> doc;
     try {
       Yaml yaml = new Yaml();
       Object loaded = yaml.load(yamlContent);
       if (loaded == null) {
-        return new RpcPolicy();
+        return new ParsedYaml(List.of(), RpcPolicyAction.DENY);
       }
       if (!(loaded instanceof Map)) {
         throw new IllegalArgumentException(
@@ -128,6 +168,12 @@ public final class RpcPolicyParser {
       if (presetsObj instanceof Map) {
         Map<String, Object> presets = (Map<String, Object>) presetsObj;
         for (Map.Entry<String, Object> preset : presets.entrySet()) {
+          if ("deny-pal-internals".equals(preset.getKey())
+              && Boolean.FALSE.equals(preset.getValue())) {
+            LOG.warn(
+                "Ignoring 'deny-pal-internals: false' in YAML policy — this preset is always"
+                    + " enforced and cannot be disabled");
+          }
           if (Boolean.TRUE.equals(preset.getValue())) {
             rules.addAll(RpcPolicyPresets.resolvePreset(preset.getKey()));
           }
@@ -135,7 +181,7 @@ public final class RpcPolicyParser {
       }
     }
 
-    return new RpcPolicy(rules, defaultAction);
+    return new ParsedYaml(rules, defaultAction);
   }
 
   /**
@@ -166,9 +212,9 @@ public final class RpcPolicyParser {
       } catch (IOException e) {
         throw new UncheckedIOException("Cannot read RPC policy file: " + yamlPath, e);
       }
-      RpcPolicy yamlPolicy = parseYaml(yamlContent);
-      allRules.addAll(yamlPolicy.getRules());
-      action = yamlPolicy.getDefaultAction();
+      ParsedYaml parsed = parseYamlRaw(yamlContent);
+      allRules.addAll(parsed.rules);
+      action = parsed.defaultAction;
     }
 
     // 2. CLI preset rules (after YAML rules, including YAML presets already added)

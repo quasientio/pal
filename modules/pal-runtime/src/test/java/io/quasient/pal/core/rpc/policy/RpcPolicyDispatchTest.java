@@ -144,16 +144,19 @@ public class RpcPolicyDispatchTest {
   /**
    * Verifies that {@code dispatchIncoming()} proceeds with normal execution (reflective loading and
    * invocation) when the policy allows the target operation.
+   *
+   * <p>Uses {@code java.util.ArrayList} (a non-PAL class) as the target, because the mandatory
+   * deny-pal-internals rules block all classes in {@code io.quasient.pal.**}.
    */
   @Test
   public void shouldAllowWhenPolicyAcceptsInDispatchIncoming() throws Exception {
-    // Given: allow-all policy
+    // Given: allow-all policy with a non-PAL class as target
     RpcPolicy allowAll = new RpcPolicy(List.of(), RpcPolicyAction.ALLOW);
     RpcPolicyChecker checker = new RpcPolicyChecker(allowAll);
     ExecMessageDispatcher dispatcher = createDispatcher(checker);
 
     ExecMessage incomingMessage =
-        messageBuilder.buildEmptyConstructor(peerUuid, SampleClass.class.getName());
+        messageBuilder.buildEmptyConstructor(peerUuid, "java.util.ArrayList");
 
     // When: dispatchIncoming is called
     ExecMessage response =
@@ -194,6 +197,9 @@ public class RpcPolicyDispatchTest {
   /**
    * Verifies that a dispatcher wired with a deny-all policy checker reflects a reloaded allow-all
    * policy after the underlying {@link RpcPolicyHolder} is swapped.
+   *
+   * <p>Uses a non-PAL class ({@code java.util.ArrayList}) as the target, because the mandatory
+   * deny-pal-internals rules always block PAL internal classes regardless of the user policy.
    */
   @Test
   public void shouldDispatchReflectReloadedPolicy() throws Exception {
@@ -204,15 +210,15 @@ public class RpcPolicyDispatchTest {
     RpcPolicyChecker checker = new RpcPolicyChecker(holder, null);
     ExecMessageDispatcher dispatcher = createDispatcher(checker);
 
-    ExecMessage incomingMessage =
-        messageBuilder.buildEmptyConstructor(peerUuid, SampleClass.class.getName());
+    String nonPalClass = "java.util.ArrayList";
+    ExecMessage incomingMessage = messageBuilder.buildEmptyConstructor(peerUuid, nonPalClass);
 
     // Verify deny-all is in effect
     try {
       dispatcher.dispatchIncoming(incomingMessage, MessageChannelType.ZMQ_SOCKET_RPC);
       fail("Expected RpcAccessDeniedException");
     } catch (RpcAccessDeniedException e) {
-      assertThat(e.getClassName(), is(SampleClass.class.getName()));
+      assertThat(e.getClassName(), is(nonPalClass));
     }
 
     // When: The holder is swapped to allow-all
@@ -220,8 +226,7 @@ public class RpcPolicyDispatchTest {
     holder.updatePolicy(allowAll);
 
     // Then: Execution proceeds normally (no RpcAccessDeniedException)
-    ExecMessage freshMessage =
-        messageBuilder.buildEmptyConstructor(peerUuid, SampleClass.class.getName());
+    ExecMessage freshMessage = messageBuilder.buildEmptyConstructor(peerUuid, nonPalClass);
     ExecMessage response =
         dispatcher.dispatchIncoming(freshMessage, MessageChannelType.ZMQ_SOCKET_RPC);
     assertNotNull(response);

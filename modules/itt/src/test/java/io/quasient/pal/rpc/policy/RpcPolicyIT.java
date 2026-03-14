@@ -742,8 +742,123 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
   }
 
   // ===========================================================================================
+  // Mandatory deny-pal-internals enforcement tests
+  // ===========================================================================================
+
+  /**
+   * Verifies that PAL internal classes are denied even when the default action is ALLOW and no
+   * presets are configured. The mandatory {@code deny-pal-internals} rules in {@link
+   * io.quasient.pal.core.rpc.policy.RpcPolicy} ensure PAL runtime internals can never be invoked
+   * via RPC, regardless of user configuration.
+   *
+   * <p>This test uses {@code io.quasient.pal.core.Main} as the target — a PAL internal class that
+   * must always be blocked.
+   */
+  @Test
+  public void shouldAlwaysDenyPalInternalsEvenWithAllowAll() throws Exception {
+    UUID peerId = UUID.randomUUID();
+    PeerProcess peer = null;
+    ThinPeer thinPeer = null;
+    PalDirectory directory = null;
+
+    try {
+      peer = launchPolicyPeer(peerId, "--rpc-default-action", "ALLOW", "--as-service");
+
+      directory = new PalDirectory(getPalDirectoryUrl(), null, true);
+      PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
+      thinPeer = createThinPeer(peerInfo);
+
+      // Call PAL internal class — should be denied by mandatory rules
+      callStaticMethodAndAssertDenied(
+          thinPeer,
+          "io.quasient.pal.core.Main",
+          "run",
+          new String[] {"java.util.Properties"},
+          new Object[] {null});
+
+      // Verify non-PAL class is still allowed (to confirm the default action is ALLOW)
+      Object result =
+          callStaticMethodAndAssertAllowed(
+              thinPeer,
+              METHODS_CLASS,
+              "testNonVoidStatic",
+              new String[] {"java.lang.String"},
+              new Object[] {"hello"});
+      assertNotNull("Non-PAL method should return a value", result);
+
+      logger.info(
+          "shouldAlwaysDenyPalInternalsEvenWithAllowAll [{}]: PAL internals denied despite"
+              + " ALLOW-all",
+          rpcType);
+    } finally {
+      cleanup(thinPeer, peer, peerId, directory);
+    }
+  }
+
+  /**
+   * Verifies that an explicit ALLOW rule for {@code io.quasient.pal.**} in a YAML policy does not
+   * override the mandatory deny-pal-internals rules. The mandatory rules are always prepended
+   * before user rules, so they match first under first-match-wins evaluation.
+   */
+  @Test
+  public void shouldDenyPalInternalsEvenWithExplicitAllowPolicyRule() throws Exception {
+    UUID peerId = UUID.randomUUID();
+    PeerProcess peer = null;
+    ThinPeer thinPeer = null;
+    PalDirectory directory = null;
+
+    try {
+      File policyFile = writePolicyFile("allow-pal-attempt", allowPalInternalsPolicy());
+      peer =
+          launchPolicyPeer(
+              peerId,
+              "--rpc-policy",
+              policyFile.getAbsolutePath(),
+              "--rpc-default-action",
+              "ALLOW",
+              "--as-service");
+
+      directory = new PalDirectory(getPalDirectoryUrl(), null, true);
+      PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
+      thinPeer = createThinPeer(peerInfo);
+
+      // Call PAL internal class — should still be denied despite explicit ALLOW rule
+      callStaticMethodAndAssertDenied(
+          thinPeer,
+          "io.quasient.pal.core.Main",
+          "run",
+          new String[] {"java.util.Properties"},
+          new Object[] {null});
+
+      logger.info(
+          "shouldDenyPalInternalsEvenWithExplicitAllowPolicyRule [{}]: Cannot override mandatory"
+              + " deny",
+          rpcType);
+    } finally {
+      cleanup(thinPeer, peer, peerId, directory);
+    }
+  }
+
+  // ===========================================================================================
   // Policy YAML helpers
   // ===========================================================================================
+
+  /**
+   * Policy that explicitly attempts to ALLOW all PAL internal classes. Used to verify that the
+   * mandatory deny-pal-internals rules cannot be overridden by user configuration.
+   *
+   * @return YAML policy content
+   */
+  private String allowPalInternalsPolicy() {
+    return """
+        version: 1
+        defaultAction: ALLOW
+        rules:
+          - class: "io.quasient.pal.**"
+            method: "**"
+            action: ALLOW
+        """;
+  }
 
   /**
    * Policy that allows only {@code Methods.testNonVoidStatic}, denying everything else.
@@ -755,7 +870,7 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
         version: 1
         defaultAction: DENY
         rules:
-          - class: "io.quasient.pal.apps.quantized.rpc.Methods"
+          - class: "io.quasient.foobar.apps.quantized.rpc.Methods"
             method: "testNonVoidStatic"
             action: ALLOW
         """;
@@ -771,7 +886,7 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
         version: 1
         defaultAction: DENY
         rules:
-          - class: "io.quasient.pal.apps.quantized.rpc.Methods"
+          - class: "io.quasient.foobar.apps.quantized.rpc.Methods"
             method: "**"
             channel: ZMQ_SOCKET_RPC
             action: ALLOW
@@ -788,7 +903,7 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
         version: 1
         defaultAction: DENY
         rules:
-          - class: "io.quasient.pal.apps.quantized.rpc.Methods"
+          - class: "io.quasient.foobar.apps.quantized.rpc.Methods"
             method: "**"
             channel: WEBSOCKET_RPC
             action: ALLOW
@@ -843,7 +958,7 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
         version: 1
         defaultAction: DENY
         rules:
-          - class: "io.quasient.pal.apps.quantized.rpc.Methods"
+          - class: "io.quasient.foobar.apps.quantized.rpc.Methods"
             method: "main"
             action: ALLOW
         """;
@@ -860,7 +975,7 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
         version: 1
         defaultAction: DENY
         rules:
-          - class: "io.quasient.pal.apps.quantized.rpc.Methods"
+          - class: "io.quasient.foobar.apps.quantized.rpc.Methods"
             method: "**"
             visibility: ALL
             action: ALLOW
@@ -880,7 +995,7 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
         presets:
           - deny-nonpublic
         rules:
-          - class: "io.quasient.pal.apps.quantized.rpc.Methods"
+          - class: "io.quasient.foobar.apps.quantized.rpc.Methods"
             method: "doSomethingStatically"
             visibility:
               - PACKAGE_PRIVATE

@@ -22,7 +22,6 @@ defaultAction: DENY
 presets:
   deny-unsafe: true
   deny-jdk-internals: true
-  deny-pal-internals: true
   deny-classloading: true
   deny-reflection: true
   deny-serialization: true

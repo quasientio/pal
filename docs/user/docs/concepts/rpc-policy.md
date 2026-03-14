@@ -157,7 +157,9 @@ Presets are predefined deny rules for common threat categories. They are evaluat
 | `deny-serialization` | `java.io.ObjectInputStream.*` |
 | `deny-scripting` | `javax.script.**` |
 | `deny-nonpublic` | Denies RPC access to non-public members (protected, package-private, private) |
-| `deny-pal-internals` | `io.quasient.pal.**` |
+| `deny-pal-internals` | `io.quasient.pal.**` — **always ON**, cannot be disabled (see below) |
+
+> **Mandatory preset — `deny-pal-internals`:** The `deny-pal-internals` rules are always enforced, regardless of CLI flags or YAML policy configuration. They are prepended before any user-supplied rules, so explicit `ALLOW` rules targeting `io.quasient.pal.**` have no effect. Setting `deny-pal-internals: false` in a YAML policy is silently ignored (a warning is logged). This ensures PAL runtime internals can never be invoked via RPC.
 
 Enable presets via YAML or CLI:
 
@@ -290,7 +292,6 @@ defaultAction: ALLOW
 
 presets:
   deny-unsafe: true
-  deny-pal-internals: true
 ```
 
 ### Production (Restrictive Allowlist)
@@ -304,7 +305,6 @@ defaultAction: DENY
 presets:
   deny-unsafe: true
   deny-jdk-internals: true
-  deny-pal-internals: true
   deny-classloading: true
   deny-reflection: true
   deny-serialization: true

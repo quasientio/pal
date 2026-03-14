@@ -124,7 +124,7 @@ When no policy flags are specified, all RPC operations are denied by default. To
 
 When a policy YAML file is specified via `--rpc-policy`, the peer automatically watches the file for changes and reloads the policy at runtime. See [RPC Policy — Hot Reloading](concepts/rpc-policy.md#hot-reloading) for details.
 
-Available presets: `deny-unsafe`, `deny-jdk-internals`, `deny-classloading`, `deny-reflection`, `deny-serialization`, `deny-scripting`, `deny-pal-internals`.
+Available presets: `deny-unsafe`, `deny-jdk-internals`, `deny-classloading`, `deny-reflection`, `deny-serialization`, `deny-scripting`, `deny-pal-internals`. Note: `deny-pal-internals` is always enforced regardless of configuration and cannot be disabled.
 
 ```bash
 # Block dangerous operations

@@ -21,4 +21,3 @@ defaultAction: ALLOW
 
 presets:
   deny-unsafe: true
-  deny-pal-internals: true

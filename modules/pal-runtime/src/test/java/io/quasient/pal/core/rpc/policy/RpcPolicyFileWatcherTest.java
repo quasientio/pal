@@ -103,7 +103,8 @@ public class RpcPolicyFileWatcherTest {
     // Then: Wait for reload
     Thread.sleep(TEST_POLL_INTERVAL_MS * 4);
     assertThat(holder.getPolicy().getDefaultAction(), is(RpcPolicyAction.DENY));
-    assertThat(holder.getPolicy().getRules().size(), is(1));
+    int m = RpcPolicyPresets.getDenyPalInternalRules().size();
+    assertThat(holder.getPolicy().getRules().size(), is(m + 1));
   }
 
   /**

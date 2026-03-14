@@ -33,9 +33,17 @@ import java.util.Set;
  *   <li><b>deny-reflection:</b> java.lang.reflect.**, java.lang.invoke.**
  *   <li><b>deny-serialization:</b> java.io.ObjectInputStream.**
  *   <li><b>deny-scripting:</b> javax.script.**
- *   <li><b>deny-pal-internals:</b> io.quasient.pal.**
+ *   <li><b>deny-pal-internals:</b> io.quasient.pal.** — <b>always ON</b>, cannot be disabled via
+ *       CLI or YAML policy. See below.
  *   <li><b>deny-nonpublic:</b> all non-public members (protected, package-private, private)
  * </ul>
+ *
+ * <p><b>Mandatory preset — deny-pal-internals:</b> The {@code deny-pal-internals} rules are always
+ * enforced by {@link RpcPolicy}, which prepends them before any user-supplied rules. Because rule
+ * evaluation is first-match-wins, user ALLOW rules targeting {@code io.quasient.pal.**} are
+ * unreachable. Setting {@code deny-pal-internals: false} in a YAML policy file has no effect. The
+ * preset remains available in the preset map for documentation and tooling purposes, but enabling
+ * or disabling it is a no-op — the rules are always active.
  *
  * <p><b>Field access bypass prevention:</b> ProcessBuilder and Process use {@code **} for the
  * member pattern to deny ALL member types (methods, constructors, fields), preventing bypass via
@@ -163,6 +171,10 @@ public final class RpcPolicyPresets {
    * weave, common, cxn, dsl, messages, serdes, tools) and any future subpackages, ensuring that
    * remote callers cannot invoke PAL runtime internals. User application classes outside the {@code
    * io.quasient.pal} namespace are unaffected.
+   *
+   * <p><b>Note:</b> These rules are <em>always enforced</em> by {@link RpcPolicy}, which prepends
+   * them as mandatory rules before any user-supplied rules. Explicitly enabling or disabling this
+   * preset via CLI or YAML has no effect on enforcement.
    *
    * @return an unmodifiable list of deny rules for PAL internals
    */

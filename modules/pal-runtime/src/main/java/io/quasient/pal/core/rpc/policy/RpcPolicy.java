@@ -10,6 +10,7 @@
 package io.quasient.pal.core.rpc.policy;
 
 import io.quasient.pal.core.transport.MessageChannelType;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -28,8 +29,21 @@ import java.util.List;
  * <p>The default no-arg constructor creates a policy with empty rules and {@link
  * RpcPolicyAction#DENY} as the default action, matching the project requirement that the default
  * posture is deny-all.
+ *
+ * <p><b>Mandatory rules:</b> The {@code deny-pal-internals} rules (blocking all members in {@code
+ * io.quasient.pal.**}) are always prepended before any user-supplied rules. This ensures that PAL
+ * runtime internals can never be invoked via RPC, regardless of user policy configuration, CLI
+ * flags, or hot-reload. Because rule evaluation is first-match-wins, user ALLOW rules for PAL
+ * internal classes are unreachable.
  */
 public class RpcPolicy {
+
+  /**
+   * Mandatory deny rules that are always prepended before user rules. These block all RPC access to
+   * PAL internal packages ({@code io.quasient.pal.**}) and cannot be overridden.
+   */
+  private static final List<RpcPolicyRule> MANDATORY_RULES =
+      RpcPolicyPresets.getDenyPalInternalRules();
 
   /** The ordered list of rules evaluated in first-match-wins order. */
   private final List<RpcPolicyRule> rules;
@@ -47,13 +61,20 @@ public class RpcPolicy {
   /**
    * Creates a policy with the given rules and default action.
    *
+   * <p>The {@link RpcPolicyPresets#getDenyPalInternalRules() deny-pal-internals} rules are always
+   * prepended before the given rules. This ensures PAL runtime internals are never accessible via
+   * RPC, regardless of user configuration.
+   *
    * @param rules the ordered list of rules (defensively copied)
    * @param defaultAction the action to return when no rule matches
    */
   public RpcPolicy(List<RpcPolicyRule> rules, RpcPolicyAction defaultAction) {
-    this.rules = Collections.unmodifiableList(List.copyOf(rules));
+    List<RpcPolicyRule> allRules = new ArrayList<>(MANDATORY_RULES.size() + rules.size());
+    allRules.addAll(MANDATORY_RULES);
+    allRules.addAll(rules);
+    this.rules = Collections.unmodifiableList(allRules);
     this.defaultAction = defaultAction;
-    this.hasVisibilityRules = rules.stream().anyMatch(r -> r.getVisibilities() != null);
+    this.hasVisibilityRules = this.rules.stream().anyMatch(r -> r.getVisibilities() != null);
   }
 
   /**

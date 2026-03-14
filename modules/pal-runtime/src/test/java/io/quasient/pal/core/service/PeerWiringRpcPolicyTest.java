@@ -70,9 +70,10 @@ public class PeerWiringRpcPolicyTest {
     // When
     RpcPolicy policy = wiring.provideRpcPolicy();
 
-    // Then: Returns policy with DENY default, empty rules
+    // Then: Returns policy with DENY default, only mandatory rules
     assertThat(policy.getDefaultAction(), is(RpcPolicyAction.DENY));
-    assertThat(policy.getRules(), is(empty()));
+    int mandatorySize = RpcPolicyPresets.getDenyPalInternalRules().size();
+    assertThat(policy.getRules().size(), is(mandatorySize));
   }
 
   /** Tests that buildRpcPolicy parses rules from a YAML file when rpc.policy.path is provided. */
@@ -100,10 +101,11 @@ public class PeerWiringRpcPolicyTest {
       // When
       RpcPolicy policy = wiring.provideRpcPolicy();
 
-      // Then: Returns policy with parsed rules and ALLOW default from YAML
-      assertThat(policy.getRules().size(), is(2));
-      assertThat(policy.getRules().get(0).getAction(), is(RpcPolicyAction.ALLOW));
-      assertThat(policy.getRules().get(1).getAction(), is(RpcPolicyAction.DENY));
+      // Then: Returns policy with mandatory + parsed rules and ALLOW default from YAML
+      int m = RpcPolicyPresets.getDenyPalInternalRules().size();
+      assertThat(policy.getRules().size(), is(m + 2));
+      assertThat(policy.getRules().get(m).getAction(), is(RpcPolicyAction.ALLOW));
+      assertThat(policy.getRules().get(m + 1).getAction(), is(RpcPolicyAction.DENY));
       assertThat(policy.getDefaultAction(), is(RpcPolicyAction.ALLOW));
     } finally {
       Files.deleteIfExists(yamlFile);
@@ -121,11 +123,12 @@ public class PeerWiringRpcPolicyTest {
     // When
     RpcPolicy policy = wiring.provideRpcPolicy();
 
-    // Then: Returns policy with deny-unsafe rules
-    int expectedRuleCount = RpcPolicyPresets.getDenyUnsafeRules().size();
+    // Then: Returns policy with mandatory + deny-unsafe rules
+    int m = RpcPolicyPresets.getDenyPalInternalRules().size();
+    int expectedRuleCount = m + RpcPolicyPresets.getDenyUnsafeRules().size();
     assertThat(policy.getRules().size(), is(expectedRuleCount));
     assertThat(policy.getRules().size(), is(greaterThan(0)));
-    // All preset rules should be DENY
+    // All rules (mandatory + preset) should be DENY
     for (int i = 0; i < policy.getRules().size(); i++) {
       assertThat(policy.getRules().get(i).getAction(), is(RpcPolicyAction.DENY));
     }
@@ -158,14 +161,17 @@ public class PeerWiringRpcPolicyTest {
       // When
       RpcPolicy policy = wiring.provideRpcPolicy();
 
-      // Then: User rules from YAML come first, then presets
+      // Then: Mandatory rules first, then user rules from YAML, then presets
+      int m = RpcPolicyPresets.getDenyPalInternalRules().size();
       int yamlRuleCount = 1;
       int presetRuleCount = RpcPolicyPresets.getDenyUnsafeRules().size();
-      assertThat(policy.getRules().size(), is(yamlRuleCount + presetRuleCount));
-      // First rule is from YAML (ALLOW)
-      assertThat(policy.getRules().get(0).getAction(), is(RpcPolicyAction.ALLOW));
-      // Remaining rules are from preset (DENY)
-      assertThat(policy.getRules().get(1).getAction(), is(RpcPolicyAction.DENY));
+      assertThat(policy.getRules().size(), is(m + yamlRuleCount + presetRuleCount));
+      // First rule(s) are mandatory deny-pal-internals (DENY)
+      assertThat(policy.getRules().get(0).getAction(), is(RpcPolicyAction.DENY));
+      // Then YAML rule (ALLOW)
+      assertThat(policy.getRules().get(m).getAction(), is(RpcPolicyAction.ALLOW));
+      // Then preset rules (DENY)
+      assertThat(policy.getRules().get(m + 1).getAction(), is(RpcPolicyAction.DENY));
       assertThat(policy.getRules(), is(not(empty())));
     } finally {
       Files.deleteIfExists(yamlFile);
@@ -201,10 +207,12 @@ public class PeerWiringRpcPolicyTest {
     RpcPolicyHolder holder = new RpcPolicyHolder(policy);
 
     // Then: RpcPolicyHolder is created and its getPolicy() returns the default deny-all policy
+    // with only mandatory deny-pal-internals rules
     assertThat(holder, is(notNullValue()));
     assertThat(holder.getPolicy(), is(notNullValue()));
     assertThat(holder.getPolicy().getDefaultAction(), is(RpcPolicyAction.DENY));
-    assertThat(holder.getPolicy().getRules(), is(empty()));
+    int mandatorySize = RpcPolicyPresets.getDenyPalInternalRules().size();
+    assertThat(holder.getPolicy().getRules().size(), is(mandatorySize));
   }
 
   /**
