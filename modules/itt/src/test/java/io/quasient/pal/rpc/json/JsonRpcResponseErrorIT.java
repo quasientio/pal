@@ -21,7 +21,7 @@ import org.junit.Test;
  */
 public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
-  protected final String className = "io.quasient.pal.apps.quantized.rpc.Constructors";
+  protected final String className = "io.quasient.foobar.apps.quantized.rpc.Constructors";
 
   @Test
   public void constructor_invalidJson_parseErrorThrown() throws Exception {
@@ -136,7 +136,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void constructor_noSuchClass_classNotFoundThrown() throws Exception {
-    String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     String requestId = generateId();
     String request =
         """
@@ -158,7 +158,7 @@ public class JsonRpcResponseErrorIT extends AbstractJsonRpcMessageIT {
         responseMessage,
         JsonRpcErrorCode.METHOD_NOT_FOUND,
         "java.lang.ClassNotFoundException",
-        "io.quasient.pal.apps.IDontExist");
+        "io.quasient.foobar.apps.IDontExist");
   }
 
   @Test

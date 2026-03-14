@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  * <p>Parameterized over two dimensions: backend type ("chronicle" or "kafka") and test application
  * class. Chronicle uses {@code file:} prefix WAL paths; Kafka uses topic names with {@code -k}
  * bootstrap servers. Each test application is a deterministic, single-threaded program from the
- * {@code io.quasient.pal.apps.quantized.replay} package.
+ * {@code io.quasient.foobar.apps.quantized.replay} package.
  */
 @RunWith(Parameterized.class)
 public class ReplayIT extends AbstractCliIT {
@@ -45,7 +45,7 @@ public class ReplayIT extends AbstractCliIT {
   private static final Logger logger = LoggerFactory.getLogger(ReplayIT.class);
 
   /** Package prefix shared by all replay test applications. */
-  private static final String APP_PACKAGE = "io.quasient.pal.apps.quantized.replay.";
+  private static final String APP_PACKAGE = "io.quasient.foobar.apps.quantized.replay.";
 
   /** Configurations for all test application classes. */
   private static final TestAppConfig[] TEST_APPS = {

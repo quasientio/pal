@@ -138,7 +138,7 @@ public class RemoveIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -197,7 +197,7 @@ public class RemoveIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Chronicle queue files
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -267,7 +267,7 @@ public class RemoveIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     UUID peerId1 = UUID.randomUUID();
     PeerProcess peer1 =
@@ -468,7 +468,7 @@ public class RemoveIT extends AbstractCliIT {
     // Create a log by launching a peer with a WAL
     String walName = "test-wal-direct-rm-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -544,7 +544,7 @@ public class RemoveIT extends AbstractCliIT {
     String walName1 = prefix + "-log1";
     String walName2 = prefix + "-log2";
 
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     UUID peerId1 = UUID.randomUUID();
     PeerProcess peer1 =
@@ -626,7 +626,7 @@ public class RemoveIT extends AbstractCliIT {
     // Given: Launch a peer that terminates quickly (runs a simple class and exits)
     String peerName = "test-dead-peer-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     // Launch peer and wait for it to complete
     peerProcess =
@@ -783,7 +783,7 @@ public class RemoveIT extends AbstractCliIT {
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     // Launch peer to create the Chronicle queue
     peerProcess =

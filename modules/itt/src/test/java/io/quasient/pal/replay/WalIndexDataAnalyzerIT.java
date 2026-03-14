@@ -45,7 +45,7 @@ public class WalIndexDataAnalyzerIT extends AbstractCliIT {
   private static final Logger logger = LoggerFactory.getLogger(WalIndexDataAnalyzerIT.class);
 
   /** Fully qualified name of the test application used for recording. */
-  private static final String MAIN_CLASS = "io.quasient.pal.apps.quantized.replay.DataAnalyzer";
+  private static final String MAIN_CLASS = "io.quasient.foobar.apps.quantized.replay.DataAnalyzer";
 
   /** The WAL backend type for this test run ("chronicle" or "kafka"). */
   private final String backend;

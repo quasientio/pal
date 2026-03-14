@@ -13,7 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
-import io.quasient.pal.apps.quantized.intercept.InterceptableApp;
+import io.quasient.foobar.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.FieldOpType;
 import io.quasient.pal.common.lang.intercept.InterceptType;

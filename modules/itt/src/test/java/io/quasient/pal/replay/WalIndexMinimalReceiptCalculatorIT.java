@@ -53,7 +53,7 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
 
   /** Fully qualified name of the test application used for recording. */
   private static final String MAIN_CLASS =
-      "io.quasient.pal.apps.quantized.replay.MinimalReceiptCalculator";
+      "io.quasient.foobar.apps.quantized.replay.MinimalReceiptCalculator";
 
   /** The WAL backend type for this test run ("chronicle" or "kafka"). */
   private final String backend;

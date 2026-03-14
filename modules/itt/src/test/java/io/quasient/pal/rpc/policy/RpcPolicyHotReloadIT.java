@@ -83,7 +83,7 @@ public class RpcPolicyHotReloadIT extends AbstractIntegrationTest {
       "io.quasient.pal.core.rpc.policy.RpcAccessDeniedException";
 
   /** Test application class used for RPC calls. */
-  private static final String METHODS_CLASS = "io.quasient.pal.apps.quantized.rpc.Methods";
+  private static final String METHODS_CLASS = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
   /** Wait time in milliseconds after modifying the policy file (4x the 500ms poll interval). */
   private static final long RELOAD_WAIT_MS = 2000;
@@ -122,9 +122,9 @@ public class RpcPolicyHotReloadIT extends AbstractIntegrationTest {
   /**
    * Verifies that a policy change from deny to allow takes effect without restarting the peer.
    *
-   * <p>Starts a peer with a policy that denies {@code io.quasient.pal.apps.**} and a default DENY
-   * action, verifies an RPC call is denied, then modifies the YAML to allow the class and verifies
-   * the same RPC call succeeds after the file watcher picks up the change.
+   * <p>Starts a peer with a policy that denies {@code io.quasient.foobar.apps.**} and a default
+   * DENY action, verifies an RPC call is denied, then modifies the YAML to allow the class and
+   * verifies the same RPC call succeeds after the file watcher picks up the change.
    */
   @Test
   public void shouldDenyThenAllowAfterPolicyFileChange() throws Exception {
@@ -186,9 +186,9 @@ public class RpcPolicyHotReloadIT extends AbstractIntegrationTest {
   /**
    * Verifies that a policy change from allow to deny takes effect without restarting the peer.
    *
-   * <p>Starts a peer with a policy that allows {@code io.quasient.pal.apps.**} and a default ALLOW
-   * action, verifies an RPC call succeeds, then modifies the YAML to deny the class and verifies
-   * the same RPC call is denied after the file watcher picks up the change.
+   * <p>Starts a peer with a policy that allows {@code io.quasient.foobar.apps.**} and a default
+   * ALLOW action, verifies an RPC call succeeds, then modifies the YAML to deny the class and
+   * verifies the same RPC call is denied after the file watcher picks up the change.
    */
   @Test
   public void shouldAllowThenDenyAfterPolicyFileChange() throws Exception {
@@ -420,7 +420,7 @@ public class RpcPolicyHotReloadIT extends AbstractIntegrationTest {
         version: 1
         defaultAction: DENY
         rules:
-          - class: "io.quasient.pal.apps.quantized.rpc.Methods"
+          - class: "io.quasient.foobar.apps.quantized.rpc.Methods"
             method: "**"
             action: ALLOW
         """;
@@ -436,7 +436,7 @@ public class RpcPolicyHotReloadIT extends AbstractIntegrationTest {
         version: 1
         defaultAction: ALLOW
         rules:
-          - class: "io.quasient.pal.apps.quantized.rpc.Methods"
+          - class: "io.quasient.foobar.apps.quantized.rpc.Methods"
             method: "**"
             action: DENY
         """;

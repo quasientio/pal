@@ -85,7 +85,7 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
       "io.quasient.pal.core.rpc.policy.RpcAccessDeniedException";
 
   /** Test application class used for RPC calls. */
-  private static final String METHODS_CLASS = "io.quasient.pal.apps.quantized.rpc.Methods";
+  private static final String METHODS_CLASS = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
   /** Builder for creating binary (Colfer) messages. */
   private final MessageBuilder messageBuilder = new MessageBuilder();

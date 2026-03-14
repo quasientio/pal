@@ -13,9 +13,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertTrue;
 
+import io.quasient.foobar.apps.callbacks.method.MethodHandlers;
+import io.quasient.foobar.apps.quantized.intercept.StringMethods;
 import io.quasient.pal.InterceptEndToEndTestSuite;
-import io.quasient.pal.apps.callbacks.method.MethodHandlers;
-import io.quasient.pal.apps.quantized.intercept.StringMethods;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;

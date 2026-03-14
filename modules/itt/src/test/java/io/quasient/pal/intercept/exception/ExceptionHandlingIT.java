@@ -16,8 +16,8 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
+import io.quasient.foobar.apps.quantized.intercept.StringMethods;
 import io.quasient.pal.InterceptEndToEndTestSuite;
-import io.quasient.pal.apps.quantized.intercept.StringMethods;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
 import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
@@ -66,14 +66,14 @@ import org.junit.runners.Parameterized;
  *
  * @see io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy
  * @see io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy
- * @see io.quasient.pal.apps.callbacks.exception.ExceptionTestCallbacks
+ * @see io.quasient.foobar.apps.callbacks.exception.ExceptionTestCallbacks
  */
 @RunWith(Parameterized.class)
 public class ExceptionHandlingIT extends AbstractInterceptIT {
 
   /** Fully qualified name of the exception test callback handler class. */
   private static final String EXCEPTION_CALLBACK_CLASS =
-      "io.quasient.pal.apps.callbacks.exception.ExceptionTestCallbacks";
+      "io.quasient.foobar.apps.callbacks.exception.ExceptionTestCallbacks";
 
   /** Target class for interception. */
   private static final String TARGET_CLASS = StringMethods.class.getName();

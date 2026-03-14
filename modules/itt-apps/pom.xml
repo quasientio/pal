@@ -58,7 +58,7 @@
 
                             <!-- ...except the quantized package (handled by Ajc) -->
                             <excludes>
-                                <exclude>io/quasient/pal/apps/quantized/**/*.java</exclude>
+                                <exclude>io/quasient/foobar/apps/quantized/**/*.java</exclude>
                             </excludes>
 
                             <compilerArgs>
@@ -87,7 +87,7 @@
                     </aspectLibraries>
                     <!-- Only compile/weave classes in the quantized package -->
                     <includes>
-                        <include>io/quasient/pal/apps/quantized/**/*.java</include>
+                        <include>io/quasient/foobar/apps/quantized/**/*.java</include>
                     </includes>
                 </configuration>
                 <executions>

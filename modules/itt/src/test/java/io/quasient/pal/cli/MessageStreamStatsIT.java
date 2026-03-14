@@ -82,7 +82,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     UUID peerId = UUID.randomUUID();
 
     // Run a simple class that creates objects and calls methods
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -175,7 +175,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     String walName = "test-stats-kafka-filter-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -270,7 +270,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     String walName = "test-stats-kafka-peer-filter-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -363,7 +363,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     String walName = "test-stats-kafka-categories-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -538,7 +538,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     Thread.sleep(200);
 
     // Launch a peer with TCP PUB socket and a class that generates messages
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -637,7 +637,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     Thread.sleep(200);
 
     // Launch a peer with TCP PUB socket and a class that generates multiple message types
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -741,7 +741,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     Thread.sleep(200);
 
     // Launch a peer with TCP PUB socket
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(

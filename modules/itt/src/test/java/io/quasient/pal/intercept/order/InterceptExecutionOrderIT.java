@@ -13,8 +13,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+import io.quasient.foobar.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.InterceptEndToEndTestSuite;
-import io.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -76,11 +76,11 @@ public class InterceptExecutionOrderIT extends AbstractInterceptIT {
 
   /** Fully qualified name of the local callback handler class. */
   private static final String LOCAL_CALLBACK_CLASS =
-      "io.quasient.pal.apps.callbacks.order.OrderTrackingCallbacks";
+      "io.quasient.foobar.apps.callbacks.order.OrderTrackingCallbacks";
 
   /** Fully qualified name of the remote callback handler class. */
   private static final String REMOTE_CALLBACK_CLASS =
-      "io.quasient.pal.apps.callbacks.order.RemoteOrderCallbacks";
+      "io.quasient.foobar.apps.callbacks.order.RemoteOrderCallbacks";
 
   /** Target class for interception. */
   private static final String TARGET_CLASS = InterceptableApp.class.getName();

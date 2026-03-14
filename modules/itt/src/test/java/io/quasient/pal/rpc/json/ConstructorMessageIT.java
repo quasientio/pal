@@ -21,7 +21,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class ConstructorMessageIT extends AbstractJsonRpcMessageIT {
 
-  protected final String className = "io.quasient.pal.apps.quantized.rpc.Constructors";
+  protected final String className = "io.quasient.foobar.apps.quantized.rpc.Constructors";
 
   public ConstructorMessageIT(TargetType targetType) {
     super(targetType);

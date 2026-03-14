@@ -66,7 +66,7 @@ import org.slf4j.LoggerFactory;
  *   <li>{@code RpcCalculator} test app
  * </ul>
  *
- * @see io.quasient.pal.apps.quantized.replay.RpcCalculator
+ * @see io.quasient.foobar.apps.quantized.replay.RpcCalculator
  */
 @RunWith(Parameterized.class)
 public class MultiThreadReplayIT extends AbstractCliIT {
@@ -76,7 +76,7 @@ public class MultiThreadReplayIT extends AbstractCliIT {
 
   /** Fully qualified name of the RpcCalculator test application. */
   private static final String RPC_CALCULATOR_CLASS =
-      "io.quasient.pal.apps.quantized.replay.RpcCalculator";
+      "io.quasient.foobar.apps.quantized.replay.RpcCalculator";
 
   /** Number of RPC worker threads to use when launching the peer. */
   private static final int RPC_THREADS = 3;

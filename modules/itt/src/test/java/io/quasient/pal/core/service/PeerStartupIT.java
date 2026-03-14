@@ -97,7 +97,7 @@ public class PeerStartupIT extends AbstractIntegrationTest {
               "--as-service",
               "-cp",
               ittAppsClasspath,
-              "io.quasient.pal.apps.quantized.rpc.Methods");
+              "io.quasient.foobar.apps.quantized.rpc.Methods");
 
       // Then: Peer registers in directory
       assertTrue("Peer process should be alive", peer.isAlive());
@@ -162,7 +162,7 @@ public class PeerStartupIT extends AbstractIntegrationTest {
               "--as-service",
               "-cp",
               ittAppsClasspath,
-              "io.quasient.pal.apps.quantized.rpc.Methods");
+              "io.quasient.foobar.apps.quantized.rpc.Methods");
 
       // Then: Peer starts successfully without Kafka
       assertTrue("Peer process should be alive", peer.isAlive());
@@ -303,7 +303,7 @@ public class PeerStartupIT extends AbstractIntegrationTest {
               "--as-service",
               "-cp",
               ittAppsClasspath,
-              "io.quasient.pal.apps.quantized.rpc.Methods");
+              "io.quasient.foobar.apps.quantized.rpc.Methods");
 
       // Verify peer is registered in etcd using PalDirectory.getPeer()
       directory = new PalDirectory(getPalDirectoryUrl(), null, true);

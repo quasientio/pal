@@ -26,7 +26,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class PutMessageIT extends AbstractColferRpcMessageIT {
 
-  protected static final String CLASS_NAME = "io.quasient.pal.apps.rpc.Variables";
+  protected static final String CLASS_NAME = "io.quasient.foobar.apps.rpc.Variables";
 
   public PutMessageIT(TargetType targetType) {
     super(targetType);
@@ -116,7 +116,7 @@ public class PutMessageIT extends AbstractColferRpcMessageIT {
 
   @Test
   public void putStatic_noSuchClass_exThrown() {
-    String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     callGetStatic(nonExistingClass, "aStaticInteger", "java.lang.ClassNotFoundException");
   }
 
@@ -218,7 +218,7 @@ public class PutMessageIT extends AbstractColferRpcMessageIT {
   @Test
   public void putField_noSuchClass_exThrown() throws Exception {
 
-    String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     String fieldName = "anInt";
     String fieldClassName = "java.lang.String";
     String newValue = "500";

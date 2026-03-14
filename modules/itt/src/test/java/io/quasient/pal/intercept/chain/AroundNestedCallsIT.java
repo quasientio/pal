@@ -14,8 +14,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
+import io.quasient.foobar.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.InterceptEndToEndTestSuite;
-import io.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -52,11 +52,11 @@ public class AroundNestedCallsIT extends AbstractInterceptIT {
 
   /** Fully qualified name of the local callback handler class. */
   private static final String LOCAL_CALLBACK_CLASS =
-      "io.quasient.pal.apps.callbacks.chain.AroundChainCallbacks";
+      "io.quasient.foobar.apps.callbacks.chain.AroundChainCallbacks";
 
   /** Fully qualified name of the remote callback handler class. */
   private static final String REMOTE_CALLBACK_CLASS =
-      "io.quasient.pal.apps.callbacks.chain.RemoteAroundChainCallbacks";
+      "io.quasient.foobar.apps.callbacks.chain.RemoteAroundChainCallbacks";
 
   /** Target class for interception. */
   private static final String TARGET_CLASS = InterceptableApp.class.getName();

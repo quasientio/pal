@@ -45,7 +45,7 @@ public class WalIndexOrderTotalIT extends AbstractCliIT {
   private static final Logger logger = LoggerFactory.getLogger(WalIndexOrderTotalIT.class);
 
   /** Fully qualified name of the test application used for recording. */
-  private static final String MAIN_CLASS = "io.quasient.pal.apps.quantized.replay.OrderTotal";
+  private static final String MAIN_CLASS = "io.quasient.foobar.apps.quantized.replay.OrderTotal";
 
   /** The WAL backend type for this test run ("chronicle" or "kafka"). */
   private final String backend;

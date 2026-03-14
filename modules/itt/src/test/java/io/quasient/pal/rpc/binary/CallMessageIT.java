@@ -27,7 +27,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class CallMessageIT extends AbstractColferRpcMessageIT {
 
-  private static final String CLASS_NAME = "io.quasient.pal.apps.quantized.rpc.Methods";
+  private static final String CLASS_NAME = "io.quasient.foobar.apps.quantized.rpc.Methods";
   private static final String[] EMPTY_STRING_ARRAY = {};
   private static final Object[] EMPTY_OBJECT_ARRAY = {};
 
@@ -105,7 +105,7 @@ public class CallMessageIT extends AbstractColferRpcMessageIT {
 
   @Test
   public void callClassMethod_noSuchClass_exThrown() {
-    String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     String methodName = "doSomethingStatically";
 
     callVoidClassMethod(
@@ -423,7 +423,7 @@ public class CallMessageIT extends AbstractColferRpcMessageIT {
 
   @Test
   public void callInstanceMethod_noSuchClass_throwsEx() throws Exception {
-    String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     String methodName = "testNonNullArg";
 
     ReturnValue instanceReturnValue = callEmptyConstructor(CLASS_NAME);

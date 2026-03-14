@@ -33,7 +33,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class GetArrayMessageIT extends AbstractColferRpcMessageIT {
 
-  protected final String className = "io.quasient.pal.apps.rpc.StaticArrayVars";
+  protected final String className = "io.quasient.foobar.apps.rpc.StaticArrayVars";
 
   public GetArrayMessageIT(TargetType targetType) {
     super(targetType);

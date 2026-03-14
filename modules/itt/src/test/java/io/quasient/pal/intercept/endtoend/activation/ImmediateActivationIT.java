@@ -76,7 +76,7 @@ public class ImmediateActivationIT extends AbstractInterceptIT {
 
   /** Fully qualified class name for the SlowMethodApp test application. */
   private static final String SLOW_METHOD_APP_CLASS =
-      "io.quasient.pal.apps.quantized.intercept.SlowMethodApp";
+      "io.quasient.foobar.apps.quantized.intercept.SlowMethodApp";
 
   /** The intercept type being tested in this parameterized run. */
   private final InterceptType interceptType;

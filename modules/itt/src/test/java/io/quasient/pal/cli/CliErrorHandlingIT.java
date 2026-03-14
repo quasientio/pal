@@ -71,7 +71,7 @@ public class CliErrorHandlingIT extends AbstractCliIT {
     // Create a peer
     String walName = "test-call-error-invalid-sig-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -317,7 +317,7 @@ public class CliErrorHandlingIT extends AbstractCliIT {
     // Create a Kafka log with minimal messages
     String walName = "test-print-minimal-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -361,7 +361,7 @@ public class CliErrorHandlingIT extends AbstractCliIT {
     // Create a log with some messages
     String walName = "test-print-offset-beyond-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(

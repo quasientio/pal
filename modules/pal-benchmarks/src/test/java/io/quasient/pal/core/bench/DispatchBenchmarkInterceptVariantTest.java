@@ -16,6 +16,9 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import io.quasient.foobar.apps.quantized.bench.callbacks.BenchmarkAfterCallback;
+import io.quasient.foobar.apps.quantized.bench.callbacks.BenchmarkAroundCallback;
+import io.quasient.foobar.apps.quantized.bench.callbacks.BenchmarkBeforeCallback;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.core.execution.java.CustomClassloader;
@@ -57,15 +60,15 @@ import org.zeromq.ZMQ;
  *
  * @see FeatureSetVariant
  * @see io.quasient.pal.core.intercept.InterceptMatcher
- * @see io.quasient.pal.apps.quantized.bench.callbacks.BenchmarkBeforeCallback
- * @see io.quasient.pal.apps.quantized.bench.callbacks.BenchmarkAfterCallback
- * @see io.quasient.pal.apps.quantized.bench.callbacks.BenchmarkAroundCallback
+ * @see BenchmarkBeforeCallback
+ * @see BenchmarkAfterCallback
+ * @see BenchmarkAroundCallback
  */
 public class DispatchBenchmarkInterceptVariantTest {
 
   /** Class name of the benchmark target. */
   private static final String QUANTIZED_CALLS_CLASS =
-      "io.quasient.pal.apps.quantized.bench.QuantizedCalls";
+      "bench.quantized.io.quasient.foobar.apps.QuantizedCalls";
 
   /** The shared ZMQ context for the test. */
   private ZContext zmqCtx;
@@ -138,7 +141,7 @@ public class DispatchBenchmarkInterceptVariantTest {
 
   /**
    * Verifies that the INTERCEPTS_BEFORE variant registers BEFORE intercepts for each benchmark
-   * method on {@code io.quasient.pal.apps.quantized.bench.QuantizedCalls}.
+   * method on {@code bench.quantized.io.quasient.foobar.apps.QuantizedCalls}.
    *
    * <p>After benchmark setup with {@link FeatureSetVariant#INTERCEPTS_BEFORE}:
    *
@@ -198,7 +201,7 @@ public class DispatchBenchmarkInterceptVariantTest {
 
   /**
    * Verifies that the INTERCEPTS_AFTER variant registers AFTER intercepts for each benchmark method
-   * on {@code io.quasient.pal.apps.quantized.bench.QuantizedCalls}.
+   * on {@code bench.quantized.io.quasient.foobar.apps.QuantizedCalls}.
    *
    * <p>After benchmark setup with {@link FeatureSetVariant#INTERCEPTS_AFTER}:
    *
@@ -248,7 +251,7 @@ public class DispatchBenchmarkInterceptVariantTest {
 
   /**
    * Verifies that the INTERCEPTS_AROUND variant registers AROUND intercepts for each benchmark
-   * method on {@code io.quasient.pal.apps.quantized.bench.QuantizedCalls}.
+   * method on {@code bench.quantized.io.quasient.foobar.apps.QuantizedCalls}.
    *
    * <p>After benchmark setup with {@link FeatureSetVariant#INTERCEPTS_AROUND}:
    *
@@ -301,7 +304,7 @@ public class DispatchBenchmarkInterceptVariantTest {
 
   /**
    * Verifies that the INTERCEPTS_ALL variant registers BEFORE + AFTER + AROUND intercepts for each
-   * benchmark method on {@code io.quasient.pal.apps.quantized.bench.QuantizedCalls}.
+   * benchmark method on {@code bench.quantized.io.quasient.foobar.apps.QuantizedCalls}.
    *
    * <p>After benchmark setup with {@link FeatureSetVariant#INTERCEPTS_ALL}:
    *

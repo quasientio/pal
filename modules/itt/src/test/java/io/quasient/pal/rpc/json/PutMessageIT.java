@@ -22,7 +22,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
-  private static final String CLASS_NAME = "io.quasient.pal.apps.rpc.Variables";
+  private static final String CLASS_NAME = "io.quasient.foobar.apps.rpc.Variables";
 
   public PutMessageIT(TargetType targetType) {
     super(targetType);
@@ -232,7 +232,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void putStatic_noSuchClass_exThrown() throws Exception {
-    String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     String fieldName = "aStaticInteger";
     String value = "someValue";
     String requestId = generateId();
@@ -564,7 +564,7 @@ public class PutMessageIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void putField_noSuchClass_exThrown() throws Exception {
-    final String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    final String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     final String fieldName = "anInt";
     final String value = "500";
 

@@ -16,8 +16,8 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
+import io.quasient.foobar.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.LocalInterceptTestSuite;
-import io.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -58,7 +58,7 @@ import org.junit.runners.Parameterized;
 public class LocalConstructorSyncCallbackIT extends AbstractInterceptIT {
 
   private static final String CALLBACK_CLASS =
-      "io.quasient.pal.apps.callbacks.local.LocalInterceptCallbacks";
+      "io.quasient.foobar.apps.callbacks.local.LocalInterceptCallbacks";
   private static final String TARGET_CLASS = InterceptableApp.class.getName();
 
   /** Constructor invocation descriptor for parameterized tests. */

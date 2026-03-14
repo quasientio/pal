@@ -698,9 +698,9 @@ public abstract class AbstractIntegrationTest {
         modifiedLines.add("        <appender-ref ref=\"peer\"/>");
         modifiedLines.add("    </logger>");
         modifiedLines.add("");
-        // Add INFO logger for io.quasient.pal.apps to capture callback handler logs
+        // Add INFO logger for io.quasient.foobar.apps to capture callback handler logs
         modifiedLines.add(
-            "    <logger name=\"io.quasient.pal.apps\" level=\"INFO\" additivity=\"false\">");
+            "    <logger name=\"io.quasient.foobar.apps\" level=\"INFO\" additivity=\"false\">");
         modifiedLines.add("        <appender-ref ref=\"peer\"/>");
         modifiedLines.add("    </logger>");
         modifiedLines.add("");

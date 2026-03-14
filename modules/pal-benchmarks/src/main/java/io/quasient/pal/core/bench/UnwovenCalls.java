@@ -10,7 +10,7 @@
 package io.quasient.pal.core.bench;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import io.quasient.pal.apps.quantized.bench.Calls;
+import io.quasient.foobar.apps.quantized.bench.Calls;
 import java.util.Arrays;
 
 /** Simple wrapper around misc calls to JDK classes. */

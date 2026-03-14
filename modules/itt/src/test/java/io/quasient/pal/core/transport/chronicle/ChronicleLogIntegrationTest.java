@@ -89,7 +89,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "modules/itt-apps/target/classes",
             "-r",
             "12345", // Use a specific port to avoid conflicts
-            "io.quasient.pal.apps.quantized.rpc.Methods");
+            "io.quasient.foobar.apps.quantized.rpc.Methods");
 
     // Verify the process started and completed successfully
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
@@ -134,7 +134,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "file:" + walPath.toAbsolutePath(),
             "-cp",
             "modules/itt-apps/target/classes",
-            "io.quasient.pal.apps.quantized.rpc.Methods");
+            "io.quasient.foobar.apps.quantized.rpc.Methods");
 
     assertThat("Writer process should exit with code 0", writeResult.exitCode(), is(0));
 
@@ -153,7 +153,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "file:" + walPath.toAbsolutePath(),
             "-cp",
             "modules/itt-apps/target/classes",
-            "io.quasient.pal.apps.quantized.rpc.Methods");
+            "io.quasient.foobar.apps.quantized.rpc.Methods");
 
     assertThat("Reader process should exit with code 0", readResult.exitCode(), is(0));
 
@@ -187,7 +187,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "file:" + walPath.toAbsolutePath(),
             "-cp",
             "modules/itt-apps/target/classes",
-            "io.quasient.pal.apps.quantized.rpc.Methods");
+            "io.quasient.foobar.apps.quantized.rpc.Methods");
 
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
 
@@ -231,7 +231,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             kafkaServers,
             "-cp",
             "modules/itt-apps/target/classes",
-            "io.quasient.pal.apps.quantized.rpc.Methods");
+            "io.quasient.foobar.apps.quantized.rpc.Methods");
 
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
 
@@ -266,7 +266,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "file:" + walPath.toAbsolutePath(),
             "-cp",
             "modules/itt-apps/target/classes",
-            "io.quasient.pal.apps.quantized.rpc.Methods");
+            "io.quasient.foobar.apps.quantized.rpc.Methods");
 
     assertThat("Writer should exit successfully", writeResult.exitCode(), is(0));
 
@@ -293,7 +293,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             String.valueOf(startOffset),
             "-cp",
             "modules/itt-apps/target/classes",
-            "io.quasient.pal.apps.quantized.rpc.Methods");
+            "io.quasient.foobar.apps.quantized.rpc.Methods");
 
     assertThat("Reader should exit successfully", readResult.exitCode(), is(0));
 
@@ -338,7 +338,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "file:" + nonExistentQueue.toAbsolutePath(),
             "-cp",
             "modules/itt-apps/target/classes",
-            "io.quasient.pal.apps.quantized.rpc.Methods");
+            "io.quasient.foobar.apps.quantized.rpc.Methods");
 
     // Verify the process exits with ERROR_INITIALIZING_LOGS (exit code 7)
     assertThat(
@@ -384,7 +384,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "file:" + newQueue.toAbsolutePath(),
             "-cp",
             "modules/itt-apps/target/classes",
-            "io.quasient.pal.apps.quantized.rpc.Methods");
+            "io.quasient.foobar.apps.quantized.rpc.Methods");
 
     // Verify the process exits successfully
     assertThat("Process should exit with code 0", result.exitCode(), is(0));
@@ -433,7 +433,7 @@ public class ChronicleLogIntegrationTest extends AbstractIntegrationTest {
             "file:" + relativeName, // Relative path (no leading slash)
             "-cp",
             "modules/itt-apps/target/classes",
-            "io.quasient.pal.apps.quantized.rpc.Methods");
+            "io.quasient.foobar.apps.quantized.rpc.Methods");
 
     // Verify the process exits successfully
     assertThat("Process should exit with code 0", result.exitCode(), is(0));

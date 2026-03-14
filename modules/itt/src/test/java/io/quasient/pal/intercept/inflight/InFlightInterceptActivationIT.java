@@ -128,8 +128,8 @@ public class InFlightInterceptActivationIT extends AbstractInterceptIT {
         UUID.randomUUID(),
         callbackPeerUuid,
         interceptType,
-        "io.quasient.pal.apps.quantized.intercept.SlowMethodApp",
-        "io.quasient.pal.apps.quantized.intercept.SlowMethodApp",
+        "io.quasient.foobar.apps.quantized.intercept.SlowMethodApp",
+        "io.quasient.foobar.apps.quantized.intercept.SlowMethodApp",
         "slowMethod",
         new InterceptableMethodCall("slowMethod", Collections.singletonList("int")),
         forceImmediate);
@@ -189,7 +189,7 @@ public class InFlightInterceptActivationIT extends AbstractInterceptIT {
 
     // Given: A method is executing (in-flight)
     final int slowMethodDelayMs = 2000; // 2 seconds
-    final String slowMethodAppClass = "io.quasient.pal.apps.quantized.intercept.SlowMethodApp";
+    final String slowMethodAppClass = "io.quasient.foobar.apps.quantized.intercept.SlowMethodApp";
 
     // First, create an instance of SlowMethodApp
     logger.info("Creating SlowMethodApp instance");
@@ -234,7 +234,8 @@ public class InFlightInterceptActivationIT extends AbstractInterceptIT {
     logger.info("DEBUG:   interceptUuid = {}", interceptRequest.getUuid());
     logger.info("DEBUG:   callbackPeerUuid = {}", myPeerUuid);
     logger.info("DEBUG:   interceptType = {}", interceptType);
-    logger.info("DEBUG:   classPattern = io.quasient.pal.apps.quantized.intercept.SlowMethodApp");
+    logger.info(
+        "DEBUG:   classPattern = io.quasient.foobar.apps.quantized.intercept.SlowMethodApp");
     logger.info("DEBUG:   methodPattern = slowMethod");
     logger.info("DEBUG:   forceImmediate = false");
     register(interceptRequest);
@@ -329,7 +330,7 @@ public class InFlightInterceptActivationIT extends AbstractInterceptIT {
     final int slowMethodDelayMs = 3000; // 3 seconds
     final AtomicLong blockedCallStartTime = new AtomicLong();
     final AtomicLong blockedCallEndTime = new AtomicLong();
-    final String slowMethodAppClass = "io.quasient.pal.apps.quantized.intercept.SlowMethodApp";
+    final String slowMethodAppClass = "io.quasient.foobar.apps.quantized.intercept.SlowMethodApp";
 
     // Create separate ThinPeers for concurrent threads (ZMQ sockets are not thread-safe)
     ThinPeer inFlightThinPeer = createAdditionalThinPeer();
@@ -472,7 +473,7 @@ public class InFlightInterceptActivationIT extends AbstractInterceptIT {
     // Given: A method has in-flight calls executing
     final int slowMethodDelayMs = 3000; // 3 seconds
     final long[] newCallTimes = new long[2]; // [startTime, endTime]
-    final String slowMethodAppClass = "io.quasient.pal.apps.quantized.intercept.SlowMethodApp";
+    final String slowMethodAppClass = "io.quasient.foobar.apps.quantized.intercept.SlowMethodApp";
 
     // Create separate ThinPeer for concurrent thread (ZMQ sockets are not thread-safe)
     ThinPeer inFlightThinPeer = createAdditionalThinPeer();
@@ -617,7 +618,7 @@ public class InFlightInterceptActivationIT extends AbstractInterceptIT {
     final int slowMethodDelayMs = 10000; // 10 seconds - exceeds 5 second timeout
     final AtomicLong blockedCallStartTime = new AtomicLong();
     final AtomicLong blockedCallEndTime = new AtomicLong();
-    final String slowMethodAppClass = "io.quasient.pal.apps.quantized.intercept.SlowMethodApp";
+    final String slowMethodAppClass = "io.quasient.foobar.apps.quantized.intercept.SlowMethodApp";
 
     // Create separate ThinPeers for concurrent threads (ZMQ sockets are not thread-safe)
     ThinPeer verySlowThinPeer = createAdditionalThinPeer();
@@ -771,7 +772,7 @@ public class InFlightInterceptActivationIT extends AbstractInterceptIT {
 
     final int methodADelayMs = 2000;
     final int methodBDelayMs = 3000;
-    final String slowMethodAppClass = "io.quasient.pal.apps.quantized.intercept.SlowMethodApp";
+    final String slowMethodAppClass = "io.quasient.foobar.apps.quantized.intercept.SlowMethodApp";
 
     // First, create an instance of SlowMethodApp
     logger.info("Creating SlowMethodApp instance");

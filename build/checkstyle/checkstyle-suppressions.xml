@@ -5,6 +5,6 @@
   <!-- Ignore generated Colfer classes (/src/main/java/io/quasient/pal/messages/colfer/) -->
   <suppress files=".*[\\/]+src[\\/]+main[\\/]+java[\\/]+io[\\/]+quasient[\\/]+pal[\\/]+messages[\\/]+colfer[\\/]+.*" checks=".*"/>
 
-  <!-- Ignore apps - classes under itt/ and used by integration tests (/src/main/java/io/quasient/pal/apps) -->
-  <suppress files=".*[\\/]+src[\\/]+main[\\/]+java[\\/]+io[\\/]+quasient[\\/]+pal[\\/]+apps[\\/]+.*" checks=".*"/>
+  <!-- Ignore apps - classes under itt/ and used by integration tests (/src/main/java/io/quasient/foobar/apps) -->
+  <suppress files=".*[\\/]+src[\\/]+main[\\/]+java[\\/]+io[\\/]+quasient[\\/]+foobar[\\/]+apps[\\/]+.*" checks=".*"/>
 </suppressions>

@@ -14,8 +14,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
+import io.quasient.foobar.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.LocalInterceptTestSuite;
-import io.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.FieldOpType;
 import io.quasient.pal.common.lang.intercept.InterceptType;
@@ -52,7 +52,7 @@ import org.junit.runners.Parameterized;
 public class LocalFieldAsyncCallbackIT extends AbstractInterceptIT {
 
   private static final String CALLBACK_CLASS =
-      "io.quasient.pal.apps.callbacks.local.LocalInterceptCallbacks";
+      "io.quasient.foobar.apps.callbacks.local.LocalInterceptCallbacks";
   private static final String TARGET_CLASS = InterceptableApp.class.getName();
 
   /** Field invocation descriptor for instance field tests. */

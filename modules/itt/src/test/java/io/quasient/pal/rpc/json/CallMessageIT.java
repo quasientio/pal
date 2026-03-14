@@ -31,7 +31,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
-  private static final String CLASS_NAME = "io.quasient.pal.apps.quantized.rpc.Methods";
+  private static final String CLASS_NAME = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
   public CallMessageIT(TargetType targetType) {
     super(targetType);
@@ -244,7 +244,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void callClassMethod_noSuchClass_exThrown() throws Exception {
-    String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     String methodName = "doSomethingStatically";
 
     String request =
@@ -1109,7 +1109,7 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void callInstanceMethod_noSuchClass_throwsEx() throws Exception {
-    final String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    final String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     final String methodName = "testNonNullArg";
 
     // 1. Create a new instance of CLASS_NAME

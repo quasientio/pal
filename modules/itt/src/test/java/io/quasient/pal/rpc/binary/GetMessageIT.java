@@ -24,7 +24,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class GetMessageIT extends AbstractColferRpcMessageIT {
 
-  private static final String CLASS_NAME = "io.quasient.pal.apps.rpc.Variables";
+  private static final String CLASS_NAME = "io.quasient.foobar.apps.rpc.Variables";
 
   public GetMessageIT(TargetType targetType) {
     super(targetType);
@@ -84,7 +84,7 @@ public class GetMessageIT extends AbstractColferRpcMessageIT {
 
   @Test
   public void getClassVariable_noSuchClass_exThrown() {
-    String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     callGetStatic(nonExistingClass, "aProtectedBool", "java.lang.ClassNotFoundException");
   }
 
@@ -194,7 +194,7 @@ public class GetMessageIT extends AbstractColferRpcMessageIT {
     // create new instance
     ObjectRef newObjRef = ObjectRef.from(callEmptyConstructor(CLASS_NAME).getObject().getRef());
 
-    String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     callGetInstanceVar(
         nonExistingClass, "someShort", newObjRef, "java.lang.ClassNotFoundException");
   }

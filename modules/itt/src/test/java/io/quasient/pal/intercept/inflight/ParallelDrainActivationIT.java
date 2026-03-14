@@ -116,7 +116,7 @@ public class ParallelDrainActivationIT extends AbstractInterceptIT {
 
     final int drainDelayMs = 2000; // Each in-flight call takes 2 seconds
     final int numIntercepts = 3;
-    final String slowMethodAppClass = "io.quasient.pal.apps.quantized.intercept.SlowMethodApp";
+    final String slowMethodAppClass = "io.quasient.foobar.apps.quantized.intercept.SlowMethodApp";
 
     // Create separate ThinPeers for concurrent threads (ZMQ sockets are not thread-safe)
     List<ThinPeer> inFlightThinPeers = new ArrayList<>();
@@ -255,7 +255,7 @@ public class ParallelDrainActivationIT extends AbstractInterceptIT {
     logger.info("===== differentMethodDrainsExecuteInParallel: TEST STARTED =====");
 
     final int drainDelayMs = 2000;
-    final String slowMethodAppClass = "io.quasient.pal.apps.quantized.intercept.SlowMethodApp";
+    final String slowMethodAppClass = "io.quasient.foobar.apps.quantized.intercept.SlowMethodApp";
 
     // Create separate ThinPeers for concurrent threads (ZMQ sockets are not thread-safe)
     ThinPeer slowMethodThinPeer = createAdditionalThinPeer();

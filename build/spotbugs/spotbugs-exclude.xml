@@ -28,7 +28,7 @@
 
     <!-- Exclude quantized replay sample apps (test applications for integration tests) -->
     <Match>
-        <Package name="io.quasient.pal.apps.quantized.replay"/>
+        <Package name="io.quasient.foobar.apps.quantized.replay"/>
     </Match>
 
     <!--

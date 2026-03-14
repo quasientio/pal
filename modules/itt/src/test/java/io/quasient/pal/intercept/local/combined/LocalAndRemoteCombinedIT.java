@@ -14,9 +14,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertTrue;
 
+import io.quasient.foobar.apps.callbacks.method.MethodHandlers;
+import io.quasient.foobar.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.InterceptEndToEndTestSuite;
-import io.quasient.pal.apps.callbacks.method.MethodHandlers;
-import io.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
@@ -56,7 +56,7 @@ import org.junit.runners.Parameterized;
 public class LocalAndRemoteCombinedIT extends AbstractInterceptIT {
 
   private static final String LOCAL_CALLBACK_CLASS =
-      "io.quasient.pal.apps.callbacks.local.LocalInterceptCallbacks";
+      "io.quasient.foobar.apps.callbacks.local.LocalInterceptCallbacks";
   private static final String REMOTE_CALLBACK_CLASS = MethodHandlers.class.getName();
   private static final String TARGET_CLASS = InterceptableApp.class.getName();
 

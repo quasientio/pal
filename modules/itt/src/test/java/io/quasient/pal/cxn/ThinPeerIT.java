@@ -616,7 +616,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       ExecMessage execMsg =
           msgBuilder.buildClassMethod(
               tp.getPeerUuid(),
-              "io.quasient.pal.apps.quantized.rpc.Methods",
+              "io.quasient.foobar.apps.quantized.rpc.Methods",
               "staticStringWithStringArg",
               new String[] {"java.lang.String"},
               null,
@@ -1145,7 +1145,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       ExecMessage execMsg =
           msgBuilder.buildClassMethod(
               tp.getPeerUuid(),
-              "io.quasient.pal.apps.quantized.rpc.Methods",
+              "io.quasient.foobar.apps.quantized.rpc.Methods",
               "staticVoidNoArg",
               new String[] {},
               null,
@@ -1475,7 +1475,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       // Use a static method call that will succeed
       JsonRpcRequest request =
           JsonRpcMessageFactory.buildClassMethodCall(
-              "io.quasient.pal.apps.quantized.rpc.Methods",
+              "io.quasient.foobar.apps.quantized.rpc.Methods",
               "staticIntNoArgs",
               Collections.emptyList());
 
@@ -1527,13 +1527,13 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       JsonRpcRequest request1 =
           JsonRpcMessageFactory.buildClassMethodCall(
               messageId1,
-              "io.quasient.pal.apps.quantized.rpc.Methods",
+              "io.quasient.foobar.apps.quantized.rpc.Methods",
               "staticIntNoArgs",
               Collections.emptyList());
       JsonRpcRequest request2 =
           JsonRpcMessageFactory.buildClassMethodCall(
               messageId2,
-              "io.quasient.pal.apps.quantized.rpc.Methods",
+              "io.quasient.foobar.apps.quantized.rpc.Methods",
               "staticIntNoArgs",
               Collections.emptyList());
 
@@ -2060,7 +2060,7 @@ public class ThinPeerIT extends AbstractIntegrationTest {
       // Build a valid JsonRpcRequest
       JsonRpcRequest request =
           JsonRpcMessageFactory.buildClassMethodCall(
-              "io.quasient.pal.apps.quantized.rpc.Methods",
+              "io.quasient.foobar.apps.quantized.rpc.Methods",
               "staticIntNoArgs",
               Collections.emptyList());
 

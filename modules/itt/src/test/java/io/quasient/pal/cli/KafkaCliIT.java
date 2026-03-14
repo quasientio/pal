@@ -69,7 +69,7 @@ public class KafkaCliIT extends AbstractCliIT {
     // Create a Kafka log by running a peer
     String walName = "test-print-kafka-no-dir-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -113,7 +113,7 @@ public class KafkaCliIT extends AbstractCliIT {
     String kafkaServers = getKafkaServers();
     String walName = "test-kafka-offset-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -174,7 +174,7 @@ public class KafkaCliIT extends AbstractCliIT {
     String kafkaServers = getKafkaServers();
     String walName = "test-print-kafka-registry-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -213,7 +213,7 @@ public class KafkaCliIT extends AbstractCliIT {
     String kafkaServers = getKafkaServers();
     String walName = "test-remove-kafka-registry-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -260,7 +260,7 @@ public class KafkaCliIT extends AbstractCliIT {
     String kafkaServers = getKafkaServers();
     String walName = "test-remove-kafka-direct-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -337,7 +337,7 @@ public class KafkaCliIT extends AbstractCliIT {
             sourceName,
             "--input-log",
             walName,
-            "io.quasient.pal.apps.quantized.rpc.Methods",
+            "io.quasient.foobar.apps.quantized.rpc.Methods",
             "-m",
             "staticStringWithStringArgs",
             "test-call-kafka-registry");
@@ -397,7 +397,7 @@ public class KafkaCliIT extends AbstractCliIT {
             sourceName,
             "--input-log",
             walName,
-            "io.quasient.pal.apps.quantized.rpc.Methods",
+            "io.quasient.foobar.apps.quantized.rpc.Methods",
             "-m",
             "staticStringWithStringArgs",
             "test-call-kafka-direct");

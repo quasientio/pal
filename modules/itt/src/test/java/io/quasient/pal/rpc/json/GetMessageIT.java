@@ -22,7 +22,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
-  private static final String CLASS_NAME = "io.quasient.pal.apps.rpc.Variables";
+  private static final String CLASS_NAME = "io.quasient.foobar.apps.rpc.Variables";
 
   public GetMessageIT(TargetType targetType) {
     super(targetType);
@@ -145,7 +145,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void getClassVariable_noSuchClass_exThrown() throws Exception {
-    String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     String fieldName = "aProtectedBool";
     String requestId = generateId();
     String request =
@@ -531,7 +531,7 @@ public class GetMessageIT extends AbstractJsonRpcMessageIT {
 
   @Test
   public void getInstanceVariable_noSuchClass_exThrown() throws Exception {
-    final String nonExistingClass = "io.quasient.pal.apps.IDontExist";
+    final String nonExistingClass = "io.quasient.foobar.apps.IDontExist";
     final String fieldName = "someShort";
 
     // Create a new instance of CLASS_NAME

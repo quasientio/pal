@@ -176,7 +176,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -223,7 +223,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Chronicle queue files
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -258,7 +258,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -305,7 +305,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     PeerProcess peer1 =
         launchPeer(
@@ -379,7 +379,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -428,7 +428,7 @@ public class ListIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -478,7 +478,7 @@ public class ListIT extends AbstractCliIT {
     String walName = "xclg-wal-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -534,7 +534,7 @@ public class ListIT extends AbstractCliIT {
     // Use shorter names to avoid CLI truncation (CLI truncates names at ~18 chars)
     String walName1 = "sz1-" + generateId();
     UUID peerId1 = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     PeerProcess peer1 =
         launchPeer(
@@ -595,7 +595,7 @@ public class ListIT extends AbstractCliIT {
     // Create two logs - use short prefixes to avoid CLI truncation
     String walName1 = "rv1-" + generateId();
     UUID peerId1 = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     PeerProcess peer1 =
         launchPeer(
@@ -664,7 +664,7 @@ public class ListIT extends AbstractCliIT {
     // Create a log with a long name
     String walName = "test-wal-notrim-verylongname-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(

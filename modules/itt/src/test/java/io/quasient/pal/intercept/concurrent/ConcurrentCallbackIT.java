@@ -13,8 +13,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 
+import io.quasient.foobar.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.ConcurrentCallbackTestSuite;
-import io.quasient.pal.apps.quantized.intercept.InterceptableApp;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.common.lang.intercept.InterceptType;
@@ -75,7 +75,7 @@ public class ConcurrentCallbackIT extends AbstractInterceptIT {
   private static final Logger logger = LoggerFactory.getLogger(ConcurrentCallbackIT.class);
 
   private static final String CALLBACK_CLASS =
-      "io.quasient.pal.apps.callbacks.concurrent.ConcurrentCallbacks";
+      "io.quasient.foobar.apps.callbacks.concurrent.ConcurrentCallbacks";
   private static final String TARGET_CLASS = InterceptableApp.class.getName();
 
   /** Number of concurrent threads. Must be <= ConcurrentCallbackTestSuite.RPC_THREAD_COUNT. */

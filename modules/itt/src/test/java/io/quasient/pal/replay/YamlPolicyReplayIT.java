@@ -52,7 +52,7 @@ public class YamlPolicyReplayIT extends AbstractCliIT {
   private static final Logger logger = LoggerFactory.getLogger(YamlPolicyReplayIT.class);
 
   /** Package prefix shared by all replay test applications. */
-  private static final String APP_PACKAGE = "io.quasient.pal.apps.quantized.replay.";
+  private static final String APP_PACKAGE = "io.quasient.foobar.apps.quantized.replay.";
 
   /** The number of threads for this parameterized test run. */
   private final int threadCount;

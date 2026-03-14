@@ -34,7 +34,7 @@ import org.junit.runners.Suite;
  *   <li><b>Drain timeout configured:</b> Peer configured with {@code --drain-timeout-ms} for
  *       quiescence coordination
  *   <li><b>Test application:</b> Uses {@link
- *       io.quasient.pal.apps.quantized.intercept.SlowMethodApp} with controllable slow/blocking
+ *       io.quasient.foobar.apps.quantized.intercept.SlowMethodApp} with controllable slow/blocking
  *       methods
  *   <li><b>Multi-threaded scenarios:</b> Tests spawn concurrent threads to create realistic
  *       in-flight conditions
@@ -68,7 +68,7 @@ import org.junit.runners.Suite;
  * avoid conflicts when running test suites in parallel.
  *
  * @see InFlightInterceptActivationIT
- * @see io.quasient.pal.apps.quantized.intercept.SlowMethodApp
+ * @see io.quasient.foobar.apps.quantized.intercept.SlowMethodApp
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({InFlightInterceptActivationIT.class, ParallelDrainActivationIT.class})

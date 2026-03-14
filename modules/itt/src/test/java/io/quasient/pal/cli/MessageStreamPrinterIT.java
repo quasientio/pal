@@ -88,7 +88,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -135,7 +135,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -182,7 +182,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -232,7 +232,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Chronicle queue files
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -271,7 +271,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Chronicle queue files
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -309,7 +309,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Chronicle queue files
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -350,7 +350,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -398,7 +398,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Log in Kafka
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -449,7 +449,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Chronicle queue files
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -491,7 +491,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     // we need to run something for messages to be written to the WAL, which actually
     // creates the Chronicle queue files
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -526,7 +526,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String walName = "test-print-filter-peer-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -580,7 +580,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String walName = "test-print-filter-thread-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -642,7 +642,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String walName = "test-print-direct-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -686,7 +686,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String walName = "test-print-multi-types-" + generateId();
     UUID peerId = UUID.randomUUID();
 
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -733,7 +733,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     UUID peerId = UUID.randomUUID();
 
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -780,7 +780,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     UUID peerId = UUID.randomUUID();
     String pubEndpoint = "localhost:41791";
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     // Start print command FIRST (will wait for socket to become available)
     printHandle = startPrintInBackground("-d", palDirectory, "-pa", pubEndpoint, "--full");
@@ -845,7 +845,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     UUID peerId = UUID.randomUUID();
     String pubEndpoint = "localhost:41792";
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     // Start print command FIRST
     printHandle = startPrintInBackground("-d", palDirectory, "-pa", pubEndpoint, "--json");
@@ -893,7 +893,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     UUID peerId = UUID.randomUUID();
     String pubEndpoint = "localhost:41793";
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     // Start print command FIRST
     printHandle = startPrintInBackground("-d", palDirectory, "-pa", pubEndpoint);
@@ -945,7 +945,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     UUID peerId = UUID.randomUUID();
     String pubEndpoint = "localhost:41794";
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     // Start print command FIRST with type filter
     printHandle =
@@ -1006,7 +1006,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     UUID peerId = UUID.randomUUID();
     String pubEndpoint = "localhost:41795";
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     // Start print command FIRST with peer filter
     printHandle =
@@ -1060,7 +1060,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String palDirectory = getPalDirectoryUrl();
     UUID peerId = UUID.randomUUID();
     String pubEndpoint = "localhost:41796";
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     // Start print command FIRST with thread filter
     printHandle =
@@ -1119,7 +1119,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -1153,7 +1153,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     String walName = "test-print-kafka-tree-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -1197,7 +1197,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -1235,7 +1235,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     String walName = "test-print-kafka-withreturn-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -1287,7 +1287,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.ThrowingMain";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.ThrowingMain";
 
     peerProcess =
         launchPeer(
@@ -1336,7 +1336,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     String walName = "test-print-kafka-withreturn-throw-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.ThrowingMain";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.ThrowingMain";
 
     peerProcess =
         launchPeer(
@@ -1387,7 +1387,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     String walPath = "file:" + walName;
 
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(
@@ -1428,7 +1428,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     String walName = "test-print-kafka-filter-class-" + generateId();
     UUID peerId = UUID.randomUUID();
-    String classToRun = "io.quasient.pal.apps.quantized.rpc.Methods";
+    String classToRun = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
     peerProcess =
         launchPeer(

@@ -47,7 +47,7 @@ public class IncomingWalIT extends AbstractCliIT {
   private static final Logger logger = LoggerFactory.getLogger(IncomingWalIT.class);
 
   /** Test application class used for RPC invocations. */
-  private static final String METHODS_CLASS = "io.quasient.pal.apps.quantized.rpc.Methods";
+  private static final String METHODS_CLASS = "io.quasient.foobar.apps.quantized.rpc.Methods";
 
   /** Peer process launched for testing, or null if not launched. */
   private PeerProcess peerProcess;
@@ -87,7 +87,7 @@ public class IncomingWalIT extends AbstractCliIT {
    * -d <etcd>} running a woven app JAR with a callable method
    *
    * <p>When: {@code pal call -d <etcd> -p <peer-name> -m processArgs
-   * io.quasient.pal.apps.quantized.rpc.Methods wal-test-arg} invoked
+   * io.quasient.foobar.apps.quantized.rpc.Methods wal-test-arg} invoked
    *
    * <p>Then: {@code pal print -d <etcd> -l <wal-topic>} shows both the BEFORE message (call to
    * processArgs) and the AFTER message (with return value PROCESSED) for the incoming RPC call

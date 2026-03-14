@@ -22,7 +22,7 @@ import org.junit.Test;
 public class SerdesSpeedTest {
 
   private MessageBuilder messageBuilder;
-  String className = "io.quasient.pal.apps.MyClass";
+  String className = "io.quasient.foobar.apps.MyClass";
   Object[] args = {
     new String[] {"A normal string", "Boring to say the least", "The loong winter is comiiing"}
   };

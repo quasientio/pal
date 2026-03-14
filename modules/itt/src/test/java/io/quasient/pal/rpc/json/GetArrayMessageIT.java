@@ -11,7 +11,7 @@ package io.quasient.pal.rpc.json;
 
 import static org.junit.Assert.assertArrayEquals;
 
-import io.quasient.pal.apps.rpc.StaticArrayVars;
+import io.quasient.foobar.apps.rpc.StaticArrayVars;
 import io.quasient.pal.common.util.Classes;
 import io.quasient.pal.messages.jsonrpc.JsonRpcResponse;
 import java.lang.reflect.Field;
@@ -38,7 +38,7 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class GetArrayMessageIT extends AbstractJsonRpcMessageIT {
 
-  private static final String CLASS_NAME = "io.quasient.pal.apps.rpc.StaticArrayVars";
+  private static final String CLASS_NAME = "io.quasient.foobar.apps.rpc.StaticArrayVars";
   private static final Class<?> CLASS = StaticArrayVars.class;
 
   // Test parameters

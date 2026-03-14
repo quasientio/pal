@@ -47,7 +47,7 @@ public final class BenchmarkInterceptRegistrar {
    * {@code toUpperCase} and {@code sort}).
    */
   static final String BENCHMARK_CLASS_PATTERN =
-      "io.quasient.pal.apps.quantized.bench.QuantizedCalls";
+      "bench.quantized.io.quasient.foobar.apps.QuantizedCalls";
 
   /**
    * Benchmark method signatures to register intercepts for.
@@ -62,21 +62,21 @@ public final class BenchmarkInterceptRegistrar {
 
   /** Fully qualified callback class for BEFORE intercepts. */
   static final String BEFORE_CALLBACK_CLASS =
-      "io.quasient.pal.apps.quantized.bench.callbacks.BenchmarkBeforeCallback";
+      "callbacks.bench.quantized.io.quasient.foobar.apps.BenchmarkBeforeCallback";
 
   /** Callback method name for BEFORE intercepts. */
   static final String BEFORE_CALLBACK_METHOD = "onBefore";
 
   /** Fully qualified callback class for AFTER intercepts. */
   static final String AFTER_CALLBACK_CLASS =
-      "io.quasient.pal.apps.quantized.bench.callbacks.BenchmarkAfterCallback";
+      "callbacks.bench.quantized.io.quasient.foobar.apps.BenchmarkAfterCallback";
 
   /** Callback method name for AFTER intercepts. */
   static final String AFTER_CALLBACK_METHOD = "onAfter";
 
   /** Fully qualified callback class for AROUND intercepts. */
   static final String AROUND_CALLBACK_CLASS =
-      "io.quasient.pal.apps.quantized.bench.callbacks.BenchmarkAroundCallback";
+      "callbacks.bench.quantized.io.quasient.foobar.apps.BenchmarkAroundCallback";
 
   /** Callback method name for AROUND intercepts. */
   static final String AROUND_CALLBACK_METHOD = "onAround";
