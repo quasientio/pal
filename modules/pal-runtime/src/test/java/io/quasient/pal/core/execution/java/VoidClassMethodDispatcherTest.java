@@ -26,6 +26,7 @@ import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.testfixtures.dispatch.ClassForVoidClassMethodTest;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -793,59 +794,5 @@ public class VoidClassMethodDispatcherTest extends AbstractMethodDispatcherTest 
 
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
-  }
-
-  // auxiliary class
-  @SuppressWarnings({"unused", "MemberName"})
-  private static class ClassForVoidClassMethodTest {
-    public static boolean slept;
-    public static Long millisSlept;
-    static Object verified;
-
-    static {
-      resetStaticVars();
-    }
-
-    static void sleep() {
-      slept = true;
-    }
-
-    public static void sleep(Long millis) {
-      millisSlept = millis;
-    }
-
-    protected static void sleepUnboxed(long millis) {
-      millisSlept = millis;
-    }
-
-    static void verify(Object toVerify) {
-      verified = toVerify;
-    }
-
-    static void add(List<Long> sumContainer, long... parts) {
-      // add it manually, (use streams for verification)
-      long sum = 0;
-      for (long part : parts) {
-        sum += part;
-      }
-      sumContainer.add(sum);
-    }
-
-    static void addPositive(List<Long> someList, long chunk) {
-      if (chunk > 0) {
-        someList.add(chunk);
-      }
-    }
-
-    private static void nap() {
-      sleep(30 * 60 * 1000L);
-    }
-
-    // call this method from unit tests to restore class variables that have been modified
-    static void resetStaticVars() {
-      verified = "blah";
-      slept = false;
-      millisSlept = 0L;
-    }
   }
 }

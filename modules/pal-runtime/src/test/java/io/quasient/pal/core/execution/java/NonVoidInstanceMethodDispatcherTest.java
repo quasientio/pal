@@ -32,6 +32,7 @@ import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.Unwrapper;
 import io.quasient.pal.serdes.colfer.ExecMessageUtils;
+import io.quasient.testfixtures.dispatch.ClassForNonVoidInstanceMethodTest;
 import java.lang.reflect.Method;
 import java.util.EnumSet;
 import java.util.Locale;
@@ -865,36 +866,5 @@ public class NonVoidInstanceMethodDispatcherTest extends AbstractMethodDispatche
 
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
-  }
-
-  // auxiliary class
-  @SuppressWarnings("unused")
-  private static class ClassForNonVoidInstanceMethodTest {
-    private String value;
-
-    ClassForNonVoidInstanceMethodTest() {}
-
-    ClassForNonVoidInstanceMethodTest(String value) {
-      this.value = value;
-    }
-
-    public String floatAsString(float someFloat) {
-      return String.valueOf(someFloat);
-    }
-
-    String toUpperCase() {
-      return value.toUpperCase(Locale.getDefault());
-    }
-
-    protected String append(String value) {
-      if (value == null) {
-        return this.value;
-      }
-      return this.value.concat(value);
-    }
-
-    private String join(String joiner, String... values) {
-      return String.join(joiner, values);
-    }
   }
 }

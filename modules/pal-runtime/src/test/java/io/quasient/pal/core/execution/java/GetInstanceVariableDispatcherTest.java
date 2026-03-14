@@ -24,10 +24,9 @@ import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.serdes.Unwrapper;
+import io.quasient.testfixtures.dispatch.ClassForGetFieldTest;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
@@ -721,19 +720,5 @@ public class GetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
-  }
-
-  // auxiliary class
-  @SuppressWarnings({"unused", "checkstyle:MemberName"})
-  private static class ClassForGetFieldTest {
-    public short someShort = 0;
-    byte[] bytes;
-    Integer someInteger;
-    protected String aString = "I am a normal string";
-    List<?> anObject = new ArrayList<>();
-    Object[] objects = {1, "a", false};
-    private final Object[] privateObjects = {0, "b", true};
-    Throwable lastError = new Error("dummy error");
-    Class<?> aNullClass;
   }
 }

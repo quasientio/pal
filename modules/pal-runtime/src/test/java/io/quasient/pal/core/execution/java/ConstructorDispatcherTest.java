@@ -25,6 +25,7 @@ import io.quasient.pal.core.ExecMessageMatchers.ComesFromReflectable;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.testfixtures.dispatch.ClassForConstructorTest;
 import java.lang.reflect.Constructor;
 import java.util.EnumSet;
 import java.util.concurrent.Callable;
@@ -663,38 +664,5 @@ public class ConstructorDispatcherTest extends AbstractMethodDispatcherTest {
 
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
-  }
-
-  // auxiliary class
-  @SuppressWarnings({"unused", "checkstyle:MemberName"})
-  private static class ClassForConstructorTest {
-    Integer someInteger;
-    String joinedVarArgs;
-    long aLong;
-
-    ClassForConstructorTest() {}
-
-    ClassForConstructorTest(boolean plusOne, long someLong) {
-      this.aLong = plusOne ? someLong + 1 : someLong;
-    }
-
-    ClassForConstructorTest(Integer someInteger) {
-      this.someInteger = someInteger;
-    }
-
-    ClassForConstructorTest(String someMalformedNumber) {
-      this.someInteger = Integer.valueOf(someMalformedNumber);
-    }
-
-    ClassForConstructorTest(String... args) {
-      this.joinedVarArgs = String.join("", args);
-    }
-
-    // for visibility tests
-    public ClassForConstructorTest(int i) {}
-
-    protected ClassForConstructorTest(int i, int j) {}
-
-    private ClassForConstructorTest(int i, int j, int k) {}
   }
 }

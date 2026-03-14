@@ -25,6 +25,7 @@ import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.testfixtures.dispatch.ClassForPutStaticTest;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
@@ -759,33 +760,5 @@ public class SetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
-  }
-
-  // auxiliary class
-  @SuppressWarnings({"unused", "StaticAssignmentOfThrowable"})
-  private static class ClassForPutStaticTest {
-
-    static {
-      resetStaticVars();
-    }
-
-    public static short someShort;
-    static byte[] bytes;
-    static Boolean someBoolean;
-    protected static String aString;
-    private static String secretString;
-    static ArrayDeque<?> aCollection;
-    static Object[] objects;
-    static Throwable lastError;
-
-    static void resetStaticVars() {
-      someShort = 4;
-      bytes = null;
-      someBoolean = false;
-      aString = "I am a normal string";
-      aCollection = new ArrayDeque<>();
-      objects = null;
-      lastError = new Exception("dummy exception");
-    }
   }
 }

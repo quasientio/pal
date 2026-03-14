@@ -24,9 +24,9 @@ import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.testfixtures.dispatch.ClassForPutFieldTest;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -896,18 +896,5 @@ public class SetInstanceVariableDispatcherTest extends AbstractFieldOpDispatcher
 
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
-  }
-
-  // auxiliary class
-  @SuppressWarnings({"unused", "StaticAssignmentOfThrowable", "MemberName"})
-  private static class ClassForPutFieldTest {
-    public short someShort = 4;
-    byte[] bytes;
-    Long aLong = 8238L;
-    protected String aString = "I am a normal string";
-    private final String aPrivateString = "I am a private string";
-    List<?> aList = new ArrayList<>();
-    Object[] objects;
-    Throwable lastError = new Exception("dummy exception");
   }
 }

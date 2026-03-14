@@ -26,12 +26,9 @@ import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.serdes.Unwrapper;
+import io.quasient.testfixtures.dispatch.ClassForGetStaticTest;
 import java.lang.reflect.Field;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
@@ -639,19 +636,5 @@ public class GetClassVariableDispatcherTest extends AbstractFieldOpDispatcherTes
 
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
-  }
-
-  // auxiliary class
-  @SuppressWarnings({"unused", "StaticAssignmentOfThrowable"})
-  private static class ClassForGetStaticTest {
-    public static short someShort = 4;
-    static byte[] bytes = "Some".getBytes(StandardCharsets.UTF_8);
-    static Integer someInteger = 965235;
-    protected static String aString = "I am a normal string";
-    static List<?> anObject = new ArrayList<>();
-    static Object[] objects = {1, "a", false};
-    private static final Object[] privateObjects = new Object[] {0, "b", true};
-    static Throwable lastError = new Exception("dummy exception");
-    static Map<?, ?> aNullMap;
   }
 }

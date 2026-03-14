@@ -24,8 +24,8 @@ import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.testfixtures.dispatch.ClassForVoidInstanceMethodTest;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -828,45 +828,5 @@ public class VoidInstanceMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
-  }
-
-  // auxiliary class
-  @SuppressWarnings("unused")
-  private static class ClassForVoidInstanceMethodTest {
-    public List<String> wordsCollected = new ArrayList<>();
-    private static final String WORD_REGEX = "^\\w+$";
-
-    ClassForVoidInstanceMethodTest() {}
-
-    private void addHelloWorld() {
-      wordsCollected.add("Hello");
-      wordsCollected.add("World");
-    }
-
-    public void addWord(String word) {
-      if (word == null) {
-        return;
-      }
-
-      if (word.matches(WORD_REGEX)) {
-        wordsCollected.add(word);
-      } else {
-        throw new IllegalArgumentException("Not a word: " + word);
-      }
-    }
-
-    void addWords(int n) {
-      for (int i = 0; i < n; i++) {
-        addWord("again");
-      }
-    }
-
-    protected void addWords(String... words) {
-      Arrays.stream(words).filter(w -> w.matches(WORD_REGEX)).forEach(w -> wordsCollected.add(w));
-    }
-
-    void addWordList(List<String> wordList) {
-      wordsCollected.addAll(wordList);
-    }
   }
 }

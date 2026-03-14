@@ -28,11 +28,10 @@ import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.serdes.Unwrapper;
+import io.quasient.testfixtures.dispatch.ClassForNonVoidClassMethodTest;
 import java.lang.reflect.Method;
 import java.util.EnumSet;
-import java.util.Random;
 import java.util.concurrent.Callable;
-import java.util.stream.DoubleStream;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hamcrest.Matchers;
 import org.junit.Before;
@@ -797,46 +796,5 @@ public class NonVoidClassMethodDispatcherTest extends AbstractMethodDispatcherTe
 
     walDispatcher.dispatchIncoming(incomingMessage, MessageChannelType.LOG_RPC);
     verifyDispatcherConnectorSendExecMessageNeverCalled();
-  }
-
-  // auxiliary class
-  @SuppressWarnings("unused")
-  private static class ClassForNonVoidClassMethodTest {
-    private static final Random random = new Random();
-
-    static short getRandomMinute() {
-      return (short) random.nextInt(60);
-    }
-
-    static Double max(Double a, Double b) {
-      return Math.max(a, b);
-    }
-
-    static double max(double... doubles) {
-      return DoubleStream.of(doubles).max().orElseThrow();
-    }
-
-    protected static double min(double a, double b) {
-      return Math.min(a, b);
-    }
-
-    @SuppressWarnings("NarrowCalculation")
-    static double divBy(int number, int divisor) {
-      return number / divisor;
-    }
-
-    public static int somePublicMethod() {
-      return add(4, 5);
-    }
-
-    private static Integer add(Integer a, Integer b) {
-      if (a == null) {
-        return b;
-      }
-      if (b == null) {
-        return a;
-      }
-      return a + b;
-    }
   }
 }
