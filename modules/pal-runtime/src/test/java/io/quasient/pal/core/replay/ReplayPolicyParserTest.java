@@ -110,6 +110,30 @@ public class ReplayPolicyParserTest {
   }
 
   /**
+   * Verifies that built-in shield rules take precedence over CLI {@code --replay-re-execute '**'}
+   * patterns. The FX shield stubs {@code AnimationTimer.start} even when a blanket re-execute
+   * pattern would otherwise match it.
+   */
+  @Test
+  public void shieldRulesTakePrecedenceOverBlanketReExecute() {
+    ReplayPolicy policy =
+        ReplayPolicyParser.fromOptions(null, true, true, new String[] {"**"}, null, false);
+
+    // Shield rules should win for shielded operations
+    assertThat(
+        policy.getAction(
+            "javafx.animation.AnimationTimer", "start", MessageType.EXEC_INSTANCE_METHOD),
+        is(ReplayAction.STUB_FROM_WAL));
+    assertThat(
+        policy.getAction("java.lang.System", "currentTimeMillis", MessageType.EXEC_CLASS_METHOD),
+        is(ReplayAction.STUB_FROM_WAL));
+    // Non-shielded operations fall through to CLI --re-execute '**'
+    assertThat(
+        policy.getAction("com.example.MyApp", "doWork", MessageType.EXEC_INSTANCE_METHOD),
+        is(ReplayAction.RE_EXECUTE));
+  }
+
+  /**
    * Verifies that malformed YAML content causes an {@link IllegalArgumentException} with a
    * descriptive error message.
    */

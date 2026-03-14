@@ -27,10 +27,10 @@ import org.yaml.snakeyaml.error.YAMLException;
  * <p>Supports four sources of rules, applied in priority order:
  *
  * <ol>
- *   <li><b>CLI patterns</b> ({@code --re-execute}, {@code --stub}): highest priority, prepended
- *       before YAML rules
  *   <li><b>Built-in I/O rules</b> ({@code --shield-io}): I/O and non-deterministic operation stubs
  *   <li><b>Built-in JavaFX rules</b> ({@code --shield-fx}): JavaFX animation and timing stubs
+ *   <li><b>CLI patterns</b> ({@code --re-execute}, {@code --stub}): override defaults and YAML
+ *       rules but not shields
  *   <li><b>YAML file</b> ({@code --replay-policy}): user-defined rules with a default action
  * </ol>
  *
@@ -114,10 +114,10 @@ public final class ReplayPolicyParser {
   /**
    * Builds a {@link ReplayPolicy} from CLI options and an optional YAML file.
    *
-   * <p>CLI patterns are prepended before YAML rules (higher priority). The {@code --shield-io} flag
-   * adds built-in I/O rules after CLI patterns but before YAML rules. The {@code --shield-fx} flag
-   * adds built-in JavaFX rules. The {@code --stub-all-else} flag overrides the default action to
-   * {@link ReplayAction#STUB_FROM_WAL}.
+   * <p>Built-in shield rules ({@code --shield-io}, {@code --shield-fx}) have highest priority and
+   * cannot be overridden by CLI patterns. CLI patterns override YAML rules and the default action.
+   * The {@code --stub-all-else} flag overrides the default action to {@link
+   * ReplayAction#STUB_FROM_WAL}.
    *
    * @param yamlPath path to a YAML replay policy file, or {@code null} if not provided
    * @param shieldIo whether to include built-in I/O shield rules
@@ -140,7 +140,16 @@ public final class ReplayPolicyParser {
     List<ReplayPolicyRule> allRules = new ArrayList<>();
     ReplayAction defaultAction = ReplayAction.RE_EXECUTE;
 
-    // 1. CLI patterns have highest priority
+    // 1. Built-in shield rules have highest priority — they are curated safety
+    //    rules that should not be defeated by blanket CLI patterns like '**'.
+    if (shieldIo) {
+      allRules.addAll(BuiltInStubRules.getIoShieldRules());
+    }
+    if (shieldFx) {
+      allRules.addAll(BuiltInStubRules.getFxShieldRules());
+    }
+
+    // 2. CLI patterns override defaults and YAML rules but not shields
     if (reExecutePatterns != null) {
       for (String pattern : reExecutePatterns) {
         allRules.add(patternToRule(pattern, ReplayAction.RE_EXECUTE));
@@ -152,15 +161,7 @@ public final class ReplayPolicyParser {
       }
     }
 
-    // 2. Built-in shield rules
-    if (shieldIo) {
-      allRules.addAll(BuiltInStubRules.getIoShieldRules());
-    }
-    if (shieldFx) {
-      allRules.addAll(BuiltInStubRules.getFxShieldRules());
-    }
-
-    // 3. YAML file rules
+    // 3. YAML file rules (lowest priority)
     if (yamlPath != null) {
       String yamlContent;
       try {
