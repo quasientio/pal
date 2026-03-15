@@ -9,10 +9,18 @@
  */
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.cli.PalCommand;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.Map;
 import org.junit.Test;
+import picocli.CommandLine;
 
 /**
  * Unit test specifications for {@code LogCommand}.
@@ -22,9 +30,6 @@ import org.junit.Test;
  * {@code pal log stats}). It implements {@link io.quasient.pal.common.cli.PalCommand} to propagate
  * the directory connection string from the root {@link Pal} command down to its sub-subcommands via
  * {@code @ParentCommand} delegation.
- *
- * <p>All tests are specification stubs awaiting implementation in issue #1191 when the {@code
- * LogCommand} class is created.
  *
  * @see io.quasient.pal.common.cli.PalCommand
  * @see Pal
@@ -38,14 +43,13 @@ public class LogCommandTest {
    * sub-subcommands to use {@code @ParentCommand PalCommand} uniformly.
    */
   @Test
-  @Ignore("Awaiting implementation in #1191")
   public void implementsPalCommand() {
     // Given: a LogCommand instance
+    LogCommand logCommand = new LogCommand();
+
     // When: checked for PalCommand assignability
     // Then: instance is assignable to PalCommand
-
-    // TODO(#1191): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(PalCommand.class.isAssignableFrom(logCommand.getClass()));
   }
 
   /**
@@ -56,14 +60,16 @@ public class LogCommandTest {
    * {@code @ParentCommand} delegation.
    */
   @Test
-  @Ignore("Awaiting implementation in #1191")
   public void getPalDirectoryConnectionString_delegatesToParent() {
     // Given: LogCommand with mock parent PalCommand returning "localhost:2379"
-    // When: getPalDirectoryConnectionString() called
-    // Then: returns "localhost:2379"
+    LogCommand logCommand = new LogCommand();
+    logCommand.parent = () -> "localhost:2379";
 
-    // TODO(#1191): Implement test logic
-    fail("Not yet implemented");
+    // When: getPalDirectoryConnectionString() called
+    String result = logCommand.getPalDirectoryConnectionString();
+
+    // Then: returns "localhost:2379"
+    assertThat(result, is("localhost:2379"));
   }
 
   /**
@@ -73,14 +79,26 @@ public class LogCommandTest {
    * it prints usage information to stdout and exits with code 0.
    */
   @Test
-  @Ignore("Awaiting implementation in #1191")
   public void run_withNoSubcommand_printsUsage() {
     // Given: LogCommand wired into CommandLine
-    // When: execute with no subcommand
-    // Then: usage is printed to stdout (exit code 0)
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    PrintStream printStream = new PrintStream(outputStream);
+    PrintStream originalOut = System.out;
+    System.setOut(printStream);
 
-    // TODO(#1191): Implement test logic
-    fail("Not yet implemented");
+    try {
+      CommandLine commandLine = new CommandLine(new LogCommand());
+
+      // When: execute with no subcommand
+      int exitCode = commandLine.execute();
+
+      // Then: usage is printed to stdout (exit code 0)
+      assertThat(exitCode, is(0));
+      String output = outputStream.toString(UTF_8);
+      assertThat(output, containsString("log"));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -90,13 +108,19 @@ public class LogCommandTest {
    * "rm", "print", "call", "index", and "stats".
    */
   @Test
-  @Ignore("Awaiting implementation in #1191")
   public void subcommands_areRegistered() {
     // Given: CommandLine with LogCommand
-    // When: getSubcommands() called
-    // Then: contains keys "ls", "rm", "print", "call", "index", "stats"
+    CommandLine commandLine = new CommandLine(new LogCommand());
 
-    // TODO(#1191): Implement test logic
-    fail("Not yet implemented");
+    // When: getSubcommands() called
+    Map<String, CommandLine> subcommands = commandLine.getSubcommands();
+
+    // Then: contains keys "ls", "rm", "print", "call", "index", "stats"
+    assertTrue(subcommands.containsKey("ls"));
+    assertTrue(subcommands.containsKey("rm"));
+    assertTrue(subcommands.containsKey("print"));
+    assertTrue(subcommands.containsKey("call"));
+    assertTrue(subcommands.containsKey("index"));
+    assertTrue(subcommands.containsKey("stats"));
   }
 }
