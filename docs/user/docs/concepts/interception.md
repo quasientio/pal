@@ -681,10 +681,10 @@ List intercepts via the CLI or Java API:
 
 ```bash
 # List all intercepts
-pal ls -d localhost:2379 -I
+pal intercept ls -d localhost:2379
 
 # List with details (includes TTL column)
-pal ls -d localhost:2379 -I -l
+pal intercept ls -d localhost:2379 -l
 ```
 
 Or query programmatically:
@@ -736,7 +736,7 @@ Should see AspectJ calls. If not, rebuild with AspectJ plugin.
 
 **Check 2**: Is peer interceptable?
 ```bash
-pal ls -d localhost:2379 -P -l
+pal peer ls -d localhost:2379 -l
 ```
 Look for intercept support indicator.
 
@@ -750,12 +750,12 @@ Look for intercept support indicator.
 
 **Check 1**: Is callback peer running?
 ```bash
-pal ls -d localhost:2379 -P | grep callback-peer
+pal peer ls -d localhost:2379 | grep callback-peer
 ```
 
 **Check 2**: Is callback peer's RPC endpoint correct?
 ```bash
-pal ls -d localhost:2379 -P -l
+pal peer ls -d localhost:2379 -l
 ```
 Verify RPC endpoint is accessible.
 

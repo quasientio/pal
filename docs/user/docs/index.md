@@ -110,10 +110,10 @@ pal run -d localhost:2379 -k localhost:29092 \
 
 ```bash
 # List running peers
-pal ls -d localhost:2379 -P
+pal peer ls -d localhost:2379
 
 # Call a method
-pal call -d localhost:2379 -p peer-uuid \
+pal peer call -d localhost:2379 peer-uuid \
   com.example.Calculator add 5 3
 ```
 
@@ -200,7 +200,7 @@ pal run -d etcd:2379 -k kafka:9092 \
   -cp service.jar com.example.Service
 
 # Peer B: Client
-pal call -d etcd:2379 -p my-service \
+pal peer call -d etcd:2379 my-service \
   com.example.Service processRequest data
 ```
 
@@ -223,12 +223,11 @@ Guide: [Testing with Interception](guides/testing-with-interception.md)
 | Command | Purpose |
 |---------|---------|
 | `pal run` | Start a peer and run application code |
-| `pal call` | Send RPC calls to peers or logs |
-| `pal print` | Print messages from logs or peer streams |
-| `pal ls` | List registered peers and logs |
+| `pal peer` | Manage peers (ls, call, print, rm, stats) |
+| `pal log` | Manage logs (ls, call, print, rm, index, stats) |
+| `pal intercept` | Manage intercepts (ls) |
+| `pal run` | Start a peer and run application code |
 | `pal replay` | Replay application and verify against recorded WAL |
-| `pal wal-index` | Analyze WAL structure and entry pairing |
-| `pal rm` | Remove peers or logs from directory |
 
 See [CLI Reference](cli-reference.md) for complete documentation.
 
@@ -250,7 +249,7 @@ pal run --source-log file:/tmp/execution-log \
   -cp app.jar
 
 # Print to see what happened
-pal print -l file:/tmp/execution-log --full
+pal log print file:/tmp/execution-log --full
 ```
 
 Guide: [Deterministic Replay](guides/deterministic-replay.md)
@@ -264,7 +263,7 @@ pal run -d localhost:2379 -k localhost:29092 \
   -cp calc.jar com.example.Calculator
 
 # Terminal 2: Call service
-pal call -d localhost:2379 -p calculator \
+pal peer call -d localhost:2379 calculator \
   com.example.Calculator add 10 20
 
 # Result: 30

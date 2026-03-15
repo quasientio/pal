@@ -351,7 +351,7 @@ Every operation is automatically logged:
 pal run --wal audit-log -cp app.jar
 
 # Later: Query audit log
-pal print -l audit-log --types INSTANCE_METHOD,CLASS_METHOD --full
+pal log print audit-log --types INSTANCE_METHOD,CLASS_METHOD --full
 ```
 
 **Output:**
@@ -385,7 +385,7 @@ Message 1048:
 
 ```bash
 # Query all operations from the application log in JSON format
-pal print -l application-log --json > user-data.json
+pal log print application-log --json > user-data.json
 # Then search the JSON output for the user's email
 ```
 
@@ -410,7 +410,7 @@ Every operation is timed and logged:
 pal run --wal perf-log -cp app.jar
 
 # Later: Analyze messages with full detail
-pal print -l perf-log --full
+pal log print perf-log --full
 
 # Output shows every method call with arguments and results,
 # which can be used to identify bottlenecks
@@ -426,13 +426,13 @@ pal print -l perf-log --full
 
 ```bash
 # 1. Review production messages with full detail
-pal print -l prod-log --full
+pal log print prod-log --full
 
 # 2. Replay the production log locally to investigate
 pal run --source-log prod-log -cp app.jar
 
 # 3. Inspect the replayed output for performance issues
-pal print -l prod-log --full
+pal log print prod-log --full
 ```
 
 **Reproduce production performance issue locally, with exact data and timing.**
@@ -459,8 +459,8 @@ pal run --wal prod-traffic -cp app.jar
 pal run --source-log prod-traffic -cp app-v2.jar --wal qa-replay
 
 # 3. Inspect both logs and compare outputs
-pal print -l prod-traffic --json > prod-output.json
-pal print -l qa-replay --json > qa-output.json
+pal log print prod-traffic --json > prod-output.json
+pal log print qa-replay --json > qa-output.json
 # Compare the two JSON outputs to find behavioral differences
 ```
 
@@ -481,8 +481,8 @@ pal run --wal golden-master -cp app-v1.jar
 pal run --source-log golden-master -cp app-v2.jar --wal v2-output
 
 # 3. Compare by inspecting both logs
-pal print -l golden-master --json > v1-output.json
-pal print -l v2-output --json > v2-output.json
+pal log print golden-master --json > v1-output.json
+pal log print v2-output --json > v2-output.json
 # Diff the JSON outputs to find behavioral differences
 ```
 
@@ -538,7 +538,7 @@ palDirectory.createIntercept(intercept);
 **Post-Mortem:**
 ```bash
 # Analyze what happened
-pal print -l prod-log --full
+pal log print prod-log --full
 
 # Replay the production log locally to investigate
 pal run --source-log prod-log -cp app.jar

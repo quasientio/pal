@@ -69,7 +69,7 @@ pal run --source-log file:/tmp/my-queue -cp app.jar
 
 **Print queue contents**:
 ```bash
-pal print -l file:/tmp/my-queue --full
+pal log print file:/tmp/my-queue --full
 ```
 
 **Delete old queue**:
@@ -270,26 +270,26 @@ pal run -k localhost:29092 --source-log my-log \
 
 ```bash
 # Print all messages
-pal print -l file:/tmp/my-log
+pal log print file:/tmp/my-log
 
 # Print specific offset
-pal print -l file:/tmp/my-log -o 100
+pal log print file:/tmp/my-log -o 100
 
 # Follow (like tail -f)
-pal print -l file:/tmp/my-log -f
+pal log print file:/tmp/my-log -f
 ```
 
 ### Kafka
 
 ```bash
 # Print all messages
-pal print -d localhost:2379 -l my-log
+pal log print -d localhost:2379 my-log
 
 # Print with full details
-pal print -d localhost:2379 -l my-log --full
+pal log print -d localhost:2379 my-log --full
 
 # Follow new messages
-pal print -d localhost:2379 -l my-log -f
+pal log print -d localhost:2379 my-log -f
 ```
 
 ## Managing Logs
@@ -314,7 +314,7 @@ kafka-topics.sh --bootstrap-server localhost:29092 \
   --delete --topic old-topic
 
 # Or use PAL
-pal rm -d localhost:2379 -L old-log
+pal log rm -d localhost:2379 old-log
 ```
 
 ### Log Retention

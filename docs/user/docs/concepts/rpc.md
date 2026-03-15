@@ -34,7 +34,7 @@ pal run -d localhost:2379 --json-rpc auto \
 
 Call with binary RPC:
 ```bash
-pal call -d localhost:2379 -p my-peer \
+pal peer call -d localhost:2379 my-peer \
   com.example.Calculator add 5 3
 ```
 
@@ -54,7 +54,7 @@ pal run -d localhost:2379 --json-rpc auto \
 Call with JSON-RPC:
 ```bash
 echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Calculator","method":"add","args":[5,3]}}' | \
-  pal call -d localhost:2379 -p ws://localhost:9001
+  pal peer call -d localhost:2379 ws://localhost:9001
 ```
 
 ## Making RPC Calls
@@ -64,7 +64,7 @@ echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Ca
 #### Simple Method Call
 
 ```bash
-pal call -d localhost:2379 -p peer-name \
+pal peer call -d localhost:2379 peer-name \
   com.example.Calculator add 5 3
 ```
 
@@ -73,7 +73,7 @@ This calls the `main(String[] args)` method by default with the arguments.
 #### Specific Method
 
 ```bash
-pal call -d localhost:2379 -p peer-name \
+pal peer call -d localhost:2379 peer-name \
   -m processData \
   com.example.Processor data1 data2
 ```
@@ -100,15 +100,15 @@ For maximum flexibility:
 ```bash
 # Constructor
 echo '{"jsonrpc":"2.0","id":"1","method":"new","params":{"type":"com.example.User"}}' | \
-  pal call -d localhost:2379 -p peer-name
+  pal peer call -d localhost:2379 peer-name
 
 # Method with custom signature
 echo '{"jsonrpc":"2.0","id":"2","method":"call","params":{"type":"com.example.Math","method":"multiply","args":[{"type":"int","value":5},{"type":"int","value":3}]}}' | \
-  pal call -d localhost:2379 -p peer-name
+  pal peer call -d localhost:2379 peer-name
 
 # Field access
 echo '{"jsonrpc":"2.0","id":"3","method":"get","params":{"type":"com.example.Config","field":"VERSION"}}' | \
-  pal call -d localhost:2379 -p peer-name
+  pal peer call -d localhost:2379 peer-name
 ```
 
 ## Peer Addressing
@@ -116,7 +116,7 @@ echo '{"jsonrpc":"2.0","id":"3","method":"get","params":{"type":"com.example.Con
 ### By Name
 
 ```bash
-pal call -d localhost:2379 -p my-service \
+pal peer call -d localhost:2379 my-service \
   com.example.Service doWork
 ```
 
@@ -125,7 +125,7 @@ PAL looks up "my-service" in the directory and finds its RPC endpoint.
 ### By UUID
 
 ```bash
-pal call -d localhost:2379 -p 550e8400-e29b-41d4-a716-446655440000 \
+pal peer call -d localhost:2379 550e8400-e29b-41d4-a716-446655440000 \
   com.example.Service doWork
 ```
 
@@ -135,11 +135,11 @@ Direct UUID lookup - faster if you already know it.
 
 ```bash
 # Binary RPC
-pal call -p tcp://192.168.1.100:5555 \
+pal peer call tcp://192.168.1.100:5555 \
   com.example.Service doWork
 
 # JSON-RPC
-pal call -p ws://192.168.1.100:9001 \
+pal peer call ws://192.168.1.100:9001 \
   com.example.Service doWork
 ```
 
@@ -151,7 +151,7 @@ No directory needed - direct connection.
 
 **Direct peer-to-peer**:
 ```bash
-pal call -d localhost:2379 -p peer-name \
+pal peer call -d localhost:2379 peer-name \
   com.example.Service process
 ```
 
@@ -163,7 +163,7 @@ pal call -d localhost:2379 -p peer-name \
 
 **Fire-and-forget via log**:
 ```bash
-pal call -d localhost:2379 -l work-queue --forget-response \
+pal log call -d localhost:2379 work-queue --forget-response \
   com.example.Worker process
 ```
 
@@ -176,7 +176,7 @@ pal call -d localhost:2379 -l work-queue --forget-response \
 ### Static Methods
 
 ```bash
-pal call -d localhost:2379 -p peer-name \
+pal peer call -d localhost:2379 peer-name \
   com.example.Utils processData arg1 arg2
 ```
 
@@ -222,7 +222,7 @@ Returns an ObjectRef that can be used in subsequent calls.
 If the remote method throws an exception:
 
 ```bash
-$ pal call -d localhost:2379 -p peer-name \
+$ pal peer call -d localhost:2379 peer-name \
     com.example.Calculator divide 10 0
 
 Error: java.lang.ArithmeticException: / by zero
@@ -239,13 +239,13 @@ RPC timeouts are configured at the transport level, not via a CLI flag. ZeroMQ a
 ### Peer Not Found
 
 ```bash
-$ pal call -d localhost:2379 -p missing-peer \
+$ pal peer call -d localhost:2379 missing-peer \
     com.example.Service process
 
 Error: Peer not found: missing-peer
 ```
 
-Check with `pal ls -P` to see available peers.
+Check with `pal peer ls` to see available peers.
 
 ## Performance Considerations
 
@@ -275,7 +275,7 @@ For bulk operations, use log-based communication:
 ```bash
 # Write many messages to log
 for i in {1..1000}; do
-  pal call -l work-queue --forget-response \
+  pal log call work-queue --forget-response \
     com.example.Worker process $i
 done
 ```
@@ -321,7 +321,7 @@ pal run -d etcd:2379 --json-rpc auto -n calculator \
 **Client**:
 ```bash
 while true; do
-  pal call -d etcd:2379 -p calculator \
+  pal peer call -d etcd:2379 calculator \
     com.example.Calculator add $RANDOM $RANDOM
   sleep 1
 done
@@ -331,7 +331,7 @@ done
 
 **Producer**:
 ```bash
-pal call -d etcd:2379 -l work-queue --forget-response \
+pal log call -d etcd:2379 work-queue --forget-response \
   com.example.Worker process data
 ```
 
@@ -362,7 +362,7 @@ PAL directory maintains all instances. (Note: Currently no automatic load balanc
 
 Enable verbose output:
 ```bash
-pal call -d localhost:2379 -p peer-name -v \
+pal peer call -d localhost:2379 peer-name -v \
   com.example.Service process
 ```
 
@@ -370,7 +370,7 @@ pal call -d localhost:2379 -p peer-name -v \
 
 Subscribe to peer's message stream:
 ```bash
-pal print -d localhost:2379 -pu peer-uuid -f
+pal peer print -d localhost:2379 peer-uuid -f
 ```
 
 See all messages sent and received in real-time.
@@ -379,7 +379,7 @@ See all messages sent and received in real-time.
 
 ```bash
 # Verify peer is running
-pal ls -d localhost:2379 -P -l
+pal peer ls -d localhost:2379 -l
 
 # Check RPC endpoint
 # Look for ZMQ-RPC or JSON-RPC column
@@ -412,5 +412,5 @@ For custom objects, PAL creates ObjectRefs (UUIDs) instead of copying data.
 
 - [Peers and Logs](peers-and-logs.md) - Understanding peers
 - [Interception](interception.md) - Intercepting RPC calls
-- [CLI Reference](../cli-reference.md) - Complete `pal call` documentation
+- [CLI Reference](../cli-reference.md) - Complete `pal peer call` and `pal log call` documentation
 - [Distributed Application Guide](../guides/distributed-application.md) - Building with RPC

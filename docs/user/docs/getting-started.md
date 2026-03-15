@@ -53,12 +53,19 @@ Usage: pal [OPTIONS] COMMAND
 
 The friendly java runtime
 
+Management Commands:
+  peer       Manage peers
+  log        Manage logs
+  intercept  Manage intercepts
+
 Commands:
-  run    Run a new peer
-  print  Print messages from peers or logs
-  call   Send messages to peers or logs
-  ls     List peers and logs in directory
-  rm     Remove peers or logs from directory
+  run     Run a new peer
+  replay  Deterministic WAL replay
+
+Shortcuts:
+  peers       List peers (shorthand for 'peer ls')
+  logs        List logs (shorthand for 'log ls')
+  intercepts  List intercepts (shorthand for 'intercept ls')
 ```
 
 ## Your First PAL Application
@@ -258,7 +265,7 @@ Let's see what PAL captured:
 
 ```bash
 # Print all messages from the log
-pal print -l file:/tmp/tutorial-wal --full
+pal log print file:/tmp/tutorial-wal --full
 ```
 
 Output (abbreviated):
@@ -405,7 +412,7 @@ In another terminal:
 
 ```bash
 # Call the add method
-pal call -d localhost:2379 -p calculator \
+pal peer call -d localhost:2379 calculator \
   tutorial.Calculator add 10 20
 
 # Result: 30
@@ -413,7 +420,7 @@ pal call -d localhost:2379 -p calculator \
 
 **What happened:**
 
-1. `pal call` created an ExecMessage: `{class: "Calculator", method: "add", args: [10, 20]}`
+1. `pal peer call` created an ExecMessage: `{class: "Calculator", method: "add", args: [10, 20]}`
 2. Looked up peer "calculator" in etcd directory
 3. Sent message to calculator peer via ZeroMQ
 4. Calculator peer received message, invoked `calc.add(10, 20)` via reflection
@@ -426,14 +433,14 @@ pal call -d localhost:2379 -p calculator \
 
 ```bash
 # List all registered peers
-pal ls -d localhost:2379 -P -l
+pal peer ls -d localhost:2379 -l
 
 # Output:
 # Peers:
 #   abcd1234-... (calculator) - localhost:5555 - RUNNING
 
 # List all logs
-pal ls -d localhost:2379 -L -l
+pal log ls -d localhost:2379 -l
 
 # Output:
 # Logs:
@@ -444,7 +451,7 @@ pal ls -d localhost:2379 -L -l
 
 ```bash
 # Print messages from calculator's WAL
-pal print -d localhost:2379 -l calculator-wal --full
+pal log print -d localhost:2379 calculator-wal --full
 
 # You'll see the RPC call captured:
 # Message 0:
@@ -540,27 +547,27 @@ docker ps | grep -E "etcd|kafka"
 
 ```bash
 # List all logs in directory
-pal ls -d localhost:2379 -L
+pal log ls -d localhost:2379
 
 # Print messages from a log
-pal print -d localhost:2379 -l my-log
+pal log print -d localhost:2379 my-log
 
 # Print with full details
-pal print -d localhost:2379 -l my-log --full
+pal log print -d localhost:2379 my-log --full
 
 # Print specific message at offset 100
-pal print -d localhost:2379 -l my-log -o 100
+pal log print -d localhost:2379 my-log -o 100
 ```
 
 ### Call Remote Methods
 
 ```bash
 # By peer name
-pal call -d localhost:2379 -p my-service \
+pal peer call -d localhost:2379 my-service \
   com.example.MyClass myMethod arg1 arg2
 
 # By peer UUID
-pal call -d localhost:2379 -p 550e8400-... \
+pal peer call -d localhost:2379 550e8400-... \
   com.example.MyClass myMethod arg1 arg2
 
 # With JSON-RPC (for non-Java clients)
@@ -578,10 +585,10 @@ curl -X POST http://localhost:8080/rpc \
 
 ```bash
 # Remove a peer from directory
-pal rm -d localhost:2379 -P my-peer-uuid
+pal peer rm -d localhost:2379 my-peer-uuid
 
 # Remove a log from directory (doesn't delete Kafka topic)
-pal rm -d localhost:2379 -L my-log
+pal log rm -d localhost:2379 my-log
 
 # Clean local Chronicle logs
 rm -rf /tmp/tutorial-wal

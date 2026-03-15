@@ -148,7 +148,7 @@ Result: WORLD
 ### Inspect the WAL
 
 ```bash
-pal print -l file:/tmp/dev-wal --compact
+pal log print file:/tmp/dev-wal --compact
 ```
 
 See all operations logged:
@@ -166,13 +166,13 @@ When developing locally with Chronicle Queue, all CLI commands support direct mo
 
 ```bash
 # Print messages from Chronicle log
-pal print -l file:/tmp/dev-wal --full
+pal log print file:/tmp/dev-wal --full
 
 # Call method and write to Chronicle log
-pal call -l file:/tmp/dev-wal com.example.HelloService processMessage "test"
+pal log call file:/tmp/dev-wal com.example.HelloService processMessage "test"
 
 # Remove Chronicle log
-pal rm -l file:/tmp/dev-wal
+pal log rm file:/tmp/dev-wal
 ```
 
 **Benefits of direct mode**:
@@ -374,7 +374,7 @@ Watch messages in real-time:
 pal run --wal file:/tmp/live-wal -cp target/classes com.example.HelloService
 
 # Terminal 2: Follow log
-pal print -l file:/tmp/live-wal -f --full
+pal log print file:/tmp/live-wal -f --full
 ```
 
 See every method call, argument, and return value.
@@ -550,7 +550,7 @@ pal run --wal file:dev-wal \
   -cp target/classes com.example.HelloService test1 test2
 
 # 5. Check results
-pal print -l file:dev-wal --compact
+pal log print file:dev-wal --compact
 
 # 6. Make changes to code
 vim src/main/java/com/example/HelloService.java
@@ -563,7 +563,7 @@ pal run --wal file:dev-wal2 \
   -cp target/classes com.example.HelloService test3
 
 # 9. Compare logs
-diff <(pal print -l file:dev-wal) <(pal print -l file:dev-wal2)
+diff <(pal log print file:dev-wal) <(pal log print file:dev-wal2)
 
 # 10. When satisfied, package
 mvn package

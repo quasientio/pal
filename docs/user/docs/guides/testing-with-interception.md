@@ -164,7 +164,7 @@ public class UserServiceTest {
     }
 
     private void callUserService(String method, Object... args) {
-        // Use pal call or ThinPeer to invoke application
+        // Use pal peer call or ThinPeer to invoke application
     }
 }
 ```

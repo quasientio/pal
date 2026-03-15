@@ -139,7 +139,7 @@ pal run -d localhost:2379 -k localhost:29092 \
 ### Verify Service Started
 
 ```bash
-$ pal ls -d localhost:2379 -P -l
+$ pal peer ls -d localhost:2379 -l
 
 UUID                                  Name        ZMQ-RPC             JSON-RPC            Uptime
 550e8400-e29b-41d4-a716-446655440000  calculator  tcp://localhost:555 ws://localhost:9001 0:00:05
@@ -153,13 +153,13 @@ Service is running and ready for calls!
 
 ```bash
 # Add 5 + 3
-$ pal call -d localhost:2379 -p calculator \
+$ pal peer call -d localhost:2379 calculator \
     com.example.calculator.CalculatorService add 5 3
 
 Result: 8
 
 # Multiply 4 * 7
-$ pal call -d localhost:2379 -p calculator \
+$ pal peer call -d localhost:2379 calculator \
     com.example.calculator.CalculatorService multiply 4 7
 
 Result: 28
@@ -170,13 +170,13 @@ Result: 28
 ```bash
 # Create calculator instance
 echo '{"jsonrpc":"2.0","id":"1","method":"new","params":{"type":"com.example.calculator.CalculatorService"}}' | \
-  pal call -d localhost:2379 -p calculator
+  pal peer call -d localhost:2379 calculator
 
 # Returns ObjectRef UUID: 660e9400-e39c-41e4-b726-556766550000
 
 # Call instance method
 echo '{"jsonrpc":"2.0","id":"2","method":"call","params":{"target":"660e9400-e39c-41e4-b726-556766550000","method":"add","args":[{"type":"int","value":10},{"type":"int","value":20}]}}' | \
-  pal call -d localhost:2379 -p calculator
+  pal peer call -d localhost:2379 calculator
 
 # Returns: 30
 ```
@@ -187,14 +187,14 @@ All operations are logged to Kafka:
 
 ```bash
 # Print calculator's WAL
-$ pal print -d localhost:2379 -l calculator-wal --compact
+$ pal log print -d localhost:2379 calculator-wal --compact
 
 offset=0 id=abc123 message=CalculatorService.add(5, 3)
 offset=1 id=abc124 message=CalculatorService.multiply(4, 7)
 offset=2 id=abc125 message=CalculatorService.add(10, 20)
 
 # Follow live (like tail -f)
-$ pal print -d localhost:2379 -l calculator-wal -f
+$ pal log print -d localhost:2379 calculator-wal -f
 
 # Waiting for new messages...
 ```
@@ -370,15 +370,15 @@ Now you have 3 calculator instances. Clients can call any of them:
 
 ```bash
 # Call calculator-1
-pal call -d localhost:2379 -p calculator-1 \
+pal peer call -d localhost:2379 calculator-1 \
   com.example.calculator.CalculatorService add 1 2
 
 # Call calculator-2
-pal call -d localhost:2379 -p calculator-2 \
+pal peer call -d localhost:2379 calculator-2 \
   com.example.calculator.CalculatorService add 3 4
 
 # Call calculator-3
-pal call -d localhost:2379 -p calculator-3 \
+pal peer call -d localhost:2379 calculator-3 \
   com.example.calculator.CalculatorService add 5 6
 ```
 
@@ -414,10 +414,10 @@ pal call -d localhost:2379 -p calculator-3 \
 
 ```bash
 # Remove peers
-pal rm -d localhost:2379 -P calculator monitor --force
+pal peer rm -d localhost:2379 calculator monitor --force
 
 # Remove logs
-pal rm -d localhost:2379 -L calculator-wal
+pal log rm -d localhost:2379 calculator-wal
 
 # Stop infrastructure
 infra/bin/stop_etcd_and_kafka_docker.sh

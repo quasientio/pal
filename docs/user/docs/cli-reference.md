@@ -4,19 +4,43 @@ PAL provides a command-line interface for managing peers, logs, and remote proce
 
 ## Overview
 
-The PAL CLI uses a subcommand structure:
+The PAL CLI uses an entity-operation command structure inspired by Docker:
 
 ```bash
-pal <subcommand> [OPTIONS] [ARGUMENTS]
+pal <entity> <operation> [OPTIONS] [ARGUMENTS]
 ```
 
-Common options across all subcommands:
+**Management Commands** (entity groups):
 
-- `-d, --dir <URL>` - PAL directory URL (etcd endpoint, e.g., `localhost:2379`)
-- `-k, --kafka-servers <host:port>` - Kafka bootstrap servers (available on `print`, `call`, and `rm` only)
-- `-h, --help` - Display help for the subcommand
+| Command | Description |
+|---------|-------------|
+| `pal peer <command>` | Manage peers |
+| `pal log <command>` | Manage logs |
+| `pal intercept <command>` | Manage intercepts |
+
+**Commands**:
+
+| Command | Description |
+|---------|-------------|
+| `pal run` | Run a new peer |
+| `pal replay` | Deterministic WAL replay |
+
+**Shortcuts** (aliases for common operations):
+
+| Shortcut | Equivalent |
+|----------|------------|
+| `pal peers` | `pal peer ls` |
+| `pal logs` | `pal log ls` |
+| `pal intercepts` | `pal intercept ls` |
+
+### Global Options
+
+- `-d, --dir <HOST:PORT>` - PAL directory URL (etcd endpoint, e.g., `localhost:2379`)
+- `-h, --help` - Display help for the command
 
 The directory URL can also be set via the `PAL_DIRECTORY` environment variable. Kafka servers can be set via the `KAFKA_SERVERS` environment variable.
+
+Run `pal COMMAND --help` or `pal COMMAND SUBCOMMAND --help` for more information on a specific command.
 
 ## Registry Mode vs Direct Mode
 
@@ -36,7 +60,7 @@ Uses the PAL directory (etcd) to look up resources by name or UUID. This is the 
 **Usage**: Specify `-d/--dir` option or set `PAL_DIRECTORY` environment variable.
 
 ```bash
-pal print -d localhost:2379 -l my-log
+pal log print -d localhost:2379 my-log
 ```
 
 ### Direct Mode (without PAL_DIRECTORY)
@@ -57,22 +81,27 @@ Directly accesses Kafka logs or Chronicle logs without using the PAL directory. 
 
 ```bash
 # Chronicle log (local file)
-pal print -l file:/tmp/my-log
+pal log print file:/tmp/my-log
 
 # Kafka log (specify servers)
-pal print -k localhost:29092 -l my-log
+pal log print -k localhost:29092 my-log
 ```
 
 ### Command Support
 
 | Command | Registry Mode | Direct Mode | Notes |
 |---------|--------------|-------------|-------|
-| `pal ls` | ✓ | ✗ | Requires directory (purpose is to list directory) |
-| `pal print` | ✓ | ✓ | Both Chronicle and Kafka |
-| `pal call` | ✓ | ✓ | Both Chronicle and Kafka |
-| `pal rm` | ✓ | ✓ | Both Chronicle and Kafka |
+| `pal peer ls` | ✓ | ✗ | Requires directory |
+| `pal log ls` | ✓ | ✗ | Requires directory |
+| `pal intercept ls` | ✓ | ✗ | Requires directory |
+| `pal log print` | ✓ | ✓ | Both Chronicle and Kafka |
+| `pal peer print` | ✗ | ✓ | Direct peer connection |
+| `pal peer call` | ✓ | ✓ | By name, UUID, or address |
+| `pal log call` | ✓ | ✓ | Both Chronicle and Kafka |
+| `pal peer rm` | ✓ | ✗ | Requires directory |
+| `pal log rm` | ✓ | ✓ | Both Chronicle and Kafka |
 | `pal replay` | ✓ | ✓ | Both Chronicle and Kafka |
-| `pal wal-index` | ✓ | ✓ | Both Chronicle and Kafka |
+| `pal log index` | ✓ | ✓ | Both Chronicle and Kafka |
 
 ## pal run - WAL Options
 
@@ -174,70 +203,45 @@ pal run -k localhost:29092 --source-log input-topic --wal output-topic \
 
 ---
 
-## pal ls - List Peers, Logs, and Intercepts
+## pal peer ls - List Peers
 
-List registered peers, logs, and intercepts in the directory.
+List registered peers in the directory.
+
+**Alias**: `pal peers`
 
 ### Synopsis
 
 ```bash
-pal ls [OPTIONS]
+pal peer ls [OPTIONS]
 ```
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `-P, --peers` | List only peers |
-| `-L, --logs` | List only logs |
-| `-I, --intercepts` | List only intercepts |
 | `-l, --long` | Use long listing format with detailed information |
-| `-S, --sort-by-size` | Sort logs by size, largest first |
 | `-c, --sort-by-ctime` | Sort by creation/uptime, newest first |
 | `-r, --reverse` | Reverse the sorting order |
 | `--no-trim` | Disable trimming of long field values |
 
-### Behavior
-
-- **No flags**: Lists both peers and logs (intercepts require explicit `-I`)
-- **Filter flags** (`-P`, `-L`, `-I`): Are mutually exclusive; use only one at a time
-- **Short format**: Shows names (or UUIDs if no name is set)
-- **Long format** (`-l`): Shows detailed information including UUIDs, endpoints, sizes, offsets, and timestamps
-
 ### Examples
 
 ```bash
-# List all peers and logs
-pal ls -d localhost:2379
-
-# List only running peers (short format shows name or UUID)
-pal ls -d localhost:2379 -P
+# List running peers
+pal peer ls -d localhost:2379
 
 # List peers with detailed information
-pal ls -d localhost:2379 -P -l
+pal peer ls -d localhost:2379 -l
 
-# List logs sorted by creation time (newest first)
-pal ls -d localhost:2379 -L -c
+# List peers sorted by uptime (newest first)
+pal peer ls -d localhost:2379 -c
 
-# List logs sorted by size (largest first) in long format
-pal ls -d localhost:2379 -L -S -l
-
-# List logs sorted by size (smallest first)
-pal ls -d localhost:2379 -L -S -r
-
-# List all registered intercepts
-pal ls -d localhost:2379 -I
-
-# List intercepts with detailed information
-pal ls -d localhost:2379 -I -l
-
-# List intercepts sorted by creation time (newest first)
-pal ls -d localhost:2379 -I -c -l
+# Using the alias
+pal peers -d localhost:2379
 ```
 
 ### Long Format Output
 
-**Peers** (`-P -l`):
 ```
 UUID                                 Name            ZMQ-RPC              JSON-RPC             PUB                  JMX                  Uptime
 ```
@@ -250,7 +254,54 @@ UUID                                 Name            ZMQ-RPC              JSON-R
 - JMX: JMX monitoring endpoint
 - Uptime: Time since peer started (H:mm:ss format)
 
-**Logs** (`-L -l`):
+---
+
+## pal log ls - List Logs
+
+List registered logs in the directory.
+
+**Alias**: `pal logs`
+
+### Synopsis
+
+```bash
+pal log ls [OPTIONS]
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-l, --long` | Use long listing format with detailed information |
+| `-S, --sort-by-size` | Sort logs by size, largest first |
+| `-c, --sort-by-ctime` | Sort by creation time, newest first |
+| `-r, --reverse` | Reverse the sorting order |
+| `--no-trim` | Disable trimming of long field values |
+
+### Examples
+
+```bash
+# List all logs
+pal log ls -d localhost:2379
+
+# List logs with detailed information
+pal log ls -d localhost:2379 -l
+
+# List logs sorted by size (largest first) in long format
+pal log ls -d localhost:2379 -S -l
+
+# List logs sorted by size (smallest first)
+pal log ls -d localhost:2379 -S -r
+
+# List logs sorted by creation time (newest first)
+pal log ls -d localhost:2379 -c
+
+# Using the alias
+pal logs -d localhost:2379 -l
+```
+
+### Long Format Output
+
 ```
 Name                 UUID                                 Size       Start    --> End      Created
 ```
@@ -262,7 +313,47 @@ Name                 UUID                                 Size       Start    --
 - End: Last available offset/index
 - Created: Creation timestamp (MMM dd HH:mm format)
 
-**Intercepts** (`-I -l`):
+---
+
+## pal intercept ls - List Intercepts
+
+List registered intercepts in the directory.
+
+**Alias**: `pal intercepts`
+
+### Synopsis
+
+```bash
+pal intercept ls [OPTIONS]
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-l, --long` | Use long listing format with detailed information |
+| `-c, --sort-by-ctime` | Sort by creation time, newest first |
+| `-r, --reverse` | Reverse the sorting order |
+| `--no-trim` | Disable trimming of long field values |
+
+### Examples
+
+```bash
+# List all registered intercepts
+pal intercept ls -d localhost:2379
+
+# List intercepts with detailed information
+pal intercept ls -d localhost:2379 -l
+
+# List intercepts sorted by creation time (newest first)
+pal intercept ls -d localhost:2379 -c -l
+
+# Using the alias
+pal intercepts -d localhost:2379 -l
+```
+
+### Long Format Output
+
 ```
 UUID                                 Peer                                 Type         Class                          Target                    Callback                       TTL      Created
 ```
@@ -276,7 +367,7 @@ UUID                                 Peer                                 Type  
 - TTL: Time-to-live in seconds (e.g., `300s`), or `-` if the intercept has no dedicated TTL
 - Created: Creation timestamp (MMM dd HH:mm format)
 
-### Notes
+### Notes (ls commands)
 
 - Lists both Kafka and Chronicle logs
 - Chronicle logs use `file:` prefix in the directory but are displayed without it
@@ -286,41 +377,39 @@ UUID                                 Peer                                 Type  
 
 ---
 
-## pal print - Print Messages from Logs
+## pal log print - Print Messages from a Log
 
-Print and stream messages from Kafka/Chronicle logs or subscribe to peer message streams.
+Print and stream messages from Kafka or Chronicle logs.
 
 ### Synopsis
 
 ```bash
-# Print from log
-pal print -l <LOG_NAME> [OPTIONS]
-
-# Subscribe to peer
-pal print -pu <PEER_UUID> [OPTIONS]
-pal print -pa <HOST:PORT> [OPTIONS]
+pal log print [OPTIONS] LOG
 ```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `LOG` | Log name, UUID, or `file:` path |
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `-l, --log <name\|uuid\|path>` | Read messages from the specified log (name/UUID for registry mode, `file:path` for Chronicle direct mode, topic name for Kafka direct mode) |
 | `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
-| `-pu, --peer-uuid <uuid>` | Subscribe to peer by UUID |
-| `-pa, --peer-address <HOST:PORT>` | Subscribe to peer by address |
-| `-o, --offset <number>` | Print message at specific offset and exit |
+| `-o, --offset <number>` | Print message at specific offset. Combine with `-f` to wait for a future offset |
 | `-f, --follow` | Follow new messages (like `tail -f`) |
+| `--with-return` | Also print the return value or exception for the message at `--offset` |
 | `--compact` | Compact output format (default) |
 | `--json` | JSON output format |
 | `--full` | Full output format with all details |
 | `--tree` | Tree output format showing operation nesting |
-| `--with-return` | Also print the return value or exception for the message at `--offset` |
 | `--filter <key=value>` | Filter messages by pattern (repeatable; `class=` and `method=` supported) |
 | `--formats <list>` | Filter by message format: `BINARY`, `JSON` (comma-separated) |
-| `--types <list>` | Filter by message type (comma-separated, see below) |
-| `-fp, --from-peer <uuid>` | Filter by peer UUID |
-| `-ft, --from-thread <name>` | Filter by thread name |
+| `-t, --types <list>` | Filter by message type (comma-separated, see below) |
+| `--from-peer <uuid>` | Filter by peer UUID |
+| `--from-thread <name>` | Filter by thread name |
 | `--id <id>` | Filter by message ID |
 | `-v` | Verbose output with diagnostic information |
 
@@ -376,104 +465,136 @@ offset: 42,
 
 ### Examples
 
-#### Reading from Logs (Registry Mode)
+#### Registry Mode
 
 ```bash
 # Print all messages from a Kafka log in compact format
-pal print -d localhost:2379 -l my-wal-log
+pal log print -d localhost:2379 my-wal-log
 
 # Print messages from a Chronicle log in full format
-pal print -d localhost:2379 -l my-chronicle-log --full
+pal log print -d localhost:2379 my-chronicle-log --full
 
 # Print message at specific offset
-pal print -d localhost:2379 -l my-log -o 100
+pal log print -d localhost:2379 my-log -o 100
 
 # Wait for and print message at future offset (follow mode)
-pal print -d localhost:2379 -l my-log -o 999 -f
+pal log print -d localhost:2379 my-log -o 999 -f
 
 # Follow new messages (like tail -f)
-pal print -d localhost:2379 -l my-log -f
+pal log print -d localhost:2379 my-log -f
 
 # Print only method call messages
-pal print -d localhost:2379 -l my-log --types CLASS_METHOD,INSTANCE_METHOD
+pal log print -d localhost:2379 my-log -t CLASS_METHOD,INSTANCE_METHOD
 
 # Print messages in JSON format
-pal print -d localhost:2379 -l my-log --json
+pal log print -d localhost:2379 my-log --json
 
 # Print messages from specific peer
-pal print -d localhost:2379 -l my-log -fp <peer-uuid>
+pal log print -d localhost:2379 my-log --from-peer <peer-uuid>
 
 # Verbose output with diagnostics
-pal print -d localhost:2379 -l my-log -v
+pal log print -d localhost:2379 my-log -v
 
 # Print messages as an indented operation tree
-pal print -d localhost:2379 -l my-log --tree
+pal log print -d localhost:2379 my-log --tree
 
 # Print a specific operation and its return value
-pal print -d localhost:2379 -l my-log -o 42 --with-return
+pal log print -d localhost:2379 my-log -o 42 --with-return
 
 # Print a specific operation and its return value in full format
-pal print -d localhost:2379 -l my-log -o 42 --with-return --full
+pal log print -d localhost:2379 my-log -o 42 --with-return --full
 
 # Filter messages by class name (substring match)
-pal print -d localhost:2379 -l my-log --filter "class=OrderService"
+pal log print -d localhost:2379 my-log --filter "class=OrderService"
 
 # Filter messages by method name
-pal print -d localhost:2379 -l my-log --filter "method=processOrder"
+pal log print -d localhost:2379 my-log --filter "method=processOrder"
 
 # Combine multiple filters (AND logic)
-pal print -d localhost:2379 -l my-log --filter "class=OrderService" --filter "method=process"
+pal log print -d localhost:2379 my-log --filter "class=OrderService" --filter "method=process"
 ```
 
-#### Reading from Logs (Direct Mode)
+#### Direct Mode
 
 ```bash
 # Print from Chronicle log (absolute path)
-pal print -l file:/tmp/my-chronicle-log --full
+pal log print file:/tmp/my-chronicle-log --full
 
 # Print from Chronicle log (relative path)
-pal print -l file:./logs/my-log
+pal log print file:./logs/my-log
 
 # Print from Kafka log (direct, with -k option)
-pal print -k localhost:29092 -l my-kafka-topic
+pal log print -k localhost:29092 my-kafka-topic
 
 # Print from Kafka log (using KAFKA_SERVERS environment variable)
 export KAFKA_SERVERS=localhost:29092
-pal print -l my-kafka-topic
+pal log print my-kafka-topic
 
 # Follow new messages from Chronicle log
-pal print -l file:/tmp/my-log -f
+pal log print file:/tmp/my-log -f
 
 # Print message at specific offset from Chronicle log
-pal print -l file:/tmp/my-log -o 100
+pal log print file:/tmp/my-log -o 100
 
 # Combine direct mode with filters
-pal print -k localhost:29092 -l my-topic --types CLASS_METHOD -f
+pal log print -k localhost:29092 my-topic -t CLASS_METHOD -f
 
 # Tree view from Chronicle log
-pal print -l file:/tmp/my-log --tree
+pal log print file:/tmp/my-log --tree
 
 # Operation with return value from Chronicle log
-pal print -l file:/tmp/my-log -o 0 --with-return
+pal log print file:/tmp/my-log -o 0 --with-return
 
 # Filter by class from Kafka log
-pal print -k localhost:29092 -l my-topic --filter "class=OrderService"
+pal log print -k localhost:29092 my-topic --filter "class=OrderService"
 ```
 
-#### Subscribing to Peers
+---
+
+## pal peer print - Print Messages from a Peer
+
+Subscribe to a peer's message stream and print messages in real-time.
+
+### Synopsis
+
+```bash
+pal peer print [OPTIONS] PEER
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `PEER` | Peer UUID or address (tcp:// or ws://) |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--compact` | Compact output format (default) |
+| `--json` | JSON output format |
+| `--full` | Full output format with all details |
+| `--tree` | Tree output format showing operation nesting |
+| `-t, --types <list>` | Filter by message type (comma-separated) |
+| `--from-peer <uuid>` | Filter by peer UUID |
+| `--from-thread <name>` | Filter by thread name |
+| `--id <id>` | Filter by message ID |
+| `-v` | Verbose output |
+
+### Examples
 
 ```bash
 # Subscribe to peer by UUID
-pal print -d localhost:2379 -pu <peer-uuid>
+pal peer print -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
 
 # Subscribe to peer by address
-pal print -pa tcp://localhost:5555
+pal peer print tcp://localhost:5555
 
 # Subscribe with message type filter
-pal print -d localhost:2379 -pu <peer-uuid> --types CLASS_METHOD
+pal peer print -d localhost:2379 550e8400-e29b... -t CLASS_METHOD
 ```
 
-### Notes
+### Notes (print commands)
 
 - **Offset behavior**:
   - For Kafka logs: offset refers to Kafka partition offset
@@ -489,38 +610,34 @@ pal print -d localhost:2379 -pu <peer-uuid> --types CLASS_METHOD
 
 ---
 
-## pal call - Send Messages to Peers or Logs
+## pal peer call - Send RPC Calls to a Peer
 
-Invoke methods on remote peers or write messages to logs using RPC.
+Invoke methods on a remote peer via RPC.
 
 ### Synopsis
 
 ```bash
-# CLI mode: Call static method with String[] parameter
-pal call [OPTIONS] -p <PEER> [-m <METHOD>] <CLASS> [args...]
-
-# JSON-RPC stdin mode: Send arbitrary JSON-RPC requests
-echo '<JSON_RPC_REQUEST>' | pal call [OPTIONS] -p <PEER_ADDRESS>
-
-# Write to log
-pal call [OPTIONS] -l <LOG_NAME> <CLASS> <METHOD> [args...]
+pal peer call [OPTIONS] PEER [class args...]
 ```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `PEER` | Peer UUID, address (tcp:// or ws://), or name |
+| `class` | Fully qualified class name |
+| `args...` | Arguments passed to the method |
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `-p, --to-peer <uuid\|HOST:PORT\|name>` | Target peer by UUID, RPC address, or name |
-| `-l, --log <name\|path>` | Read from and write to the same log (name for registry mode, `file:path` for Chronicle, topic name for Kafka) |
-| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
-| `-i, --input-log <name>` | Read responses from this log |
-| `-o, --output-log <name>` | Write requests to this log |
-| `-r, --rpc-type <type>` | RPC type: `ZMQ_RPC` or `JSON_RPC` |
+| `-r, --rpc-type <ZMQ_RPC\|JSON_RPC>` | RPC type to use |
 | `-m, --method <name>` | Method name to call (default: `main`) |
-| `-f, --forget-response` | Send without waiting for response (async) |
 | `-a, --add-ids` | Auto-generate missing JSON-RPC request IDs |
 | `--print-responses <bool>` | Print response messages (default: `true`) |
 | `-t, --num-threads <N>` | Number of parallel clients (default: `1`) |
+| `--thread-affinity <affinity>` | Thread affinity hint for the target peer |
 | `-v` | Verbose output |
 
 ### Invocation Modes
@@ -537,13 +654,13 @@ Invokes static methods with `String[]` signature using command-line arguments.
 
 ```bash
 # Call main method (default)
-pal call -d localhost:2379 -p my-peer com.example.MyClass arg1 arg2
+pal peer call -d localhost:2379 my-peer com.example.MyClass arg1 arg2
 
 # Call specific method
-pal call -d localhost:2379 -p my-peer -m processArgs com.example.MyClass arg1 arg2
+pal peer call -d localhost:2379 my-peer -m processArgs com.example.MyClass arg1 arg2
 
 # Explicit RPC type
-pal call -d localhost:2379 -p my-peer --rpc-type ZMQ_RPC com.example.MyClass
+pal peer call -d localhost:2379 my-peer -r ZMQ_RPC com.example.MyClass
 ```
 
 #### 2. JSON-RPC Stdin Mode
@@ -578,44 +695,17 @@ Sends arbitrary JSON-RPC requests via stdin for full flexibility.
 #### Basic Method Invocation
 
 ```bash
-# Call main method on peer
-pal call -d localhost:2379 -p my-peer com.example.App arg1 arg2
+# Call main method on peer by name
+pal peer call -d localhost:2379 my-peer com.example.App arg1 arg2
 
 # Call non-main method
-pal call -d localhost:2379 -p my-peer -m processData com.example.Processor data1 data2
+pal peer call -d localhost:2379 my-peer -m processData com.example.Processor data1 data2
 
 # Call using peer address instead of name
-pal call -p tcp://localhost:5001 com.example.App
+pal peer call tcp://localhost:5001 com.example.App
 
 # Call using JSON-RPC endpoint
-pal call -p ws://localhost:9001 com.example.App
-```
-
-#### Writing to Logs (Registry Mode)
-
-```bash
-# Write method call to log (async, no response)
-pal call -d localhost:2379 -l my-log --forget-response com.example.Worker process
-
-# Write to output log, read response from input log
-pal call -d localhost:2379 -i input-log -o output-log com.example.App
-```
-
-#### Writing to Logs (Direct Mode)
-
-```bash
-# Write to Chronicle log (no PAL directory needed)
-pal call -l file:/tmp/my-log --forget-response com.example.Worker process
-
-# Write to Chronicle log (relative path)
-pal call -l file:./logs/my-log com.example.App
-
-# Write to Kafka log (with -k option)
-pal call -k localhost:29092 -l my-topic --forget-response com.example.App
-
-# Write to Kafka log (using KAFKA_SERVERS environment variable)
-export KAFKA_SERVERS=localhost:29092
-pal call -l my-kafka-topic com.example.Processor data1 data2
+pal peer call ws://localhost:9001 com.example.App
 ```
 
 #### JSON-RPC via Stdin
@@ -623,94 +713,235 @@ pal call -l my-kafka-topic com.example.Processor data1 data2
 ```bash
 # Call method with custom signature
 echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Math","method":"add","args":[{"type":"int","value":5},{"type":"int","value":3}]}}' | \
-  pal call -d localhost:2379 -p ws://localhost:9001
+  pal peer call -d localhost:2379 ws://localhost:9001
 
 # Construct object
 echo '{"jsonrpc":"2.0","id":"1","method":"new","params":{"type":"com.example.User"}}' | \
-  pal call -d localhost:2379 -p ws://localhost:9001
+  pal peer call -d localhost:2379 ws://localhost:9001
 
 # Get static field
 echo '{"jsonrpc":"2.0","id":"1","method":"get","params":{"type":"com.example.Config","field":"VERSION"}}' | \
-  pal call -d localhost:2379 -p ws://localhost:9001
+  pal peer call -d localhost:2379 ws://localhost:9001
 
 # Set static field
 echo '{"jsonrpc":"2.0","id":"1","method":"put","params":{"type":"com.example.Config","field":"debugMode","value":true}}' | \
-  pal call -d localhost:2379 -p ws://localhost:9001
+  pal peer call -d localhost:2379 ws://localhost:9001
 
 # Multiple requests (one per line)
-cat <<EOF | pal call -d localhost:2379 -p ws://localhost:9001
+cat <<EOF | pal peer call -d localhost:2379 ws://localhost:9001
 {"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Math","method":"add","args":[{"type":"int","value":5},{"type":"int","value":3}]}}
 {"jsonrpc":"2.0","id":"2","method":"call","params":{"type":"com.example.Math","method":"multiply","args":[{"type":"int","value":5},{"type":"int","value":3}]}}
 EOF
 
 # Auto-generate missing IDs
-cat requests.jsonl | pal call -d localhost:2379 -p ws://localhost:9001 --add-ids
+cat requests.jsonl | pal peer call -d localhost:2379 ws://localhost:9001 -a
 ```
 
 #### Performance Testing
 
 ```bash
 # Single-threaded call
-pal call -d localhost:2379 -p my-peer com.example.Benchmark
+pal peer call -d localhost:2379 my-peer com.example.Benchmark
 
 # Multi-threaded calls (10 parallel clients)
-pal call -d localhost:2379 -p my-peer -t 10 com.example.Benchmark
-```
-
-#### Async Operations
-
-```bash
-# Fire and forget (write to log, don't wait for response)
-pal call -d localhost:2379 -l events --forget-response com.example.Logger logEvent
-
-# Useful for void methods or event notifications
-pal call -d localhost:2379 -l notifications -f com.example.Notifier send "Alert!"
+pal peer call -d localhost:2379 my-peer -t 10 com.example.Benchmark
 ```
 
 ### RPC Type Selection
 
 The tool automatically infers RPC type based on:
 
-1. Explicit `--rpc-type` option
+1. Explicit `-r/--rpc-type` option
 2. Peer address scheme:
    - `tcp://` → `ZMQ_RPC`
    - `ws://` → `JSON_RPC`
 3. Peer's registered endpoints in directory
 
-If a peer supports both RPC types, you must specify `--rpc-type` explicitly.
-
-### Notes
-
-- **CLI mode limitations**: Only works with `static void methodName(String[] args)` signature
-- **JSON-RPC flexibility**: Use stdin mode for arbitrary method signatures, constructors, and field access
-- **Peer resolution**: Can specify peer by UUID, name, or direct RPC address
-- **Async writes**: `--forget-response` only works with logs, not direct peer communication
-- **Response printing**: Use `--print-responses false` to suppress output for performance testing
-- **Multi-threading**: Each thread creates its own ThinPeer client instance
+If a peer supports both RPC types, you must specify `-r` explicitly.
 
 ---
 
-## pal rm - Remove Peers or Logs
+## pal log call - Send Method Calls via a Log
 
-Remove peers or logs from the directory and delete their backing storage.
+Write method call messages to a log (Kafka or Chronicle).
 
 ### Synopsis
 
 ```bash
-pal rm [OPTIONS] -P <PEER...>  # Remove peers
-pal rm [OPTIONS] -L <LOG...>   # Remove logs
+pal log call [OPTIONS] [LOG] [class args...]
 ```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `LOG` | Log name, topic, or `file:/path` |
+| `class` | Fully qualified class name |
+| `args...` | Arguments passed to the method |
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| `-P, --delete-peers` | Delete peers |
-| `-L, --delete-logs` | Delete logs |
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
+| `-i, --input-log <name>` | Read responses from this log |
+| `-o, --output-log <name>` | Write requests to this log |
+| `-f, --forget-response` | Send without waiting for response (async) |
+| `-m, --method <name>` | Method name to call (default: `main`) |
+| `--print-responses <bool>` | Print response messages (default: `true`) |
+| `-t, --num-threads <N>` | Number of parallel clients (default: `1`) |
+| `-v` | Verbose output |
+
+### Examples
+
+#### Registry Mode
+
+```bash
+# Write method call to log (async, no response)
+pal log call -d localhost:2379 my-log -f com.example.Worker process
+
+# Write to output log, read response from input log
+pal log call -d localhost:2379 -i input-log -o output-log com.example.App
+```
+
+#### Direct Mode
+
+```bash
+# Write to Chronicle log (no PAL directory needed)
+pal log call file:/tmp/my-log -f com.example.Worker process
+
+# Write to Chronicle log (relative path)
+pal log call file:./logs/my-log com.example.App
+
+# Write to Kafka log (with -k option)
+pal log call -k localhost:29092 my-topic -f com.example.App
+
+# Write to Kafka log (using KAFKA_SERVERS environment variable)
+export KAFKA_SERVERS=localhost:29092
+pal log call my-kafka-topic com.example.Processor data1 data2
+```
+
+### Notes (call commands)
+
+- **CLI mode limitations**: Only works with `static void methodName(String[] args)` signature
+- **JSON-RPC flexibility**: Use stdin mode with `pal peer call` for arbitrary method signatures, constructors, and field access
+- **Peer resolution**: Can specify peer by UUID, name, or direct RPC address
+- **Async writes**: `--forget-response` only works with log calls
+- **Response printing**: Use `--print-responses false` to suppress output for performance testing
+- **Multi-threading**: Each thread creates its own client instance
+
+---
+
+## pal peer rm - Remove Peers
+
+Remove peers from the directory.
+
+### Synopsis
+
+```bash
+pal peer rm [OPTIONS] [PEER...]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `PEER` | Peer names or UUIDs to remove |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-s, --starting-with` | Treat arguments as prefixes (delete all matching) |
+| `-a, --all` | Delete all peers |
+| `-f, --force` | Skip confirmation prompts and force removal of alive peers |
+
+### Examples
+
+```bash
+# Remove peer by name
+pal peer rm -d localhost:2379 my-peer
+
+# Remove peer by UUID
+pal peer rm -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
+
+# Remove multiple peers
+pal peer rm -d localhost:2379 peer-alpha peer-beta peer-gamma
+
+# Remove all peers with prefix
+pal peer rm -d localhost:2379 -s test-peer
+
+# Force remove live peer
+pal peer rm -d localhost:2379 my-running-peer --force
+```
+
+---
+
+## pal log rm - Remove Logs
+
+Remove logs from the directory and their backing storage.
+
+### Synopsis
+
+```bash
+pal log rm [OPTIONS] [LOG...]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `LOG` | Log names, UUIDs, or `file:` paths to remove |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
 | `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
 | `-s, --starting-with` | Treat arguments as prefixes (delete all matching) |
-| `-a, --all` | Delete all peers or logs |
-| `-f, --force` | Skip confirmation prompts and remove live peers |
+| `-a, --all` | Delete all logs |
+| `-f, --force` | Skip confirmation prompts |
+
+### Examples
+
+#### Registry Mode
+
+```bash
+# Remove single log by name
+pal log rm -d localhost:2379 my-old-log
+
+# Remove log by UUID
+pal log rm -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
+
+# Remove multiple logs
+pal log rm -d localhost:2379 log1 log2 log3
+
+# Remove all logs with prefix
+pal log rm -d localhost:2379 -s test-log
+
+# Remove all logs (dangerous!)
+pal log rm -d localhost:2379 -a --force
+```
+
+#### Direct Mode
+
+```bash
+# Remove Chronicle log (no PAL directory needed)
+pal log rm file:/tmp/my-chronicle-log
+
+# Remove Chronicle log (relative path)
+pal log rm file:./logs/old-log
+
+# Remove Kafka log (with -k option)
+pal log rm -k localhost:29092 my-kafka-topic
+
+# Remove Kafka log (using KAFKA_SERVERS environment variable)
+export KAFKA_SERVERS=localhost:29092
+pal log rm my-old-topic
+
+# Note: Direct mode removes from backing store only
+# If log was registered in PAL directory, use registry mode to fully clean up
+```
 
 ### Safety Features
 
@@ -718,100 +949,7 @@ pal rm [OPTIONS] -L <LOG...>   # Remove logs
 - **Confirmation prompts**: Asks before deleting multiple items (unless `--force`)
 - **Error reporting**: Returns count of errors encountered
 
-### Behavior
-
-**Logs**:
-
-- Unregisters from directory
-- Deletes Kafka topic (for Kafka logs)
-- Deletes Chronicle queue files (for Chronicle logs)
-
-**Peers**:
-
-- Checks for active lease (is peer alive?)
-- Unregisters from directory
-- Requires `--force` to remove live peers
-
-### Examples
-
-#### Removing Logs (Registry Mode)
-
-```bash
-# Remove single log by name
-pal rm -d localhost:2379 -L my-old-log
-
-# Remove log by UUID
-pal rm -d localhost:2379 -L 550e8400-e29b-41d4-a716-446655440000
-
-# Remove multiple logs
-pal rm -d localhost:2379 -L log1 log2 log3
-
-# Remove all logs with prefix
-pal rm -d localhost:2379 -L -s test-log
-
-# Remove all logs (dangerous!)
-pal rm -d localhost:2379 -L -a --force
-```
-
-#### Removing Logs (Direct Mode)
-
-```bash
-# Remove Chronicle log (no PAL directory needed)
-pal rm -l file:/tmp/my-chronicle-log
-
-# Remove Chronicle log (relative path)
-pal rm -l file:./logs/old-log
-
-# Remove Kafka log (with -k option)
-pal rm -k localhost:29092 -l my-kafka-topic
-
-# Remove Kafka log (using KAFKA_SERVERS environment variable)
-export KAFKA_SERVERS=localhost:29092
-pal rm -l my-old-topic
-
-# Note: Direct mode removes from backing store only
-# If log was registered in PAL directory, use registry mode to fully clean up
-```
-
-#### Removing Peers
-
-```bash
-# Remove peer by UUID
-pal rm -d localhost:2379 -P 550e8400-e29b-41d4-a716-446655440000
-
-# Remove peer by name
-pal rm -d localhost:2379 -P my-peer
-
-# Remove all peers with prefix
-pal rm -d localhost:2379 -P -s test-peer
-
-# Force remove live peer
-pal rm -d localhost:2379 -P my-running-peer --force
-```
-
-#### Batch Operations
-
-```bash
-# Remove all test logs (skipping confirmation)
-pal rm -d localhost:2379 -L -s test- --force
-
-# Remove multiple specific peers
-pal rm -d localhost:2379 -P peer-alpha peer-beta peer-gamma
-```
-
-### Confirmation Prompts
-
-When removing multiple items without `--force`, you'll be prompted:
-
-```
-There are 5 logs with UUID '...'. Delete all? (y/n):
-```
-
-```
-Cannot remove peer my-peer (uuid): peer is alive (has active lease). Use --force to remove anyway.
-```
-
-### Notes
+### Notes (rm commands)
 
 - **Chronicle logs**: Deletion removes queue directory and all files
 - **Kafka logs**: Deletion removes topic from Kafka cluster
@@ -1029,16 +1167,16 @@ pal replay --wal file:/tmp/my-wal --policy policy.yaml --force-stub \
 
 ---
 
-## pal wal-index - Analyze WAL Structure
+## pal log index - Analyze WAL Structure
 
 Index a WAL and print a structural summary: entry counts, operation/completion pairing, threads, and any structural issues (orphaned or unmatched entries).
 
 ### Synopsis
 
 ```bash
-pal wal-index [OPTIONS] file:/path             # Chronicle Queue
-pal wal-index -k <servers> [OPTIONS] <topic>   # Kafka
-pal wal-index -d <url> [OPTIONS] <name>        # PalDirectory
+pal log index [OPTIONS] file:/path             # Chronicle Queue
+pal log index -k <servers> [OPTIONS] <topic>   # Kafka
+pal log index -d <url> [OPTIONS] <name>        # PalDirectory
 ```
 
 ### Options
@@ -1093,22 +1231,101 @@ For multi-threaded WALs recorded with `--wal-incoming-rpc`, entry-point operatio
 
 ```bash
 # Analyze a Chronicle WAL
-pal wal-index file:/tmp/my-wal
+pal log index file:/tmp/my-wal
 
 # Analyze with per-entry detail
-pal wal-index --verbose file:/tmp/my-wal
+pal log index --verbose file:/tmp/my-wal
 
 # Analyze a Kafka WAL
-pal wal-index -k localhost:29092 my-topic
+pal log index -k localhost:29092 my-topic
 
 # Analyze via PAL directory
-pal wal-index -d localhost:2379 my-log-name
+pal log index -d localhost:2379 my-log-name
 ```
 
 ### Notes
 
 - A balanced WAL has equal Operations and Completions counts and zero Issues. Imbalances indicate the application was interrupted mid-execution or the WAL was truncated.
 - This command is useful for verifying a WAL before replay, and for understanding the structure of recorded executions.
+
+---
+
+## pal log stats - Show Log Message Statistics
+
+Display message statistics for a log.
+
+### Synopsis
+
+```bash
+pal log stats [OPTIONS] [LOG_NAME]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `LOG_NAME` | Log name |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-b, --bootstrap-servers <host:port>` | Kafka bootstrap servers (default: `localhost:9092`) |
+| `-t, --types <list>` | Filter by message type(s) |
+| `-fp, --from-peer <uuid>` | Filter by peer UUID |
+| `-ft, --from-thread <name>` | Filter by thread name |
+| `-j, --json-output` | Print stats as JSON |
+| `-v` | Verbose output |
+
+### Examples
+
+```bash
+# Show stats for a log
+pal log stats -b localhost:29092 my-wal
+
+# Show stats as JSON
+pal log stats -b localhost:29092 my-wal -j
+
+# Filter by message type
+pal log stats -b localhost:29092 my-wal -t INSTANCE_METHOD,CLASS_METHOD
+```
+
+---
+
+## pal peer stats - Show Peer Message Statistics
+
+Display message statistics for a peer's message stream.
+
+### Synopsis
+
+```bash
+pal peer stats [OPTIONS] [PEER]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `PEER` | Peer UUID or address |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-t, --types <list>` | Filter by message type(s) |
+| `-fp, --from-peer <uuid>` | Filter by peer UUID |
+| `-ft, --from-thread <name>` | Filter by thread name |
+| `-j, --json-output` | Print stats as JSON |
+
+### Examples
+
+```bash
+# Show stats for a peer
+pal peer stats -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
+
+# Show stats as JSON
+pal peer stats -d localhost:2379 my-peer -j
+```
 
 ---
 
@@ -1121,17 +1338,17 @@ pal wal-index -d localhost:2379 my-log-name
 pal run -d localhost:2379 -k localhost:29092 -n dev-peer --zmq-rpc auto -cp target/classes
 
 # List running peers
-pal ls -d localhost:2379 -P
+pal peer ls -d localhost:2379
 
 # Call method on dev peer
-pal call -d localhost:2379 -p dev-peer com.example.TestApp
+pal peer call -d localhost:2379 dev-peer com.example.TestApp
 
 # View peer's WAL
-pal print -d localhost:2379 -l dev-peer-wal -f
+pal log print -d localhost:2379 dev-peer-wal -f
 
 # Cleanup when done
-pal rm -d localhost:2379 -P dev-peer --force
-pal rm -d localhost:2379 -L dev-peer-wal
+pal peer rm -d localhost:2379 dev-peer --force
+pal log rm -d localhost:2379 dev-peer-wal
 ```
 
 ### Testing and Debugging
@@ -1141,42 +1358,42 @@ pal rm -d localhost:2379 -L dev-peer-wal
 pal run -d localhost:2379 -k localhost:29092 --wal test-run -cp target/test-classes com.example.MyTest
 
 # Replay and analyze
-pal print -d localhost:2379 -l test-run --full --types CLASS_METHOD
+pal log print -d localhost:2379 test-run --full -t CLASS_METHOD
 
 # View call tree
-pal print -d localhost:2379 -l test-run --tree
+pal log print -d localhost:2379 test-run --tree
 
 # Print specific message and its return value
-pal print -d localhost:2379 -l test-run -o 42 --with-return
+pal log print -d localhost:2379 test-run -o 42 --with-return
 
 # Filter to specific class
-pal print -d localhost:2379 -l test-run --filter "class=OrderService"
+pal log print -d localhost:2379 test-run --filter "class=OrderService"
 
 # Cleanup test artifacts
-pal rm -d localhost:2379 -L -s test- --force
+pal log rm -d localhost:2379 -s test- --force
 ```
 
 ### Distributed System Monitoring
 
 ```bash
 # List all active peers in cluster
-pal ls -d etcd.prod.example.com:2379 -P -l
+pal peer ls -d etcd.prod.example.com:2379 -l
 
 # Monitor specific peer's output
-pal print -d etcd.prod.example.com:2379 -pu <peer-uuid> -f
+pal peer print -d etcd.prod.example.com:2379 <peer-uuid>
 
 # View shared log for debugging
-pal print -d etcd.prod.example.com:2379 -l shared-events -f --types THROWABLE
+pal log print -d etcd.prod.example.com:2379 shared-events -f -t THROWABLE
 ```
 
 ### Performance Analysis
 
 ```bash
 # Benchmark with multiple threads
-pal call -d localhost:2379 -p bench-peer -t 10 com.example.Benchmark -v
+pal peer call -d localhost:2379 bench-peer -t 10 com.example.Benchmark -v
 
 # Analyze log for performance metrics
-pal print -d localhost:2379 -l bench-wal --compact | grep -E "method=process"
+pal log print -d localhost:2379 bench-wal --compact | grep -E "method=process"
 ```
 
 ---
@@ -1196,7 +1413,7 @@ pal print -d localhost:2379 -l bench-wal --compact | grep -E "method=process"
 
 - `0` - Success
 - `1` - Invalid arguments or command failure
-- `>1` - Number of errors encountered (for `pal rm`)
+- `>1` - Number of errors encountered (for `pal peer rm` / `pal log rm`)
 
 ---
 

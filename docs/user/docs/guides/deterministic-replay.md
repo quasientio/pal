@@ -20,7 +20,7 @@ This is distinct from the existing `--source-log` mechanism, which re-dispatches
 
 **Regression testing**: Capture WALs from important scenarios and replay them as part of CI. A zero-divergence replay proves the code still behaves identically.
 
-**Understanding execution**: Use `pal wal-index` to inspect a WAL's structure, then replay to step through the execution in context.
+**Understanding execution**: Use `pal log index` to inspect a WAL's structure, then replay to step through the execution in context.
 
 ## Prerequisites
 
@@ -174,7 +174,7 @@ Before replaying, you can inspect a WAL to understand its structure:
 
 ```bash
 # Summary: entry counts, pairing, threads, structural issues
-pal wal-index file:/tmp/my-wal
+pal log index file:/tmp/my-wal
 ```
 
 ```
@@ -206,10 +206,10 @@ Entry-point operations (marked in the WAL during recording with `--wal-incoming-
 For per-entry detail:
 
 ```bash
-pal wal-index --verbose file:/tmp/my-wal
+pal log index --verbose file:/tmp/my-wal
 ```
 
-This shows every entry with its offset, kind (OPERATION or COMPLETION), thread name, and operation signature. Combined with `pal print --tree`, this gives a complete picture of the recorded execution.
+This shows every entry with its offset, kind (OPERATION or COMPLETION), thread name, and operation signature. Combined with `pal log print --tree`, this gives a complete picture of the recorded execution.
 
 ## Debugging with Replay
 
@@ -239,7 +239,7 @@ pal run --wal file:/tmp/golden-run \
   -cp target/classes com.example.OrderProcessor "TX|A|gum=1.00|0|"
 
 # 3. Inspect the WAL
-pal wal-index file:/tmp/golden-run
+pal log index file:/tmp/golden-run
 
 # 4. Verify replay matches (sanity check)
 pal replay --wal file:/tmp/golden-run \
@@ -299,14 +299,14 @@ pal run --wal file:/tmp/service-wal \
   -cp target/classes com.example.ServiceMain
 
 # 2. Send requests to the service (from another terminal)
-pal call -p ws://localhost:9001 com.example.Service processOrder "order-1"
-pal call -p ws://localhost:9001 com.example.Service processOrder "order-2"
-pal call -p ws://localhost:9001 com.example.Service processOrder "order-3"
+pal peer call ws://localhost:9001 com.example.Service processOrder "order-1"
+pal peer call ws://localhost:9001 com.example.Service processOrder "order-2"
+pal peer call ws://localhost:9001 com.example.Service processOrder "order-3"
 
 # 3. Stop the service (Ctrl-C or let it complete)
 
 # 4. Inspect the WAL
-pal wal-index file:/tmp/service-wal
+pal log index file:/tmp/service-wal
 # Threads:     [main, rpc-worker-1, rpc-worker-2, rpc-worker-3]
 
 # 5. Replay — the replay system injects the recorded RPC calls
@@ -664,6 +664,6 @@ rules:
 
 ## Further Reading
 
-- [CLI Reference](../cli-reference.md) — Complete option documentation for `pal replay` and `pal wal-index`
+- [CLI Reference](../cli-reference.md) — Complete option documentation for `pal replay` and `pal log index`
 - [Local Development Guide](local-development.md) — Recording WALs during development
 - [Log Backends](../concepts/logs.md) — Chronicle Queue vs Kafka for WAL storage

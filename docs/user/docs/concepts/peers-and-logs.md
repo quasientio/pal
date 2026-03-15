@@ -133,26 +133,26 @@ The directory is a distributed key-value store (etcd) where peers register thems
 
 ```bash
 # List all peers
-pal ls -d localhost:2379 -P
+pal peer ls -d localhost:2379
 
 # List with details
-pal ls -d localhost:2379 -P -l
+pal peer ls -d localhost:2379 -l
 
 # List logs
-pal ls -d localhost:2379 -L -l
+pal log ls -d localhost:2379 -l
 ```
 
 ### Finding a Peer
 
 By name:
 ```bash
-pal call -d localhost:2379 -p my-service \
+pal peer call -d localhost:2379 my-service \
   com.example.Service doWork
 ```
 
 By UUID:
 ```bash
-pal call -d localhost:2379 -p 550e8400-e29b... \
+pal peer call -d localhost:2379 550e8400-e29b... \
   com.example.Service doWork
 ```
 
@@ -175,7 +175,7 @@ pal run --source-log file:/tmp/execution -cp app.jar
 
 See exactly what happened:
 ```bash
-pal print -l file:/tmp/execution --full
+pal log print file:/tmp/execution --full
 ```
 
 ### Backup and Recovery
@@ -284,12 +284,12 @@ log.retention.hours=168  # 7 days
 
 Remove stale peers:
 ```bash
-pal rm -d localhost:2379 -P old-peer
+pal peer rm -d localhost:2379 old-peer
 ```
 
 Remove old logs:
 ```bash
-pal rm -d localhost:2379 -L old-log
+pal log rm -d localhost:2379 old-log
 ```
 
 ## Common Patterns
@@ -349,12 +349,12 @@ docker ps | grep kafka
 
 ### Can't Find Peer
 
-**Issue**: `pal call` says "peer not found"
+**Issue**: `pal peer call` says "peer not found"
 
 **Debug**:
 ```bash
 # List all peers
-pal ls -d localhost:2379 -P -l
+pal peer ls -d localhost:2379 -l
 
 # Check if peer is alive (has lease)
 ```

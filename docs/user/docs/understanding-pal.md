@@ -128,7 +128,7 @@ paymentService.charge(card, 100.00);
 paymentService.charge(card, 100.00);
 
 // Later: Replay the entire execution
-pal print -l payment-log --full
+pal log print payment-log --full
 // See exact sequence: charge() → validate() → authorize() → capture()
 
 // Or replay to reproduce a bug
