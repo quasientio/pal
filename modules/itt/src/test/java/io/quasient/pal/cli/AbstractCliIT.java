@@ -159,32 +159,6 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
-   * Executes a `pal print` command with the given arguments.
-   *
-   * <p>Retained for tests outside the CLI package (e.g., IncomingWalIT).
-   *
-   * @param args command-line arguments to pass to `pal print`
-   * @return CliProcessResult containing exit code, stdout, and stderr
-   * @throws Exception if command execution fails
-   */
-  protected CliProcessResult runPrint(String... args) throws Exception {
-    return runCliSubcommand("print", null, args);
-  }
-
-  /**
-   * Executes a `pal call` command with the given arguments.
-   *
-   * <p>Retained for tests outside the CLI package (e.g., replay tests, IncomingWalIT).
-   *
-   * @param args command-line arguments to pass to `pal call`
-   * @return CliProcessResult containing exit code, stdout, and stderr
-   * @throws Exception if command execution fails
-   */
-  protected CliProcessResult runCall(String... args) throws Exception {
-    return runCliSubcommand("call", null, args);
-  }
-
-  /**
    * Executes a `pal replay` command with the given arguments.
    *
    * <p>Retained for replay tests outside the CLI package.
@@ -375,6 +349,113 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
+   * Runs a CLI subcommand for a specified duration, then terminates the process.
+   *
+   * <p>Used for streaming commands (e.g., {@code pal peer print}, {@code pal peer stats}) that run
+   * indefinitely until killed. The process is started, allowed to run for the specified duration,
+   * then destroyed. Whatever output was captured during that time is returned.
+   *
+   * @param subcommandParts the subcommand path parts (e.g., {"peer", "print"})
+   * @param durationSeconds how long to let the process run before killing it
+   * @param args command-line arguments
+   * @return CliProcessResult containing exit code (-1 if killed), stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runCliSubcommandForDuration(
+      String[] subcommandParts, int durationSeconds, String... args) throws Exception {
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome == null || palHome.isEmpty()) {
+      throw new IllegalStateException("PAL_HOME environment variable not set");
+    }
+
+    List<String> command = new ArrayList<>();
+    command.add(Paths.get(palHome, "bin", "pal").toAbsolutePath().toString());
+
+    int startIdx = 0;
+    if (args.length >= 2 && args[0].equals("-d")) {
+      command.add(args[0]);
+      command.add(args[1]);
+      startIdx = 2;
+    }
+
+    command.addAll(Arrays.asList(subcommandParts));
+    command.addAll(Arrays.asList(args).subList(startIdx, args.length));
+
+    logger.info("Executing CLI command for {}s: {}", durationSeconds, String.join(" ", command));
+
+    ProcessBuilder pb = new ProcessBuilder(command);
+    pb.directory(new File(palHome));
+    pb.environment()
+        .put("PAL_CLI_LOGGING_CONFIG", Paths.get(palHome, "config", "cli-logging.xml").toString());
+    pb.environment().remove("PAL_DIRECTORY");
+    pb.environment().remove("KAFKA_SERVERS");
+    pb.environment().remove("CHRONICLE_BASE_DIR");
+    pb.environment().remove("PAL_JMX_HOST");
+    pb.environment().remove("PAL_JMX_PORT");
+
+    Process process = pb.start();
+
+    StringBuilder stdout = new StringBuilder();
+    StringBuilder stderr = new StringBuilder();
+
+    Thread stdoutThread =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(
+                      new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  stdout.append(line).append("\n");
+                }
+              } catch (IOException e) {
+                // Process was destroyed, expected
+              }
+            });
+
+    Thread stderrThread =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(
+                      new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  stderr.append(line).append("\n");
+                }
+              } catch (IOException e) {
+                // Process was destroyed, expected
+              }
+            });
+
+    stdoutThread.start();
+    stderrThread.start();
+
+    boolean completed = process.waitFor(durationSeconds, TimeUnit.SECONDS);
+    int exitCode;
+    if (!completed) {
+      process.destroy();
+      process.waitFor(2, TimeUnit.SECONDS);
+      exitCode = -1;
+    } else {
+      exitCode = process.exitValue();
+    }
+
+    stdoutThread.join(2000);
+    stderrThread.join(2000);
+
+    logger.info(
+        "CLI command {} after {}s, exit code {}, stdout length: {}, stderr length: {}",
+        completed ? "completed" : "killed",
+        durationSeconds,
+        exitCode,
+        stdout.length(),
+        stderr.length());
+
+    return new CliProcessResult(exitCode, stdout.toString(), stderr.toString());
+  }
+
+  /**
    * Executes a PAL CLI subcommand with multi-part subcommand path and optional stdin data.
    *
    * <p>This method supports the new entity-operation command structure where subcommands consist of
@@ -387,7 +468,7 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
    * @return CliProcessResult containing exit code, stdout, and stderr
    * @throws Exception if command execution fails
    */
-  private CliProcessResult runCliSubcommand(
+  protected CliProcessResult runCliSubcommand(
       String[] subcommandParts, String stdinData, String... args) throws Exception {
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null || palHome.isEmpty()) {

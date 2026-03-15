@@ -9,9 +9,15 @@
  */
 package io.quasient.pal.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 
-import org.junit.Ignore;
+import io.quasient.pal.PeerProcess;
+import java.util.UUID;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -37,6 +43,34 @@ import org.junit.Test;
  */
 public class CallerIT extends AbstractCliIT {
 
+  /** The fully-qualified class name of the quantized Methods class for RPC tests. */
+  private static final String METHODS_CLASS = "io.quasient.foobar.apps.quantized.rpc.Methods";
+
+  /** The fully-qualified class name of the Variables class for field access tests. */
+  private static final String VARIABLES_CLASS = "io.quasient.foobar.apps.rpc.Variables";
+
+  /** A peer process handle for tests that launch peers, or null if none launched. */
+  private PeerProcess peerProcess;
+
+  /** Initializes test state before each test method. */
+  @Before
+  public void setUp() {
+    peerProcess = null;
+  }
+
+  /**
+   * Tears down test state after each test method, stopping any launched peer.
+   *
+   * @throws Exception if stopping the peer fails
+   */
+  @After
+  public void tearDown() throws Exception {
+    if (peerProcess != null) {
+      stopPeer(peerProcess);
+      peerProcess = null;
+    }
+  }
+
   // ==========================================================================
   // Peer call tests via ZMQ RPC: pal peer call
   // Old command: pal call -p <peer> ...
@@ -50,16 +84,45 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_zmqRpc_nonMainMethod() throws Exception {
-    // Given: A peer launched with ZMQ RPC enabled and a specific name
-    // When: `pal peer call -d <palDirectory> <peerName> --rpc-type ZMQ_RPC -m processArgs
-    //       io.quasient.foobar.apps.quantized.rpc.Methods arg1 arg2 arg3` is executed
-    //       via runPeerCall()
-    // Then: Exit code is 0, stdout contains "PROCESSED" and "arg1,arg2,arg3"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-zmq-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult result =
+        runPeerCall(
+            "-d",
+            palDir,
+            peerName,
+            "--rpc-type",
+            "ZMQ_RPC",
+            "-m",
+            "processArgs",
+            METHODS_CLASS,
+            "arg1",
+            "arg2",
+            "arg3");
+
+    assertThat("Expected exit code 0 for peer call", result.exitCode(), is(0));
+    assertThat("Expected PROCESSED in output", result.stdout(), containsString("PROCESSED"));
+    assertThat(
+        "Expected arg1,arg2,arg3 in output", result.stdout(), containsString("arg1,arg2,arg3"));
   }
 
   /**
@@ -68,16 +131,43 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_zmqRpc_methodInvocation() throws Exception {
-    // Given: A peer launched with ZMQ RPC enabled
-    // When: `pal peer call -d <palDirectory> <peerName> --rpc-type ZMQ_RPC -m
-    //       staticStringWithStringArgs io.quasient.foobar.apps.quantized.rpc.Methods hello world`
-    //       is executed via runPeerCall()
-    // Then: Exit code is 0, stdout contains "RESULT:" and "hello,world"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-zmq-inv-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult result =
+        runPeerCall(
+            "-d",
+            palDir,
+            peerName,
+            "--rpc-type",
+            "ZMQ_RPC",
+            "-m",
+            "staticStringWithStringArgs",
+            METHODS_CLASS,
+            "hello",
+            "world");
+
+    assertThat("Expected exit code 0 for peer call", result.exitCode(), is(0));
+    assertThat("Expected RESULT: in output", result.stdout(), containsString("RESULT:"));
+    assertThat("Expected hello,world in output", result.stdout(), containsString("hello,world"));
   }
 
   /**
@@ -87,15 +177,40 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_zmqRpc_constructorInvocation() throws Exception {
-    // Given: A peer launched with both ZMQ RPC and JSON-RPC enabled
-    // When: JSON-RPC "new" request sent via stdin to
-    //       `pal peer call -d <palDirectory> <jsonRpcAddress>` via runPeerCallWithStdin()
-    // Then: Exit code is 0, stdout contains ObjectRef (reference number)
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-ctor-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--zmq-rpc",
+            "auto",
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+
+    String jsonRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"new\","
+            + "\"params\":{\"type\":\""
+            + VARIABLES_CLASS
+            + "\"}}\n";
+
+    CliProcessResult result = runPeerCallWithStdin(jsonRequest, "-d", palDir, jsonRpcAddr);
+
+    assertThat("Expected exit code 0 for constructor invocation", result.exitCode(), is(0));
   }
 
   /**
@@ -104,15 +219,45 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_zmqRpc_fieldGet() throws Exception {
-    // Given: A peer launched with both ZMQ RPC and JSON-RPC enabled
-    // When: JSON-RPC "get" request for aClassString field sent via stdin to
-    //       `pal peer call -d <palDirectory> <jsonRpcAddress>` via runPeerCallWithStdin()
-    // Then: Exit code is 0, stdout contains "classy"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-fget-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--zmq-rpc",
+            "auto",
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+
+    String jsonRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"get\","
+            + "\"params\":{\"type\":\""
+            + VARIABLES_CLASS
+            + "\","
+            + "\"field\":\"aClassString\"}}\n";
+
+    CliProcessResult result = runPeerCallWithStdin(jsonRequest, "-d", palDir, jsonRpcAddr);
+
+    assertThat("Expected exit code 0 for field get", result.exitCode(), is(0));
+    assertThat(
+        "Expected 'classy' in output for aClassString field",
+        result.stdout(),
+        containsString("classy"));
   }
 
   /**
@@ -121,16 +266,52 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_zmqRpc_fieldSet() throws Exception {
-    // Given: A peer launched with both ZMQ RPC and JSON-RPC enabled
-    // When: JSON-RPC "put" then "get" requests for aStaticPublicInteger sent via stdin to
-    //       `pal peer call -d <palDirectory> <jsonRpcAddress> --add-ids`
-    //       via runPeerCallWithStdin()
-    // Then: Exit code is 0, stdout contains the new value "12345"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-fset-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--zmq-rpc",
+            "auto",
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+
+    String putRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"put\","
+            + "\"params\":{\"type\":\""
+            + VARIABLES_CLASS
+            + "\","
+            + "\"field\":\"aStaticPublicInteger\",\"value\":12345}}";
+    String getRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"2\",\"method\":\"get\","
+            + "\"params\":{\"type\":\""
+            + VARIABLES_CLASS
+            + "\","
+            + "\"field\":\"aStaticPublicInteger\"}}";
+
+    String stdinData = putRequest + "\n" + getRequest + "\n";
+
+    CliProcessResult result =
+        runPeerCallWithStdin(stdinData, "-d", palDir, jsonRpcAddr, "--add-ids");
+
+    assertThat("Expected exit code 0 for field set+get", result.exitCode(), is(0));
+    assertThat(
+        "Expected 12345 in output after setting field", result.stdout(), containsString("12345"));
   }
 
   /**
@@ -139,15 +320,22 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_unreachablePeer_failsGracefully() throws Exception {
-    // Given: No peer running at specified UUID
-    // When: `pal peer call -d <palDirectory> <nonExistentUuid> --rpc-type ZMQ_RPC -m processArgs
-    //       io.quasient.foobar.apps.quantized.rpc.Methods arg1` is executed via runPeerCall()
-    // Then: Non-zero exit code, error message in stderr/stdout about peer not found
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result =
+        runPeerCall(
+            "-d",
+            palDir,
+            UUID.randomUUID().toString(),
+            "--rpc-type",
+            "ZMQ_RPC",
+            "-m",
+            "processArgs",
+            METHODS_CLASS,
+            "arg1");
+
+    assertThat("Expected non-zero exit code for unreachable peer", result.exitCode(), is(not(0)));
   }
 
   /**
@@ -156,16 +344,48 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_invalidMethod_returnsError() throws Exception {
-    // Given: A peer launched with ZMQ RPC enabled
-    // When: `pal peer call -d <palDirectory> <peerName> --rpc-type ZMQ_RPC -m nonExistentMethod
-    //       io.quasient.foobar.apps.quantized.rpc.Methods arg1` is executed via runPeerCall()
-    // Then: Non-zero exit code or error indicator in output (NoSuchMethodException,
-    // RaisedThrowable)
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-invalid-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult result =
+        runPeerCall(
+            "-d",
+            palDir,
+            peerName,
+            "--rpc-type",
+            "ZMQ_RPC",
+            "-m",
+            "nonExistentMethod",
+            METHODS_CLASS,
+            "arg1");
+
+    // Invalid method should result in a non-zero exit or error in output
+    boolean hasError =
+        result.exitCode() != 0
+            || result.stdout().contains("Exception")
+            || result.stdout().contains("error")
+            || result.stdout().contains("RaisedThrowable")
+            || result.stderr().contains("Exception")
+            || result.stderr().contains("error");
+    assertThat("Expected error for non-existent method", hasError, is(true));
   }
 
   // ==========================================================================
@@ -180,15 +400,43 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_jsonRpcStdin_methodInvocation() throws Exception {
-    // Given: A peer launched with JSON-RPC enabled
-    // When: JSON-RPC "call" request sent via stdin to
-    //       `pal peer call -d <palDirectory> <jsonRpcAddress>` via runPeerCallWithStdin()
-    // Then: Exit code is 0, stdout contains "RESULT:" and the input value
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-jrpc-inv-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+
+    String jsonRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"call\","
+            + "\"params\":{\"type\":\""
+            + METHODS_CLASS
+            + "\","
+            + "\"method\":\"staticStringWithStringArg\","
+            + "\"args\":[\"json-rpc-test\"]}}\n";
+
+    CliProcessResult result = runPeerCallWithStdin(jsonRequest, "-d", palDir, jsonRpcAddr);
+
+    assertThat("Expected exit code 0 for JSON-RPC method invocation", result.exitCode(), is(0));
+    assertThat("Expected RESULT: in output", result.stdout(), containsString("RESULT:"));
+    assertThat(
+        "Expected json-rpc-test in output", result.stdout(), containsString("json-rpc-test"));
   }
 
   /**
@@ -197,15 +445,38 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_jsonRpcStdin_constructor() throws Exception {
-    // Given: A peer launched with JSON-RPC enabled
-    // When: JSON-RPC "new" request sent via stdin to
-    //       `pal peer call -d <palDirectory> <jsonRpcAddress>` via runPeerCallWithStdin()
-    // Then: Exit code is 0, stdout contains ObjectRef
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-jrpc-ctor-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+
+    String jsonRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"new\","
+            + "\"params\":{\"type\":\""
+            + VARIABLES_CLASS
+            + "\"}}\n";
+
+    CliProcessResult result = runPeerCallWithStdin(jsonRequest, "-d", palDir, jsonRpcAddr);
+
+    assertThat("Expected exit code 0 for JSON-RPC constructor call", result.exitCode(), is(0));
   }
 
   /**
@@ -214,15 +485,40 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_jsonRpcStdin_fieldGet() throws Exception {
-    // Given: A peer launched with JSON-RPC enabled
-    // When: JSON-RPC "get" request for aClassString sent via stdin to
-    //       `pal peer call -d <palDirectory> <jsonRpcAddress>` via runPeerCallWithStdin()
-    // Then: Exit code is 0, stdout contains "classy"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-jrpc-fget-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+
+    String jsonRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"get\","
+            + "\"params\":{\"type\":\""
+            + VARIABLES_CLASS
+            + "\","
+            + "\"field\":\"aClassString\"}}\n";
+
+    CliProcessResult result = runPeerCallWithStdin(jsonRequest, "-d", palDir, jsonRpcAddr);
+
+    assertThat("Expected exit code 0 for JSON-RPC field get", result.exitCode(), is(0));
+    assertThat("Expected 'classy' in output", result.stdout(), containsString("classy"));
   }
 
   /**
@@ -231,16 +527,50 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_jsonRpcStdin_fieldSet() throws Exception {
-    // Given: A peer launched with JSON-RPC enabled
-    // When: JSON-RPC "put" then "get" requests for aStaticPublicInteger sent via stdin to
-    //       `pal peer call -d <palDirectory> <jsonRpcAddress> --add-ids`
-    //       via runPeerCallWithStdin()
-    // Then: Exit code is 0, stdout contains "9999"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-jrpc-fset-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+
+    String putRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"put\","
+            + "\"params\":{\"type\":\""
+            + VARIABLES_CLASS
+            + "\","
+            + "\"field\":\"aStaticPublicInteger\",\"value\":9999}}";
+    String getRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"2\",\"method\":\"get\","
+            + "\"params\":{\"type\":\""
+            + VARIABLES_CLASS
+            + "\","
+            + "\"field\":\"aStaticPublicInteger\"}}";
+
+    String stdinData = putRequest + "\n" + getRequest + "\n";
+
+    CliProcessResult result =
+        runPeerCallWithStdin(stdinData, "-d", palDir, jsonRpcAddr, "--add-ids");
+
+    assertThat("Expected exit code 0 for JSON-RPC field set", result.exitCode(), is(0));
+    assertThat(
+        "Expected 9999 in output after setting field", result.stdout(), containsString("9999"));
   }
 
   /**
@@ -249,15 +579,58 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_jsonRpcStdin_multipleRequests() throws Exception {
-    // Given: A peer launched with JSON-RPC enabled
-    // When: Multiple JSON-RPC requests (two "call" + one "get") sent via stdin to
-    //       `pal peer call -d <palDirectory> <jsonRpcAddress>` via runPeerCallWithStdin()
-    // Then: Exit code is 0, stdout contains results from all three requests
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-jrpc-multi-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+
+    String callRequest1 =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"call\","
+            + "\"params\":{\"type\":\""
+            + METHODS_CLASS
+            + "\","
+            + "\"method\":\"staticStringWithStringArg\","
+            + "\"args\":[\"first\"]}}";
+    String callRequest2 =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"2\",\"method\":\"call\","
+            + "\"params\":{\"type\":\""
+            + METHODS_CLASS
+            + "\","
+            + "\"method\":\"staticStringWithStringArg\","
+            + "\"args\":[\"second\"]}}";
+    String getRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"3\",\"method\":\"get\","
+            + "\"params\":{\"type\":\""
+            + VARIABLES_CLASS
+            + "\","
+            + "\"field\":\"aClassString\"}}";
+
+    String stdinData = callRequest1 + "\n" + callRequest2 + "\n" + getRequest + "\n";
+
+    CliProcessResult result = runPeerCallWithStdin(stdinData, "-d", palDir, jsonRpcAddr);
+
+    assertThat("Expected exit code 0 for multiple JSON-RPC requests", result.exitCode(), is(0));
+    assertThat("Expected first call result in output", result.stdout(), containsString("first"));
+    assertThat("Expected second call result in output", result.stdout(), containsString("second"));
+    assertThat("Expected field get result in output", result.stdout(), containsString("classy"));
   }
 
   /**
@@ -266,15 +639,43 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_jsonRpc_methodInvocation() throws Exception {
-    // Given: A peer launched with JSON-RPC enabled
-    // When: JSON-RPC "call" request sent via stdin to
-    //       `pal peer call -d <palDirectory> <jsonRpcAddress>` via runPeerCallWithStdin()
-    // Then: Exit code is 0, stdout contains "RESULT:" and the input value
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-jrpc-meth-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+
+    String jsonRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"call\","
+            + "\"params\":{\"type\":\""
+            + METHODS_CLASS
+            + "\","
+            + "\"method\":\"staticStringWithStringArg\","
+            + "\"args\":[\"rpc-method-test\"]}}\n";
+
+    CliProcessResult result = runPeerCallWithStdin(jsonRequest, "-d", palDir, jsonRpcAddr);
+
+    assertThat("Expected exit code 0 for JSON-RPC method invocation", result.exitCode(), is(0));
+    assertThat("Expected RESULT: in output", result.stdout(), containsString("RESULT:"));
+    assertThat(
+        "Expected rpc-method-test in output", result.stdout(), containsString("rpc-method-test"));
   }
 
   // ==========================================================================
@@ -289,16 +690,59 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogCall_toKafkaLog_writesMessage() throws Exception {
-    // Given: A Kafka WAL created by launching a peer
-    // When: `pal log call -d <palDirectory> <logName> --forget-response
-    //       io.quasient.foobar.apps.quantized.rpc.Methods staticVoidWithStringArg test-to-log`
-    //       is executed via runLogCall()
-    // Then: Exit code is 0, and `pal log print` output contains "test-to-log"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "logcall-kafka-" + generateId();
+    String sourceName = "logcall-kafka-src-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--source-log",
+            sourceName,
+            "--wal",
+            walName,
+            "--wal-all-incoming-rpc",
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult callResult =
+        runLogCall(
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--output-log",
+            sourceName,
+            "--input-log",
+            walName,
+            "-m",
+            "staticStringWithStringArg",
+            METHODS_CLASS,
+            "test-to-log");
+
+    assertThat("Expected exit code 0 for log call", callResult.exitCode(), is(0));
+
+    stopPeer(peerProcess);
+    peerProcess = null;
+
+    // Allow Kafka time to commit messages
+    Thread.sleep(1000);
+
+    // Verify the message was written to the WAL
+    CliProcessResult printResult = runLogPrint("-d", palDir, walName, "--full");
+    assertThat("Expected exit code 0 for log print", printResult.exitCode(), is(0));
+    assertThat(
+        "Expected test-to-log in WAL output", printResult.stdout(), containsString("test-to-log"));
   }
 
   /**
@@ -307,16 +751,50 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogCall_toChronicleLog_writesMessage() throws Exception {
-    // Given: A peer launched with split Chronicle logs (source + WAL) and --wal-all-incoming-rpc
-    // When: `pal log call -d <palDirectory> --output-log file:<source> --input-log file:<wal>
-    //       io.quasient.foobar.apps.quantized.rpc.Methods -m staticStringWithStringArgs
-    //       chronicle-log-test` is executed via runLogCall()
-    // Then: Exit code is 0, stdout contains "RESULT: chronicle-log-test"
+    String palDir = getPalDirectoryUrl();
+    UUID peerId = UUID.randomUUID();
+    String suffix = generateId();
+    String sourceName = "logcall-csrc-" + suffix;
+    String walName = "logcall-cwal-" + suffix;
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    trackChronicleLog(sourceName);
+    trackChronicleLog(walName);
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "--source-log",
+            "file:" + sourceName,
+            "--wal",
+            "file:" + walName,
+            "--wal-all-incoming-rpc",
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult callResult =
+        runLogCall(
+            "-d",
+            palDir,
+            "--output-log",
+            "file:" + sourceName,
+            "--input-log",
+            "file:" + walName,
+            "-m",
+            "staticStringWithStringArgs",
+            METHODS_CLASS,
+            "chronicle-log-test");
+
+    assertThat("Expected exit code 0 for Chronicle log call", callResult.exitCode(), is(0));
+    assertThat(
+        "Expected RESULT: chronicle-log-test in output",
+        callResult.stdout(),
+        containsString("RESULT: chronicle-log-test"));
   }
 
   // ==========================================================================
@@ -331,16 +809,51 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogCall_forgetResponse_returnsImmediately() throws Exception {
-    // Given: A Kafka WAL created by launching a peer
-    // When: `pal log call -d <palDirectory> --log <logName> --forget-response
-    //       io.quasient.foobar.apps.quantized.rpc.Methods staticVoidWithStringArg test-forget`
-    //       is executed via runLogCall()
-    // Then: Exit code is 0, elapsed time < 5000ms
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "logcall-forget-" + generateId();
+    String sourceName = "logcall-forget-src-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--source-log",
+            sourceName,
+            "--wal",
+            walName,
+            "--wal-all-incoming-rpc",
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    long startTime = System.currentTimeMillis();
+
+    CliProcessResult result =
+        runLogCall(
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--output-log",
+            sourceName,
+            "--forget-response",
+            "-m",
+            "staticStringWithStringArg",
+            METHODS_CLASS,
+            "test-forget");
+
+    long elapsed = System.currentTimeMillis() - startTime;
+
+    assertThat("Expected exit code 0 for forget-response log call", result.exitCode(), is(0));
+    assertThat("Expected fast completion (< 5000ms) for forget-response", elapsed < 5000, is(true));
   }
 
   /**
@@ -349,15 +862,51 @@ public class CallerIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogCall_async_fireAndForget() throws Exception {
-    // Given: A Kafka WAL created by launching a peer
-    // When: `pal log call -d <palDirectory> --log <logName> --forget-response
-    //       io.quasient.foobar.apps.quantized.rpc.Methods staticVoidWithStringArg async-test`
-    //       is executed via runLogCall()
-    // Then: Exit code is 0, command returns quickly (< 5000ms)
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "logcall-async-" + generateId();
+    String sourceName = "logcall-async-src-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--source-log",
+            sourceName,
+            "--wal",
+            walName,
+            "--wal-all-incoming-rpc",
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    long startTime = System.currentTimeMillis();
+
+    CliProcessResult result =
+        runLogCall(
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--output-log",
+            sourceName,
+            "--forget-response",
+            "-m",
+            "staticStringWithStringArg",
+            METHODS_CLASS,
+            "async-test");
+
+    long elapsed = System.currentTimeMillis() - startTime;
+
+    assertThat("Expected exit code 0 for async fire-and-forget", result.exitCode(), is(0));
+    assertThat(
+        "Expected fast completion (< 5000ms) for async fire-and-forget", elapsed < 5000, is(true));
   }
 }

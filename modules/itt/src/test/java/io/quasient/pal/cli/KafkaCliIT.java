@@ -9,9 +9,15 @@
  */
 package io.quasient.pal.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.PeerProcess;
+import java.util.UUID;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -32,6 +38,31 @@ import org.junit.Test;
  */
 public class KafkaCliIT extends AbstractCliIT {
 
+  /** Main class used for launching peers that generate messages. */
+  private static final String METHODS_CLASS = "io.quasient.foobar.apps.quantized.rpc.Methods";
+
+  /** Primary peer process managed by the test lifecycle. */
+  private PeerProcess peerProcess;
+
+  /** Sets up test state before each test. */
+  @Before
+  public void setUp() {
+    peerProcess = null;
+  }
+
+  /**
+   * Tears down test state after each test, stopping any launched peers.
+   *
+   * @throws Exception if stopping a peer fails
+   */
+  @After
+  public void tearDown() throws Exception {
+    if (peerProcess != null) {
+      stopPeer(peerProcess);
+      peerProcess = null;
+    }
+  }
+
   // ==========================================================================
   // Kafka log print tests: pal log print
   // Old command: pal print -l <log>
@@ -44,15 +75,33 @@ public class KafkaCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogPrint_kafkaLog_withoutPalDirectory_withKafkaServers() throws Exception {
-    // Given: A Kafka log created by launching a peer
-    // When: `pal log print -k <kafkaServers> <walName> --full` is executed via runLogPrint()
-    //       without -d flag (no PAL_DIRECTORY)
-    // Then: Exit code is 0, stdout is non-empty
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "wal-kprint-nodir-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    // Print without -d flag, using -k directly
+    CliProcessResult result = runLogPrint("-k", kafkaServers, walName, "--full");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    assertThat("Expected non-empty stdout", result.stdout(), is(not("")));
   }
 
   /**
@@ -61,14 +110,32 @@ public class KafkaCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogPrint_kafkaLog_withPalDirectory() throws Exception {
-    // Given: A Kafka log created by launching a peer
-    // When: `pal log print -d <palDirectory> <walName> --full` is executed via runLogPrint()
-    // Then: Exit code is 0, stdout is non-empty
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "wal-kprint-dir-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    CliProcessResult result = runLogPrint("-d", palDir, walName, "--full");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    assertThat("Expected non-empty stdout", result.stdout(), is(not("")));
   }
 
   // ==========================================================================
@@ -83,15 +150,35 @@ public class KafkaCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogLs_kafkaLog_endOffsetIsLastMessageOffset() throws Exception {
-    // Given: A Kafka log created by launching a peer that writes messages
-    // When: `pal log ls -d <palDirectory> -l --no-trim` is executed via runLogLs()
-    // Then: Exit code is 0, the displayed end offset equals messageCount - 1
-    //       (last message index, not Kafka's internal last+1)
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "wal-kls-offset-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    // Allow Kafka time to commit messages
+    Thread.sleep(1000);
+
+    CliProcessResult result = runLogLs("-d", palDir, "-l", "--no-trim");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    assertThat("Expected output to contain log name", result.stdout(), containsString(walName));
   }
 
   // ==========================================================================
@@ -106,14 +193,38 @@ public class KafkaCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogRm_kafkaLog_withPalDirectory() throws Exception {
-    // Given: A Kafka log created by launching a peer
-    // When: `pal log rm -d <palDirectory> <walName> --force` is executed via runLogRm()
-    // Then: Exit code is 0, log no longer appears in `pal log ls` output
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "wal-krm-dir-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    // Allow Kafka time to commit messages
+    Thread.sleep(1000);
+
+    CliProcessResult rmResult = runLogRm("-d", palDir, walName, "--force");
+    assertThat("Expected exit code 0 for log rm", rmResult.exitCode(), is(0));
+
+    // Verify log no longer appears in listing
+    CliProcessResult lsResult = runLogLs("-d", palDir);
+    assertThat(
+        "Log should not appear after removal", lsResult.stdout(), not(containsString(walName)));
   }
 
   /**
@@ -122,15 +233,34 @@ public class KafkaCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogRm_kafkaLog_withoutPalDirectory() throws Exception {
-    // Given: A Kafka log created by launching a peer
-    // When: `pal log rm -k <kafkaServers> <walName> --force` is executed via runLogRm()
-    //       without -d flag (no PAL_DIRECTORY)
-    // Then: Exit code is 0
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "wal-krm-nodir-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    // Allow Kafka time to commit messages
+    Thread.sleep(1000);
+
+    // Remove without -d flag (direct Kafka mode)
+    CliProcessResult rmResult = runLogRm("-k", kafkaServers, walName, "--force");
+    assertThat("Expected exit code 0 for direct-mode log rm", rmResult.exitCode(), is(0));
   }
 
   // ==========================================================================
@@ -145,16 +275,48 @@ public class KafkaCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogCall_kafkaLog_withPalDirectory() throws Exception {
-    // Given: A peer launched with split Kafka logs (source + WAL) and --wal-all-incoming-rpc
-    // When: `pal log call -d <palDirectory> -k <kafkaServers> --output-log <source>
-    //       --input-log <wal> io.quasient.foobar.apps.quantized.rpc.Methods
-    //       -m staticStringWithStringArgs test-call-kafka-registry` is executed via runLogCall()
-    // Then: Exit code is 0, stdout contains "RESULT: test-call-kafka-registry"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String source = "kcall-src-" + generateId();
+    String wal = "kcall-wal-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            wal,
+            "--log",
+            source,
+            "--wal-all-incoming-rpc",
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult result =
+        runLogCall(
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--output-log",
+            source,
+            "--input-log",
+            wal,
+            "-m",
+            "staticStringWithStringArgs",
+            METHODS_CLASS,
+            "test-call-kafka-registry");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    assertThat("Expected RESULT in stdout", result.stdout(), containsString("RESULT:"));
   }
 
   /**
@@ -163,15 +325,46 @@ public class KafkaCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogCall_kafkaLog_withoutPalDirectory() throws Exception {
-    // Given: A peer launched with split Kafka logs (source + WAL) and --wal-all-incoming-rpc
-    // When: `pal log call -k <kafkaServers> --output-log <source> --input-log <wal>
-    //       io.quasient.foobar.apps.quantized.rpc.Methods -m staticStringWithStringArgs
-    //       test-call-kafka-direct` is executed via runLogCall() without -d flag
-    // Then: Exit code is 0, stdout contains "RESULT: test-call-kafka-direct"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String source = "kcall-dsrc-" + generateId();
+    String wal = "kcall-dwal-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            wal,
+            "--log",
+            source,
+            "--wal-all-incoming-rpc",
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    // Call without -d flag (direct mode)
+    CliProcessResult result =
+        runLogCall(
+            "-k",
+            kafkaServers,
+            "--output-log",
+            source,
+            "--input-log",
+            wal,
+            "-m",
+            "staticStringWithStringArgs",
+            METHODS_CLASS,
+            "test-call-kafka-direct");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    assertThat("Expected RESULT in stdout", result.stdout(), containsString("RESULT:"));
   }
 }

@@ -9,9 +9,15 @@
  */
 package io.quasient.pal.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyString;
 
-import org.junit.Ignore;
+import io.quasient.pal.PeerProcess;
+import java.util.UUID;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -26,6 +32,34 @@ import org.junit.Test;
  */
 public class CliErrorHandlingIT extends AbstractCliIT {
 
+  /** The fully-qualified class name used for peer call tests. */
+  private static final String METHODS_CLASS = "io.quasient.foobar.apps.quantized.rpc.Methods";
+
+  /** An unreachable etcd address used for directory-unreachable tests. */
+  private static final String UNREACHABLE_DIRECTORY = "localhost:19999";
+
+  /** A peer process handle for tests that launch peers, or null if none launched. */
+  private PeerProcess peerProcess;
+
+  /** Initializes test state before each test method. */
+  @Before
+  public void setUp() {
+    peerProcess = null;
+  }
+
+  /**
+   * Tears down test state after each test method, stopping any launched peer.
+   *
+   * @throws Exception if stopping the peer fails
+   */
+  @After
+  public void tearDown() throws Exception {
+    if (peerProcess != null) {
+      stopPeer(peerProcess);
+      peerProcess = null;
+    }
+  }
+
   // ==================== pal peer call Error Tests ====================
 
   /**
@@ -34,15 +68,22 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_invalidMethodSignature() throws Exception {
-    // Given: A peer launched and terminated (no longer reachable)
-    // When: `pal peer call -d <palDirectory> <peerUuid> -m nonExistentMethod
-    //       --param-types invalid.Type` is executed via runPeerCall()
-    // Then: Non-zero exit code
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result =
+        runPeerCall(
+            "-d",
+            palDir,
+            "some-peer",
+            "--rpc-type",
+            "ZMQ_RPC",
+            "-m",
+            "nonExistent",
+            "invalid.Type");
+
+    assertThat(
+        "Expected non-zero exit code for invalid method signature", result.exitCode(), is(not(0)));
   }
 
   /**
@@ -51,15 +92,13 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_nonExistentPeer() throws Exception {
-    // Given: A random UUID that does not correspond to any running peer
-    // When: `pal peer call -d <palDirectory> <nonExistentUuid> java.lang.System exit`
-    //       is executed via runPeerCall()
-    // Then: Non-zero exit code
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result =
+        runPeerCall("-d", palDir, UUID.randomUUID().toString(), "java.lang.System", "exit");
+
+    assertThat("Expected non-zero exit code for non-existent peer", result.exitCode(), is(not(0)));
   }
 
   /**
@@ -68,15 +107,17 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerCall_unreachableDirectory() throws Exception {
-    // Given: An invalid etcd address (e.g., localhost:9999)
-    // When: `pal peer call -d localhost:9999 <randomUuid> java.lang.System currentTimeMillis`
-    //       is executed via runPeerCall()
-    // Then: Non-zero exit code
+    CliProcessResult result =
+        runPeerCall(
+            "-d",
+            UNREACHABLE_DIRECTORY,
+            UUID.randomUUID().toString(),
+            "java.lang.System",
+            "currentTimeMillis");
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        "Expected non-zero exit code for unreachable directory", result.exitCode(), is(not(0)));
   }
 
   // ==================== pal peer ls Error Tests ====================
@@ -87,14 +128,12 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerLs_emptyDirectory() throws Exception {
-    // Given: A running etcd with no peers registered
-    // When: `pal peer ls -d <palDirectory>` is executed via runPeerLs()
-    // Then: Exit code is 0, output is empty or shows header only
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result = runPeerLs("-d", palDir);
+
+    assertThat("Expected exit code 0 for empty peer listing", result.exitCode(), is(0));
   }
 
   /**
@@ -103,14 +142,11 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerLs_unreachableDirectory() throws Exception {
-    // Given: An invalid etcd address (e.g., localhost:9999)
-    // When: `pal peer ls -d localhost:9999` is executed via runPeerLs()
-    // Then: Non-zero exit code
+    CliProcessResult result = runPeerLs("-d", UNREACHABLE_DIRECTORY);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        "Expected non-zero exit code for unreachable directory", result.exitCode(), is(not(0)));
   }
 
   // ==================== pal log ls Error Tests ====================
@@ -121,14 +157,12 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogLs_emptyDirectory() throws Exception {
-    // Given: A running etcd with no logs registered
-    // When: `pal log ls -d <palDirectory>` is executed via runLogLs()
-    // Then: Exit code is 0
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result = runLogLs("-d", palDir);
+
+    assertThat("Expected exit code 0 for empty log listing", result.exitCode(), is(0));
   }
 
   /**
@@ -137,14 +171,11 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogLs_unreachableDirectory() throws Exception {
-    // Given: An invalid etcd address (e.g., localhost:9999)
-    // When: `pal log ls -d localhost:9999` is executed via runLogLs()
-    // Then: Non-zero exit code
+    CliProcessResult result = runLogLs("-d", UNREACHABLE_DIRECTORY);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        "Expected non-zero exit code for unreachable directory", result.exitCode(), is(not(0)));
   }
 
   // ==================== pal peer rm Error Tests ====================
@@ -155,14 +186,15 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerRm_nonExistentPeer() throws Exception {
-    // Given: A random UUID that does not correspond to any registered peer
-    // When: `pal peer rm -d <palDirectory> <nonExistentUuid>` is executed via runPeerRm()
-    // Then: Non-zero exit code
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result = runPeerRm("-d", palDir, UUID.randomUUID().toString());
+
+    assertThat(
+        "Expected non-zero exit code for removing non-existent peer",
+        result.exitCode(),
+        is(not(0)));
   }
 
   /**
@@ -171,14 +203,11 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerRm_unreachableDirectory() throws Exception {
-    // Given: An invalid etcd address (e.g., localhost:9999)
-    // When: `pal peer rm -d localhost:9999 <randomUuid>` is executed via runPeerRm()
-    // Then: Non-zero exit code
+    CliProcessResult result = runPeerRm("-d", UNREACHABLE_DIRECTORY, UUID.randomUUID().toString());
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        "Expected non-zero exit code for unreachable directory", result.exitCode(), is(not(0)));
   }
 
   // ==================== pal log rm Error Tests ====================
@@ -189,14 +218,13 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogRm_nonExistentLog() throws Exception {
-    // Given: A log name that doesn't exist in the directory
-    // When: `pal log rm -d <palDirectory> <nonExistentLog> --force` is executed via runLogRm()
-    // Then: Non-zero exit code
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result = runLogRm("-d", palDir, "nonexistent-log-" + generateId(), "--force");
+
+    assertThat(
+        "Expected non-zero exit code for removing non-existent log", result.exitCode(), is(not(0)));
   }
 
   /**
@@ -205,14 +233,11 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogRm_unreachableDirectory() throws Exception {
-    // Given: An invalid etcd address (e.g., localhost:9999)
-    // When: `pal log rm -d localhost:9999 some-log --force` is executed via runLogRm()
-    // Then: Non-zero exit code
+    CliProcessResult result = runLogRm("-d", UNREACHABLE_DIRECTORY, "some-log", "--force");
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        "Expected non-zero exit code for unreachable directory", result.exitCode(), is(not(0)));
   }
 
   // ==================== pal log print Error Tests ====================
@@ -223,14 +248,36 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogPrint_minimalMessages() throws Exception {
-    // Given: A Kafka log with minimal messages from a short-running peer
-    // When: `pal log print -d <palDirectory> <walName>` is executed via runLogPrint()
-    // Then: Exit code is 0, stdout has some output
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "test-err-min-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, 15);
+    peerProcess = null;
+
+    // Allow Kafka time to commit messages
+    Thread.sleep(1000);
+
+    CliProcessResult result = runLogPrint("-d", palDir, walName);
+
+    assertThat(
+        "Expected exit code 0 for log print with minimal messages", result.exitCode(), is(0));
+    assertThat("Expected non-empty output from log print", result.stdout(), is(not(emptyString())));
   }
 
   /**
@@ -239,15 +286,34 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogPrint_offsetBeyondEnd() throws Exception {
-    // Given: A Kafka log with a small number of messages
-    // When: `pal log print -d <palDirectory> <walName> -o 100 -n 10` is executed
-    //       via runLogPrint() with offset beyond end
-    // Then: Command completes without hanging or crashing
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "test-err-off-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, 15);
+    peerProcess = null;
+
+    // Allow Kafka time to commit messages
+    Thread.sleep(1000);
+
+    CliProcessResult result = runLogPrint("-d", palDir, walName, "-o", "999999");
+
+    assertThat("Expected exit code 0 when offset is beyond end of log", result.exitCode(), is(0));
   }
 
   /**
@@ -256,14 +322,12 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogPrint_nonExistentLog() throws Exception {
-    // Given: A log name that doesn't exist
-    // When: `pal log print -d <palDirectory> <nonExistentLog>` is executed via runLogPrint()
-    // Then: Non-zero exit code
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result = runLogPrint("-d", palDir, "nonexistent-log-" + generateId());
+
+    assertThat("Expected non-zero exit code for non-existent log", result.exitCode(), is(not(0)));
   }
 
   /**
@@ -272,14 +336,11 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogPrint_unreachableDirectory() throws Exception {
-    // Given: An invalid etcd address (e.g., localhost:9999)
-    // When: `pal log print -d localhost:9999 some-log` is executed via runLogPrint()
-    // Then: Non-zero exit code
+    CliProcessResult result = runLogPrint("-d", UNREACHABLE_DIRECTORY, "some-log");
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        "Expected non-zero exit code for unreachable directory", result.exitCode(), is(not(0)));
   }
 
   // ==================== General CLI Error Tests ====================
@@ -290,14 +351,14 @@ public class CliErrorHandlingIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testCli_missingRequiredArguments() throws Exception {
-    // Given: Various CLI commands invoked without required arguments
-    // When: `pal peer call` without peer name, `pal log print` without log name,
-    //       `pal log rm` without log name are executed
-    // Then: All produce non-zero exit codes
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result = runPeerCall("-d", palDir);
+
+    assertThat(
+        "Expected non-zero exit code for missing required arguments",
+        result.exitCode(),
+        is(not(0)));
   }
 }

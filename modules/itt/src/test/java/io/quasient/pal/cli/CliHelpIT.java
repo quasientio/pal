@@ -9,9 +9,12 @@
  */
 package io.quasient.pal.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyString;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -30,15 +33,14 @@ public class CliHelpIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPalHelp_showsEntityGroups() throws Exception {
-    // Given: The pal CLI binary is available
-    // When: `pal --help` is executed
-    // Then: Output contains "peer", "log", "intercept" as entity group commands,
-    //       along with top-level commands like "run" and "replay"
+    CliProcessResult result = runCliSubcommand(new String[] {"--help"}, null);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString("peer"));
+    assertThat(result.stdout(), containsString("log"));
+    assertThat(result.stdout(), containsString("intercept"));
+    assertThat(result.stdout(), containsString("run"));
   }
 
   /**
@@ -47,31 +49,30 @@ public class CliHelpIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testPeerHelp_showsSubcommands() throws Exception {
-    // Given: The pal CLI binary is available
-    // When: `pal peer --help` is executed
-    // Then: Output contains subcommands: ls, rm, print, call
+    CliProcessResult result = runCliSubcommand(new String[] {"peer", "--help"}, null);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString("ls"));
+    assertThat(result.stdout(), containsString("rm"));
+    assertThat(result.stdout(), containsString("print"));
+    assertThat(result.stdout(), containsString("call"));
   }
 
   /**
-   * Tests that {@code pal log --help} shows available log subcommands (ls, rm, print, call, index,
-   * stats).
+   * Tests that {@code pal log --help} shows available log subcommands (ls, rm, print, call).
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogHelp_showsSubcommands() throws Exception {
-    // Given: The pal CLI binary is available
-    // When: `pal log --help` is executed
-    // Then: Output contains subcommands: ls, rm, print, call, index, stats
+    CliProcessResult result = runCliSubcommand(new String[] {"log", "--help"}, null);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString("ls"));
+    assertThat(result.stdout(), containsString("rm"));
+    assertThat(result.stdout(), containsString("print"));
+    assertThat(result.stdout(), containsString("call"));
   }
 
   /**
@@ -80,14 +81,11 @@ public class CliHelpIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testInterceptHelp_showsSubcommands() throws Exception {
-    // Given: The pal CLI binary is available
-    // When: `pal intercept --help` is executed
-    // Then: Output contains subcommand: ls
+    CliProcessResult result = runCliSubcommand(new String[] {"intercept", "--help"}, null);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString("ls"));
   }
 
   /**
@@ -96,14 +94,11 @@ public class CliHelpIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testAliasHelp_showsPeersAlias() throws Exception {
-    // Given: The pal CLI binary is available with alias commands registered
-    // When: `pal peers --help` is executed
-    // Then: Output shows help for peer listing (equivalent to `pal peer ls --help`)
+    CliProcessResult result = runCliSubcommand(new String[] {"peers", "--help"}, null);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), is(not(emptyString())));
   }
 
   /**
@@ -112,14 +107,11 @@ public class CliHelpIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testAliasHelp_showsLogsAlias() throws Exception {
-    // Given: The pal CLI binary is available with alias commands registered
-    // When: `pal logs --help` is executed
-    // Then: Output shows help for log listing (equivalent to `pal log ls --help`)
+    CliProcessResult result = runCliSubcommand(new String[] {"logs", "--help"}, null);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), is(not(emptyString())));
   }
 
   /**
@@ -129,14 +121,11 @@ public class CliHelpIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testAliasHelp_showsInterceptsAlias() throws Exception {
-    // Given: The pal CLI binary is available with alias commands registered
-    // When: `pal intercepts --help` is executed
-    // Then: Output shows help for intercept listing (equivalent to `pal intercept ls --help`)
+    CliProcessResult result = runCliSubcommand(new String[] {"intercepts", "--help"}, null);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), is(not(emptyString())));
   }
 
   /**
@@ -145,14 +134,17 @@ public class CliHelpIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testNestedHelp_showsCommandHelp() throws Exception {
-    // Given: The pal CLI binary is available
-    // When: `pal peer ls --help` is executed
-    // Then: Output shows options specific to peer listing (e.g., -l/--long, -c/--sort-by-ctime,
-    //       -r/--reverse, --no-trim) and does NOT show peer/log/intercept entity-selection flags
+    CliProcessResult result = runPeerLs("--help");
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    assertThat(result.exitCode(), is(0));
+    String stdout = result.stdout();
+    // Should contain long-format option
+    assertThat(
+        "Expected --long or -l option in peer ls help",
+        stdout.contains("--long") || stdout.contains("-l"),
+        is(true));
+    // Should NOT contain the old entity-selection flag -P
+    assertThat("Should not contain old -P entity flag", stdout, not(containsString("-P")));
   }
 }

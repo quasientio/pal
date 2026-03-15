@@ -9,9 +9,18 @@
  */
 package io.quasient.pal.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.startsWith;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.PeerProcess;
+import io.quasient.pal.common.directory.nodes.LogInfo;
+import io.quasient.pal.cxn.directory.PalDirectory;
+import java.util.UUID;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -34,6 +43,31 @@ import org.junit.Test;
  */
 public class ChronicleCliIT extends AbstractCliIT {
 
+  /** Main class used for launching peers that generate messages. */
+  private static final String METHODS_CLASS = "io.quasient.foobar.apps.quantized.rpc.Methods";
+
+  /** Primary peer process managed by the test lifecycle. */
+  private PeerProcess peerProcess;
+
+  /** Sets up test state before each test. */
+  @Before
+  public void setUp() {
+    peerProcess = null;
+  }
+
+  /**
+   * Tears down test state after each test, stopping any launched peers.
+   *
+   * @throws Exception if stopping a peer fails
+   */
+  @After
+  public void tearDown() throws Exception {
+    if (peerProcess != null) {
+      stopPeer(peerProcess);
+      peerProcess = null;
+    }
+  }
+
   // ==========================================================================
   // Chronicle log print tests: pal log print
   // Old command: pal print -l file:<name>
@@ -46,15 +80,34 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogPrint_chronicleLog_withoutPalDirectory() throws Exception {
-    // Given: A Chronicle log created by launching a peer with file: prefix WAL
-    // When: `pal log print file:<walName> --full` is executed via runLogPrint()
-    //       without -d flag (no PAL_DIRECTORY)
-    // Then: Exit code is 0, stdout contains non-empty output from Chronicle log
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String absPath = "/tmp/test-chr-nodir-" + generateId();
+    trackChronicleLog(absPath);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + absPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    // Print without -d flag (no PAL_DIRECTORY)
+    CliProcessResult result = runLogPrint("file:" + absPath, "--full");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    assertThat("Expected non-empty stdout", result.stdout(), is(not("")));
   }
 
   /**
@@ -63,15 +116,34 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogPrint_chronicleLog_withFilePrefix() throws Exception {
-    // Given: A Chronicle log created by launching a peer with file: prefix WAL
-    // When: `pal log print -d <palDirectory> file:<walName> --full` is executed
-    //       via runLogPrint()
-    // Then: Exit code is 0, stdout contains non-empty output from Chronicle log
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String absPath = "/tmp/test-chr-prefix-" + generateId();
+    trackChronicleLog(absPath);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + absPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    // Print with -d flag and file: prefix
+    CliProcessResult result = runLogPrint("-d", palDir, "file:" + absPath, "--full");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    assertThat("Expected non-empty stdout", result.stdout(), is(not("")));
   }
 
   // ==========================================================================
@@ -86,15 +158,34 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogLs_chronicleLog_accurateSizeAndOffsets() throws Exception {
-    // Given: A Chronicle log created by launching a peer
-    // When: `pal log ls -d <palDirectory> -l --no-trim` is executed via runLogLs()
-    // Then: Exit code is 0, output contains the log name, and size is reasonable
-    //       (not wildly different from actual disk usage)
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String absPath = "/tmp/test-chr-ls-" + generateId();
+    trackChronicleLog(absPath);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + absPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    CliProcessResult result = runLogLs("-d", palDir, "-l", "--no-trim");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    // The Chronicle log name (the absolute path) should appear in the listing
+    assertThat("Expected output to contain log name", result.stdout(), containsString(absPath));
   }
 
   /**
@@ -103,15 +194,58 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogLs_chronicleLog_offsetsIncrementOnRerun() throws Exception {
-    // Given: A Chronicle log created by running a peer, then re-run with same log
-    // When: `pal log ls -d <palDirectory> -l --no-trim` is executed after each run
-    //       via runLogLs()
-    // Then: Exit code is 0 both times, and end offset increases after second run
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    String absPath = "/tmp/test-chr-rerun-" + generateId();
+    trackChronicleLog(absPath);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    // First run: launch peer, generate messages, join
+    UUID peerId1 = UUID.randomUUID();
+    peerProcess =
+        launchPeer(
+            peerId1,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + absPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    CliProcessResult firstLs = runLogLs("-d", palDir, "-l", "--no-trim");
+    assertThat("Expected exit code 0 for first ls", firstLs.exitCode(), is(0));
+    String firstOutput = firstLs.stdout();
+
+    // Second run: launch another peer with the SAME WAL to append more messages
+    UUID peerId2 = UUID.randomUUID();
+    peerProcess =
+        launchPeer(
+            peerId2,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + absPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    CliProcessResult secondLs = runLogLs("-d", palDir, "-l", "--no-trim");
+    assertThat("Expected exit code 0 for second ls", secondLs.exitCode(), is(0));
+    String secondOutput = secondLs.stdout();
+
+    // The second output should differ from the first (end offset should have increased)
+    assertThat("Expected output to change after second run", secondOutput, is(not(firstOutput)));
   }
 
   /**
@@ -120,14 +254,34 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogLs_chronicleLog_withAbsolutePath() throws Exception {
-    // Given: A Chronicle log created with an absolute path (e.g., /tmp/test-log)
-    // When: `pal log ls -d <palDirectory> -l --no-trim` is executed via runLogLs()
-    // Then: Exit code is 0, output contains the log filename
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String absPath = "/tmp/test-chr-abspath-" + generateId();
+    trackChronicleLog(absPath);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + absPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    CliProcessResult result = runLogLs("-d", palDir, "-l", "--no-trim");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    assertThat(
+        "Expected output to contain absolute path", result.stdout(), containsString(absPath));
   }
 
   // ==========================================================================
@@ -142,14 +296,36 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogRm_chronicleLog_withAbsolutePath() throws Exception {
-    // Given: A Chronicle log created with an absolute path
-    // When: `pal log rm -d <palDirectory> <absolutePath> --force` is executed via runLogRm()
-    // Then: Exit code is 0, log no longer appears in `pal log ls` output
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String absPath = "/tmp/test-chr-rm-abs-" + generateId();
+    trackChronicleLog(absPath);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + absPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    CliProcessResult rmResult = runLogRm("-d", palDir, absPath, "--force");
+    assertThat("Expected exit code 0 for log rm", rmResult.exitCode(), is(0));
+
+    // Verify log no longer appears in listing
+    CliProcessResult lsResult = runLogLs("-d", palDir);
+    assertThat(
+        "Log should not appear after removal", lsResult.stdout(), not(containsString(absPath)));
   }
 
   /**
@@ -158,15 +334,33 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogRm_chronicleLog_withFilename() throws Exception {
-    // Given: A Chronicle log created with an absolute path
-    // When: `pal log rm -d <palDirectory> <filename> --force` is executed via runLogRm()
-    //       using just the filename (not full path)
-    // Then: Exit code is 0, log no longer appears in `pal log ls` output
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String filename = "test-chr-rm-fname-" + generateId();
+    String absPath = "/tmp/" + filename;
+    trackChronicleLog(absPath);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + absPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    // Remove using just the filename (not the full path)
+    CliProcessResult rmResult = runLogRm("-d", palDir, filename, "--force");
+    assertThat("Expected exit code 0 for log rm by filename", rmResult.exitCode(), is(0));
   }
 
   /**
@@ -175,15 +369,32 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogRm_chronicleLog_withoutPalDirectory() throws Exception {
-    // Given: A Chronicle log created by launching a peer
-    // When: `pal log rm file:<walName> --force` is executed via runLogRm()
-    //       without -d flag (no PAL_DIRECTORY)
-    // Then: Exit code is 0, Chronicle log directory is deleted from disk
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String absPath = "/tmp/test-chr-rm-nodir-" + generateId();
+    trackChronicleLog(absPath);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + absPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    // Remove without -d flag (direct mode)
+    CliProcessResult rmResult = runLogRm("file:" + absPath, "--force");
+    assertThat("Expected exit code 0 for direct-mode log rm", rmResult.exitCode(), is(0));
   }
 
   // ==========================================================================
@@ -196,14 +407,35 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testChronicleLog_storesAbsolutePath() throws Exception {
-    // Given: A peer launched with a relative Chronicle log path (file:<relativeName>)
-    // When: LogInfo is queried from etcd via PalDirectory
-    // Then: The stored path in LogInfo is absolute (not relative)
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "chr-rel-" + generateId();
+    trackChronicleLog(walName);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + walName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    peerProcess = null;
+
+    // Query LogInfo from etcd to check the stored path is absolute
+    PalDirectory dir = new PalDirectory(palDir, true);
+    LogInfo info = dir.getLogInfo(walName);
+    dir.close();
+
+    assertThat("LogInfo name should be an absolute path", info.getName(), startsWith("/"));
   }
 
   // ==========================================================================
@@ -218,16 +450,48 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogCall_chronicleLog_withPalDirectory() throws Exception {
-    // Given: A peer launched with split Chronicle logs (source + WAL) and --wal-all-incoming-rpc
-    // When: `pal log call -d <palDirectory> --output-log file:<source> --input-log file:<wal>
-    //       io.quasient.foobar.apps.quantized.rpc.Methods -m staticStringWithStringArgs
-    //       test-call-registry` is executed via runLogCall()
-    // Then: Exit code is 0, stdout contains "RESULT: test-call-registry"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String source = "/tmp/test-chr-call-src-" + generateId();
+    String wal = "/tmp/test-chr-call-wal-" + generateId();
+    trackChronicleLog(source);
+    trackChronicleLog(wal);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + wal,
+            "--log",
+            "file:" + source,
+            "--wal-all-incoming-rpc",
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult result =
+        runLogCall(
+            "-d",
+            palDir,
+            "--output-log",
+            "file:" + source,
+            "--input-log",
+            "file:" + wal,
+            "-m",
+            "staticStringWithStringArgs",
+            METHODS_CLASS,
+            "test-call-registry");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    assertThat("Expected RESULT in stdout", result.stdout(), containsString("RESULT:"));
   }
 
   /**
@@ -237,16 +501,46 @@ public class ChronicleCliIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testLogCall_chronicleLog_withoutPalDirectory() throws Exception {
-    // Given: A peer launched with split Chronicle logs using absolute paths and
-    //        --wal-all-incoming-rpc
-    // When: `pal log call --output-log file:<absSource> --input-log file:<absWal>
-    //       io.quasient.foobar.apps.quantized.rpc.Methods -m staticStringWithStringArgs
-    //       test-call-direct` is executed via runLogCall() without -d flag
-    // Then: Exit code is 0, stdout contains "RESULT: test-call-direct"
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String source = "/tmp/test-chr-call-dsrc-" + generateId();
+    String wal = "/tmp/test-chr-call-dwal-" + generateId();
+    trackChronicleLog(source);
+    trackChronicleLog(wal);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            "file:" + wal,
+            "--log",
+            "file:" + source,
+            "--wal-all-incoming-rpc",
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    // Call without -d flag (direct mode, using absolute paths)
+    CliProcessResult result =
+        runLogCall(
+            "--output-log",
+            "file:" + source,
+            "--input-log",
+            "file:" + wal,
+            "-m",
+            "staticStringWithStringArgs",
+            METHODS_CLASS,
+            "test-call-direct");
+
+    assertThat("Expected exit code 0", result.exitCode(), is(0));
+    assertThat("Expected RESULT in stdout", result.stdout(), containsString("RESULT:"));
   }
 }

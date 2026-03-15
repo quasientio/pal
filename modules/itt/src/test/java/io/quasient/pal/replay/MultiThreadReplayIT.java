@@ -342,10 +342,9 @@ public class MultiThreadReplayIT extends AbstractCliIT {
     // Call shutdown() via RPC so it's recorded in the WAL.
     // During replay, this releases the SHUTDOWN_LATCH so main() can exit.
     CliProcessResult shutdownResult =
-        runCall(
+        runPeerCall(
             "-d",
             getPalDirectoryUrl(),
-            "-p",
             peerName,
             "--rpc-type",
             "ZMQ_RPC",
@@ -426,10 +425,9 @@ public class MultiThreadReplayIT extends AbstractCliIT {
       CliProcessResult result;
       if (i % 2 == 0) {
         result =
-            runCall(
+            runPeerCall(
                 "-d",
                 palDirectory,
-                "-p",
                 peerName,
                 "--rpc-type",
                 "ZMQ_RPC",
@@ -439,10 +437,9 @@ public class MultiThreadReplayIT extends AbstractCliIT {
                 String.valueOf(i + 1));
       } else {
         result =
-            runCall(
+            runPeerCall(
                 "-d",
                 palDirectory,
-                "-p",
                 peerName,
                 "--rpc-type",
                 "ZMQ_RPC",

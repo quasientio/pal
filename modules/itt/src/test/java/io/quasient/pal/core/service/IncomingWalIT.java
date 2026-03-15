@@ -123,10 +123,9 @@ public class IncomingWalIT extends AbstractCliIT {
 
     // When: Invoke processArgs method on the peer via pal call
     CliProcessResult callResult =
-        runCall(
+        runPeerCall(
             "-d",
             palDirectory,
-            "-p",
             peerName,
             "--rpc-type",
             "ZMQ_RPC",
@@ -146,7 +145,7 @@ public class IncomingWalIT extends AbstractCliIT {
     Thread.sleep(1000);
 
     // Then: WAL contains both BEFORE and AFTER messages for the incoming RPC
-    CliProcessResult printResult = runPrint("-d", palDirectory, "-l", walName);
+    CliProcessResult printResult = runLogPrint("-d", palDirectory, walName);
     assertEquals("Expected successful print", 0, printResult.exitCode());
 
     String output = printResult.stdout();
@@ -204,10 +203,9 @@ public class IncomingWalIT extends AbstractCliIT {
 
     // When: Invoke processArgs method on the peer via pal call
     CliProcessResult callResult =
-        runCall(
+        runPeerCall(
             "-d",
             palDirectory,
-            "-p",
             peerName,
             "--rpc-type",
             "ZMQ_RPC",
@@ -226,7 +224,7 @@ public class IncomingWalIT extends AbstractCliIT {
     Thread.sleep(1000);
 
     // Then: WAL contains no incoming RPC messages (symmetric gating of BEFORE and AFTER)
-    CliProcessResult printResult = runPrint("-d", palDirectory, "-l", walName);
+    CliProcessResult printResult = runLogPrint("-d", palDirectory, walName);
     assertEquals("Expected successful print", 0, printResult.exitCode());
 
     String output = printResult.stdout();
@@ -292,7 +290,7 @@ public class IncomingWalIT extends AbstractCliIT {
     peerProcess = null;
 
     // Verify source log has messages
-    CliProcessResult sourceCheck = runPrint("-d", palDirectory, "-l", sourceLogName);
+    CliProcessResult sourceCheck = runLogPrint("-d", palDirectory, sourceLogName);
     assertEquals("Expected successful source print", 0, sourceCheck.exitCode());
     assertThat("Expected messages in source log", sourceCheck.stdout().length(), greaterThan(0));
 
@@ -323,7 +321,7 @@ public class IncomingWalIT extends AbstractCliIT {
     Thread.sleep(1000);
 
     // Step 3: Verify WAL contains messages from replayed operations
-    CliProcessResult walPrint = runPrint("-d", palDirectory, "-l", walLogName);
+    CliProcessResult walPrint = runLogPrint("-d", palDirectory, walLogName);
     assertEquals("Expected successful WAL print", 0, walPrint.exitCode());
 
     String walOutput = walPrint.stdout();
@@ -380,7 +378,7 @@ public class IncomingWalIT extends AbstractCliIT {
     peerProcess = null;
 
     // Count original messages in log
-    CliProcessResult originalPrint = runPrint("-d", palDirectory, "-l", logName);
+    CliProcessResult originalPrint = runLogPrint("-d", palDirectory, logName);
     assertEquals("Expected successful print", 0, originalPrint.exitCode());
     long originalLineCount = originalPrint.stdout().lines().filter(l -> !l.isBlank()).count();
     assertThat("Expected messages in log", originalLineCount, greaterThan(0L));
@@ -419,7 +417,7 @@ public class IncomingWalIT extends AbstractCliIT {
     Thread.sleep(1000);
 
     // Step 4: Verify no unbounded message growth
-    CliProcessResult afterPrint = runPrint("-d", palDirectory, "-l", logName);
+    CliProcessResult afterPrint = runLogPrint("-d", palDirectory, logName);
     assertEquals("Expected successful print after consumer", 0, afterPrint.exitCode());
     long afterLineCount = afterPrint.stdout().lines().filter(l -> !l.isBlank()).count();
 

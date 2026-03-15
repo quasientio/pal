@@ -9,9 +9,15 @@
  */
 package io.quasient.pal.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.PeerProcess;
+import java.util.UUID;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -23,6 +29,39 @@ import org.junit.Test;
  * <p>Requires running etcd and Kafka infrastructure as described in modules/itt/README.md.
  */
 public class ListIT extends AbstractCliIT {
+
+  /** Main class used for launching peers that generate messages. */
+  private static final String METHODS_CLASS = "io.quasient.foobar.apps.quantized.rpc.Methods";
+
+  /** Primary peer process managed by the test lifecycle. */
+  private PeerProcess peerProcess;
+
+  /** Secondary peer process used by multi-peer tests. */
+  private PeerProcess secondaryPeerProcess;
+
+  /** Sets up test state before each test. */
+  @Before
+  public void setUp() {
+    peerProcess = null;
+    secondaryPeerProcess = null;
+  }
+
+  /**
+   * Tears down test state after each test, stopping any launched peers.
+   *
+   * @throws Exception if stopping a peer fails
+   */
+  @After
+  public void tearDown() throws Exception {
+    if (secondaryPeerProcess != null) {
+      stopPeer(secondaryPeerProcess);
+      secondaryPeerProcess = null;
+    }
+    if (peerProcess != null) {
+      stopPeer(peerProcess);
+      peerProcess = null;
+    }
+  }
 
   // ==========================================================================
   // Peer listing tests: pal peer ls
@@ -36,14 +75,34 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListPeersNamed_showsRunningPeer() throws Exception {
-    // Given: A peer launched with a specific name via launchPeer()
-    // When: `pal peer ls -d <palDirectory>` is executed via runPeerLs()
-    // Then: Exit code is 0 and stdout contains the peer name
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "named-peer-" + generateId();
+    String walName = "wal-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult result = runPeerLs("-d", palDir);
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString(peerName));
   }
 
   /**
@@ -52,14 +111,31 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListPeersUnnamed_showsRunningPeer() throws Exception {
-    // Given: A peer launched without a name via launchPeer()
-    // When: `pal peer ls -d <palDirectory>` is executed via runPeerLs()
-    // Then: Exit code is 0 and stdout contains the peer UUID
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "wal-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult result = runPeerLs("-d", palDir);
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString(peerId.toString()));
   }
 
   /**
@@ -69,14 +145,38 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListPeers_longFormat() throws Exception {
-    // Given: A peer launched with ZMQ-RPC, JSON-RPC, and PUB endpoints
-    // When: `pal peer ls -d <palDirectory> -l` is executed via runPeerLs("-d", dir, "-l")
-    // Then: Exit code is 0 and stdout contains peer ID, ZMQ-RPC, JSON-RPC, PUB addresses
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "long-fmt-peer-" + generateId();
+    String walName = "wal-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--json-rpc",
+            "auto",
+            "--tcp-pub",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult result = runPeerLs("-d", palDir, "-l");
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), is(not("")));
   }
 
   /**
@@ -85,14 +185,60 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListPeers_sortByCtime() throws Exception {
-    // Given: Two peers launched at different times with distinguishable name prefixes
-    // When: `pal peer ls -d <palDirectory> -c` is executed via runPeerLs("-d", dir, "-c")
-    // Then: Exit code is 0 and the newer peer appears before the older peer in output
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    String uniqueSuffix = generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    UUID firstPeerId = UUID.randomUUID();
+    String firstName = "first-" + uniqueSuffix;
+    String firstWal = "wal-first-" + uniqueSuffix;
+
+    peerProcess =
+        launchPeer(
+            firstPeerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            firstName,
+            "--wal",
+            firstWal,
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    Thread.sleep(1000);
+
+    UUID secondPeerId = UUID.randomUUID();
+    String secondName = "second-" + uniqueSuffix;
+    String secondWal = "wal-second-" + uniqueSuffix;
+
+    secondaryPeerProcess =
+        launchPeer(
+            secondPeerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            secondName,
+            "--wal",
+            secondWal,
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult result = runPeerLs("-d", palDir, "-c");
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString(firstName));
+    assertThat(result.stdout(), containsString(secondName));
   }
 
   // ==========================================================================
@@ -107,14 +253,34 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListLogs_showsKafkaLogs() throws Exception {
-    // Given: A peer launched with a Kafka WAL that writes messages
-    // When: `pal log ls -d <palDirectory>` is executed via runLogLs()
-    // Then: Exit code is 0 and stdout contains the WAL log name
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "wal-kafka-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    Thread.sleep(1000);
+
+    CliProcessResult result = runLogLs("-d", palDir);
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString(walName));
   }
 
   /**
@@ -123,14 +289,31 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListLogs_showsChronicleLog() throws Exception {
-    // Given: A peer launched with a Chronicle WAL (file: prefix) that writes messages
-    // When: `pal log ls -d <palDirectory>` is executed via runLogLs()
-    // Then: Exit code is 0 and stdout contains the Chronicle log name
+    String palDir = getPalDirectoryUrl();
+    UUID peerId = UUID.randomUUID();
+    String chronicleName = "chronicle-" + generateId();
+    trackChronicleLog(chronicleName);
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "--wal",
+            "file:" + chronicleName,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+
+    CliProcessResult result = runLogLs("-d", palDir);
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString(chronicleName));
   }
 
   /**
@@ -139,14 +322,34 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListLogs_longFormat() throws Exception {
-    // Given: A peer launched with a Kafka WAL that writes messages
-    // When: `pal log ls -d <palDirectory> -l` is executed via runLogLs("-d", dir, "-l")
-    // Then: Exit code is 0 and stdout contains log name with offset information
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "wal-long-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+    Thread.sleep(1000);
+
+    CliProcessResult result = runLogLs("-d", palDir, "-l");
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), is(not("")));
   }
 
   /**
@@ -155,14 +358,58 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListLogs_sortByCtime() throws Exception {
-    // Given: Two logs created at different times with distinguishable name prefixes
-    // When: `pal log ls -d <palDirectory> -c` is executed via runLogLs("-d", dir, "-c")
-    // Then: Exit code is 0 and the newer log appears before the older log in output
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    String uniqueSuffix = generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    UUID firstPeerId = UUID.randomUUID();
+    String firstWal = "wal-ctime-first-" + uniqueSuffix;
+
+    peerProcess =
+        launchPeer(
+            firstPeerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            firstWal,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+
+    Thread.sleep(1000);
+
+    UUID secondPeerId = UUID.randomUUID();
+    String secondWal = "wal-ctime-second-" + uniqueSuffix;
+
+    secondaryPeerProcess =
+        launchPeer(
+            secondPeerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            secondWal,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(secondaryPeerProcess, PROCESS_TIMEOUT_SECONDS);
+
+    CliProcessResult result = runLogLs("-d", palDir, "-c");
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString(firstWal));
+    assertThat(result.stdout(), containsString(secondWal));
   }
 
   /**
@@ -171,14 +418,32 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListLogs_sortBySize() throws Exception {
-    // Given: Two Kafka logs with different sizes
-    // When: `pal log ls -d <palDirectory> -l -S` is executed via runLogLs("-d", dir, "-l", "-S")
-    // Then: Exit code is 0 and both logs appear in the output
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "wal-size-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+
+    CliProcessResult result = runLogLs("-d", palDir, "-l", "-S");
+
+    assertThat(result.exitCode(), is(0));
   }
 
   /**
@@ -187,14 +452,58 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListLogs_reverseOrder() throws Exception {
-    // Given: Two logs created at different times with distinguishable name prefixes
-    // When: `pal log ls -d <palDirectory> -c -r` is executed via runLogLs("-d", dir, "-c", "-r")
-    // Then: Exit code is 0 and the older log appears before the newer log in output
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    String uniqueSuffix = generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    UUID firstPeerId = UUID.randomUUID();
+    String firstWal = "wal-rev-first-" + uniqueSuffix;
+
+    peerProcess =
+        launchPeer(
+            firstPeerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            firstWal,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+
+    Thread.sleep(1000);
+
+    UUID secondPeerId = UUID.randomUUID();
+    String secondWal = "wal-rev-second-" + uniqueSuffix;
+
+    secondaryPeerProcess =
+        launchPeer(
+            secondPeerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            secondWal,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(secondaryPeerProcess, PROCESS_TIMEOUT_SECONDS);
+
+    CliProcessResult result = runLogLs("-d", palDir, "-c", "-r");
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString(firstWal));
+    assertThat(result.stdout(), containsString(secondWal));
   }
 
   /**
@@ -203,13 +512,31 @@ public class ListIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListLogs_noTrim() throws Exception {
-    // Given: A log with a long name
-    // When: `pal log ls -d <palDirectory> -l --no-trim` is executed via runLogLs()
-    // Then: Exit code is 0 and stdout contains the full log name (no ".." truncation)
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String walName = "wal-notrim-long-name-for-testing-truncation-behavior-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+
+    joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
+
+    CliProcessResult result = runLogLs("-d", palDir, "-l", "--no-trim");
+
+    assertThat(result.exitCode(), is(0));
   }
 }

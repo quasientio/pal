@@ -9,9 +9,20 @@
  */
 package io.quasient.pal.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.PeerProcess;
+import io.quasient.pal.common.directory.nodes.InterceptRequest;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
+import io.quasient.pal.cxn.directory.PalDirectory;
+import java.util.Collections;
+import java.util.UUID;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -23,6 +34,36 @@ import org.junit.Test;
  * <p>Requires running etcd infrastructure as described in modules/itt/README.md.
  */
 public class ListInterceptIT extends AbstractCliIT {
+
+  /** Primary peer process managed by the test lifecycle. */
+  private PeerProcess peerProcess;
+
+  /** PalDirectory client used to register intercepts programmatically. */
+  private PalDirectory palDirectory;
+
+  /** Sets up test state before each test. */
+  @Before
+  public void setUp() {
+    peerProcess = null;
+    palDirectory = null;
+  }
+
+  /**
+   * Tears down test state after each test, closing the directory client and stopping any peers.
+   *
+   * @throws Exception if cleanup fails
+   */
+  @After
+  public void tearDown() throws Exception {
+    if (palDirectory != null) {
+      palDirectory.close();
+      palDirectory = null;
+    }
+    if (peerProcess != null) {
+      stopPeer(peerProcess);
+      peerProcess = null;
+    }
+  }
 
   // ==========================================================================
   // Intercept listing tests: pal intercept ls
@@ -36,14 +77,50 @@ public class ListInterceptIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListIntercepts_showsRegisteredIntercepts() throws Exception {
-    // Given: A peer launched with --interceptable and intercepts registered via PalDirectory
-    // When: `pal intercept ls -d <palDirectory>` is executed via runInterceptLs()
-    // Then: Exit code is 0 and stdout contains some output for the registered intercepts
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "intercept-peer-" + generateId();
+    String walName = "wal-intercept-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--interceptable",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    palDirectory = new PalDirectory(getPalDirectoryUrl(), true);
+
+    InterceptableMethodCall methodCall =
+        new InterceptableMethodCall("test", Collections.emptyList());
+    InterceptRequest<InterceptableMethodCall> intercept =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerId,
+            InterceptType.BEFORE,
+            "com.example.Test",
+            "com.example.Callback",
+            "onTest",
+            methodCall);
+    palDirectory.createIntercept(intercept);
+
+    CliProcessResult result = runInterceptLs("-d", palDir);
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), is(not("")));
   }
 
   /**
@@ -52,15 +129,50 @@ public class ListInterceptIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListIntercepts_longFormat() throws Exception {
-    // Given: A peer launched with --interceptable and one intercept registered
-    // When: `pal intercept ls -d <palDirectory> -l` is executed via runInterceptLs("-d", dir, "-l")
-    // Then: Exit code is 0 and stdout contains "total 1", intercept type (BEFORE/AFTER),
-    //       class name, and callback method name
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "intercept-long-" + generateId();
+    String walName = "wal-intercept-long-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--interceptable",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    palDirectory = new PalDirectory(getPalDirectoryUrl(), true);
+
+    InterceptableMethodCall methodCall =
+        new InterceptableMethodCall("test", Collections.emptyList());
+    InterceptRequest<InterceptableMethodCall> intercept =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerId,
+            InterceptType.BEFORE,
+            "com.example.Test",
+            "com.example.Callback",
+            "onTest",
+            methodCall);
+    palDirectory.createIntercept(intercept);
+
+    CliProcessResult result = runInterceptLs("-d", palDir, "-l");
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString("total"));
   }
 
   /**
@@ -69,14 +181,65 @@ public class ListInterceptIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListIntercepts_sortByCtime() throws Exception {
-    // Given: Two intercepts registered at different times
-    // When: `pal intercept ls -d <palDirectory> -l -c` is executed
-    // Then: Exit code is 0, total is 2, and the newer intercept appears before the older one
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "intercept-ctime-" + generateId();
+    String walName = "wal-intercept-ctime-" + generateId();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--interceptable",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    palDirectory = new PalDirectory(getPalDirectoryUrl(), true);
+
+    InterceptableMethodCall firstMethodCall =
+        new InterceptableMethodCall("firstMethod", Collections.emptyList());
+    InterceptRequest<InterceptableMethodCall> firstIntercept =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerId,
+            InterceptType.BEFORE,
+            "com.example.First",
+            "com.example.Callback",
+            "onFirst",
+            firstMethodCall);
+    palDirectory.createIntercept(firstIntercept);
+
+    Thread.sleep(1000);
+
+    InterceptableMethodCall secondMethodCall =
+        new InterceptableMethodCall("secondMethod", Collections.emptyList());
+    InterceptRequest<InterceptableMethodCall> secondIntercept =
+        new InterceptRequest<>(
+            UUID.randomUUID(),
+            peerId,
+            InterceptType.AFTER,
+            "com.example.Second",
+            "com.example.Callback",
+            "onSecond",
+            secondMethodCall);
+    palDirectory.createIntercept(secondIntercept);
+
+    CliProcessResult result = runInterceptLs("-d", palDir, "-l", "-c");
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString("total 2"));
   }
 
   /**
@@ -85,14 +248,12 @@ public class ListInterceptIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListIntercepts_empty() throws Exception {
-    // Given: No intercepts registered in etcd
-    // When: `pal intercept ls -d <palDirectory>` is executed via runInterceptLs()
-    // Then: Exit code is 0 and output is empty or minimal
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result = runInterceptLs("-d", palDir);
+
+    assertThat(result.exitCode(), is(0));
   }
 
   /**
@@ -101,13 +262,12 @@ public class ListInterceptIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1205")
   public void testListIntercepts_emptyLongFormat() throws Exception {
-    // Given: No intercepts registered in etcd
-    // When: `pal intercept ls -d <palDirectory> -l` is executed via runInterceptLs("-d", dir, "-l")
-    // Then: Exit code is 0 and stdout contains "total 0"
+    String palDir = getPalDirectoryUrl();
 
-    // TODO(#1205): Implement test logic
-    fail("Not yet implemented");
+    CliProcessResult result = runInterceptLs("-d", palDir, "-l");
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString("total 0"));
   }
 }

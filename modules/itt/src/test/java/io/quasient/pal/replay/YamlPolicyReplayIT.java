@@ -295,10 +295,9 @@ public class YamlPolicyReplayIT extends AbstractCliIT {
 
     for (int i = 0; i < callCount; i++) {
       CliProcessResult result =
-          runCall(
+          runPeerCall(
               "-d",
               getPalDirectoryUrl(),
-              "-p",
               peerName,
               "--rpc-type",
               "ZMQ_RPC",
@@ -310,16 +309,8 @@ public class YamlPolicyReplayIT extends AbstractCliIT {
       logger.info("RPC call {} exit code: {}", i, result.exitCode());
     }
 
-    runCall(
-        "-d",
-        getPalDirectoryUrl(),
-        "-p",
-        peerName,
-        "--rpc-type",
-        "ZMQ_RPC",
-        "-m",
-        "shutdown",
-        mainClass);
+    runPeerCall(
+        "-d", getPalDirectoryUrl(), peerName, "--rpc-type", "ZMQ_RPC", "-m", "shutdown", mainClass);
 
     stopPeer(peerProcess);
     peerProcess = null;
