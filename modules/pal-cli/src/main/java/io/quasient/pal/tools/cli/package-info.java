@@ -15,7 +15,8 @@
  * <ul>
  *   <li>{@code run} - Start a PAL peer (delegates to pal-runtime)
  *   <li>{@code print} - Print messages from a log ({@link MessageStreamPrinter})
- *   <li>{@code call} - Invoke a method on a remote peer ({@link Caller})
+ *   <li>{@code peer call} - Invoke a method on a remote peer ({@link PeerCall})
+ *   <li>{@code log call} - Send method calls via a log ({@link LogCall})
  *   <li>{@code ls} - List peers and logs ({@link List})
  *   <li>{@code rm} - Remove peers or logs ({@link Remove})
  * </ul>

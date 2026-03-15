@@ -114,7 +114,6 @@ public class Pal implements Callable<Integer>, PalCommand {
     java.util.List<AbstractPalSubcommand> subcommands =
         Arrays.asList(
             new MessageStreamPrinter(),
-            new Caller(),
             new List(),
             new Remove(),
             new Replay(),

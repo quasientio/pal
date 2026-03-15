@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Refactor] Split Caller.java into PeerCall and LogCall following entity-operation pattern (pal peer call / pal log call)
 - [Test] Add integration tests for RPC policy hot reloading: deny-to-allow, allow-to-deny, invalid YAML resilience, and metadata reload verification, parameterized for both ZMQ and JSON-RPC transports
 - [Doc] Document RPC policy hot reloading: user guide (behavior, poll interval, error handling, operational workflow), developer architecture (RpcPolicyHolder volatile swap pattern, RpcPolicyFileWatcher threading model), CLI reference (--rpc-policy-watch-interval flag)
 - [Doc] Update user documentation for visibility feature: visibility field in Rule Fields table, MemberVisibility values table, deny-nonpublic preset, YAML examples with visibility usage, security considerations for visibility-aware policies
