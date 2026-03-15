@@ -18,7 +18,8 @@
  *   <li>{@code peer call} - Invoke a method on a remote peer ({@link PeerCall})
  *   <li>{@code log call} - Send method calls via a log ({@link LogCall})
  *   <li>{@code ls} - List peers and logs ({@link List})
- *   <li>{@code rm} - Remove peers or logs ({@link Remove})
+ *   <li>{@code peer rm} - Remove peers ({@link PeerRemove})
+ *   <li>{@code log rm} - Remove logs ({@link LogRemove})
  * </ul>
  */
 package io.quasient.pal.tools.cli;
