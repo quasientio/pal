@@ -17,7 +17,8 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 
 import io.quasient.pal.PeerProcess;
-import io.quasient.pal.tools.cli.MessageStreamStats;
+import io.quasient.pal.tools.cli.LogStats;
+import io.quasient.pal.tools.cli.PeerStats;
 import io.quasient.pal.tools.stats.Counters;
 import java.util.List;
 import java.util.UUID;
@@ -30,10 +31,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Integration tests for the `pal stats` command.
+ * Integration tests for the {@code pal log stats} and {@code pal peer stats} commands.
  *
- * <p>Tests collecting statistics from Kafka logs using the MessageStreamStats class
- * programmatically rather than via CLI (since stats runs continuously and doesn't terminate).
+ * <p>Tests collecting statistics from Kafka logs using {@link LogStats} and from peer sockets using
+ * {@link PeerStats} programmatically rather than via CLI (since stats runs continuously and doesn't
+ * terminate).
  *
  * <p>Requires running etcd and Kafka infrastructure as described in modules/itt/README.md.
  */
@@ -64,11 +66,11 @@ public class MessageStreamStatsIT extends AbstractCliIT {
   }
 
   /**
-   * Tests that MessageStreamStats can collect basic statistics from a Kafka log programmatically.
+   * Tests that LogStats can collect basic statistics from a Kafka log programmatically.
    *
    * <p>This test creates a Kafka WAL by launching a peer, which causes the peer to write internal
    * messages (like registration, constructor calls, method invocations) to the WAL. We then verify
-   * we can collect statistics from those messages using the MessageStreamStats class directly.
+   * we can collect statistics from those messages using the LogStats class directly.
    *
    * @throws Exception if test execution fails
    */
@@ -102,8 +104,8 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
-    // Create MessageStreamStats instance to collect statistics from the log
-    MessageStreamStats stats = new MessageStreamStats(kafkaServers, walName);
+    // Create LogStats instance to collect statistics from the log
+    LogStats stats = new LogStats(kafkaServers, walName);
 
     // Run stats collection in background and stop after a few seconds
     CompletableFuture<Integer> statsFuture =
@@ -162,7 +164,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
   }
 
   /**
-   * Tests that MessageStreamStats can filter messages by type.
+   * Tests that LogStats can filter messages by type.
    *
    * @throws Exception if test execution fails
    */
@@ -195,9 +197,9 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
-    // Create MessageStreamStats with filter for EXEC_CONSTRUCTOR messages only
+    // Create LogStats with filter for EXEC_CONSTRUCTOR messages only
     List<String> msgTypes = List.of("EXEC_CONSTRUCTOR");
-    MessageStreamStats stats = new MessageStreamStats(kafkaServers, walName, msgTypes, null, null);
+    LogStats stats = new LogStats(kafkaServers, walName, msgTypes, null, null);
 
     // Run stats collection in background
     CompletableFuture<Integer> statsFuture =
@@ -257,7 +259,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
   }
 
   /**
-   * Tests that MessageStreamStats can filter messages by peer UUID.
+   * Tests that LogStats can filter messages by peer UUID.
    *
    * @throws Exception if test execution fails
    */
@@ -290,10 +292,9 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
-    // Create MessageStreamStats with filter for specific peer UUID
+    // Create LogStats with filter for specific peer UUID
     String filterPeerUuid = peerId.toString();
-    MessageStreamStats stats =
-        new MessageStreamStats(kafkaServers, walName, null, filterPeerUuid, null);
+    LogStats stats = new LogStats(kafkaServers, walName, null, filterPeerUuid, null);
 
     // Run stats collection in background
     CompletableFuture<Integer> statsFuture =
@@ -350,7 +351,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
   }
 
   /**
-   * Tests that MessageStreamStats tracks different message categories correctly.
+   * Tests that LogStats tracks different message categories correctly.
    *
    * @throws Exception if test execution fails
    */
@@ -383,8 +384,8 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     assertEquals("Expected successful peer exit code", 0, peerExitCode);
     peerProcess = null;
 
-    // Create MessageStreamStats to collect all statistics
-    MessageStreamStats stats = new MessageStreamStats(kafkaServers, walName);
+    // Create LogStats to collect all statistics
+    LogStats stats = new LogStats(kafkaServers, walName);
 
     // Run stats collection in background
     CompletableFuture<Integer> statsFuture =
@@ -443,7 +444,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
   }
 
   /**
-   * Tests that MessageStreamStats handles empty logs gracefully.
+   * Tests that LogStats handles empty logs gracefully.
    *
    * @throws Exception if test execution fails
    */
@@ -454,8 +455,8 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     // Use a log name that doesn't exist
     String walName = "test-stats-empty-log-" + generateId();
 
-    // Create MessageStreamStats for non-existent log
-    MessageStreamStats stats = new MessageStreamStats(kafkaServers, walName);
+    // Create LogStats for non-existent log
+    LogStats stats = new LogStats(kafkaServers, walName);
 
     // Run stats collection in background
     CompletableFuture<Integer> statsFuture =
@@ -490,17 +491,17 @@ public class MessageStreamStatsIT extends AbstractCliIT {
   }
 
   // ==========================================================================
-  // Socket-based MessageStreamStats tests (socketMessageStreamStats() method)
+  // Socket-based PeerStats tests (socket streaming via PeerStats)
   // ==========================================================================
 
   /**
-   * Tests that MessageStreamStats can collect basic statistics from a peer's PUB socket.
+   * Tests that PeerStats can collect basic statistics from a peer's PUB socket.
    *
    * <p>Given: A peer running with a TCP PUB socket enabled that generates messages (constructor
    * calls, method invocations, etc.) during its main class execution.
    *
-   * <p>When: MessageStreamStats is created with the peer's UUID and PAL directory address, and runs
-   * for a period to collect statistics from the socket stream.
+   * <p>When: PeerStats is created with the peer's address and runs for a period to collect
+   * statistics from the socket stream.
    *
    * <p>Then: The counters should show messages received with numberOfMessages > 0, and message type
    * tracking should be populated.
@@ -519,8 +520,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     // ZMQ SUB can connect to a non-existing endpoint; the connection completes automatically
     // when the PUB socket is created during peer startup. This ensures the subscriber is
     // ready to receive messages before the peer's main class publishes them.
-    MessageStreamStats stats =
-        new MessageStreamStats(palDirectory, peerId, "tcp://" + pubEndpoint, null, null, null);
+    PeerStats stats = new PeerStats("tcp://" + pubEndpoint, null, null, null);
 
     // Run stats collection in background
     CompletableFuture<Integer> statsFuture =
@@ -596,13 +596,13 @@ public class MessageStreamStatsIT extends AbstractCliIT {
   }
 
   /**
-   * Tests that MessageStreamStats can filter messages by type when streaming from a peer socket.
+   * Tests that PeerStats can filter messages by type when streaming from a peer socket.
    *
    * <p>Given: A peer running with a TCP PUB socket that generates various message types
    * (EXEC_CONSTRUCTOR, EXEC_INSTANCE_METHOD, EXEC_CLASS_METHOD, etc.) during execution.
    *
-   * <p>When: MessageStreamStats is created with a message type filter (e.g., only EXEC_CONSTRUCTOR)
-   * and runs for a period collecting statistics from the socket stream.
+   * <p>When: PeerStats is created with a message type filter (e.g., only EXEC_CONSTRUCTOR) and runs
+   * for a period collecting statistics from the socket stream.
    *
    * <p>Then: Only messages matching the filtered type should be counted in the statistics.
    *
@@ -618,8 +618,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
 
     // Start subscriber BEFORE launching the peer to avoid the ZMQ "slow joiner" problem.
     List<String> msgTypes = List.of("EXEC_CONSTRUCTOR");
-    MessageStreamStats stats =
-        new MessageStreamStats(palDirectory, peerId, "tcp://" + pubEndpoint, msgTypes, null, null);
+    PeerStats stats = new PeerStats("tcp://" + pubEndpoint, msgTypes, null, null);
 
     // Run stats collection in background
     CompletableFuture<Integer> statsFuture =
@@ -700,12 +699,12 @@ public class MessageStreamStatsIT extends AbstractCliIT {
   }
 
   /**
-   * Tests that MessageStreamStats can filter messages by peer UUID when streaming from a socket.
+   * Tests that PeerStats can filter messages by peer UUID when streaming from a socket.
    *
    * <p>Given: A peer running with a TCP PUB socket and a known UUID that generates messages.
    *
-   * <p>When: MessageStreamStats is created with a peer filter matching the running peer's UUID and
-   * runs for a period collecting statistics from the socket stream.
+   * <p>When: PeerStats is created with a peer filter matching the running peer's UUID and runs for
+   * a period collecting statistics from the socket stream.
    *
    * <p>Then: Only messages from the specified peer should be counted in the statistics.
    *
@@ -721,9 +720,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
 
     // Start subscriber BEFORE launching the peer to avoid the ZMQ "slow joiner" problem.
     String filterPeerUuid = peerId.toString();
-    MessageStreamStats stats =
-        new MessageStreamStats(
-            palDirectory, peerId, "tcp://" + pubEndpoint, null, filterPeerUuid, null);
+    PeerStats stats = new PeerStats("tcp://" + pubEndpoint, null, filterPeerUuid, null);
 
     // Run stats collection in background
     CompletableFuture<Integer> statsFuture =

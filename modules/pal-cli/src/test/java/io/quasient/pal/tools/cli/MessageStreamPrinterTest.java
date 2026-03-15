@@ -47,7 +47,7 @@ public class MessageStreamPrinterTest {
     return new LogMessage<>("topic", 1L, Map.of(), m);
   }
 
-  // MessageStreamPrinter does not expose getShortClassname; tested in MessageStreamStats suite.
+  // MessageStreamPrinter does not expose getShortClassname; tested in LogStats suite.
 
   @Test
   public void shouldPrint_appliesAllFilters() throws Exception {
@@ -142,8 +142,7 @@ public class MessageStreamPrinterTest {
   }
 
   // ==========================================================================
-  // Test specifications for getFormat(), shouldPrint() branches, and printRecord()
-  // Issue #366 - Awaiting implementation in #367
+  // Tests for getFormat(), shouldPrint() branches, and printRecord()
   // ==========================================================================
 
   @Test
@@ -396,8 +395,7 @@ public class MessageStreamPrinterTest {
   }
 
   // ==========================================================================
-  // Test specifications for performSocketPrinterShutdown()
-  // Issue #372 - Awaiting implementation in #373
+  // Tests for performSocketPrinterShutdown()
   // ==========================================================================
 
   /**
@@ -423,9 +421,8 @@ public class MessageStreamPrinterTest {
   }
 
   // ==========================================================================
-  // Test specifications for printVerboseFilters, resolveLogInfo, getLogMessage,
+  // Tests for printVerboseFilters, resolveLogInfo, getLogMessage,
   // getFormat, and shouldPrint (offset filtering)
-  // Issue #629 - Awaiting implementation in #630
   // ==========================================================================
 
   /**

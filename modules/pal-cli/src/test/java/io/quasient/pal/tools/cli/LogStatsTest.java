@@ -9,22 +9,31 @@
  */
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.messages.colfer.ControlMessage;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.types.ControlCommandType;
+import io.quasient.pal.serdes.colfer.MessageBuilder;
+import io.quasient.pal.tools.stats.ContinuousPrinter;
+import io.quasient.pal.tools.stats.Counters;
+import java.util.UUID;
+import org.apache.kafka.streams.KafkaStreams;
 import org.junit.Test;
 
 /**
- * Unit test specifications for {@code LogStats}.
+ * Unit tests for {@link LogStats}.
  *
- * <p>LogStats is the log-specific stats command extracted from {@link MessageStreamStats} to follow
+ * <p>LogStats is the log-specific stats command extracted from {@code MessageStreamStats} to follow
  * the entity-operation pattern ({@code pal log stats}). It handles Kafka Streams-based log message
  * statistics collection, counter tracking, and Kafka shutdown lifecycle.
- *
- * <p>All tests are specification stubs awaiting implementation in issue #1201 when the {@code
- * LogStats} class is created.
- *
- * @see MessageStreamStats
  */
 public class LogStatsTest {
 
@@ -33,18 +42,18 @@ public class LogStatsTest {
   /**
    * Tests that runCommand with a positional log name starts Kafka Streams.
    *
-   * <p>Verifies that providing a log name and bootstrap servers creates and starts a Kafka Streams
-   * topology for message statistics collection.
+   * <p>Verifies that providing a log name and bootstrap servers creates a LogStats instance that
+   * can be configured for Kafka Streams processing. Since actually starting Kafka Streams requires
+   * a running broker, this test verifies the construction and configuration path.
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void runCommand_withLogName_startsKafkaStreams() {
     // Given: positional log name argument and -b bootstrap servers
-    // When: runCommand() is invoked
-    // Then: Kafka Streams topology is created and started
+    LogStats stats = new LogStats("localhost:9092", "test-log");
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    // Then: instance is configured and counters are accessible
+    assertNotNull(stats.getCounters());
+    assertThat(stats.getCounters().getNumberOfMessages().get(), is(0L));
   }
 
   // ==================== updateCounters() Tests ====================
@@ -56,31 +65,53 @@ public class LogStatsTest {
    * counters.getNumberOfMessages() value by 1.
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void updateCounters_incrementsMessageCount() {
     // Given: LogStats instance with a valid message
-    // When: updateCounters(message) called via reflection
-    // Then: counters.getNumberOfMessages() incremented by 1
+    UUID peerId = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage execMessage = builder.buildEmptyConstructor(peerId, "java.lang.String");
+    Message message = builder.wrap(execMessage);
+
+    // When: updateCounters(message) called
+    stats.updateCounters(message);
+
+    // Then: counters.getNumberOfMessages() incremented by 1
+    Counters counters = stats.getCounters();
+    assertThat(counters.getNumberOfMessages().get(), is(1L));
   }
 
   /**
    * Tests that updateCounters tracks message types correctly.
    *
-   * <p>Verifies that processing a message of a specific type (e.g., EXEC_INSTANCE_METHOD) results
-   * in the message type being tracked in counters.getMessagesByType().
+   * <p>Verifies that processing a message of type INSTANCE_METHOD results in the message type being
+   * tracked in counters.getMessagesByType().
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void updateCounters_tracksMessageTypes() {
     // Given: message of type EXEC_INSTANCE_METHOD
-    // When: updateCounters(message) called
-    // Then: counters.getMessagesByType() contains EXEC_INSTANCE_METHOD entry with count 1
+    UUID peerId = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage execMessage =
+        builder.buildInstanceMethod(
+            peerId,
+            "java.util.ArrayList",
+            "add",
+            ObjectRef.randomRef(),
+            new String[] {"int"},
+            new Object[] {1});
+    Message message = builder.wrap(execMessage);
+
+    // When: updateCounters(message) called
+    stats.updateCounters(message);
+
+    // Then: counters.getMessagesByType() contains EXEC_INSTANCE_METHOD entry with count 1
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getMessagesByType().get("EXEC_INSTANCE_METHOD"));
+    assertThat(counters.getMessagesByType().get("EXEC_INSTANCE_METHOD").get(), is(1L));
   }
 
   /**
@@ -90,14 +121,22 @@ public class LogStatsTest {
    * counters.getMessagesFromPeer().
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void updateCounters_tracksMessagesFromPeer() {
     // Given: message from peer with UUID X
-    // When: updateCounters(message) called
-    // Then: counters.getMessagesFromPeer() contains peer X entry with count 1
+    UUID peerId = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    ExecMessage execMessage = builder.buildEmptyConstructor(peerId, "java.lang.String");
+    Message message = builder.wrap(execMessage);
+
+    // When: updateCounters(message) called
+    stats.updateCounters(message);
+
+    // Then: counters.getMessagesFromPeer() contains peer X entry with count 1
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getMessagesFromPeer().get(peerId.toString()));
+    assertThat(counters.getMessagesFromPeer().get(peerId.toString()).get(), is(1L));
   }
 
   /**
@@ -108,15 +147,31 @@ public class LogStatsTest {
    * count.
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void updateCounters_handlesNullExecMessage() {
     // Given: message with null execMessage (e.g., a ControlMessage)
-    // When: updateCounters(message) called
-    // Then: basic message count incremented, but detailed counters (objects, methods,
-    //       fields, threads) remain empty
+    UUID peerId = UUID.randomUUID();
+    MessageBuilder builder = new MessageBuilder(peerId, Boolean.toString(false));
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    ControlMessage controlMessage =
+        builder.buildControlCommandMessage(peerId, ControlCommandType.GC);
+    Message message = builder.wrap(controlMessage);
+
+    assertNull(message.getExecMessage());
+
+    // When: updateCounters(message) called
+    stats.updateCounters(message);
+
+    // Then: basic message count incremented, but detailed counters remain empty
+    Counters counters = stats.getCounters();
+    assertThat(counters.getNumberOfMessages().get(), is(1L));
+    assertNotNull(counters.getMessagesByType().get("CONTROL_MESSAGE_REQUEST"));
+
+    assertThat(counters.getObjectsCreated().isEmpty(), is(true));
+    assertThat(counters.getMethodsCalled().isEmpty(), is(true));
+    assertThat(counters.getFieldReads().isEmpty(), is(true));
+    assertThat(counters.getFieldWrites().isEmpty(), is(true));
+    assertThat(counters.getMessagesByThread().isEmpty(), is(true));
   }
 
   // ==================== increment*() Helper Methods Tests ====================
@@ -128,14 +183,18 @@ public class LogStatsTest {
    * tracked in counters.getObjectsCreated().
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void incrementObjectsCreated_updatesCounter() {
     // Given: LogStats instance
-    // When: incrementObjectsCreated("com.example.MyClass") called via reflection
-    // Then: counters.getObjectsCreated() contains "com.example.MyClass" with count 1
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
+    String className = "com.example.MyClass";
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    // When: incrementObjectsCreated(className) called
+    stats.incrementObjectsCreated(className);
+
+    // Then: counters.getObjectsCreated() contains "com.example.MyClass" with count 1
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getObjectsCreated().get(className));
+    assertThat(counters.getObjectsCreated().get(className).get(), is(1L));
   }
 
   /**
@@ -145,14 +204,18 @@ public class LogStatsTest {
    * tracked in counters.getMethodsCalled().
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void incrementMethodCalls_updatesCounter() {
     // Given: LogStats instance
-    // When: incrementMethodCalls("MyClass.myMethod()") called via reflection
-    // Then: counters.getMethodsCalled() contains "MyClass.myMethod()" with count 1
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
+    String methodKey = "MyClass.myMethod()";
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    // When: incrementMethodCalls(methodKey) called
+    stats.incrementMethodCalls(methodKey);
+
+    // Then: counters.getMethodsCalled() contains "MyClass.myMethod()" with count 1
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getMethodsCalled().get(methodKey));
+    assertThat(counters.getMethodsCalled().get(methodKey).get(), is(1L));
   }
 
   /**
@@ -162,14 +225,18 @@ public class LogStatsTest {
    * tracked in counters.getFieldReads().
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void incrementFieldReads_updatesCounter() {
     // Given: LogStats instance
-    // When: incrementFieldReads("MyClass.myField") called via reflection
-    // Then: counters.getFieldReads() contains "MyClass.myField" with count 1
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
+    String fieldKey = "MyClass.myField";
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    // When: incrementFieldReads(fieldKey) called
+    stats.incrementFieldReads(fieldKey);
+
+    // Then: counters.getFieldReads() contains "MyClass.myField" with count 1
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getFieldReads().get(fieldKey));
+    assertThat(counters.getFieldReads().get(fieldKey).get(), is(1L));
   }
 
   /**
@@ -179,14 +246,18 @@ public class LogStatsTest {
    * tracked in counters.getFieldWrites().
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void incrementFieldWrites_updatesCounter() {
     // Given: LogStats instance
-    // When: incrementFieldWrites("MyClass.myField") called via reflection
-    // Then: counters.getFieldWrites() contains "MyClass.myField" with count 1
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
+    String fieldKey = "MyClass.myField";
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    // When: incrementFieldWrites(fieldKey) called
+    stats.incrementFieldWrites(fieldKey);
+
+    // Then: counters.getFieldWrites() contains "MyClass.myField" with count 1
+    Counters counters = stats.getCounters();
+    assertNotNull(counters.getFieldWrites().get(fieldKey));
+    assertThat(counters.getFieldWrites().get(fieldKey).get(), is(1L));
   }
 
   // ==================== getShortClassname() Tests ====================
@@ -197,14 +268,16 @@ public class LogStatsTest {
    * <p>Verifies that "com.example.MyClass" returns "MyClass".
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void getShortClassname_extractsSimpleName() {
     // Given: fully qualified class name "com.example.MyClass"
-    // When: getShortClassname("com.example.MyClass") called via reflection
-    // Then: returns "MyClass"
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
+    String fullClassName = "com.example.MyClass";
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    // When: getShortClassname("com.example.MyClass") called
+    String result = stats.getShortClassname(fullClassName);
+
+    // Then: returns "MyClass"
+    assertThat(result, is("MyClass"));
   }
 
   /**
@@ -213,14 +286,16 @@ public class LogStatsTest {
    * <p>Verifies that "MyClass" (no package) returns "MyClass" unchanged.
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void getShortClassname_handlesNoPackage() {
     // Given: class name "MyClass" with no package prefix
-    // When: getShortClassname("MyClass") called via reflection
-    // Then: returns "MyClass"
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
+    String className = "MyClass";
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    // When: getShortClassname("MyClass") called
+    String result = stats.getShortClassname(className);
+
+    // Then: returns "MyClass"
+    assertThat(result, is("MyClass"));
   }
 
   // ==================== performKafkaShutdown() Tests ====================
@@ -231,14 +306,17 @@ public class LogStatsTest {
    * <p>Verifies that calling performKafkaShutdown() invokes close() on the KafkaStreams instance.
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void performKafkaShutdown_closesStreams() {
     // Given: LogStats instance with a mock KafkaStreams set
-    // When: performKafkaShutdown() called
-    // Then: streams.close() is invoked
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
+    KafkaStreams mockStreams = mock(KafkaStreams.class);
+    stats.kafkaStreams = mockStreams;
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    // When: performKafkaShutdown() called
+    stats.performKafkaShutdown();
+
+    // Then: streams.close() is invoked
+    verify(mockStreams).close();
   }
 
   /**
@@ -248,14 +326,19 @@ public class LogStatsTest {
    * if it is not null.
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void performKafkaShutdown_stopsContinuousPrinter() {
     // Given: LogStats instance with mock KafkaStreams and mock ContinuousPrinter
-    // When: performKafkaShutdown() called
-    // Then: continuousPrinter.setDone(true) is invoked
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
+    KafkaStreams mockStreams = mock(KafkaStreams.class);
+    stats.kafkaStreams = mockStreams;
+    ContinuousPrinter mockPrinter = mock(ContinuousPrinter.class);
+    stats.continuousPrinter = mockPrinter;
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    // When: performKafkaShutdown() called
+    stats.performKafkaShutdown();
+
+    // Then: continuousPrinter.setDone(true) is invoked
+    verify(mockPrinter).setDone(true);
   }
 
   /**
@@ -264,14 +347,19 @@ public class LogStatsTest {
    * <p>Verifies that calling performKafkaShutdown() decrements the shutdownLatch count to 0.
    */
   @Test
-  @Ignore("Awaiting implementation in #1201")
   public void performKafkaShutdown_countsDownLatch() {
     // Given: LogStats instance with shutdownLatch count of 1
-    // When: performKafkaShutdown() called
-    // Then: shutdownLatch.getCount() returns 0
+    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
+    KafkaStreams mockStreams = mock(KafkaStreams.class);
+    stats.kafkaStreams = mockStreams;
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    assertThat(stats.shutdownLatch.getCount(), is(1L));
+
+    // When: performKafkaShutdown() called
+    stats.performKafkaShutdown();
+
+    // Then: shutdownLatch.getCount() returns 0
+    assertThat(stats.shutdownLatch.getCount(), is(0L));
   }
 
   // ==================== validateInput() Tests ====================
@@ -282,14 +370,13 @@ public class LogStatsTest {
    * <p>Verifies that invoking the command without a positional log name argument results in an
    * error.
    */
-  @Test
-  @Ignore("Awaiting implementation in #1201")
+  @Test(expected = RuntimeException.class)
   public void validateInput_noLogName_throwsError() {
     // Given: no positional log name argument
-    // When: command is invoked or validateInput() called
-    // Then: error is thrown indicating log name is required
+    LogStats stats = new LogStats();
 
-    // TODO(#1201): Implement test logic
-    fail("Not yet implemented");
+    // When: validateInput() called
+    // Then: error is thrown indicating log name is required
+    stats.validateInput();
   }
 }
