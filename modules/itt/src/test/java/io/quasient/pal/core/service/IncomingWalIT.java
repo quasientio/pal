@@ -39,8 +39,6 @@ import org.slf4j.LoggerFactory;
  *   <li>Kafka container running (for WAL topics)
  *   <li>Two peers: a target peer (with --wal-incoming-rpc) and a caller (via {@code pal call})
  * </ul>
- *
- * @see <a href="https://github.com/quasient/pal/issues/779">Issue #779</a>
  */
 public class IncomingWalIT extends AbstractCliIT {
 

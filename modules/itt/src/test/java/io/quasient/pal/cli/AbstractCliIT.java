@@ -185,9 +185,8 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   // ==========================================================================
-  // New entity-operation helpers for the refactored CLI structure.
+  // Entity-operation helpers for the CLI structure.
   // These use multi-part subcommand paths (e.g., {"peer", "ls"}).
-  // See issue #1204 for the new command structure specification.
   // ==========================================================================
 
   /**
