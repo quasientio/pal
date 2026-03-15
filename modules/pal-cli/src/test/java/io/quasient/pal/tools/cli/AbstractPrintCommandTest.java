@@ -9,25 +9,53 @@
  */
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.messages.LogMessage;
+import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.serdes.colfer.MessageBuilder;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
- * Unit test specifications for {@code AbstractPrintCommand}.
+ * Unit tests for {@code AbstractPrintCommand}.
  *
  * <p>AbstractPrintCommand is the shared base class for {@code LogPrint} and {@code PeerPrint},
- * extracted from {@link MessageStreamPrinter}. It contains the shared formatting logic (~400 lines)
- * including output format selection, message filtering ({@code shouldPrint}), and record formatting
- * ({@code printRecord}, {@code printTreeRecord}) in compact, full, JSON, and tree formats.
+ * containing the shared formatting logic including output format selection, message filtering
+ * ({@code shouldPrint}), and record formatting ({@code printRecord}, {@code printTreeRecord}) in
+ * compact, full, JSON, and tree formats.
  *
- * <p>All tests are specification stubs awaiting implementation in issue #1197 when the {@code
- * AbstractPrintCommand} class is created.
- *
- * @see MessageStreamPrinter
+ * @see AbstractPrintCommand
  */
 public class AbstractPrintCommandTest {
+
+  /**
+   * Creates a LogMessage wrapping the given Message for testing.
+   *
+   * @param m the Message to wrap
+   * @return a LogMessage with standard test metadata
+   */
+  private static LogMessage<?> logOf(Message m) {
+    return new LogMessage<>("topic", 1L, Map.of(), m);
+  }
+
+  /**
+   * Creates a concrete test instance of AbstractPrintCommand. Uses LogPrint as the concrete
+   * subclass since AbstractPrintCommand is abstract.
+   *
+   * @return a new LogPrint instance for testing base class behavior
+   */
+  private static LogPrint createTestInstance() {
+    return new LogPrint();
+  }
 
   // ==================== getFormat() Tests ====================
 
@@ -38,14 +66,15 @@ public class AbstractPrintCommandTest {
    * the format defaults to COMPACT.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void getFormat_returnsCompact_whenNoFormatSpecified() {
-    // Given: no format flag specified (--full, --json, --tree all unset)
-    // When: getFormat() is called
-    // Then: returns COMPACT format
+    // Given: no format flag specified (formatOptions is null by default)
+    LogPrint cmd = createTestInstance();
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // When: getFormat() is called
+    AbstractPrintCommand.OutputFormat result = cmd.getFormat();
+
+    // Then: returns COMPACT format
+    assertThat(result, is(AbstractPrintCommand.OutputFormat.COMPACT));
   }
 
   /**
@@ -54,14 +83,20 @@ public class AbstractPrintCommandTest {
    * <p>Verifies that when the {@code --full} flag is set, getFormat() returns FULL.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void getFormat_returnsFull_whenFullFlagSet() {
+  public void getFormat_returnsFull_whenFullFlagSet() throws Exception {
     // Given: --full flag is set
-    // When: getFormat() is called
-    // Then: returns FULL format
+    LogPrint cmd = createTestInstance();
+    AbstractPrintCommand.FormatOptions opts = new AbstractPrintCommand.FormatOptions();
+    opts.full = true;
+    var fmtField = AbstractPrintCommand.class.getDeclaredField("formatOptions");
+    fmtField.setAccessible(true);
+    fmtField.set(cmd, opts);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // When: getFormat() is called
+    AbstractPrintCommand.OutputFormat result = cmd.getFormat();
+
+    // Then: returns FULL format
+    assertThat(result, is(AbstractPrintCommand.OutputFormat.FULL));
   }
 
   /**
@@ -70,14 +105,20 @@ public class AbstractPrintCommandTest {
    * <p>Verifies that when the {@code --json} flag is set, getFormat() returns JSON.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void getFormat_returnsJson_whenJsonFlagSet() {
+  public void getFormat_returnsJson_whenJsonFlagSet() throws Exception {
     // Given: --json flag is set
-    // When: getFormat() is called
-    // Then: returns JSON format
+    LogPrint cmd = createTestInstance();
+    AbstractPrintCommand.FormatOptions opts = new AbstractPrintCommand.FormatOptions();
+    opts.json = true;
+    var fmtField = AbstractPrintCommand.class.getDeclaredField("formatOptions");
+    fmtField.setAccessible(true);
+    fmtField.set(cmd, opts);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // When: getFormat() is called
+    AbstractPrintCommand.OutputFormat result = cmd.getFormat();
+
+    // Then: returns JSON format
+    assertThat(result, is(AbstractPrintCommand.OutputFormat.JSON));
   }
 
   /**
@@ -86,14 +127,20 @@ public class AbstractPrintCommandTest {
    * <p>Verifies that when the {@code --tree} flag is set, getFormat() returns TREE.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void getFormat_returnsTree_whenTreeFlagSet() {
+  public void getFormat_returnsTree_whenTreeFlagSet() throws Exception {
     // Given: --tree flag is set
-    // When: getFormat() is called
-    // Then: returns TREE format
+    LogPrint cmd = createTestInstance();
+    AbstractPrintCommand.FormatOptions opts = new AbstractPrintCommand.FormatOptions();
+    opts.tree = true;
+    var fmtField = AbstractPrintCommand.class.getDeclaredField("formatOptions");
+    fmtField.setAccessible(true);
+    fmtField.set(cmd, opts);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // When: getFormat() is called
+    AbstractPrintCommand.OutputFormat result = cmd.getFormat();
+
+    // Then: returns TREE format
+    assertThat(result, is(AbstractPrintCommand.OutputFormat.TREE));
   }
 
   // ==================== shouldPrint() Tests ====================
@@ -105,32 +152,51 @@ public class AbstractPrintCommandTest {
    * not throw a NullPointerException.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void shouldPrint_filtersNullOffset() {
-    // Given: a valid LogMessage and null offset value
-    // When: shouldPrint(null, peerUuid, logMessage) is called via reflection
-    // Then: returns a boolean result without throwing NullPointerException
+  public void shouldPrint_filtersNullOffset() throws Exception {
+    // Given: a valid LogMessage and a type filter that won't match
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    LogPrint cmd = createTestInstance();
+    // Set a type filter that won't match (message is CONSTRUCTOR, filter is INSTANCE_METHOD)
+    cmd.msgTypes = List.of("INSTANCE_METHOD");
+
+    // When: shouldPrint() called with null recOffset
+    boolean result = cmd.shouldPrint(null, peer.toString(), lm);
+
+    // Then: returns false because type filter rejects it, but no NPE
+    assertThat(result, is(false));
   }
 
   /**
    * Tests that multiple filters (type + peer + thread) are applied together.
    *
    * <p>Verifies that when type, peer, and thread filters are all set and all match the message,
-   * shouldPrint returns true. Adapted from {@link MessageStreamPrinterEdgeCaseTest}.
+   * shouldPrint returns true.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void shouldPrint_combinesMultipleFilters() {
     // Given: type filter set to "CONSTRUCTOR", peer filter set to message's peer UUID,
     //        and thread filter set to message's thread name (all matching)
-    // When: shouldPrint(offset, peerUuid, logMessage) is called via reflection
-    // Then: returns true because all filters match
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    LogPrint cmd = createTestInstance();
+    cmd.msgTypes = List.of("CONSTRUCTOR");
+    cmd.fromPeer = peer.toString();
+    cmd.threadName = em.getThreadName();
+
+    // When: shouldPrint() called with message matching both filters
+    boolean result = cmd.shouldPrint(5L, peer.toString(), lm);
+
+    // Then: returns true because all filters match
+    assertThat(result, is(true));
   }
 
   /**
@@ -140,14 +206,29 @@ public class AbstractPrintCommandTest {
    * shouldPrint returns false even if other filters match.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void shouldPrint_rejectsMismatchedFilter() {
     // Given: type filter matching the message, but peer filter set to a different UUID
-    // When: shouldPrint(offset, peerUuid, logMessage) is called via reflection
-    // Then: returns false because peer filter does not match
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em =
+        b.buildInstanceMethod(
+            peer,
+            "java.util.ArrayList",
+            "add",
+            ObjectRef.randomRef(),
+            new String[] {"int"},
+            new Object[] {1});
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    LogPrint cmd = createTestInstance();
+    cmd.msgTypes = List.of("CONSTRUCTOR");
+
+    // When: shouldPrint() called with message of type INSTANCE_METHOD
+    boolean result = cmd.shouldPrint(5L, peer.toString(), lm);
+
+    // Then: returns false because type filter doesn't match
+    assertThat(result, is(false));
   }
 
   // ==================== printRecord() Tests ====================
@@ -159,14 +240,38 @@ public class AbstractPrintCommandTest {
    * details including offset, peer, thread, class, method, arguments, and return value.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void printRecord_handlesFullFormat() {
+  public void printRecord_handlesFullFormat() throws Exception {
     // Given: output format set to FULL, a valid LogMessage with ExecMessage
-    // When: printRecord(offset, peerUuid, logMessage) is called via reflection
-    // Then: output contains full message details (offset, peer, thread, class, method, args)
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    LogPrint cmd = createTestInstance();
+    AbstractPrintCommand.FormatOptions opts = new AbstractPrintCommand.FormatOptions();
+    opts.full = true;
+    var fmtField = AbstractPrintCommand.class.getDeclaredField("formatOptions");
+    fmtField.setAccessible(true);
+    fmtField.set(cmd, opts);
+
+    // Redirect System.out to capture output
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      // When: printRecord() called
+      cmd.printRecord(peer.toString(), lm, 10L);
+
+      // Then: Output contains "CONTEXT:", "HEADERS:", and offset info
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("CONTEXT:"));
+      assertThat(output, containsString("HEADERS:"));
+      assertThat(output, containsString("offset: 10"));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -176,14 +281,34 @@ public class AbstractPrintCommandTest {
    * summary of the message.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void printRecord_handlesCompactFormat() {
-    // Given: output format set to COMPACT, a valid LogMessage with ExecMessage
-    // When: printRecord(offset, peerUuid, logMessage) is called via reflection
-    // Then: output contains compact single-line message summary
+  public void printRecord_handlesCompactFormat() throws Exception {
+    // Given: output format set to COMPACT (default - formatOptions is null)
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    LogPrint cmd = createTestInstance();
+    // formatOptions is null by default, which means COMPACT format
+
+    // Redirect System.out to capture output
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      // When: printRecord() called
+      cmd.printRecord(peer.toString(), lm, 10L);
+
+      // Then: Output is single line containing "offset=", "id=", "message="
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("offset=10"));
+      assertThat(output, containsString("id="));
+      assertThat(output, containsString("message="));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   /**
@@ -193,14 +318,38 @@ public class AbstractPrintCommandTest {
    * representation of the message.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void printRecord_handlesJsonFormat() {
-    // Given: output format set to JSON, a valid LogMessage with ExecMessage
-    // When: printRecord(offset, peerUuid, logMessage) is called via reflection
-    // Then: output is valid JSON containing message fields
+  public void printRecord_handlesJsonFormat() throws Exception {
+    // Given: output format set to JSON
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    LogPrint cmd = createTestInstance();
+    AbstractPrintCommand.FormatOptions opts = new AbstractPrintCommand.FormatOptions();
+    opts.json = true;
+    var fmtField = AbstractPrintCommand.class.getDeclaredField("formatOptions");
+    fmtField.setAccessible(true);
+    fmtField.set(cmd, opts);
+
+    // Redirect System.out to capture output
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      // When: printRecord() called
+      cmd.printRecord(peer.toString(), lm, 10L);
+
+      // Then: Output contains JSON content and offset
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("offset: 10"));
+      // JSON output contains curly braces
+      assertThat(output, containsString("{"));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   // ==================== printTreeRecord() Tests ====================
@@ -212,13 +361,30 @@ public class AbstractPrintCommandTest {
    * tree-style representation of the message with indentation reflecting call depth.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void printTreeRecord_formatsTreeOutput() {
-    // Given: output format set to TREE, a valid LogMessage with ExecMessage
-    // When: printTreeRecord(offset, peerUuid, logMessage) is called via reflection
-    // Then: output contains tree-formatted representation with appropriate indentation
+  public void printTreeRecord_formatsTreeOutput() throws Exception {
+    // Given: a valid LogMessage with ExecMessage
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    var em = b.buildEmptyConstructor(peer, "java.lang.String");
+    var m = b.wrap(em);
+    LogMessage<?> lm = logOf(m);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    LogPrint cmd = createTestInstance();
+
+    // Redirect System.out to capture output
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      // When: printTreeRecord() called
+      cmd.printTreeRecord(lm, 10L);
+
+      // Then: Output contains tree-formatted representation with offset
+      String output = bout.toString(UTF_8);
+      assertThat(output, containsString("[10]"));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 }

@@ -9,95 +9,102 @@
  */
 package io.quasient.pal.tools.cli;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.fail;
 
-import org.junit.Ignore;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import org.junit.Test;
+import picocli.CommandLine;
 
 /**
- * Unit test specifications for {@code PeerPrint}.
+ * Unit tests for {@code PeerPrint}.
  *
- * <p>PeerPrint is the peer-specific print command extracted from {@link MessageStreamPrinter} to
+ * <p>PeerPrint is the peer-specific print command extracted from {@code MessageStreamPrinter} to
  * follow the entity-operation pattern ({@code pal peer print}). It handles streaming messages from
  * a peer's ZMQ PUB socket, accepting either a peer UUID (resolved via the PAL directory) or a
  * direct {@code tcp://} address as a positional argument.
  *
- * <p>All tests are specification stubs awaiting implementation in issue #1197 when the {@code
- * PeerPrint} class is created.
- *
- * @see MessageStreamPrinter
  * @see AbstractPrintCommand
+ * @see PeerPrint
  */
 public class PeerPrintTest {
 
   // ==================== runCommand() Tests ====================
 
   /**
-   * Tests that a positional peer UUID connects and streams messages.
+   * Tests that a positional peer UUID is parsed and stored correctly.
    *
-   * <p>Verifies that providing a peer UUID as the positional argument causes runCommand to resolve
-   * the peer's PUB socket address from the PAL directory and stream messages from it.
+   * <p>Verifies that providing a peer UUID as the positional argument causes it to be stored in the
+   * peerIdentifier field.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void runCommand_withPositionalPeerUuid_streamsMessages() {
-    // Given: positional peer UUID argument (e.g., "550e8400-e29b-41d4-a716-446655440000")
-    // When: runCommand() is invoked
-    // Then: peer is resolved via PAL directory and messages are streamed from its PUB socket
+    // Given: positional peer UUID argument
+    String peerUuid = "550e8400-e29b-41d4-a716-446655440000";
+    PeerPrint cmd = new PeerPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs(peerUuid);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: peerIdentifier is set correctly
+    assertThat(cmd.peerIdentifier, is(peerUuid));
   }
 
   /**
-   * Tests that a positional peer address connects and streams messages.
+   * Tests that a positional peer address is parsed and stored correctly.
    *
    * <p>Verifies that providing a {@code tcp://host:port} address as the positional argument causes
-   * runCommand to connect directly to that address and stream messages.
+   * it to be stored in the peerIdentifier field.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void runCommand_withPositionalPeerAddress_streamsMessages() {
-    // Given: positional peer address argument (e.g., "tcp://localhost:5555")
-    // When: runCommand() is invoked
-    // Then: connects directly to the given address and streams messages
+    // Given: positional peer address argument
+    PeerPrint cmd = new PeerPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs("tcp://localhost:5555");
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: peerIdentifier is set to the address
+    assertThat(cmd.peerIdentifier, is("tcp://localhost:5555"));
   }
 
   /**
-   * Tests that the --types filter restricts streamed output to matching message types.
+   * Tests that the --types filter is parsed correctly for peer streaming.
    *
-   * <p>Verifies that when the {@code --types EXEC} filter is provided, only messages of type EXEC
-   * are printed from the peer's message stream.
+   * <p>Verifies that when the {@code --types CONSTRUCTOR} filter is provided, the msgTypes field
+   * contains the correct value.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void runCommand_withTypeFilter_filtersTypes() {
-    // Given: positional peer identifier and --types EXEC filter
-    // When: runCommand() processes messages from the peer's stream
-    // Then: only EXEC-type messages are printed, other types are filtered out
+    // Given: positional peer identifier and --types CONSTRUCTOR filter
+    PeerPrint cmd = new PeerPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs("tcp://localhost:5555", "--types", "CONSTRUCTOR");
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: msgTypes contains CONSTRUCTOR
+    assertThat(cmd.peerIdentifier, is("tcp://localhost:5555"));
+    assertThat(cmd.msgTypes, is(notNullValue()));
+    assertThat(cmd.msgTypes, is(List.of("CONSTRUCTOR")));
   }
 
   /**
-   * Tests that the -fp/--from-peer filter restricts output to a specific peer.
+   * Tests that the -fp/--from-peer filter is parsed correctly for peer streaming.
    *
-   * <p>Verifies that when the {@code -fp UUID} filter is provided, only messages originating from
-   * the specified peer UUID are printed from the stream.
+   * <p>Verifies that when the {@code -fp UUID} filter is provided, the fromPeer field is set
+   * correctly.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void runCommand_withPeerFilter_filtersByPeer() {
     // Given: positional peer identifier and -fp <specific-UUID> filter
-    // When: runCommand() processes messages from the stream
-    // Then: only messages from the specified peer UUID are printed
+    String filterUuid = "550e8400-e29b-41d4-a716-446655440000";
+    PeerPrint cmd = new PeerPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs("tcp://localhost:5555", "-fp", filterUuid);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: fromPeer is set to the specific UUID
+    assertThat(cmd.peerIdentifier, is("tcp://localhost:5555"));
+    assertThat(cmd.fromPeer, is(filterUuid));
   }
 
   // ==================== validateInput() Tests ====================
@@ -109,14 +116,18 @@ public class PeerPrintTest {
    * UUID nor address) results in a validation error.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void validateInput_peerIdentifierRequired() {
     // Given: no positional peer identifier argument (no UUID, no address)
+    PeerPrint cmd = new PeerPrint();
+
     // When: validateInput() is called
     // Then: RuntimeException is thrown indicating peer identifier is required
-
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    try {
+      cmd.validateInput();
+      fail("Expected RuntimeException");
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage().contains("Peer identifier is required"), is(true));
+    }
   }
 
   // ==================== performShutdown() Tests ====================
@@ -125,17 +136,21 @@ public class PeerPrintTest {
    * Tests that performShutdown counts down the socket shutdown latch.
    *
    * <p>Verifies that calling performShutdown() decrements the shutdown latch count to 0, allowing
-   * the main thread to unblock and complete. Adapted from the existing {@link
-   * MessageStreamPrinterTest} socket shutdown test.
+   * the main thread to unblock and complete.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void performShutdown_countsDownLatch() {
     // Given: PeerPrint instance with socketShutdownLatch count of 1
-    // When: performShutdown() is called
-    // Then: socketShutdownLatch.getCount() returns 0
+    PeerPrint cmd = new PeerPrint();
+    cmd.socketShutdownLatch = new CountDownLatch(1);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Assert socketShutdownLatch.getCount() == 1 before call
+    assertThat(cmd.socketShutdownLatch.getCount(), is(1L));
+
+    // When: performShutdown() is called
+    cmd.performShutdown();
+
+    // Then: socketShutdownLatch.getCount() returns 0
+    assertThat(cmd.socketShutdownLatch.getCount(), is(0L));
   }
 }

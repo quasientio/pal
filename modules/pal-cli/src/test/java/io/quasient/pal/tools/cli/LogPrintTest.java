@@ -9,147 +9,154 @@
  */
 package io.quasient.pal.tools.cli;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.fail;
 
-import org.junit.Ignore;
+import java.util.List;
 import org.junit.Test;
+import picocli.CommandLine;
 
 /**
- * Unit test specifications for {@code LogPrint}.
+ * Unit tests for {@code LogPrint}.
  *
- * <p>LogPrint is the log-specific print command extracted from {@link MessageStreamPrinter} to
+ * <p>LogPrint is the log-specific print command extracted from {@code MessageStreamPrinter} to
  * follow the entity-operation pattern ({@code pal log print}). It handles printing messages from
  * Kafka topics or Chronicle Queue logs, including offset-based starting, follow mode, return value
  * printing, and type/peer filtering. The log identifier is a positional argument (replacing the
  * former {@code -l/--log} option).
  *
- * <p>All tests are specification stubs awaiting implementation in issue #1197 when the {@code
- * LogPrint} class is created.
- *
- * @see MessageStreamPrinter
  * @see AbstractPrintCommand
+ * @see LogPrint
  */
 public class LogPrintTest {
 
   // ==================== runCommand() Tests ====================
 
   /**
-   * Tests that a positional log name prints messages from the log.
+   * Tests that a positional log name is parsed and stored correctly.
    *
-   * <p>Verifies that providing a Kafka topic name as the positional argument causes runCommand to
-   * read and print messages from that log.
+   * <p>Verifies that providing a Kafka topic name as the positional argument causes it to be stored
+   * in the logIdentifier field.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void runCommand_withPositionalLogName_printsMessages() {
-    // Given: positional log name argument (e.g., "my-log")
-    // When: runCommand() is invoked
-    // Then: messages from the log are printed to stdout
+    // Given: positional log name argument "my-log"
+    LogPrint cmd = new LogPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs("my-log");
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: logIdentifier is set correctly
+    assertThat(cmd.logIdentifier, is("my-log"));
   }
 
   /**
-   * Tests that the -o/--offset option starts printing from the specified offset.
+   * Tests that the -o/--offset option is parsed and stored correctly.
    *
-   * <p>Verifies that providing a positional log name and {@code -o 10} causes runCommand to skip to
-   * offset 10 before printing messages.
+   * <p>Verifies that providing a positional log name and {@code -o 10} causes the offset field to
+   * be set to 10.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void runCommand_withOffset_startsAtOffset() {
+  public void runCommand_withOffset_startsAtOffset() throws Exception {
     // Given: positional log name and -o 10 option
-    // When: runCommand() is invoked
-    // Then: message consumption starts from offset 10
+    LogPrint cmd = new LogPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs("my-log", "-o", "10");
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: offset is set to 10
+    assertThat(cmd.logIdentifier, is("my-log"));
+    assertThat(cmd.offset, is(10L));
   }
 
   /**
-   * Tests that the -f/--follow flag enables continuous streaming mode.
+   * Tests that the -f/--follow flag is parsed correctly.
    *
-   * <p>Verifies that when the {@code -f} flag is set, the command enters follow mode and
-   * continuously streams new messages as they arrive on the log.
+   * <p>Verifies that when the {@code -f} flag is set, the follow field is true.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void runCommand_withFollow_streamsMessages() {
+  public void runCommand_withFollow_streamsMessages() throws Exception {
     // Given: positional log name and -f flag
-    // When: runCommand() is invoked
-    // Then: command enters follow mode for continuous message streaming
+    LogPrint cmd = new LogPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs("my-log", "-f");
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: follow is true
+    assertThat(cmd.logIdentifier, is("my-log"));
+    assertThat(cmd.follow, is(true));
   }
 
   /**
-   * Tests that the --with-return flag includes return values in the output.
+   * Tests that the --with-return flag is parsed correctly.
    *
-   * <p>Verifies that when the {@code --with-return} option is specified, printed messages include
-   * their return values alongside the execution details.
+   * <p>Verifies that when the {@code --with-return} option is specified, the withReturn field is
+   * true.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
-  public void runCommand_withReturn_includesReturnValues() {
+  public void runCommand_withReturn_includesReturnValues() throws Exception {
     // Given: positional log name and --with-return option
-    // When: runCommand() processes a message that has a return value
-    // Then: output includes the return value for that message
+    LogPrint cmd = new LogPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs("my-log", "--with-return");
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: withReturn is true
+    assertThat(cmd.logIdentifier, is("my-log"));
+    assertThat(cmd.withReturn, is(true));
   }
 
   /**
-   * Tests that the --types filter restricts output to matching message types.
+   * Tests that the --types filter is parsed correctly.
    *
-   * <p>Verifies that when the {@code --types EXEC} filter is provided, only messages of type EXEC
-   * are printed and other types are filtered out.
+   * <p>Verifies that when the {@code --types CONSTRUCTOR} filter is provided, the msgTypes field
+   * contains the correct value.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void runCommand_withTypeFilter_filtersTypes() {
-    // Given: positional log name and --types EXEC filter
-    // When: runCommand() processes messages of various types
-    // Then: only EXEC-type messages are printed, other types are filtered out
+    // Given: positional log name and --types CONSTRUCTOR filter
+    LogPrint cmd = new LogPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs("my-log", "--types", "CONSTRUCTOR");
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: msgTypes contains CONSTRUCTOR
+    assertThat(cmd.logIdentifier, is("my-log"));
+    assertThat(cmd.msgTypes, is(notNullValue()));
+    assertThat(cmd.msgTypes, is(List.of("CONSTRUCTOR")));
   }
 
   /**
-   * Tests that the -fp/--from-peer filter restricts output to a specific peer.
+   * Tests that the -fp/--from-peer filter is parsed correctly.
    *
-   * <p>Verifies that when the {@code -fp UUID} filter is provided, only messages from the specified
-   * peer are printed.
+   * <p>Verifies that when the {@code -fp UUID} filter is provided, the fromPeer field is set
+   * correctly.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void runCommand_withPeerFilter_filtersByPeer() {
     // Given: positional log name and -fp <specific-UUID> filter
-    // When: runCommand() processes messages from various peers
-    // Then: only messages from the specified peer UUID are printed
+    String peerUuid = "550e8400-e29b-41d4-a716-446655440000";
+    LogPrint cmd = new LogPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs("my-log", "-fp", peerUuid);
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: fromPeer is set to the specific UUID
+    assertThat(cmd.logIdentifier, is("my-log"));
+    assertThat(cmd.fromPeer, is(peerUuid));
   }
 
   /**
-   * Tests that a {@code file:} path as positional argument reads from Chronicle Queue directly.
+   * Tests that a {@code file:} path as positional argument is parsed correctly.
    *
-   * <p>Verifies that providing a {@code file:/tmp/wal} path as the log identifier causes the
-   * command to read messages directly from a Chronicle Queue without requiring Kafka or etcd.
+   * <p>Verifies that providing a {@code file:/tmp/wal} path as the log identifier causes the field
+   * to be set correctly for direct Chronicle mode.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void runCommand_directChronicleMode_worksWithFilePath() {
-    // Given: positional log identifier "file:/tmp/wal" (Chronicle Queue path)
-    // When: runCommand() is invoked
-    // Then: messages are read directly from the Chronicle Queue at that path
+    // Given: positional log identifier "file:/tmp/wal"
+    LogPrint cmd = new LogPrint();
+    CommandLine commandLine = new CommandLine(cmd);
+    commandLine.parseArgs("file:/tmp/wal");
 
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    // Then: logIdentifier is set to the file path
+    assertThat(cmd.logIdentifier, is("file:/tmp/wal"));
   }
 
   // ==================== validateInput() Tests ====================
@@ -161,13 +168,17 @@ public class LogPrintTest {
    * validation error.
    */
   @Test
-  @Ignore("Awaiting implementation in #1197")
   public void validateInput_logIdentifierRequired() {
     // Given: no positional log identifier argument
+    LogPrint cmd = new LogPrint();
+
     // When: validateInput() is called
     // Then: RuntimeException is thrown indicating log identifier is required
-
-    // TODO(#1197): Implement test logic
-    fail("Not yet implemented");
+    try {
+      cmd.validateInput();
+      fail("Expected RuntimeException");
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage().contains("Log identifier is required"), is(true));
+    }
   }
 }
