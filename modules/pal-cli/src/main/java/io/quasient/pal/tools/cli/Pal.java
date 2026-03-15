@@ -112,12 +112,13 @@ public class Pal implements Callable<Integer>, PalCommand {
 
     // subcommands other than 'run' must be subclasses of AbstractPalSubcommand
     java.util.List<AbstractPalSubcommand> subcommands =
-        Arrays.asList(new List(), new Replay(), new WalIndexCommand());
+        Arrays.asList(new Replay(), new WalIndexCommand());
     subcommands.forEach(commandLine::addSubcommand);
 
     // entity group commands (with nested subcommands declared via @Command(subcommands=...))
     commandLine.addSubcommand("peer", new PeerCommand());
     commandLine.addSubcommand("log", new LogCommand());
+    commandLine.addSubcommand("intercept", new InterceptCommand());
 
     // at last Help
     commandLine.addSubcommand(HelpCommand.class);
