@@ -159,29 +159,9 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
-   * Executes a `pal ls` command with the given arguments.
-   *
-   * @param args command-line arguments to pass to `pal ls`
-   * @return CliProcessResult containing exit code, stdout, and stderr
-   * @throws Exception if command execution fails
-   */
-  protected CliProcessResult runLs(String... args) throws Exception {
-    return runCliSubcommand("ls", null, args);
-  }
-
-  /**
-   * Executes a `pal rm` command with the given arguments.
-   *
-   * @param args command-line arguments to pass to `pal rm`
-   * @return CliProcessResult containing exit code, stdout, and stderr
-   * @throws Exception if command execution fails
-   */
-  protected CliProcessResult runRm(String... args) throws Exception {
-    return runCliSubcommand("rm", null, args);
-  }
-
-  /**
    * Executes a `pal print` command with the given arguments.
+   *
+   * <p>Retained for tests outside the CLI package (e.g., IncomingWalIT).
    *
    * @param args command-line arguments to pass to `pal print`
    * @return CliProcessResult containing exit code, stdout, and stderr
@@ -194,6 +174,8 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   /**
    * Executes a `pal call` command with the given arguments.
    *
+   * <p>Retained for tests outside the CLI package (e.g., replay tests, IncomingWalIT).
+   *
    * @param args command-line arguments to pass to `pal call`
    * @return CliProcessResult containing exit code, stdout, and stderr
    * @throws Exception if command execution fails
@@ -203,32 +185,9 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
-   * Executes a `pal call` command with JSON-RPC requests sent via stdin.
-   *
-   * <p>Each JSON-RPC request should be a complete JSON object on a single line.
-   *
-   * @param stdinData the data to send to stdin (one JSON-RPC request per line)
-   * @param args command-line arguments to pass to `pal call`
-   * @return CliProcessResult containing exit code, stdout, and stderr
-   * @throws Exception if command execution fails
-   */
-  protected CliProcessResult runCallWithStdin(String stdinData, String... args) throws Exception {
-    return runCliSubcommand("call", stdinData, args);
-  }
-
-  /**
-   * Executes a `pal stats` command with the given arguments.
-   *
-   * @param args command-line arguments to pass to `pal stats`
-   * @return CliProcessResult containing exit code, stdout, and stderr
-   * @throws Exception if command execution fails
-   */
-  protected CliProcessResult runStats(String... args) throws Exception {
-    return runCliSubcommand("stats", null, args);
-  }
-
-  /**
    * Executes a `pal replay` command with the given arguments.
+   *
+   * <p>Retained for replay tests outside the CLI package.
    *
    * @param args command-line arguments to pass to `pal replay`
    * @return CliProcessResult containing exit code, stdout, and stderr
@@ -241,6 +200,8 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   /**
    * Executes a `pal wal-index` command with the given arguments.
    *
+   * <p>Retained for wal-index tests outside the CLI package.
+   *
    * @param args command-line arguments to pass to `pal wal-index`
    * @return CliProcessResult containing exit code, stdout, and stderr
    * @throws Exception if command execution fails
@@ -249,37 +210,191 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     return runCliSubcommand("wal-index", null, args);
   }
 
+  // ==========================================================================
+  // New entity-operation helpers for the refactored CLI structure.
+  // These use multi-part subcommand paths (e.g., {"peer", "ls"}).
+  // See issue #1204 for the new command structure specification.
+  // ==========================================================================
+
   /**
-   * Executes a PAL CLI subcommand with the given arguments and optional stdin data.
+   * Executes a {@code pal peer ls} command with the given arguments.
    *
-   * <p>This method:
+   * @param args command-line arguments to pass to {@code pal peer ls}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runPeerLs(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"peer", "ls"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal peer rm} command with the given arguments.
    *
-   * <ul>
-   *   <li>Handles global options (like -d) that must appear before the subcommand name
-   *   <li>Cleans environment variables (PAL_DIRECTORY, KAFKA_SERVERS, etc.) to ensure tests are
-   *       explicit about configuration
-   *   <li>Optionally sends data to stdin if provided
-   * </ul>
+   * @param args command-line arguments to pass to {@code pal peer rm}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runPeerRm(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"peer", "rm"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal peer print} command with the given arguments.
    *
-   * <p><b>Important:</b> This method removes PAL_DIRECTORY and KAFKA_SERVERS from the environment.
-   * Tests must explicitly pass these via command-line arguments (-d, -k) or the peer/log will not
-   * be able to connect.
+   * @param args command-line arguments to pass to {@code pal peer print}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runPeerPrint(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"peer", "print"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal peer call} command with the given arguments.
    *
-   * @param subcommand the subcommand name (e.g., "ls", "rm", "print", "call")
+   * @param args command-line arguments to pass to {@code pal peer call}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runPeerCall(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"peer", "call"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal peer call} command with JSON-RPC requests sent via stdin.
+   *
+   * @param stdinData the data to send to stdin (one JSON-RPC request per line)
+   * @param args command-line arguments to pass to {@code pal peer call}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runPeerCallWithStdin(String stdinData, String... args)
+      throws Exception {
+    return runCliSubcommand(new String[] {"peer", "call"}, stdinData, args);
+  }
+
+  /**
+   * Executes a {@code pal log ls} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal log ls}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogLs(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"log", "ls"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal log rm} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal log rm}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogRm(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"log", "rm"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal log print} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal log print}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogPrint(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"log", "print"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal log call} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal log call}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogCall(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"log", "call"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal log call} command with JSON-RPC requests sent via stdin.
+   *
+   * @param stdinData the data to send to stdin (one JSON-RPC request per line)
+   * @param args command-line arguments to pass to {@code pal log call}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogCallWithStdin(String stdinData, String... args)
+      throws Exception {
+    return runCliSubcommand(new String[] {"log", "call"}, stdinData, args);
+  }
+
+  /**
+   * Executes a {@code pal intercept ls} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal intercept ls}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runInterceptLs(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"intercept", "ls"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal log stats} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal log stats}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogStats(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"log", "stats"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal peer stats} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal peer stats}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runPeerStats(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"peer", "stats"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal log index} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal log index}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogIndex(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"log", "index"}, null, args);
+  }
+
+  /**
+   * Executes a PAL CLI subcommand with multi-part subcommand path and optional stdin data.
+   *
+   * <p>This method supports the new entity-operation command structure where subcommands consist of
+   * multiple parts (e.g., {@code {"peer", "ls"}} for {@code pal peer ls}).
+   *
+   * @param subcommandParts the subcommand path parts (e.g., {"peer", "ls"}, {"log", "print"})
    * @param stdinData optional data to send to stdin, or null for no stdin input
    * @param args command-line arguments; if first arg is "-d", it and the next arg are moved before
    *     subcommand
    * @return CliProcessResult containing exit code, stdout, and stderr
    * @throws Exception if command execution fails
    */
-  private CliProcessResult runCliSubcommand(String subcommand, String stdinData, String... args)
-      throws Exception {
+  private CliProcessResult runCliSubcommand(
+      String[] subcommandParts, String stdinData, String... args) throws Exception {
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null || palHome.isEmpty()) {
       throw new IllegalStateException("PAL_HOME environment variable not set");
     }
 
-    // Build command: pal [global-opts] <subcommand> <args>
+    // Build command: pal [global-opts] <subcommand-parts...> <args>
     // Global options like -d must come BEFORE the subcommand
     List<String> command = new ArrayList<>();
     command.add(Paths.get(palHome, "bin", "pal").toAbsolutePath().toString());
@@ -293,12 +408,13 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
       startIdx = 2;
     }
 
-    // Add subcommand
-    command.add(subcommand);
+    // Add all subcommand parts
+    command.addAll(Arrays.asList(subcommandParts));
 
     // Add remaining args
     command.addAll(Arrays.asList(args).subList(startIdx, args.length));
 
+    String subcommandStr = String.join(" ", subcommandParts);
     logger.info("Executing CLI command: {}", String.join(" ", command));
 
     ProcessBuilder pb = new ProcessBuilder(command);
@@ -317,7 +433,9 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
         // Create unique coverage file for this CLI invocation
         int invocationId = cliInvocationCounter.getAndIncrement();
         String coverageFile =
-            Paths.get(jacocoDestFileDir, "jacoco-cli-" + subcommand + "-" + invocationId + ".exec")
+            Paths.get(
+                    jacocoDestFileDir,
+                    "jacoco-cli-" + subcommandStr.replace(' ', '-') + "-" + invocationId + ".exec")
                 .toString();
         // Note: bin/pal script adds '-javaagent:' prefix automatically, so only provide
         // path+options
@@ -417,6 +535,37 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
+   * Executes a PAL CLI subcommand with the given arguments and optional stdin data.
+   *
+   * <p>This method:
+   *
+   * <ul>
+   *   <li>Handles global options (like -d) that must appear before the subcommand name
+   *   <li>Cleans environment variables (PAL_DIRECTORY, KAFKA_SERVERS, etc.) to ensure tests are
+   *       explicit about configuration
+   *   <li>Optionally sends data to stdin if provided
+   * </ul>
+   *
+   * <p><b>Important:</b> This method removes PAL_DIRECTORY and KAFKA_SERVERS from the environment.
+   * Tests must explicitly pass these via command-line arguments (-d, -k) or the peer/log will not
+   * be able to connect.
+   *
+   * @param subcommand the subcommand name (e.g., "ls", "rm", "print", "call")
+   * @param stdinData optional data to send to stdin, or null for no stdin input
+   * @param args command-line arguments; if first arg is "-d", it and the next arg are moved before
+   *     subcommand
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   * @deprecated Use {@link #runCliSubcommand(String[], String, String...)} for multi-part
+   *     subcommand paths
+   */
+  @Deprecated
+  private CliProcessResult runCliSubcommand(String subcommand, String stdinData, String... args)
+      throws Exception {
+    return runCliSubcommand(new String[] {subcommand}, stdinData, args);
+  }
+
+  /**
    * Gets the classpath for itt-apps module.
    *
    * @return classpath string
@@ -433,346 +582,6 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
    */
   protected void trackChronicleLog(String queueName) {
     chronicleLogsToCleanup.add(Paths.get(queueName));
-  }
-
-  /**
-   * Starts a `pal print` command in the background and returns a handle to control it.
-   *
-   * <p>This method is designed for socket-based streaming tests where the print command needs to be
-   * started BEFORE the peer that publishes messages. The caller can then:
-   *
-   * <ol>
-   *   <li>Start the print command with this method
-   *   <li>Launch the peer that will publish messages
-   *   <li>Wait for a period to collect messages
-   *   <li>Terminate the print command and get results
-   * </ol>
-   *
-   * @param args command-line arguments to pass to `pal print`
-   * @return PrintProcessHandle that can be used to wait and terminate the process
-   * @throws Exception if command cannot be started
-   */
-  protected PrintProcessHandle startPrintInBackground(String... args) throws Exception {
-    String palHome = System.getenv("PAL_HOME");
-    if (palHome == null || palHome.isEmpty()) {
-      throw new IllegalStateException("PAL_HOME environment variable not set");
-    }
-
-    // Build command: pal [global-opts] print <args>
-    List<String> command = new ArrayList<>();
-    command.add(Paths.get(palHome, "bin", "pal").toAbsolutePath().toString());
-
-    // Check if first arg is a global option (-d, -k, etc.)
-    int startIdx = 0;
-    if (args.length >= 2 && args[0].equals("-d")) {
-      command.add(args[0]); // -d
-      command.add(args[1]); // directory value
-      startIdx = 2;
-    }
-
-    // Add subcommand
-    command.add("print");
-
-    // Add remaining args
-    command.addAll(Arrays.asList(args).subList(startIdx, args.length));
-
-    logger.info("Starting print command in background: {}", String.join(" ", command));
-
-    ProcessBuilder pb = new ProcessBuilder(command);
-    pb.directory(new File(palHome));
-
-    // Configure logging
-    pb.environment()
-        .put("PAL_CLI_LOGGING_CONFIG", Paths.get(palHome, "config", "cli-logging.xml").toString());
-
-    // Configure JaCoCo agent for CLI process coverage collection
-    String jacocoAgentJar = System.getProperty("jacoco.agent.jar");
-    String jacocoDestFileDir = System.getProperty("jacoco.destfile.dir");
-    if (jacocoAgentJar != null && jacocoDestFileDir != null) {
-      File agentFile = new File(jacocoAgentJar);
-      if (agentFile.exists()) {
-        int invocationId = cliInvocationCounter.getAndIncrement();
-        String coverageFile =
-            Paths.get(jacocoDestFileDir, "jacoco-cli-print-socket-" + invocationId + ".exec")
-                .toString();
-        String javaAgent =
-            String.format(
-                "%s=destfile=%s,append=true,dumponexit=true", jacocoAgentJar, coverageFile);
-        pb.environment().put("JAVA_AGENT", javaAgent);
-        logger.debug("Enabled JaCoCo agent for CLI process: {}", coverageFile);
-      }
-    }
-
-    // Remove environment variables that would interfere with tests
-    pb.environment().remove("PAL_DIRECTORY");
-    pb.environment().remove("KAFKA_SERVERS");
-    pb.environment().remove("CHRONICLE_BASE_DIR");
-    pb.environment().remove("PAL_JMX_HOST");
-    pb.environment().remove("PAL_JMX_PORT");
-
-    Process process = pb.start();
-
-    return new PrintProcessHandle(process);
-  }
-
-  /**
-   * Handle for a background print process that captures output.
-   *
-   * <p>Use {@link #waitAndTerminate(long)} to collect output for a duration then terminate.
-   */
-  protected static class PrintProcessHandle {
-    private final Process process;
-    private final StringBuilder stdout = new StringBuilder();
-    private final StringBuilder stderr = new StringBuilder();
-    private final Thread stdoutThread;
-    private final Thread stderrThread;
-
-    /**
-     * Creates a handle for the given process and starts output capture threads.
-     *
-     * @param process the print process
-     */
-    PrintProcessHandle(Process process) {
-      this.process = process;
-
-      // Start output capture threads
-      this.stdoutThread =
-          new Thread(
-              () -> {
-                try (BufferedReader reader =
-                    new BufferedReader(
-                        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                  String line;
-                  while ((line = reader.readLine()) != null) {
-                    synchronized (stdout) {
-                      stdout.append(line).append("\n");
-                    }
-                  }
-                } catch (IOException e) {
-                  // Process terminated, expected
-                }
-              });
-
-      this.stderrThread =
-          new Thread(
-              () -> {
-                try (BufferedReader reader =
-                    new BufferedReader(
-                        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
-                  String line;
-                  while ((line = reader.readLine()) != null) {
-                    synchronized (stderr) {
-                      stderr.append(line).append("\n");
-                    }
-                  }
-                } catch (IOException e) {
-                  // Process terminated, expected
-                }
-              });
-
-      stdoutThread.start();
-      stderrThread.start();
-    }
-
-    /**
-     * Waits for the specified duration to collect output, then terminates the process.
-     *
-     * @param collectDurationMs duration in milliseconds to collect output
-     * @return CliProcessResult with collected stdout and stderr
-     * @throws InterruptedException if interrupted while waiting
-     */
-    public CliProcessResult waitAndTerminate(long collectDurationMs) throws InterruptedException {
-      // Wait for the collect duration
-      Thread.sleep(collectDurationMs);
-
-      // Terminate the process gracefully first
-      process.destroy();
-      boolean terminated = process.waitFor(2, TimeUnit.SECONDS);
-      if (!terminated) {
-        process.destroyForcibly();
-        process.waitFor(1, TimeUnit.SECONDS);
-      }
-
-      // Wait for output capture threads to finish
-      stdoutThread.join(2000);
-      stderrThread.join(2000);
-
-      int exitCode = process.exitValue();
-      return new CliProcessResult(exitCode, stdout.toString(), stderr.toString());
-    }
-
-    /**
-     * Returns the currently captured stdout.
-     *
-     * @return captured stdout so far
-     */
-    public String getCurrentStdout() {
-      synchronized (stdout) {
-        return stdout.toString();
-      }
-    }
-  }
-
-  /**
-   * Executes a `pal print` command with a custom timeout, designed for socket-based streaming
-   * tests.
-   *
-   * <p>Unlike {@link #runPrint}, this method runs the print command for a specified duration then
-   * terminates the process gracefully. This is necessary for socket-based streaming tests where the
-   * print command would otherwise run indefinitely.
-   *
-   * <p>The method:
-   *
-   * <ol>
-   *   <li>Starts the print process
-   *   <li>Waits for the specified collect duration while capturing output
-   *   <li>Terminates the process (first gracefully, then forcibly if needed)
-   *   <li>Returns collected stdout/stderr
-   * </ol>
-   *
-   * @param collectDurationMs duration in milliseconds to collect messages before terminating
-   * @param args command-line arguments to pass to `pal print`
-   * @return CliProcessResult containing collected stdout and stderr (exit code is typically 143
-   *     from SIGTERM)
-   * @throws Exception if command execution fails before the timeout
-   */
-  protected CliProcessResult runPrintWithTimeout(long collectDurationMs, String... args)
-      throws Exception {
-    String palHome = System.getenv("PAL_HOME");
-    if (palHome == null || palHome.isEmpty()) {
-      throw new IllegalStateException("PAL_HOME environment variable not set");
-    }
-
-    // Build command: pal [global-opts] print <args>
-    List<String> command = new ArrayList<>();
-    command.add(Paths.get(palHome, "bin", "pal").toAbsolutePath().toString());
-
-    // Check if first arg is a global option (-d, -k, etc.)
-    int startIdx = 0;
-    if (args.length >= 2 && args[0].equals("-d")) {
-      command.add(args[0]); // -d
-      command.add(args[1]); // directory value
-      startIdx = 2;
-    }
-
-    // Add subcommand
-    command.add("print");
-
-    // Add remaining args
-    command.addAll(Arrays.asList(args).subList(startIdx, args.length));
-
-    logger.info(
-        "Executing CLI command with {}ms timeout: {}",
-        collectDurationMs,
-        String.join(" ", command));
-
-    ProcessBuilder pb = new ProcessBuilder(command);
-    pb.directory(new File(palHome));
-
-    // Configure logging
-    pb.environment()
-        .put("PAL_CLI_LOGGING_CONFIG", Paths.get(palHome, "config", "cli-logging.xml").toString());
-
-    // Configure JaCoCo agent for CLI process coverage collection
-    String jacocoAgentJar = System.getProperty("jacoco.agent.jar");
-    String jacocoDestFileDir = System.getProperty("jacoco.destfile.dir");
-    if (jacocoAgentJar != null && jacocoDestFileDir != null) {
-      File agentFile = new File(jacocoAgentJar);
-      if (agentFile.exists()) {
-        // Create unique coverage file for this CLI invocation
-        int invocationId = cliInvocationCounter.getAndIncrement();
-        String coverageFile =
-            Paths.get(jacocoDestFileDir, "jacoco-cli-print-socket-" + invocationId + ".exec")
-                .toString();
-        String javaAgent =
-            String.format(
-                "%s=destfile=%s,append=true,dumponexit=true", jacocoAgentJar, coverageFile);
-        pb.environment().put("JAVA_AGENT", javaAgent);
-        logger.debug("Enabled JaCoCo agent for CLI process: {}", coverageFile);
-      }
-    }
-
-    // Remove environment variables that would interfere with tests
-    pb.environment().remove("PAL_DIRECTORY");
-    pb.environment().remove("KAFKA_SERVERS");
-    pb.environment().remove("CHRONICLE_BASE_DIR");
-    pb.environment().remove("PAL_JMX_HOST");
-    pb.environment().remove("PAL_JMX_PORT");
-
-    Process process = pb.start();
-
-    // Capture stdout and stderr
-    StringBuilder stdout = new StringBuilder();
-    StringBuilder stderr = new StringBuilder();
-
-    Thread stdoutThread =
-        new Thread(
-            () -> {
-              try (BufferedReader reader =
-                  new BufferedReader(
-                      new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                  synchronized (stdout) {
-                    stdout.append(line).append("\n");
-                  }
-                }
-              } catch (IOException e) {
-                // Process terminated, expected
-                logger.debug("Stdout reader ended", e);
-              }
-            });
-
-    Thread stderrThread =
-        new Thread(
-            () -> {
-              try (BufferedReader reader =
-                  new BufferedReader(
-                      new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                  synchronized (stderr) {
-                    stderr.append(line).append("\n");
-                  }
-                }
-              } catch (IOException e) {
-                // Process terminated, expected
-                logger.debug("Stderr reader ended", e);
-              }
-            });
-
-    stdoutThread.start();
-    stderrThread.start();
-
-    // Wait for the collect duration
-    Thread.sleep(collectDurationMs);
-
-    // Terminate the process gracefully first
-    process.destroy();
-    boolean terminated = process.waitFor(2, TimeUnit.SECONDS);
-    if (!terminated) {
-      logger.warn("Process did not terminate gracefully, force killing");
-      process.destroyForcibly();
-      process.waitFor(1, TimeUnit.SECONDS);
-    }
-
-    // Wait for output capture threads to finish
-    stdoutThread.join(2000);
-    stderrThread.join(2000);
-
-    int exitCode = process.exitValue();
-    logger.info(
-        "CLI command terminated with exit code {}, stdout length: {}, stderr length: {}",
-        exitCode,
-        stdout.length(),
-        stderr.length());
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("-----CLI STDOUT-----\n{}", stdout);
-      logger.debug("-----CLI STDERR-----\n{}", stderr);
-    }
-
-    return new CliProcessResult(exitCode, stdout.toString(), stderr.toString());
   }
 
   /** Container for CLI process execution results. */
