@@ -409,11 +409,13 @@ Each operation during replay is assigned one of five actions:
 Understanding when replay actions apply is critical:
 
 **Entry point injection** (operations injected by `ReplayInputInjector` via `dispatchIncoming`):
+
 - Arguments **always** come from the WAL message — this is how injection works
 - The method body **always** executes with those WAL arguments
 - RE_EXECUTE vs STUB does not apply to the entry point itself
 
 **Nested operations** (operations inside entry points, handled via `dispatchReplay`):
+
 - Arguments come from **live execution state** (`pjp.getArgs()`)
 - This is where RE_EXECUTE vs STUB makes a difference
 

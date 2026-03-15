@@ -435,6 +435,7 @@ To update the policy at runtime:
    ```
    INFO  RPC policy reloaded from rpc-policy.yaml (5 rules, default action: DENY)
    ```
+
 4. The new policy is now active
 
 ### Error Handling
