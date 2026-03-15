@@ -9,10 +9,12 @@
  */
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
 import org.junit.Test;
+import picocli.CommandLine;
 
 /**
  * Unit test specifications for {@code PeersAlias}.
@@ -34,14 +36,8 @@ public class PeersAliasTest {
    * behavior and only overrides the {@code @Command(name = "peers")} annotation.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void extendsFromPeerList() {
-    // Given: PeersAlias class
-    // When: checked for superclass
-    // Then: PeersAlias extends PeerList
-
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(PeerList.class.isAssignableFrom(PeersAlias.class));
   }
 
   /**
@@ -51,14 +47,9 @@ public class PeersAliasTest {
    * "peers" (not "ls" from the parent PeerList).
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void commandNameIsPeers() {
-    // Given: CommandLine wrapping PeersAlias
-    // When: getCommandName() called
-    // Then: command name is "peers"
-
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    CommandLine commandLine = new CommandLine(new PeersAlias());
+    assertThat(commandLine.getCommandName(), is("peers"));
   }
 
   /**
@@ -69,13 +60,16 @@ public class PeersAliasTest {
    * getPalDirectoryConnectionString()} to propagate from Pal through the alias.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void worksAsDirectChildOfPal() {
-    // Given: PeersAlias wired as direct child of Pal command
-    // When: @ParentCommand resolves
-    // Then: PalCommand chain works correctly (getPalDirectoryConnectionString propagates)
+    CommandLine palCmd = Pal.createCommandLine();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    // Verify "peers" is registered as a direct child
+    assertTrue(palCmd.getSubcommands().containsKey("peers"));
+    assertTrue(palCmd.getSubcommands().get("peers").getCommand() instanceof PeersAlias);
+
+    // Parse args to trigger @ParentCommand injection
+    palCmd.parseArgs("-d", "test-host:2379", "peers");
+    PeersAlias alias = palCmd.getSubcommands().get("peers").getCommand();
+    assertThat(alias.palCommand.getPalDirectoryConnectionString(), is("test-host:2379"));
   }
 }

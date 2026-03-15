@@ -14,7 +14,7 @@ import static picocli.CommandLine.Option;
 import io.quasient.pal.common.cli.PalCommand;
 import io.quasient.pal.core.service.Main;
 import io.quasient.pal.cxn.directory.PalDirectory;
-import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -36,12 +36,14 @@ import picocli.CommandLine.Spec;
     separator = " ",
     mixinStandardHelpOptions = true,
     optionListHeading = "%nOptions:%n",
-    commandListHeading = "%nCommands:%n",
     usageHelpWidth = 90,
-    footer = "%nRun 'pal COMMAND --help' or 'pal help COMMAND' for more information on a command.",
+    footer = "%nRun 'pal COMMAND --help' or 'pal COMMAND SUBCOMMAND --help' for more information.",
     sortOptions = false,
     versionProvider = ManifestVersionProvider.class)
 public class Pal implements Callable<Integer>, PalCommand {
+
+  /** Column width for command names in the Docker-style help output. */
+  private static final int COMMAND_NAME_WIDTH = 14;
 
   /** The command specification provided by Picocli for the current command. */
   @SuppressWarnings("unused")
@@ -65,6 +67,40 @@ public class Pal implements Callable<Integer>, PalCommand {
    * <p>This constructor is private to enforce usage through the CLI framework.
    */
   private Pal() {}
+
+  /**
+   * Creates and configures the full command-line hierarchy.
+   *
+   * <p>Assembles the entire CLI command tree including entity group commands, alias shortcuts, and
+   * Docker-style help formatting. Package-private to support testing.
+   *
+   * @return a fully configured {@link CommandLine} instance
+   */
+  static CommandLine createCommandLine() {
+    Pal pal = new Pal();
+    CommandLine commandLine = new CommandLine(pal);
+
+    // top-level commands
+    commandLine.addSubcommand("run", new Main());
+    commandLine.addSubcommand(new Replay());
+
+    // entity group commands (with nested subcommands declared via @Command(subcommands=...))
+    commandLine.addSubcommand("peer", new PeerCommand());
+    commandLine.addSubcommand("log", new LogCommand());
+    commandLine.addSubcommand("intercept", new InterceptCommand());
+
+    // alias shortcuts
+    commandLine.addSubcommand("peers", new PeersAlias());
+    commandLine.addSubcommand("logs", new LogsAlias());
+    commandLine.addSubcommand("intercepts", new InterceptsAlias());
+
+    // help
+    commandLine.addSubcommand(HelpCommand.class);
+
+    setupDockerStyleHelp(commandLine);
+    commandLine.setExecutionStrategy(pal::executionStrategy);
+    return commandLine;
+  }
 
   /**
    * Defines the execution strategy for processing parsed command-line input.
@@ -101,29 +137,10 @@ public class Pal implements Callable<Integer>, PalCommand {
    *
    * @param args the command-line arguments provided by the user
    */
-  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
   public static void main(String[] args) {
     System.setProperty("picocli.ansi", "false");
-    Pal pal = new Pal();
-    CommandLine commandLine = new CommandLine(pal);
-
-    // run (i.e. peer) command goes first
-    commandLine.addSubcommand("run", new Main());
-
-    // subcommands other than 'run' must be subclasses of AbstractPalSubcommand
-    java.util.List<AbstractPalSubcommand> subcommands =
-        Arrays.asList(new Replay(), new WalIndexCommand());
-    subcommands.forEach(commandLine::addSubcommand);
-
-    // entity group commands (with nested subcommands declared via @Command(subcommands=...))
-    commandLine.addSubcommand("peer", new PeerCommand());
-    commandLine.addSubcommand("log", new LogCommand());
-    commandLine.addSubcommand("intercept", new InterceptCommand());
-
-    // at last Help
-    commandLine.addSubcommand(HelpCommand.class);
-
-    int exitCode = commandLine.setExecutionStrategy(pal::executionStrategy).execute(args);
+    CommandLine commandLine = createCommandLine();
+    int exitCode = commandLine.execute(args);
     System.exit(exitCode);
   }
 
@@ -149,5 +166,55 @@ public class Pal implements Callable<Integer>, PalCommand {
   @Override
   public String getPalDirectoryConnectionString() {
     return this.palDirectoryUrl;
+  }
+
+  /**
+   * Configures Docker-style help grouping on the given command line.
+   *
+   * <p>Replaces the default command list section with a grouped rendering that organizes commands
+   * into Management Commands, Commands, and Shortcuts sections.
+   *
+   * @param commandLine the root command line to configure
+   */
+  private static void setupDockerStyleHelp(CommandLine commandLine) {
+    commandLine.getHelpSectionMap().put("commandListHeading", help -> "");
+    commandLine.getHelpSectionMap().put("commandList", Pal::renderDockerStyleCommandList);
+  }
+
+  /**
+   * Renders the command list in Docker-style grouped format.
+   *
+   * @param help the picocli Help object providing access to command metadata
+   * @return the formatted command list string
+   */
+  private static String renderDockerStyleCommandList(CommandLine.Help help) {
+    Map<String, CommandLine> subs = help.commandSpec().subcommands();
+
+    StringBuilder sb = new StringBuilder();
+    appendGroup(sb, "Management Commands", subs, "peer", "log", "intercept");
+    appendGroup(sb, "Commands", subs, "run", "replay");
+    appendGroup(sb, "Shortcuts", subs, "peers", "logs", "intercepts");
+    return sb.toString();
+  }
+
+  /**
+   * Appends a named group of commands to the help output.
+   *
+   * @param sb the string builder to append to
+   * @param heading the group heading
+   * @param subs the map of registered subcommands
+   * @param names the command names to include in this group
+   */
+  private static void appendGroup(
+      StringBuilder sb, String heading, Map<String, CommandLine> subs, String... names) {
+    sb.append(String.format("%n%s:%n", heading));
+    for (String name : names) {
+      CommandLine sub = subs.get(name);
+      if (sub != null) {
+        String[] desc = sub.getCommandSpec().usageMessage().description();
+        String description = desc.length > 0 ? desc[0] : "";
+        sb.append(String.format("  %-" + COMMAND_NAME_WIDTH + "s%s%n", name, description));
+      }
+    }
   }
 }

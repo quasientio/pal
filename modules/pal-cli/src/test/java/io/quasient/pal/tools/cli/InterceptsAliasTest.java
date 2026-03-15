@@ -9,10 +9,12 @@
  */
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
 import org.junit.Test;
+import picocli.CommandLine;
 
 /**
  * Unit test specifications for {@code InterceptsAlias}.
@@ -35,14 +37,8 @@ public class InterceptsAliasTest {
    * annotation.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void extendsFromInterceptList() {
-    // Given: InterceptsAlias class
-    // When: checked for superclass
-    // Then: InterceptsAlias extends InterceptList
-
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(InterceptList.class.isAssignableFrom(InterceptsAlias.class));
   }
 
   /**
@@ -52,14 +48,9 @@ public class InterceptsAliasTest {
    * "intercepts" (not "ls" from the parent InterceptList).
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void commandNameIsIntercepts() {
-    // Given: CommandLine wrapping InterceptsAlias
-    // When: getCommandName() called
-    // Then: command name is "intercepts"
-
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    CommandLine commandLine = new CommandLine(new InterceptsAlias());
+    assertThat(commandLine.getCommandName(), is("intercepts"));
   }
 
   /**
@@ -70,13 +61,16 @@ public class InterceptsAliasTest {
    * getPalDirectoryConnectionString()} to propagate from Pal through the alias.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void worksAsDirectChildOfPal() {
-    // Given: InterceptsAlias wired as direct child of Pal command
-    // When: @ParentCommand resolves
-    // Then: PalCommand chain works correctly (getPalDirectoryConnectionString propagates)
+    CommandLine palCmd = Pal.createCommandLine();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    // Verify "intercepts" is registered as a direct child
+    assertTrue(palCmd.getSubcommands().containsKey("intercepts"));
+    assertTrue(palCmd.getSubcommands().get("intercepts").getCommand() instanceof InterceptsAlias);
+
+    // Parse args to trigger @ParentCommand injection
+    palCmd.parseArgs("-d", "test-host:2379", "intercepts");
+    InterceptsAlias alias = palCmd.getSubcommands().get("intercepts").getCommand();
+    assertThat(alias.palCommand.getPalDirectoryConnectionString(), is("test-host:2379"));
   }
 }

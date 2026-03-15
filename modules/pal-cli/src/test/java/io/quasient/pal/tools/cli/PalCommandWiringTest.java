@@ -9,10 +9,13 @@
  */
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.util.Map;
 import org.junit.Test;
+import picocli.CommandLine;
 
 /**
  * Unit test specifications for the overall {@link Pal} command wiring.
@@ -36,14 +39,19 @@ public class PalCommandWiringTest {
    * intercept, replay, peers, logs, intercepts, help.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void topLevelCommands_registered() {
-    // Given: full Pal CommandLine (constructed as in Pal.main)
-    // When: getSubcommands() called
-    // Then: subcommands contain: run, peer, log, intercept, replay, peers, logs, intercepts, help
+    CommandLine palCmd = Pal.createCommandLine();
+    Map<String, CommandLine> subs = palCmd.getSubcommands();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(subs.containsKey("run"));
+    assertTrue(subs.containsKey("peer"));
+    assertTrue(subs.containsKey("log"));
+    assertTrue(subs.containsKey("intercept"));
+    assertTrue(subs.containsKey("replay"));
+    assertTrue(subs.containsKey("peers"));
+    assertTrue(subs.containsKey("logs"));
+    assertTrue(subs.containsKey("intercepts"));
+    assertTrue(subs.containsKey("help"));
   }
 
   /**
@@ -52,14 +60,16 @@ public class PalCommandWiringTest {
    * <p>Verifies that the "peer" subcommand contains nested subcommands: ls, rm, print, call, stats.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void peerSubcommands_registered() {
-    // Given: peer subcommand from full Pal CommandLine
-    // When: getSubcommands() called on peer CommandLine
-    // Then: contains ls, rm, print, call, stats
+    CommandLine palCmd = Pal.createCommandLine();
+    CommandLine peerCmd = palCmd.getSubcommands().get("peer");
+    Map<String, CommandLine> subs = peerCmd.getSubcommands();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(subs.containsKey("ls"));
+    assertTrue(subs.containsKey("rm"));
+    assertTrue(subs.containsKey("print"));
+    assertTrue(subs.containsKey("call"));
+    assertTrue(subs.containsKey("stats"));
   }
 
   /**
@@ -69,14 +79,17 @@ public class PalCommandWiringTest {
    * stats.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void logSubcommands_registered() {
-    // Given: log subcommand from full Pal CommandLine
-    // When: getSubcommands() called on log CommandLine
-    // Then: contains ls, rm, print, call, index, stats
+    CommandLine palCmd = Pal.createCommandLine();
+    CommandLine logCmd = palCmd.getSubcommands().get("log");
+    Map<String, CommandLine> subs = logCmd.getSubcommands();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(subs.containsKey("ls"));
+    assertTrue(subs.containsKey("rm"));
+    assertTrue(subs.containsKey("print"));
+    assertTrue(subs.containsKey("call"));
+    assertTrue(subs.containsKey("index"));
+    assertTrue(subs.containsKey("stats"));
   }
 
   /**
@@ -85,14 +98,12 @@ public class PalCommandWiringTest {
    * <p>Verifies that the "intercept" subcommand contains nested subcommand: ls.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void interceptSubcommands_registered() {
-    // Given: intercept subcommand from full Pal CommandLine
-    // When: getSubcommands() called on intercept CommandLine
-    // Then: contains ls
+    CommandLine palCmd = Pal.createCommandLine();
+    CommandLine interceptCmd = palCmd.getSubcommands().get("intercept");
+    Map<String, CommandLine> subs = interceptCmd.getSubcommands();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(subs.containsKey("ls"));
   }
 
   /**
@@ -102,14 +113,13 @@ public class PalCommandWiringTest {
    * mentions "peer", "log", and "intercept" entity groups.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void helpText_includesEntityGroups() {
-    // Given: Pal CommandLine
-    // When: getUsageMessage() called
-    // Then: help text contains "peer", "log", "intercept" groups
+    CommandLine palCmd = Pal.createCommandLine();
+    String help = palCmd.getUsageMessage();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    assertThat(help, containsString("peer"));
+    assertThat(help, containsString("log"));
+    assertThat(help, containsString("intercept"));
   }
 
   /**
@@ -120,14 +130,13 @@ public class PalCommandWiringTest {
    * intercepts), similar to Docker CLI help formatting.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void helpText_dockerStyleFormat() {
-    // Given: Pal CommandLine
-    // When: getUsageMessage() called
-    // Then: output matches Docker-style grouping (Management Commands vs Commands vs Shortcuts)
+    CommandLine palCmd = Pal.createCommandLine();
+    String help = palCmd.getUsageMessage();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    assertThat(help, containsString("Management Commands:"));
+    assertThat(help, containsString("Commands:"));
+    assertThat(help, containsString("Shortcuts:"));
   }
 
   /**
@@ -137,14 +146,15 @@ public class PalCommandWiringTest {
    * lists ls, rm, print, call subcommands.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void peerHelp_showsSubcommands() {
-    // Given: peer CommandLine (from full Pal wiring)
-    // When: getUsageMessage() called
-    // Then: help text shows ls, rm, print, call
+    CommandLine palCmd = Pal.createCommandLine();
+    CommandLine peerCmd = palCmd.getSubcommands().get("peer");
+    String help = peerCmd.getUsageMessage();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    assertThat(help, containsString("ls"));
+    assertThat(help, containsString("rm"));
+    assertThat(help, containsString("print"));
+    assertThat(help, containsString("call"));
   }
 
   /**
@@ -154,13 +164,13 @@ public class PalCommandWiringTest {
    * instance, which extends PeerList (i.e., is functionally equivalent to {@code pal peer ls}).
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void aliasesAreFunctional() {
-    // Given: full Pal CommandLine
-    // When: parse "peers"
-    // Then: resolves to PeersAlias (extends PeerList)
+    CommandLine palCmd = Pal.createCommandLine();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    // Parse "peers" and verify it resolves to PeersAlias
+    CommandLine.ParseResult result = palCmd.parseArgs("peers");
+    CommandLine.ParseResult sub = result.subcommand();
+    assertTrue(sub.commandSpec().userObject() instanceof PeersAlias);
+    assertTrue(sub.commandSpec().userObject() instanceof PeerList);
   }
 }

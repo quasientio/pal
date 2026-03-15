@@ -9,10 +9,12 @@
  */
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
 import org.junit.Test;
+import picocli.CommandLine;
 
 /**
  * Unit test specifications for {@code LogsAlias}.
@@ -34,14 +36,8 @@ public class LogsAliasTest {
    * behavior and only overrides the {@code @Command(name = "logs")} annotation.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void extendsFromLogList() {
-    // Given: LogsAlias class
-    // When: checked for superclass
-    // Then: LogsAlias extends LogList
-
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(LogList.class.isAssignableFrom(LogsAlias.class));
   }
 
   /**
@@ -51,14 +47,9 @@ public class LogsAliasTest {
    * "logs" (not "ls" from the parent LogList).
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void commandNameIsLogs() {
-    // Given: CommandLine wrapping LogsAlias
-    // When: getCommandName() called
-    // Then: command name is "logs"
-
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    CommandLine commandLine = new CommandLine(new LogsAlias());
+    assertThat(commandLine.getCommandName(), is("logs"));
   }
 
   /**
@@ -69,13 +60,16 @@ public class LogsAliasTest {
    * getPalDirectoryConnectionString()} to propagate from Pal through the alias.
    */
   @Test
-  @Ignore("Awaiting implementation in #1203")
   public void worksAsDirectChildOfPal() {
-    // Given: LogsAlias wired as direct child of Pal command
-    // When: @ParentCommand resolves
-    // Then: PalCommand chain works correctly (getPalDirectoryConnectionString propagates)
+    CommandLine palCmd = Pal.createCommandLine();
 
-    // TODO(#1203): Implement test logic
-    fail("Not yet implemented");
+    // Verify "logs" is registered as a direct child
+    assertTrue(palCmd.getSubcommands().containsKey("logs"));
+    assertTrue(palCmd.getSubcommands().get("logs").getCommand() instanceof LogsAlias);
+
+    // Parse args to trigger @ParentCommand injection
+    palCmd.parseArgs("-d", "test-host:2379", "logs");
+    LogsAlias alias = palCmd.getSubcommands().get("logs").getCommand();
+    assertThat(alias.palCommand.getPalDirectoryConnectionString(), is("test-host:2379"));
   }
 }
