@@ -40,7 +40,15 @@ pal <entity> <operation> [OPTIONS] [ARGUMENTS]
 
 The directory URL can also be set via the `PAL_DIRECTORY` environment variable. Kafka servers can be set via the `KAFKA_SERVERS` environment variable.
 
-Run `pal COMMAND --help` or `pal COMMAND SUBCOMMAND --help` for more information on a specific command.
+Run `pal COMMAND --help` for more information on a command.
+
+To get help on a subcommand, run `pal COMMAND SUBCOMMAND --help`. For example:
+
+```bash
+pal peer --help         # List all peer operations
+pal peer ls --help      # Help for 'pal peer ls'
+pal log print --help    # Help for 'pal log print'
+```
 
 ## Registry Mode vs Direct Mode
 

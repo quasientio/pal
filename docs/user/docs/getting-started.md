@@ -66,6 +66,8 @@ Shortcuts:
   peers       List peers (shorthand for 'peer ls')
   logs        List logs (shorthand for 'log ls')
   intercepts  List intercepts (shorthand for 'intercept ls')
+
+Run 'pal COMMAND --help' for more information on a command.
 ```
 
 ## Your First PAL Application
