@@ -7,12 +7,21 @@
  * Change Date: 2030-10-01
  * Change License: Apache 2.0
  */
-
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import org.junit.Ignore;
+import java.util.Properties;
+import java.util.function.Function;
+import org.apache.kafka.clients.admin.Admin;
 import org.junit.Test;
 
 /**
@@ -21,11 +30,17 @@ import org.junit.Test;
  * <p>KafkaAdminHelper is a shared utility that manages a cache of Kafka {@code Admin} clients keyed
  * by bootstrap server strings. It consolidates the duplicated {@code getAdminClientForServers()}
  * logic from {@code List} and {@code Remove}.
- *
- * <p>All tests are specification stubs awaiting implementation in issue #1189 when the {@code
- * KafkaAdminHelper} class is created.
  */
 public class KafkaAdminHelperTest {
+
+  /**
+   * Creates a KafkaAdminHelper that returns mock Admin instances instead of real Kafka connections.
+   *
+   * @return a KafkaAdminHelper with a mock factory
+   */
+  private static KafkaAdminHelper createHelperWithMockFactory() {
+    return new KafkaAdminHelper(props -> mock(Admin.class));
+  }
 
   // ==================== Client Creation Tests ====================
 
@@ -36,14 +51,15 @@ public class KafkaAdminHelperTest {
    * a new Admin client.
    */
   @Test
-  @Ignore("Awaiting implementation in #1189")
   public void getAdminClient_createsNewClient_whenCacheEmpty() {
     // Given: empty cache
-    // When: getAdminClientForServers("localhost:29092")
-    // Then: creates and returns new Admin client
+    KafkaAdminHelper helper = createHelperWithMockFactory();
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    // When
+    Admin admin = helper.getAdminClientForServers("localhost:29092");
+
+    // Then: creates and returns new Admin client
+    assertThat(admin, is(notNullValue()));
   }
 
   /**
@@ -53,14 +69,16 @@ public class KafkaAdminHelperTest {
    * bootstrap servers string, the same Admin instance is returned on subsequent calls.
    */
   @Test
-  @Ignore("Awaiting implementation in #1189")
   public void getAdminClient_returnsCachedClient_onSecondCall() {
     // Given: already called once for "localhost:29092"
-    // When: getAdminClientForServers("localhost:29092") again
-    // Then: returns same Admin instance
+    KafkaAdminHelper helper = createHelperWithMockFactory();
+    Admin first = helper.getAdminClientForServers("localhost:29092");
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    // When
+    Admin second = helper.getAdminClientForServers("localhost:29092");
+
+    // Then: returns same Admin instance
+    assertThat(second, is(sameInstance(first)));
   }
 
   /**
@@ -70,14 +88,17 @@ public class KafkaAdminHelperTest {
    * Admin instance and the cache contains two entries.
    */
   @Test
-  @Ignore("Awaiting implementation in #1189")
   public void getAdminClient_createsSeparateClients_forDifferentServers() {
     // Given: client for "server-a:9092" exists
-    // When: getAdminClientForServers("server-b:9092")
-    // Then: creates new client; cache has 2 entries
+    KafkaAdminHelper helper = createHelperWithMockFactory();
+    Admin adminA = helper.getAdminClientForServers("server-a:9092");
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    // When
+    Admin adminB = helper.getAdminClientForServers("server-b:9092");
+
+    // Then: creates new client; they are different instances
+    assertThat(adminB, is(notNullValue()));
+    assertThat(adminB, is(not(sameInstance(adminA))));
   }
 
   // ==================== Resource Cleanup Tests ====================
@@ -88,14 +109,24 @@ public class KafkaAdminHelperTest {
    * <p>Verifies that when {@code closeResources} is called, all cached Admin clients are closed.
    */
   @Test
-  @Ignore("Awaiting implementation in #1189")
   public void closeResources_closesAllCachedClients() {
     // Given: 2 cached Admin clients
-    // When: closeResources()
-    // Then: both clients are closed
+    Admin mockAdminA = mock(Admin.class);
+    Admin mockAdminB = mock(Admin.class);
+    @SuppressWarnings("unchecked")
+    Function<Properties, Admin> factory = mock(Function.class);
+    when(factory.apply(any())).thenReturn(mockAdminA).thenReturn(mockAdminB);
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    KafkaAdminHelper helper = new KafkaAdminHelper(factory);
+    helper.getAdminClientForServers("server-a:9092");
+    helper.getAdminClientForServers("server-b:9092");
+
+    // When
+    helper.closeResources();
+
+    // Then: both clients are closed
+    verify(mockAdminA).close();
+    verify(mockAdminB).close();
   }
 
   /**
@@ -105,13 +136,11 @@ public class KafkaAdminHelperTest {
    * throw any exceptions.
    */
   @Test
-  @Ignore("Awaiting implementation in #1189")
   public void closeResources_onEmptyCache_doesNothing() {
     // Given: empty cache
-    // When: closeResources()
-    // Then: no exceptions thrown
+    KafkaAdminHelper helper = createHelperWithMockFactory();
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    // When: closeResources() — should not throw
+    helper.closeResources();
   }
 }

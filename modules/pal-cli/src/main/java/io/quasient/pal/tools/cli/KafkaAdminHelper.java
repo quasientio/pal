@@ -1,0 +1,100 @@
+/*
+ * Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
+ *
+ * Use of this software is governed by the Business Source License 1.1
+ * included in the file LICENSE and at https://mariadb.com/bsl11
+ *
+ * Change Date: 2030-10-01
+ * Change License: Apache 2.0
+ */
+package io.quasient.pal.tools.cli;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.function.Function;
+import org.apache.kafka.clients.admin.Admin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Manages a cache of Kafka {@link Admin} clients keyed by bootstrap server strings.
+ *
+ * <p>This shared utility consolidates the duplicated {@code getAdminClientForServers} logic
+ * previously found in {@code List} and {@code Remove}. It provides lazy creation and caching of
+ * {@link Admin} instances, ensuring that only one client is created per unique bootstrap servers
+ * string.
+ *
+ * <p>Callers should invoke {@link #closeResources()} when the helper is no longer needed to release
+ * all cached Kafka admin connections.
+ */
+public class KafkaAdminHelper {
+
+  /** Logger for this class. */
+  private static final Logger logger = LoggerFactory.getLogger(KafkaAdminHelper.class);
+
+  /** Unique client ID used for all Kafka admin connections created by this helper. */
+  private static final UUID KAFKA_CLIENT_ID = UUID.randomUUID();
+
+  /** Cache of Admin clients keyed by bootstrap server string. */
+  private final Map<String, Admin> adminClientsPerServer = new HashMap<>();
+
+  /** Factory function for creating Admin instances from properties. */
+  private final Function<Properties, Admin> adminFactory;
+
+  /** Constructs a new {@code KafkaAdminHelper} that creates real Kafka Admin clients. */
+  public KafkaAdminHelper() {
+    this(Admin::create);
+  }
+
+  /**
+   * Constructs a new {@code KafkaAdminHelper} with a custom Admin factory.
+   *
+   * @param adminFactory function that creates an {@link Admin} from {@link Properties}
+   */
+  KafkaAdminHelper(Function<Properties, Admin> adminFactory) {
+    this.adminFactory = adminFactory;
+  }
+
+  /**
+   * Retrieves or creates a Kafka {@link Admin} client for the specified bootstrap servers.
+   *
+   * <p>If a client for the given {@code bootstrapServers} string already exists in the cache, the
+   * cached instance is returned. Otherwise, a new client is created with the following
+   * configuration:
+   *
+   * <ul>
+   *   <li>{@code bootstrap.servers} — set to the provided value
+   *   <li>{@code client.id} — set to a UUID unique to this helper instance
+   *   <li>{@code request.timeout.ms} — 5000 ms
+   *   <li>{@code default.api.timeout.ms} — 10000 ms
+   * </ul>
+   *
+   * @param bootstrapServers the Kafka bootstrap servers to connect to
+   * @return the {@link Admin} client for the given bootstrap servers
+   */
+  public Admin getAdminClientForServers(String bootstrapServers) {
+    if (!adminClientsPerServer.containsKey(bootstrapServers)) {
+      Properties props = new Properties();
+      props.setProperty("bootstrap.servers", bootstrapServers);
+      props.setProperty("client.id", KAFKA_CLIENT_ID.toString());
+      props.setProperty("request.timeout.ms", "5000");
+      props.setProperty("default.api.timeout.ms", "10000");
+      adminClientsPerServer.put(bootstrapServers, adminFactory.apply(props));
+      logger.debug("Created Kafka Admin client for servers: {}", bootstrapServers);
+    }
+    return adminClientsPerServer.get(bootstrapServers);
+  }
+
+  /**
+   * Closes all cached Kafka {@link Admin} clients and clears the cache.
+   *
+   * <p>This method should be called when the helper is no longer needed. It is safe to call on an
+   * empty cache.
+   */
+  public void closeResources() {
+    adminClientsPerServer.values().forEach(Admin::close);
+    adminClientsPerServer.clear();
+  }
+}

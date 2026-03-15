@@ -7,12 +7,22 @@
  * Change Date: 2030-10-01
  * Change License: Apache 2.0
  */
-
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.directory.nodes.LogInfo;
+import io.quasient.pal.common.directory.nodes.LogInfo.LogType;
+import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import io.quasient.pal.cxn.directory.PalDirectory;
+import java.util.Optional;
 import org.junit.Test;
 
 /**
@@ -22,11 +32,8 @@ import org.junit.Test;
  * object. It consolidates the duplicated {@code resolveLogInfo()} logic from {@code Caller}, {@code
  * Remove}, and {@code MessageStreamPrinter}.
  *
- * <p>Resolution strategy: PAL directory lookup first, then {@code file:} prefix detection for
- * Chronicle, then Kafka fallback.
- *
- * <p>All tests are specification stubs awaiting implementation in issue #1189 when the {@code
- * LogResolver} class is created.
+ * <p>Resolution strategy: (1) {@code file:} prefix detection for Chronicle, (2) PAL directory
+ * lookup, (3) Kafka fallback.
  */
 public class LogResolverTest {
 
@@ -39,14 +46,26 @@ public class LogResolverTest {
    * resolveLogInfo} returns the correct LogInfo with the expected name, type, and backend details.
    */
   @Test
-  @Ignore("Awaiting implementation in #1189")
-  public void resolveLogInfo_withDirectoryAndKnownLog_returnsLogInfo() {
+  public void resolveLogInfo_withDirectoryAndKnownLog_returnsLogInfo() throws Exception {
     // Given: PalDirectory mock returns LogInfo for log name "my-log"
-    // When: resolveLogInfo("my-log")
-    // Then: returns LogInfo with correct name, type, and backend details
+    PalDirectory mockDir = mock(PalDirectory.class);
+    LogInfo expectedLog = new LogInfo("my-log", "localhost:29092");
+    expectedLog.setLogType(LogType.KAFKA);
+    when(mockDir.getLogInfo("my-log")).thenReturn(expectedLog);
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    DirectoryConnectionProvider dcp = mock(DirectoryConnectionProvider.class);
+    when(dcp.get()).thenReturn(Optional.of(mockDir));
+
+    LogResolver resolver = new LogResolver(dcp, "localhost:29092");
+
+    // When
+    LogInfo result = resolver.resolveLogInfo("my-log");
+
+    // Then
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getName(), is("my-log"));
+    assertThat(result.getBootstrapServers(), is("localhost:29092"));
+    assertThat(result.getLogType(), is(LogType.KAFKA));
   }
 
   /**
@@ -56,14 +75,24 @@ public class LogResolverTest {
    * configured, the resolver falls back to creating a Kafka-backed LogInfo.
    */
   @Test
-  @Ignore("Awaiting implementation in #1189")
-  public void resolveLogInfo_withDirectoryButUnknownLog_fallsBackToKafka() {
+  public void resolveLogInfo_withDirectoryButUnknownLog_fallsBackToKafka() throws Exception {
     // Given: PalDirectory returns null for log name "unknown-log", kafkaServers is set
-    // When: resolveLogInfo("unknown-log")
-    // Then: returns LogInfo with Kafka backend
+    PalDirectory mockDir = mock(PalDirectory.class);
+    when(mockDir.getLogInfo("unknown-log")).thenReturn(null);
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    DirectoryConnectionProvider dcp = mock(DirectoryConnectionProvider.class);
+    when(dcp.get()).thenReturn(Optional.of(mockDir));
+
+    LogResolver resolver = new LogResolver(dcp, "localhost:29092");
+
+    // When
+    LogInfo result = resolver.resolveLogInfo("unknown-log");
+
+    // Then: returns LogInfo with Kafka backend
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getName(), is("unknown-log"));
+    assertThat(result.getBootstrapServers(), is("localhost:29092"));
+    assertThat(result.getLogType(), is(LogType.KAFKA));
   }
 
   // ==================== Chronicle (file: prefix) Tests ====================
@@ -76,14 +105,19 @@ public class LogResolverTest {
    * with Chronicle backend and the correct path, without querying the directory.
    */
   @Test
-  @Ignore("Awaiting implementation in #1189")
-  public void resolveLogInfo_withFilePrefixPath_returnsChronicleLogInfo() {
-    // Given: log name is "file:/tmp/my-wal"
-    // When: resolveLogInfo("file:/tmp/my-wal")
-    // Then: returns LogInfo with Chronicle backend, path=/tmp/my-wal, without querying directory
+  public void resolveLogInfo_withFilePrefixPath_returnsChronicleLogInfo() throws Exception {
+    // Given: log name is "file:/tmp/my-wal", directory is available
+    DirectoryConnectionProvider dcp = mock(DirectoryConnectionProvider.class);
+    LogResolver resolver = new LogResolver(dcp, "localhost:29092");
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    // When
+    LogInfo result = resolver.resolveLogInfo("file:/tmp/my-wal");
+
+    // Then: returns LogInfo with Chronicle backend, path=/tmp/my-wal, without querying directory
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getName(), is("/tmp/my-wal"));
+    assertThat(result.getLogType(), is(LogType.CHRONICLE));
+    verify(dcp, never()).get();
   }
 
   // ==================== Kafka Fallback Tests ====================
@@ -95,14 +129,18 @@ public class LogResolverTest {
    * resolver returns a Kafka-backed LogInfo.
    */
   @Test
-  @Ignore("Awaiting implementation in #1189")
   public void resolveLogInfo_withKafkaFallback_returnsKafkaLogInfo() {
     // Given: no directory connection, kafkaServers="localhost:29092"
-    // When: resolveLogInfo("my-topic")
-    // Then: returns LogInfo with Kafka backend
+    LogResolver resolver = new LogResolver(null, "localhost:29092");
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    // When
+    LogInfo result = resolver.resolveLogInfo("my-topic");
+
+    // Then: returns LogInfo with Kafka backend
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getName(), is("my-topic"));
+    assertThat(result.getBootstrapServers(), is("localhost:29092"));
+    assertThat(result.getLogType(), is(LogType.KAFKA));
   }
 
   // ==================== Error / Edge Case Tests ====================
@@ -114,14 +152,15 @@ public class LogResolverTest {
    * resolver returns null.
    */
   @Test
-  @Ignore("Awaiting implementation in #1189")
   public void resolveLogInfo_withNoDirectoryAndNoKafka_returnsNull() {
     // Given: no directory connection, no Kafka servers
-    // When: resolveLogInfo("my-log")
-    // Then: returns null
+    LogResolver resolver = new LogResolver(null, null);
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    // When
+    LogInfo result = resolver.resolveLogInfo("my-log");
+
+    // Then: returns null
+    assertThat(result, is(nullValue()));
   }
 
   /**
@@ -129,14 +168,14 @@ public class LogResolverTest {
    *
    * <p>Verifies that passing null as the log name throws an {@code IllegalArgumentException}.
    */
-  @Test
-  @Ignore("Awaiting implementation in #1189")
+  @Test(expected = IllegalArgumentException.class)
   public void resolveLogInfo_withNullLogName_throwsIllegalArgument() {
     // Given: any state
-    // When: resolveLogInfo(null)
-    // Then: throws IllegalArgumentException
+    LogResolver resolver = new LogResolver(null, null);
 
-    // TODO(#1189): Implement test logic
-    fail("Not yet implemented");
+    // When: resolveLogInfo(null)
+    resolver.resolveLogInfo(null);
+
+    // Then: throws IllegalArgumentException (handled by annotation)
   }
 }
