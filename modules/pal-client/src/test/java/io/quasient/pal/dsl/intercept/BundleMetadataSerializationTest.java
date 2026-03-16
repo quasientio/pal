@@ -9,9 +9,15 @@
  */
 package io.quasient.pal.dsl.intercept;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
@@ -30,15 +36,28 @@ public class BundleMetadataSerializationTest {
    * serialize/deserialize cycle.
    */
   @Test
-  @Ignore("Awaiting implementation in #1237")
   public void roundTrip_serializeDeserialize() {
-    // Given: A BundleMetadata with all fields populated (bundleName, peerUuid,
-    //        a list of intercept UUIDs, an appliedAt Instant, and a version number)
-    // When: The metadata is serialized to JSON via toJson() and deserialized back via fromJson()
-    // Then: All fields on the deserialized instance match the original values exactly
+    // Given
+    String bundleName = "fraud-check-v1";
+    UUID peerUuid = UUID.randomUUID();
+    List<UUID> interceptUuids = List.of(UUID.randomUUID(), UUID.randomUUID());
+    Instant appliedAt = Instant.parse("2026-03-15T10:30:00Z");
+    int version = 1;
 
-    // TODO(#1237): Implement test logic
-    fail("Not yet implemented");
+    BundleMetadata original =
+        new BundleMetadata(bundleName, peerUuid, interceptUuids, appliedAt, version);
+
+    // When
+    String json = original.toJson();
+    BundleMetadata deserialized = BundleMetadata.fromJson(json);
+
+    // Then
+    assertThat(deserialized, is(notNullValue()));
+    assertThat(deserialized.getBundleName(), is(bundleName));
+    assertThat(deserialized.getPeerUuid(), is(peerUuid));
+    assertThat(deserialized.getInterceptUuids(), is(interceptUuids));
+    assertThat(deserialized.getAppliedAt(), is(appliedAt));
+    assertThat(deserialized.getVersion(), is(version));
   }
 
   /**
@@ -46,25 +65,39 @@ public class BundleMetadataSerializationTest {
    * correctly.
    */
   @Test
-  @Ignore("Awaiting implementation in #1237")
   public void serialize_handlesEmptyInterceptUuids() {
-    // Given: A BundleMetadata with an empty interceptUuids list
-    // When: The metadata is serialized to JSON and deserialized back
-    // Then: The deserialized interceptUuids list is empty (not null)
+    // Given
+    BundleMetadata original =
+        new BundleMetadata(
+            "empty-bundle", UUID.randomUUID(), Collections.emptyList(), Instant.now(), 0);
 
-    // TODO(#1237): Implement test logic
-    fail("Not yet implemented");
+    // When
+    String json = original.toJson();
+    BundleMetadata deserialized = BundleMetadata.fromJson(json);
+
+    // Then
+    assertThat(deserialized, is(notNullValue()));
+    assertThat(deserialized.getInterceptUuids(), is(notNullValue()));
+    assertThat(deserialized.getInterceptUuids().isEmpty(), is(true));
   }
 
   /** Verifies that a BundleMetadata with multiple intercept UUIDs round-trips correctly. */
   @Test
-  @Ignore("Awaiting implementation in #1237")
   public void serialize_handlesMultipleUuids() {
-    // Given: A BundleMetadata with 5 distinct intercept UUIDs
-    // When: The metadata is serialized to JSON and deserialized back
-    // Then: All 5 UUIDs are present in the deserialized list, in the same order
+    // Given
+    List<UUID> uuids = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      uuids.add(UUID.randomUUID());
+    }
+    BundleMetadata original =
+        new BundleMetadata("multi-bundle", UUID.randomUUID(), uuids, Instant.now(), 2);
 
-    // TODO(#1237): Implement test logic
-    fail("Not yet implemented");
+    // When
+    String json = original.toJson();
+    BundleMetadata deserialized = BundleMetadata.fromJson(json);
+
+    // Then
+    assertThat(deserialized.getInterceptUuids().size(), is(5));
+    assertThat(deserialized.getInterceptUuids(), is(uuids));
   }
 }
