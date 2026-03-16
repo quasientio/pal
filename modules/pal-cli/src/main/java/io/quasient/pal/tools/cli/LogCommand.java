@@ -10,6 +10,7 @@
 package io.quasient.pal.tools.cli;
 
 import io.quasient.pal.common.cli.PalCommand;
+import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParentCommand;
@@ -32,6 +33,7 @@ import picocli.CommandLine.Spec;
 @Command(
     name = "log",
     description = "Manage logs",
+    mixinStandardHelpOptions = true,
     subcommands = {
       LogList.class,
       LogRemove.class,
@@ -40,7 +42,7 @@ import picocli.CommandLine.Spec;
       LogIndexCommand.class,
       LogStats.class,
     })
-public class LogCommand implements PalCommand, Runnable {
+public class LogCommand implements PalCommand, Callable<Integer> {
 
   /** Parent command providing access to the PAL directory connection string. */
   @ParentCommand PalCommand parent;
@@ -61,9 +63,14 @@ public class LogCommand implements PalCommand, Runnable {
     return parent.getPalDirectoryConnectionString();
   }
 
-  /** Prints usage information when invoked without a subcommand. */
+  /**
+   * Prints usage information when invoked without a subcommand.
+   *
+   * @return exit code 0
+   */
   @Override
-  public void run() {
+  public Integer call() {
     spec.commandLine().usage(System.out);
+    return 0;
   }
 }

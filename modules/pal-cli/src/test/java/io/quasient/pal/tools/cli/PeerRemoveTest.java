@@ -153,6 +153,8 @@ public class PeerRemoveTest {
     UUID peerUuid = UUID.randomUUID();
 
     PalDirectory mockDir = mock(PalDirectory.class);
+    PeerInfo peerInfo = new PeerInfo(peerUuid, "test-peer");
+    when(mockDir.getPeer(peerUuid)).thenReturn(peerInfo);
     when(mockDir.isPeerAlive(peerUuid)).thenReturn(false);
 
     PeerRemove cmd = createWithMockDirectory(mockDir);
@@ -218,6 +220,9 @@ public class PeerRemoveTest {
     allPeers.add(peer3);
     when(mockDir.listPeers()).thenReturn(allPeers);
     when(mockDir.isPeerAlive(any(UUID.class))).thenReturn(false);
+    when(mockDir.getPeer(peer1Uuid)).thenReturn(peer1);
+    when(mockDir.getPeer(peer2Uuid)).thenReturn(peer2);
+    when(mockDir.getPeer(peer3Uuid)).thenReturn(peer3);
 
     PeerRemove cmd = createWithMockDirectory(mockDir);
     setField(cmd, "peerIdentifiers", List.of("app"));
@@ -251,6 +256,8 @@ public class PeerRemoveTest {
     UUID peerUuid = UUID.randomUUID();
 
     PalDirectory mockDir = mock(PalDirectory.class);
+    PeerInfo peerInfo = new PeerInfo(peerUuid, "alive-peer");
+    when(mockDir.getPeer(peerUuid)).thenReturn(peerInfo);
     when(mockDir.isPeerAlive(peerUuid)).thenReturn(true);
 
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -284,6 +291,8 @@ public class PeerRemoveTest {
     UUID peerUuid = UUID.randomUUID();
 
     PalDirectory mockDir = mock(PalDirectory.class);
+    PeerInfo peerInfo = new PeerInfo(peerUuid, "alive-peer");
+    when(mockDir.getPeer(peerUuid)).thenReturn(peerInfo);
     when(mockDir.isPeerAlive(peerUuid)).thenReturn(true);
 
     PeerRemove cmd = createWithMockDirectory(mockDir);
@@ -313,6 +322,8 @@ public class PeerRemoveTest {
     UUID peerUuid = UUID.randomUUID();
 
     PalDirectory mockDir = mock(PalDirectory.class);
+    PeerInfo peerInfo = new PeerInfo(peerUuid, "dead-peer");
+    when(mockDir.getPeer(peerUuid)).thenReturn(peerInfo);
     when(mockDir.isPeerAlive(peerUuid)).thenReturn(false);
 
     PeerRemove cmd = createWithMockDirectory(mockDir);
@@ -354,10 +365,10 @@ public class PeerRemoveTest {
     runCommand.setAccessible(true);
     int result = (int) runCommand.invoke(cmd);
 
-    // Then: no deletion occurs (no peers matched)
+    // Then: no deletion occurs (no peers matched), error is incremented
     verify(mockDir).listPeers();
     verify(mockDir, never()).deletePeer(any(UUID.class));
-    assertThat(result, is(0));
+    assertThat(result, is(1));
   }
 
   /**

@@ -51,8 +51,8 @@ import picocli.CommandLine.ParentCommand;
  * <p>Usage examples:
  *
  * <pre>
- *   pal log stats my-log-topic -b localhost:9092
- *   pal log stats my-log-topic -b localhost:9092 -t EXEC_INSTANCE_METHOD -j
+ *   pal log stats my-log-topic -k localhost:9092
+ *   pal log stats my-log-topic -k localhost:9092 -t EXEC_INSTANCE_METHOD -j
  * </pre>
  *
  * @see Counters
@@ -107,7 +107,7 @@ public class LogStats extends AbstractStatsCommand {
    * provided.
    */
   @Option(
-      names = {"-b", "--bootstrap-servers"},
+      names = {"-k", "--kafka-servers"},
       required = true,
       paramLabel = "BOOTSTRAP_SERVERS",
       defaultValue = "localhost:9092",

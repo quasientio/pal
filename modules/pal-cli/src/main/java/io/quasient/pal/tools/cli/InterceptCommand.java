@@ -10,6 +10,7 @@
 package io.quasient.pal.tools.cli;
 
 import io.quasient.pal.common.cli.PalCommand;
+import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParentCommand;
@@ -31,8 +32,9 @@ import picocli.CommandLine.Spec;
 @Command(
     name = "intercept",
     description = "Manage intercepts",
+    mixinStandardHelpOptions = true,
     subcommands = {InterceptList.class})
-public class InterceptCommand implements PalCommand, Runnable {
+public class InterceptCommand implements PalCommand, Callable<Integer> {
 
   /** Parent command providing access to the PAL directory connection string. */
   @ParentCommand PalCommand parent;
@@ -53,9 +55,14 @@ public class InterceptCommand implements PalCommand, Runnable {
     return parent.getPalDirectoryConnectionString();
   }
 
-  /** Prints usage information when invoked without a subcommand. */
+  /**
+   * Prints usage information when invoked without a subcommand.
+   *
+   * @return exit code 0
+   */
   @Override
-  public void run() {
+  public Integer call() {
     spec.commandLine().usage(System.out);
+    return 0;
   }
 }

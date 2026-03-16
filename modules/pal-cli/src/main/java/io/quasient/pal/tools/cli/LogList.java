@@ -18,7 +18,6 @@ import io.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import io.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.Comparator;
@@ -419,13 +418,7 @@ public class LogList extends AbstractPalSubcommand {
    */
   private void print(LogInfo logInfo) {
     final String logInfoLine;
-    String logName;
-    if (logInfo.getLogType() == LogType.CHRONICLE) {
-      Path fileName = Paths.get(logInfo.getName()).getFileName();
-      logName = fileName != null ? fileName.toString() : logInfo.getName();
-    } else {
-      logName = logInfo.getName();
-    }
+    String logName = logInfo.getName();
     if (longListing) {
       logInfoLine =
           format(

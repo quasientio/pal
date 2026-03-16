@@ -124,6 +124,11 @@ public class PeerRemove extends AbstractPalSubcommand {
    */
   private void deletePeer(UUID peerUuid) {
     try {
+      if (getPalDirectory().getPeer(peerUuid) == null) {
+        out.printf("No peer found with UUID '%s'%n", peerUuid);
+        errors++;
+        return;
+      }
       boolean isAlive = getPalDirectory().isPeerAlive(peerUuid);
       if (isAlive && !force) {
         out.printf(
@@ -153,6 +158,12 @@ public class PeerRemove extends AbstractPalSubcommand {
         getPalDirectory().listPeers().stream()
             .filter(p -> peerName.equals(p.getName()))
             .collect(Collectors.toSet());
+
+    if (matchingPeers.isEmpty()) {
+      out.printf("No peer found with name '%s'%n", peerName);
+      errors++;
+      return;
+    }
 
     if (matchingPeers.size() > 1 && !force) {
       String answer = null;

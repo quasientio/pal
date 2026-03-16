@@ -48,7 +48,7 @@ public class LogStatsTest {
    */
   @Test
   public void runCommand_withLogName_startsKafkaStreams() {
-    // Given: positional log name argument and -b bootstrap servers
+    // Given: positional log name argument and -k kafka servers
     LogStats stats = new LogStats("localhost:9092", "test-log");
 
     // Then: instance is configured and counters are accessible
