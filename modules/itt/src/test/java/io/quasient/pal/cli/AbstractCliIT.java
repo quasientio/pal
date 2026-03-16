@@ -315,6 +315,50 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
+   * Executes a {@code pal intercept apply} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal intercept apply}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runInterceptApply(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"intercept", "apply"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal intercept rm} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal intercept rm}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runInterceptRm(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"intercept", "rm"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal intercept diff} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal intercept diff}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runInterceptDiff(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"intercept", "diff"}, null, args);
+  }
+
+  /**
+   * Executes a {@code pal intercept status} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal intercept status}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runInterceptStatus(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"intercept", "status"}, null, args);
+  }
+
+  /**
    * Executes a {@code pal log stats} command with the given arguments.
    *
    * @param args command-line arguments to pass to {@code pal log stats}
