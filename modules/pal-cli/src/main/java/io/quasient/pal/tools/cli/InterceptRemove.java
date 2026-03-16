@@ -237,6 +237,9 @@ public class InterceptRemove extends AbstractPalSubcommand {
    *
    * @return 0 on success, 1 on error
    */
+  @SuppressFBWarnings(
+      value = "REC_CATCH_EXCEPTION",
+      justification = "Catching all exceptions to provide user-friendly error messages in CLI")
   private int removeByPeer() {
     try {
       PalDirectory dir = getPalDirectory();

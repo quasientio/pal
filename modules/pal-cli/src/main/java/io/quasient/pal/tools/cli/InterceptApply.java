@@ -17,9 +17,6 @@ import io.quasient.pal.dsl.intercept.InterceptDiff;
 import io.quasient.pal.dsl.intercept.InterceptManager;
 import io.quasient.pal.dsl.intercept.InterceptSpec;
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.InvalidPathException;
-import java.nio.file.NoSuchFileException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,17 +125,8 @@ public class InterceptApply extends AbstractPalSubcommand {
       return 1;
     }
 
-    InterceptBundleSpec bundle;
-    try {
-      bundle = InterceptBundleSpec.fromYamlFile(file.toPath());
-    } catch (NoSuchFileException | InvalidPathException e) {
-      err.printf("Error: File not found: %s%n", file);
-      return 1;
-    } catch (IOException e) {
-      err.printf("Error: Cannot read file %s: %s%n", file, e.getMessage());
-      return 1;
-    } catch (Exception e) {
-      err.printf("Error: Invalid YAML: %s%n", e.getMessage());
+    InterceptBundleSpec bundle = InterceptDiffCommand.parseYamlFile(file, err);
+    if (bundle == null) {
       return 1;
     }
 
@@ -160,34 +148,7 @@ public class InterceptApply extends AbstractPalSubcommand {
   private int executeDryRun(InterceptManager manager, InterceptBundleSpec bundle) {
     try {
       List<InterceptDiff> diffs = manager.diff(bundle);
-      out.printf("Comparing bundle \"%s\" against directory...%n", bundle.getBundleName());
-      long createCount = 0;
-      long unchangedCount = 0;
-      long modifiedCount = 0;
-      for (InterceptDiff diff : diffs) {
-        InterceptSpec spec = diff.getInterceptSpec();
-        String target = spec.getTargetClass() + "." + spec.getTargetName();
-        switch (diff.getDiffType()) {
-          case CREATE -> {
-            out.printf("  + %s %s   (would be created)%n", spec.getType(), target);
-            createCount++;
-          }
-          case UNCHANGED -> {
-            out.printf("  = %s %s   (already exists, matches)%n", spec.getType(), target);
-            unchangedCount++;
-          }
-          case MODIFIED -> {
-            out.printf(
-                "  ~ %s %s   (exists, but differs: %s)%n",
-                spec.getType(), target, diff.getDetails());
-            modifiedCount++;
-          }
-          default -> {}
-        }
-      }
-      out.printf(
-          "%nSummary: %d to create, %d unchanged, %d to update%n",
-          createCount, unchangedCount, modifiedCount);
+      InterceptDiffCommand.printDiffResults(out, bundle.getBundleName(), diffs);
       return 0;
     } catch (IllegalArgumentException e) {
       err.printf("Error: %s%n", e.getMessage());

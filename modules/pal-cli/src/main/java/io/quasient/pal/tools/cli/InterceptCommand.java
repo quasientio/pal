@@ -33,7 +33,13 @@ import picocli.CommandLine.Spec;
     name = "intercept",
     description = "Manage intercepts",
     mixinStandardHelpOptions = true,
-    subcommands = {InterceptList.class, InterceptApply.class, InterceptRemove.class})
+    subcommands = {
+      InterceptList.class,
+      InterceptApply.class,
+      InterceptRemove.class,
+      InterceptDiffCommand.class,
+      InterceptStatusCommand.class
+    })
 public class InterceptCommand implements PalCommand, Callable<Integer> {
 
   /** Parent command providing access to the PAL directory connection string. */
