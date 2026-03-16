@@ -39,6 +39,7 @@ import io.quasient.pal.common.directory.events.InterceptNodeListener;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
 import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
+import io.quasient.pal.dsl.intercept.BundleMetadata;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -115,6 +116,9 @@ public class PalDirectory {
 
   /** Directory name for storing intercept configurations. */
   private static final String INTERCEPTS_DIR = "intercepts";
+
+  /** Directory name for storing bundle metadata. */
+  private static final String BUNDLES_DIR = "bundles";
 
   /** Character set used for encoding/decoding strings. */
   private static final Charset UTF8 = StandardCharsets.UTF_8;
@@ -657,6 +661,52 @@ public class PalDirectory {
   }
 
   /**
+   * Resolves a peer name to a {@link PeerInfo} instance.
+   *
+   * <p>This method queries all peers via {@link #listPeers()} and filters by name. If the provided
+   * name is a valid UUID string, it also attempts to match by UUID as a fallback.
+   *
+   * @param name the peer name or UUID string to resolve
+   * @return the matching {@link PeerInfo}, or {@code null} if no peer matches
+   * @throws IllegalStateException if multiple peers share the same name, with a message listing all
+   *     matching UUIDs
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  public PeerInfo getPeerByName(String name) throws ExecutionException, InterruptedException {
+    Objects.requireNonNull(name, "name must not be null");
+
+    Set<PeerInfo> allPeers = listPeers();
+
+    // Filter by name
+    List<PeerInfo> matches =
+        allPeers.stream().filter(p -> name.equals(p.getName())).collect(Collectors.toList());
+
+    if (matches.size() == 1) {
+      return matches.get(0);
+    }
+
+    if (matches.size() > 1) {
+      String uuids =
+          matches.stream().map(p -> p.getUuid().toString()).collect(Collectors.joining(", "));
+      throw new IllegalStateException(
+          format(
+              "Multiple peers found with name \"%s\": [%s]. "
+                  + "Peer names must be unique when used for resolution.",
+              name, uuids));
+    }
+
+    // No match by name — try matching by UUID if the name is a valid UUID string
+    try {
+      UUID uuid = UUID.fromString(name);
+      return allPeers.stream().filter(p -> uuid.equals(p.getUuid())).findFirst().orElse(null);
+    } catch (IllegalArgumentException e) {
+      // Not a valid UUID string, return null
+      return null;
+    }
+  }
+
+  /**
    * Deletes all peer nodes except those specified in the exclusion set, and cleans up associated
    * intercept requests.
    *
@@ -1193,6 +1243,102 @@ public class PalDirectory {
     if (lease != null) {
       lease.close();
     }
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Bundle metadata methods">
+
+  /**
+   * Stores bundle metadata in etcd.
+   *
+   * <p>The metadata is stored as JSON under the key {@code /<namespace>/bundles/<bundleName>}. If a
+   * bundle with the same name already exists, it is overwritten (re-apply is expected to be
+   * idempotent).
+   *
+   * @param bundleName the bundle name
+   * @param metadata the bundle metadata to store
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  public void createBundleMetadata(String bundleName, BundleMetadata metadata)
+      throws ExecutionException, InterruptedException {
+    Objects.requireNonNull(bundleName, "bundleName must not be null");
+    Objects.requireNonNull(metadata, "metadata must not be null");
+
+    String key = format("%s/%s", getBundlesPath(), bundleName);
+    String json = metadata.toJson();
+    kvClient.put(ByteSequence.from(key, UTF8), ByteSequence.from(json, UTF8)).get();
+    logger.info("Stored bundle metadata for \"{}\"", bundleName);
+  }
+
+  /**
+   * Retrieves bundle metadata from etcd.
+   *
+   * @param bundleName the bundle name
+   * @return the {@link BundleMetadata}, or {@code null} if no bundle with the given name exists
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  public BundleMetadata getBundleMetadata(String bundleName)
+      throws ExecutionException, InterruptedException {
+    Objects.requireNonNull(bundleName, "bundleName must not be null");
+
+    String key = format("%s/%s", getBundlesPath(), bundleName);
+    GetResponse resp = kvClient.get(ByteSequence.from(key, UTF8)).get();
+    if (resp.getCount() == 0) {
+      return null;
+    }
+    String json = resp.getKvs().get(0).getValue().toString(UTF8);
+    return BundleMetadata.fromJson(json);
+  }
+
+  /**
+   * Deletes bundle metadata from etcd.
+   *
+   * @param bundleName the bundle name
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  public void deleteBundleMetadata(String bundleName)
+      throws ExecutionException, InterruptedException {
+    Objects.requireNonNull(bundleName, "bundleName must not be null");
+
+    String key = format("%s/%s", getBundlesPath(), bundleName);
+    DeleteResponse resp = kvClient.delete(ByteSequence.from(key, UTF8)).get();
+    if (resp.getDeleted() == 0) {
+      logger.warn("No bundle metadata found for \"{}\"", bundleName);
+    } else {
+      logger.info("Deleted bundle metadata for \"{}\"", bundleName);
+    }
+  }
+
+  /**
+   * Lists all bundle names stored in etcd.
+   *
+   * <p>Performs a prefix query on {@code /<namespace>/bundles/} and extracts bundle names from the
+   * key suffixes.
+   *
+   * @return a {@link Set} of bundle names
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  public Set<String> listBundles() throws ExecutionException, InterruptedException {
+    String prefix = getBundlesPath() + "/";
+    GetResponse resp =
+        kvClient
+            .get(getBundlesPathKey(), GetOption.builder().isPrefix(true).withKeysOnly(true).build())
+            .get();
+
+    Set<String> bundleNames = new HashSet<>();
+    for (KeyValue kv : resp.getKvs()) {
+      String key = kv.getKey().toString(UTF8);
+      String name = key.substring(prefix.length());
+      if (!name.isEmpty()) {
+        bundleNames.add(name);
+      }
+    }
+    return bundleNames;
   }
 
   // </editor-fold>
@@ -2133,6 +2279,24 @@ public class PalDirectory {
    */
   private ByteSequence getInterceptsPathKey() {
     return ByteSequence.from(getInterceptsPath().getBytes(UTF8));
+  }
+
+  /**
+   * Retrieves the base etcd path for all bundles.
+   *
+   * @return the etcd path for bundles
+   */
+  private String getBundlesPath() {
+    return format("/%s/%s", namespace, BUNDLES_DIR);
+  }
+
+  /**
+   * Retrieves the etcd key sequence for the bundles' path.
+   *
+   * @return the {@link ByteSequence} representing the bundles path key
+   */
+  private ByteSequence getBundlesPathKey() {
+    return ByteSequence.from(getBundlesPath().getBytes(UTF8));
   }
 
   /**
