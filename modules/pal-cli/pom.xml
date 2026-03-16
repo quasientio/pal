@@ -162,6 +162,10 @@
                             <pattern>org.jboss.netty</pattern>
                             <shadedPattern>${shading.prefix}.netty</shadedPattern>
                         </relocation>
+                        <relocation>
+                            <pattern>org.yaml</pattern>
+                            <shadedPattern>${shading.prefix}.yaml</shadedPattern>
+                        </relocation>
                     </relocations>
                     <filters>
                         <filter>

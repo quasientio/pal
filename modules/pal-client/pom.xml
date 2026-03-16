@@ -123,5 +123,9 @@
             <groupId>net.openhft</groupId>
             <artifactId>chronicle-queue</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+        </dependency>
     </dependencies>
 </project>
