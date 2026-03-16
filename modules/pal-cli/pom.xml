@@ -222,6 +222,7 @@
                             <includes>
                                 <include>io/quasient/pal/cxn/**</include>
                                 <include>io/quasient/pal/common/replay/**</include>
+                                <include>io/quasient/pal/dsl/intercept/**</include>
                                 <include>io/quasient/pal/messages/**</include>
                             </includes>
                         </filter>

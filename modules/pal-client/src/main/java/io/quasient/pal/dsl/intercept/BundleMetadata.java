@@ -14,6 +14,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -92,6 +93,9 @@ public final class BundleMetadata {
    *
    * @return an unmodifiable list of intercept UUIDs
    */
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP",
+      justification = "interceptUuids is already an unmodifiable defensive copy")
   public List<UUID> getInterceptUuids() {
     return interceptUuids;
   }
