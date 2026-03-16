@@ -9,6 +9,9 @@
  */
 package io.quasient.pal.dsl.intercept;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -53,6 +56,29 @@ public final class InterceptBundleSpec {
     this.bundleName = builder.bundleName;
     this.defaults = builder.defaults;
     this.intercepts = Collections.unmodifiableList(new ArrayList<>(builder.intercepts));
+  }
+
+  /**
+   * Parses a YAML string into an {@code InterceptBundleSpec}.
+   *
+   * @param yamlContent the YAML content to parse
+   * @return the parsed bundle specification
+   * @throws IllegalArgumentException if the YAML is empty, malformed, or missing required fields
+   */
+  public static InterceptBundleSpec fromYaml(String yamlContent) {
+    return new InterceptBundleParser().parse(yamlContent);
+  }
+
+  /**
+   * Reads a YAML file and parses it into an {@code InterceptBundleSpec}.
+   *
+   * @param path the path to the YAML file
+   * @return the parsed bundle specification
+   * @throws IOException if the file cannot be read
+   * @throws IllegalArgumentException if the YAML is empty, malformed, or missing required fields
+   */
+  public static InterceptBundleSpec fromYamlFile(Path path) throws IOException {
+    return fromYaml(Files.readString(path));
   }
 
   /**

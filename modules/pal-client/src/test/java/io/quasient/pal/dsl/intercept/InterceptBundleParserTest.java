@@ -9,9 +9,17 @@
  */
 package io.quasient.pal.dsl.intercept;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.lang.FieldOpType;
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.Test;
 
 /**
@@ -21,313 +29,575 @@ import org.junit.Test;
  * specific aspect of the schema: valid bundles, target parsing, duration strings, field intercepts,
  * validation errors, and security (SafeConstructor).
  *
- * <p>All tests are stubs awaiting implementation in issue #1235.
- *
  * @see InterceptBundleSpec
  * @see InterceptSpec
  * @see InterceptBundleDefaults
  */
 public class InterceptBundleParserTest {
 
+  private final InterceptBundleParser parser = new InterceptBundleParser();
+
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_validFullBundle() {
-    // Given: A YAML string with bundle name, full defaults (peer, priority, ttl,
-    //        forceImmediate, exceptionPolicy, checkedExceptionPolicy), and 2 method intercepts
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The resulting InterceptBundleSpec has the correct bundle name,
-    //       all defaults fields populated, and 2 InterceptSpecs with correct fields
+    // Given
+    String yaml =
+        """
+        bundle: fraud-check-v1
+        defaults:
+          peer: fraud-checker
+          priority: 5
+          ttl: 30s
+          forceImmediate: true
+          exceptionPolicy: PROPAGATE_ALL
+          checkedExceptionPolicy: WRAP
+        intercepts:
+          - target: com.acme.OrderService.placeOrder
+            type: BEFORE
+            callback:
+              class: com.acme.FraudChecker
+              method: verify
+          - target: com.acme.OrderService.refund
+            type: AROUND
+            callback:
+              class: com.acme.FraudChecker
+              method: wrapRefund
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getBundleName(), is("fraud-check-v1"));
+
+    InterceptBundleDefaults defaults = bundle.getDefaults();
+    assertThat(defaults.getPeer(), is("fraud-checker"));
+    assertThat(defaults.getPriority(), is(5));
+    assertThat(defaults.getTtl(), is(Duration.ofSeconds(30)));
+    assertThat(defaults.getForceImmediate(), is(true));
+    assertThat(defaults.getExceptionPolicy(), is(ExceptionPropagationPolicy.PROPAGATE_ALL));
+    assertThat(defaults.getCheckedExceptionPolicy(), is(CheckedExceptionPolicy.WRAP));
+
+    assertThat(bundle.getIntercepts().size(), is(2));
+
+    InterceptSpec first = bundle.getIntercepts().get(0);
+    assertThat(first.getTargetClass(), is("com.acme.OrderService"));
+    assertThat(first.getTargetName(), is("placeOrder"));
+    assertThat(first.getType(), is(InterceptType.BEFORE));
+    assertThat(first.getCallbackClass(), is("com.acme.FraudChecker"));
+    assertThat(first.getCallbackMethod(), is("verify"));
+
+    InterceptSpec second = bundle.getIntercepts().get(1);
+    assertThat(second.getTargetClass(), is("com.acme.OrderService"));
+    assertThat(second.getTargetName(), is("refund"));
+    assertThat(second.getType(), is(InterceptType.AROUND));
+    assertThat(second.getCallbackClass(), is("com.acme.FraudChecker"));
+    assertThat(second.getCallbackMethod(), is("wrapRefund"));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_minimalBundle() {
-    // Given: A YAML string with only a bundle name and one intercept
-    //        containing target, type, and callback (no defaults section)
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The resulting InterceptBundleSpec has EMPTY defaults,
-    //       one InterceptSpec with correct target/type/callback,
-    //       and all optional fields are null
+    // Given
+    String yaml =
+        """
+        bundle: minimal
+        intercepts:
+          - target: com.acme.Service.doWork
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getBundleName(), is("minimal"));
+    assertThat(bundle.getDefaults().getPeer(), is(nullValue()));
+    assertThat(bundle.getDefaults().getPriority(), is(nullValue()));
+    assertThat(bundle.getDefaults().getTtl(), is(nullValue()));
+    assertThat(bundle.getDefaults().getForceImmediate(), is(nullValue()));
+    assertThat(bundle.getDefaults().getExceptionPolicy(), is(nullValue()));
+    assertThat(bundle.getDefaults().getCheckedExceptionPolicy(), is(nullValue()));
+
+    assertThat(bundle.getIntercepts().size(), is(1));
+    InterceptSpec spec = bundle.getIntercepts().get(0);
+    assertThat(spec.getTargetClass(), is("com.acme.Service"));
+    assertThat(spec.getTargetName(), is("doWork"));
+    assertThat(spec.getType(), is(InterceptType.BEFORE));
+    assertThat(spec.getCallbackClass(), is("com.acme.Handler"));
+    assertThat(spec.getCallbackMethod(), is("handle"));
+    assertThat(spec.getPeerOverride(), is(nullValue()));
+    assertThat(spec.getPriorityOverride(), is(nullValue()));
+    assertThat(spec.getTtlOverride(), is(nullValue()));
+    assertThat(spec.getForceImmediateOverride(), is(nullValue()));
+    assertThat(spec.getExceptionPolicyOverride(), is(nullValue()));
+    assertThat(spec.getCheckedExceptionPolicyOverride(), is(nullValue()));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_targetParsing_classAndMethodSplit() {
-    // Given: A YAML intercept with target "com.acme.payment.OrderService.placeOrder"
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptSpec has targetClass="com.acme.payment.OrderService"
-    //       and targetName="placeOrder" (split at the last dot)
+    // Given
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.payment.OrderService.placeOrder
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    InterceptSpec spec = bundle.getIntercepts().get(0);
+    assertThat(spec.getTargetClass(), is("com.acme.payment.OrderService"));
+    assertThat(spec.getTargetName(), is("placeOrder"));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_targetParsing_innerClass() {
-    // Given: A YAML intercept with target "com.acme.Outer$Inner.method"
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptSpec has targetClass="com.acme.Outer$Inner"
-    //       and targetName="method"
+    // Given
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Outer$Inner.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    InterceptSpec spec = bundle.getIntercepts().get(0);
+    assertThat(spec.getTargetClass(), is("com.acme.Outer$Inner"));
+    assertThat(spec.getTargetName(), is("method"));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_fieldIntercept() {
-    // Given: A YAML intercept with kind: field, fieldOp: GET,
-    //        and target: com.acme.Service.status
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptSpec has kind=FIELD, fieldOpType=GET,
-    //       targetClass="com.acme.Service", targetName="status"
+    // Given
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Service.status
+            kind: field
+            fieldOp: GET
+            type: AFTER
+            callback:
+              class: com.acme.Auditor
+              method: onFieldRead
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    InterceptSpec spec = bundle.getIntercepts().get(0);
+    assertThat(spec.getKind(), is(InterceptableKind.FIELD));
+    assertThat(spec.getFieldOpType(), is(FieldOpType.GET));
+    assertThat(spec.getTargetClass(), is("com.acme.Service"));
+    assertThat(spec.getTargetName(), is("status"));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_fieldIntercept_putOp() {
-    // Given: A YAML intercept with kind: field and fieldOp: PUT
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptSpec has kind=FIELD, fieldOpType=PUT
+    // Given
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Service.config
+            kind: field
+            fieldOp: PUT
+            type: BEFORE
+            callback:
+              class: com.acme.Auditor
+              method: onFieldWrite
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    InterceptSpec spec = bundle.getIntercepts().get(0);
+    assertThat(spec.getKind(), is(InterceptableKind.FIELD));
+    assertThat(spec.getFieldOpType(), is(FieldOpType.PUT));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_parameterTypes() {
-    // Given: A YAML intercept with params: [java.lang.String, int]
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptSpec has parameterTypes=["java.lang.String", "int"]
+    // Given
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Service.process
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+            params:
+              - java.lang.String
+              - int
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    InterceptSpec spec = bundle.getIntercepts().get(0);
+    assertThat(spec.getParameterTypes(), is(Arrays.asList("java.lang.String", "int")));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_durationParsing_seconds() {
-    // Given: A YAML defaults section with ttl: 30s
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptBundleDefaults has ttl equal to Duration.ofSeconds(30)
+    // Given
+    String yaml =
+        """
+        bundle: test
+        defaults:
+          ttl: 30s
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getDefaults().getTtl(), is(Duration.ofSeconds(30)));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_durationParsing_minutes() {
-    // Given: A YAML defaults section with ttl: 5m
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptBundleDefaults has ttl equal to Duration.ofMinutes(5)
+    // Given
+    String yaml =
+        """
+        bundle: test
+        defaults:
+          ttl: 5m
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getDefaults().getTtl(), is(Duration.ofMinutes(5)));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_durationParsing_hours() {
-    // Given: A YAML defaults section with ttl: 1h
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptBundleDefaults has ttl equal to Duration.ofHours(1)
+    // Given
+    String yaml =
+        """
+        bundle: test
+        defaults:
+          ttl: 1h
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getDefaults().getTtl(), is(Duration.ofHours(1)));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_durationParsing_days() {
-    // Given: A YAML defaults section with ttl: 1d
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptBundleDefaults has ttl equal to Duration.ofDays(1) (86400 seconds)
+    // Given
+    String yaml =
+        """
+        bundle: test
+        defaults:
+          ttl: 1d
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getDefaults().getTtl(), is(Duration.ofDays(1)));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_durationParsing_zeroMeansNoTtl() {
-    // Given: A YAML defaults section with ttl: 0s
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptBundleDefaults has ttl equal to Duration.ZERO
+    // Given
+    String yaml =
+        """
+        bundle: test
+        defaults:
+          ttl: 0s
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getDefaults().getTtl(), is(Duration.ZERO));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_interceptOverridesDefaults() {
-    // Given: A YAML with defaults priority: 0 and one intercept with priority: 10
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptBundleDefaults has priority=0,
-    //       and the InterceptSpec has priorityOverride=10
+    // Given
+    String yaml =
+        """
+        bundle: test
+        defaults:
+          priority: 0
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+            priority: 10
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getDefaults().getPriority(), is(0));
+    assertThat(bundle.getIntercepts().get(0).getPriorityOverride(), is(10));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_interceptTypeCaseInsensitive() {
-    // Given: A YAML intercept with type: before (all lowercase)
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptSpec has type=InterceptType.BEFORE
+    // Given
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Service.method
+            type: before
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getIntercepts().get(0).getType(), is(InterceptType.BEFORE));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_allInterceptTypes() {
-    // Given: A YAML with 5 intercepts using types BEFORE, AFTER, AROUND,
-    //        BEFORE_ASYNC, and AFTER_ASYNC
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: Each InterceptSpec has the correct InterceptType enum value
+    // Given
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Service.m1
+            type: BEFORE
+            callback:
+              class: com.acme.H
+              method: h
+          - target: com.acme.Service.m2
+            type: AFTER
+            callback:
+              class: com.acme.H
+              method: h
+          - target: com.acme.Service.m3
+            type: AROUND
+            callback:
+              class: com.acme.H
+              method: h
+          - target: com.acme.Service.m4
+            type: BEFORE_ASYNC
+            callback:
+              class: com.acme.H
+              method: h
+          - target: com.acme.Service.m5
+            type: AFTER_ASYNC
+            callback:
+              class: com.acme.H
+              method: h
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    List<InterceptSpec> specs = bundle.getIntercepts();
+    assertThat(specs.size(), is(5));
+    assertThat(specs.get(0).getType(), is(InterceptType.BEFORE));
+    assertThat(specs.get(1).getType(), is(InterceptType.AFTER));
+    assertThat(specs.get(2).getType(), is(InterceptType.AROUND));
+    assertThat(specs.get(3).getType(), is(InterceptType.BEFORE_ASYNC));
+    assertThat(specs.get(4).getType(), is(InterceptType.AFTER_ASYNC));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1235")
   public void parse_exceptionPolicies() {
-    // Given: A YAML defaults section with exceptionPolicy: PROPAGATE_ALL
-    //        and checkedExceptionPolicy: WRAP
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: The InterceptBundleDefaults has
-    //       exceptionPolicy=ExceptionPropagationPolicy.PROPAGATE_ALL
-    //       and checkedExceptionPolicy=CheckedExceptionPolicy.WRAP
+    // Given
+    String yaml =
+        """
+        bundle: test
+        defaults:
+          exceptionPolicy: PROPAGATE_ALL
+          checkedExceptionPolicy: WRAP
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
 
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(
+        bundle.getDefaults().getExceptionPolicy(), is(ExceptionPropagationPolicy.PROPAGATE_ALL));
+    assertThat(bundle.getDefaults().getCheckedExceptionPolicy(), is(CheckedExceptionPolicy.WRAP));
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1235")
+  @Test(expected = IllegalArgumentException.class)
   public void parse_emptyYaml_throws() {
-    // Given: An empty YAML string
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: An IllegalArgumentException is thrown
-
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    parser.parse("");
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1235")
+  @Test(expected = IllegalArgumentException.class)
   public void parse_missingBundleName_throws() {
-    // Given: A YAML string without the "bundle" key (has intercepts but no bundle name)
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: An IllegalArgumentException is thrown
-
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    String yaml =
+        """
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
+    parser.parse(yaml);
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1235")
+  @Test(expected = IllegalArgumentException.class)
   public void parse_missingIntercepts_throws() {
-    // Given: A YAML string with a bundle name but no "intercepts" key
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: An exception is thrown
-
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    parser.parse("bundle: test\n");
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1235")
+  @Test(expected = IllegalArgumentException.class)
   public void parse_emptyInterceptsList_throws() {
-    // Given: A YAML string with bundle name and intercepts: [] (empty list)
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: An exception is thrown
-
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    parser.parse("bundle: test\nintercepts: []\n");
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1235")
+  @Test(expected = IllegalArgumentException.class)
   public void parse_missingTarget_throws() {
-    // Given: A YAML intercept entry missing the "target" field
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: An exception is thrown
-
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
+    parser.parse(yaml);
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1235")
+  @Test(expected = IllegalArgumentException.class)
   public void parse_missingType_throws() {
-    // Given: A YAML intercept entry missing the "type" field
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: An exception is thrown
-
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Service.method
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
+    parser.parse(yaml);
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1235")
+  @Test(expected = IllegalArgumentException.class)
   public void parse_missingCallback_throws() {
-    // Given: A YAML intercept entry missing the "callback" section
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: An exception is thrown
-
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+        """;
+    parser.parse(yaml);
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1235")
+  @Test(expected = IllegalArgumentException.class)
   public void parse_fieldKindWithoutFieldOp_throws() {
-    // Given: A YAML intercept with kind: field but no fieldOp specified
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: An exception is thrown
-
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Service.status
+            kind: field
+            type: AFTER
+            callback:
+              class: com.acme.Auditor
+              method: onFieldRead
+        """;
+    parser.parse(yaml);
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1235")
+  @Test(expected = IllegalArgumentException.class)
   public void parse_invalidDurationFormat_throws() {
-    // Given: A YAML defaults section with ttl: abc (invalid format)
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: An exception is thrown
-
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    String yaml =
+        """
+        bundle: test
+        defaults:
+          ttl: abc
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
+    parser.parse(yaml);
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1235")
+  @Test(expected = Exception.class)
   public void parse_useSafeConstructor() {
-    // Given: A malicious YAML string containing !!java.lang.Runtime tag
-    //        (attempting a deserialization attack)
-    // When: The YAML is parsed via InterceptBundleParser
-    // Then: An exception is thrown (the parser uses SafeConstructor
-    //       or equivalent safe loading and does not execute the payload)
-
-    // TODO(#1235): Implement test logic
-    fail("Not yet implemented");
+    // A malicious YAML containing a Java type tag that SafeConstructor rejects
+    String maliciousYaml = "bundle: !!java.lang.Runtime test\nintercepts: []\n";
+    parser.parse(maliciousYaml);
   }
 }
