@@ -9,9 +9,32 @@
  */
 package io.quasient.pal.tools.cli;
 
-import static org.junit.Assert.fail;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.directory.nodes.InterceptRequest;
+import io.quasient.pal.common.directory.nodes.PeerInfo;
+import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import io.quasient.pal.cxn.directory.PalDirectory;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
@@ -22,12 +45,125 @@ import org.junit.Test;
  * YAML, unknown peers, and partial failures. Uses the same reflection-based mock injection pattern
  * as {@link InterceptListTest} and {@link PeerRemoveTest}.
  *
- * <p>All tests are stubs awaiting implementation in issue #1241.
- *
  * @see InterceptListTest
  * @see PeerRemoveTest
  */
 public class InterceptApplyTest {
+
+  /** Minimal valid YAML content for a bundle with one intercept. */
+  private static final String VALID_YAML =
+      """
+      bundle: test-bundle
+      defaults:
+        peer: my-peer
+      intercepts:
+        - target: com.acme.OrderService.placeOrder
+          type: BEFORE
+          callback:
+            class: com.acme.FraudChecker
+            method: verify
+      """;
+
+  /** YAML content with two intercepts for partial-failure testing. */
+  private static final String TWO_INTERCEPTS_YAML =
+      """
+      bundle: test-bundle
+      defaults:
+        peer: my-peer
+      intercepts:
+        - target: com.acme.OrderService.placeOrder
+          type: BEFORE
+          callback:
+            class: com.acme.FraudChecker
+            method: verify
+        - target: com.acme.OrderService.refund
+          type: AFTER
+          callback:
+            class: com.acme.FraudChecker
+            method: audit
+      """;
+
+  // ==================== Helper methods ====================
+
+  /**
+   * Sets a field value on an object via reflection, searching the class hierarchy.
+   *
+   * @param target the object to set the field on
+   * @param fieldName the name of the field
+   * @param value the value to set
+   */
+  private static void setField(Object target, String fieldName, Object value) throws Exception {
+    Field f = findField(target.getClass(), fieldName);
+    f.setAccessible(true);
+    f.set(target, value);
+  }
+
+  /**
+   * Finds a field by name in the given class or its superclasses.
+   *
+   * @param clazz the class to search
+   * @param name the field name
+   * @return the found Field
+   * @throws NoSuchFieldException if the field is not found
+   */
+  private static Field findField(Class<?> clazz, String name) throws NoSuchFieldException {
+    Class<?> current = clazz;
+    while (current != null) {
+      try {
+        return current.getDeclaredField(name);
+      } catch (NoSuchFieldException e) {
+        current = current.getSuperclass();
+      }
+    }
+    throw new NoSuchFieldException(name);
+  }
+
+  /**
+   * Creates an InterceptApply instance with a mock PalDirectory and output streams injected.
+   *
+   * @param mockDir the mock PalDirectory
+   * @param bout the output stream to capture standard output
+   * @param berr the output stream to capture error output
+   * @return a configured InterceptApply instance
+   */
+  private static InterceptApply createWithMockDirAndOutput(
+      PalDirectory mockDir, ByteArrayOutputStream bout, ByteArrayOutputStream berr)
+      throws Exception {
+    InterceptApply cmd = new InterceptApply();
+    DirectoryConnectionProvider dcp = mock(DirectoryConnectionProvider.class);
+    when(dcp.get()).thenReturn(Optional.of(mockDir));
+    setField(cmd, "directoryConnectionProvider", dcp);
+    setField(cmd, "out", new PrintStream(bout));
+    setField(cmd, "err", new PrintStream(berr));
+    return cmd;
+  }
+
+  /**
+   * Creates a temporary YAML file with the given content.
+   *
+   * @param content the YAML content
+   * @return the created temp file
+   */
+  private static File createTempYamlFile(String content) throws Exception {
+    File tempFile = File.createTempFile("intercept-test", ".yaml");
+    tempFile.deleteOnExit();
+    Files.writeString(tempFile.toPath(), content);
+    return tempFile;
+  }
+
+  /**
+   * Invokes runCommand() via reflection.
+   *
+   * @param cmd the command instance
+   * @return the exit code
+   */
+  private static int invokeRunCommand(InterceptApply cmd) throws Exception {
+    Method runCommand = InterceptApply.class.getDeclaredMethod("runCommand");
+    runCommand.setAccessible(true);
+    return (int) runCommand.invoke(cmd);
+  }
+
+  // ==================== Tests ====================
 
   /**
    * Verifies that applying a valid YAML file creates intercepts in the directory and stores bundle
@@ -36,17 +172,27 @@ public class InterceptApplyTest {
    * and output should contain "created".
    */
   @Test
-  @Ignore("Awaiting implementation in #1241")
-  public void runCommand_appliesYamlFile() {
-    // Given: A temp file with valid YAML content defining a bundle with intercepts,
-    //        the file path field set to this temp file, and a mock PalDirectory where
-    //        getPeerByName() returns a valid PeerInfo
-    // When: runCommand() is invoked via reflection
-    // Then: Exit code is 0, createIntercept() is called on the mock PalDirectory,
-    //       createBundleMetadata() is called, and output contains "created"
+  public void runCommand_appliesYamlFile() throws Exception {
+    // Given
+    PalDirectory mockDir = mock(PalDirectory.class);
+    UUID peerUuid = UUID.randomUUID();
+    PeerInfo peerInfo = new PeerInfo(peerUuid, "my-peer");
+    when(mockDir.getPeerByName("my-peer")).thenReturn(peerInfo);
 
-    // TODO(#1241): Implement test logic
-    fail("Not yet implemented");
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    ByteArrayOutputStream berr = new ByteArrayOutputStream();
+    InterceptApply cmd = createWithMockDirAndOutput(mockDir, bout, berr);
+    setField(cmd, "file", createTempYamlFile(VALID_YAML));
+
+    // When
+    int result = invokeRunCommand(cmd);
+
+    // Then
+    assertThat(result, is(0));
+    verify(mockDir).createIntercept(any(InterceptRequest.class), anyLong());
+    verify(mockDir).createBundleMetadata(anyString(), any());
+    String output = bout.toString(UTF_8);
+    assertThat(output, containsString("created"));
   }
 
   /**
@@ -55,16 +201,28 @@ public class InterceptApplyTest {
    * never be called on the directory.
    */
   @Test
-  @Ignore("Awaiting implementation in #1241")
-  public void runCommand_dryRun_showsDiffWithoutApplying() {
-    // Given: A temp file with valid YAML content, the file path field set to this temp file,
-    //        the dry-run flag set to true, and a mock PalDirectory
-    // When: runCommand() is invoked via reflection
-    // Then: Output shows diff information (e.g., what would be created),
-    //       createIntercept() is never called on the mock PalDirectory
+  public void runCommand_dryRun_showsDiffWithoutApplying() throws Exception {
+    // Given
+    PalDirectory mockDir = mock(PalDirectory.class);
+    UUID peerUuid = UUID.randomUUID();
+    PeerInfo peerInfo = new PeerInfo(peerUuid, "my-peer");
+    when(mockDir.getPeerByName("my-peer")).thenReturn(peerInfo);
+    when(mockDir.listInterceptsForPeer(peerUuid)).thenReturn(new HashSet<>());
 
-    // TODO(#1241): Implement test logic
-    fail("Not yet implemented");
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    ByteArrayOutputStream berr = new ByteArrayOutputStream();
+    InterceptApply cmd = createWithMockDirAndOutput(mockDir, bout, berr);
+    setField(cmd, "file", createTempYamlFile(VALID_YAML));
+    setField(cmd, "dryRun", true);
+
+    // When
+    int result = invokeRunCommand(cmd);
+
+    // Then
+    assertThat(result, is(0));
+    verify(mockDir, never()).createIntercept(any(InterceptRequest.class), anyLong());
+    String output = bout.toString(UTF_8);
+    assertThat(output, containsString("would be created"));
   }
 
   /**
@@ -72,14 +230,21 @@ public class InterceptApplyTest {
    * the missing file.
    */
   @Test
-  @Ignore("Awaiting implementation in #1241")
-  public void runCommand_fileNotFound_reportsError() {
-    // Given: The file path field set to a non-existent file (e.g., "/tmp/does-not-exist.yaml")
-    // When: runCommand() is invoked via reflection
-    // Then: Exit code is 1 and stderr/stdout contains an error message about the missing file
+  public void runCommand_fileNotFound_reportsError() throws Exception {
+    // Given
+    PalDirectory mockDir = mock(PalDirectory.class);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    ByteArrayOutputStream berr = new ByteArrayOutputStream();
+    InterceptApply cmd = createWithMockDirAndOutput(mockDir, bout, berr);
+    setField(cmd, "file", new File("/tmp/does-not-exist-" + UUID.randomUUID() + ".yaml"));
 
-    // TODO(#1241): Implement test logic
-    fail("Not yet implemented");
+    // When
+    int result = invokeRunCommand(cmd);
+
+    // Then
+    assertThat(result, is(1));
+    String errOutput = berr.toString(UTF_8);
+    assertThat(errOutput, containsString("File not found"));
   }
 
   /**
@@ -87,15 +252,21 @@ public class InterceptApplyTest {
    * message about YAML parsing failure.
    */
   @Test
-  @Ignore("Awaiting implementation in #1241")
-  public void runCommand_invalidYaml_reportsError() {
-    // Given: A temp file containing invalid YAML content (e.g., "{{invalid: yaml: ["),
-    //        and the file path field set to this temp file
-    // When: runCommand() is invoked via reflection
-    // Then: Exit code is 1 and stderr/stdout contains a parse error message
+  public void runCommand_invalidYaml_reportsError() throws Exception {
+    // Given
+    PalDirectory mockDir = mock(PalDirectory.class);
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    ByteArrayOutputStream berr = new ByteArrayOutputStream();
+    InterceptApply cmd = createWithMockDirAndOutput(mockDir, bout, berr);
+    setField(cmd, "file", createTempYamlFile("{{invalid: yaml: ["));
 
-    // TODO(#1241): Implement test logic
-    fail("Not yet implemented");
+    // When
+    int result = invokeRunCommand(cmd);
+
+    // Then
+    assertThat(result, is(1));
+    String errOutput = berr.toString(UTF_8);
+    assertThat(errOutput, containsString("Invalid YAML"));
   }
 
   /**
@@ -103,16 +274,23 @@ public class InterceptApplyTest {
    * command reports an error with exit code 1.
    */
   @Test
-  @Ignore("Awaiting implementation in #1241")
-  public void runCommand_peerNotFound_reportsError() {
-    // Given: A temp file with valid YAML referencing peer "nonexistent-peer",
-    //        the file path field set to this temp file, and a mock PalDirectory where
-    //        getPeerByName("nonexistent-peer") returns null
-    // When: runCommand() is invoked via reflection
-    // Then: Exit code is 1 and output contains an error message about the unknown peer
+  public void runCommand_peerNotFound_reportsError() throws Exception {
+    // Given
+    PalDirectory mockDir = mock(PalDirectory.class);
+    when(mockDir.getPeerByName("my-peer")).thenReturn(null);
 
-    // TODO(#1241): Implement test logic
-    fail("Not yet implemented");
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    ByteArrayOutputStream berr = new ByteArrayOutputStream();
+    InterceptApply cmd = createWithMockDirAndOutput(mockDir, bout, berr);
+    setField(cmd, "file", createTempYamlFile(VALID_YAML));
+
+    // When
+    int result = invokeRunCommand(cmd);
+
+    // Then
+    assertThat(result, is(1));
+    String errOutput = berr.toString(UTF_8);
+    assertThat(errOutput, containsString("Peer not found"));
   }
 
   /**
@@ -121,15 +299,29 @@ public class InterceptApplyTest {
    * counts for both created and failed intercepts.
    */
   @Test
-  @Ignore("Awaiting implementation in #1241")
-  public void runCommand_partialFailure_reportsResults() {
-    // Given: A temp file with valid YAML defining 2 intercepts, the file path field set
-    //        to this temp file, and a mock PalDirectory where createIntercept() succeeds
-    //        for the first intercept but throws an exception for the second
-    // When: runCommand() is invoked via reflection
-    // Then: Exit code is 0 (partial success), output shows both created and failed counts
+  public void runCommand_partialFailure_reportsResults() throws Exception {
+    // Given: two intercepts, first succeeds, second fails
+    PalDirectory mockDir = mock(PalDirectory.class);
+    UUID peerUuid = UUID.randomUUID();
+    PeerInfo peerInfo = new PeerInfo(peerUuid, "my-peer");
+    when(mockDir.getPeerByName("my-peer")).thenReturn(peerInfo);
 
-    // TODO(#1241): Implement test logic
-    fail("Not yet implemented");
+    // First call succeeds, second call throws
+    doThrow(new RuntimeException("etcd unavailable"))
+        .when(mockDir)
+        .createIntercept(any(InterceptRequest.class), anyLong());
+
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    ByteArrayOutputStream berr = new ByteArrayOutputStream();
+    InterceptApply cmd = createWithMockDirAndOutput(mockDir, bout, berr);
+    setField(cmd, "file", createTempYamlFile(TWO_INTERCEPTS_YAML));
+
+    // When
+    int result = invokeRunCommand(cmd);
+
+    // Then: exit code 0 (partial success), output shows both created and failed counts
+    assertThat(result, is(0));
+    String output = bout.toString(UTF_8);
+    assertThat(output, containsString("failed"));
   }
 }

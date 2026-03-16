@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Feature] Add `pal intercept apply` and `pal intercept rm` CLI commands for applying and removing intercept bundles from YAML files
 - [Refactor] Split MessageStreamPrinter.java into AbstractPrintCommand, LogPrint, and PeerPrint following entity-operation pattern (pal log print / pal peer print)
 - [Refactor] Split Caller.java into PeerCall and LogCall following entity-operation pattern (pal peer call / pal log call)
 - [Test] Add integration tests for RPC policy hot reloading: deny-to-allow, allow-to-deny, invalid YAML resilience, and metadata reload verification, parameterized for both ZMQ and JSON-RPC transports
