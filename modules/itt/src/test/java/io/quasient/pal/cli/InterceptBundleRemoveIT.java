@@ -9,9 +9,21 @@
  */
 package io.quasient.pal.cli;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import io.quasient.pal.PeerProcess;
+import io.quasient.pal.cxn.directory.PalDirectory;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.UUID;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -24,21 +36,85 @@ import org.junit.Test;
  */
 public class InterceptBundleRemoveIT extends AbstractCliIT {
 
+  /** Primary peer process managed by the test lifecycle. */
+  private PeerProcess peerProcess;
+
+  /** PalDirectory client used to verify intercepts programmatically. */
+  private PalDirectory palDirectory;
+
+  /** Sets up test state before each test. */
+  @Before
+  public void setUp() {
+    peerProcess = null;
+    palDirectory = null;
+  }
+
+  /**
+   * Tears down test state after each test.
+   *
+   * @throws Exception if cleanup fails
+   */
+  @After
+  public void tearDown() throws Exception {
+    if (palDirectory != null) {
+      palDirectory.close();
+      palDirectory = null;
+    }
+    if (peerProcess != null) {
+      stopPeer(peerProcess);
+      peerProcess = null;
+    }
+  }
+
   /**
    * Tests that {@code pal intercept rm -f <file>} removes all intercepts defined in the file.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1245")
   public void testRemove_byFile_removesAllIntercepts() throws Exception {
     // Given: A bundle has been applied (3 intercepts exist in etcd)
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "rm-file-peer-" + generateId();
+    String walName = "wal-rm-file-" + generateId();
+    String bundleName = "rm-file-bundle-" + generateId();
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--interceptable",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    File yamlFile = createBundleYaml(bundleName, peerName);
+    CliProcessResult applyResult = runInterceptApply("-d", palDir, yamlFile.getAbsolutePath());
+    assertThat("Apply should succeed", applyResult.exitCode(), is(0));
+
     // When: Running `pal intercept rm -d <url> -f <file>`
+    CliProcessResult rmResult = runInterceptRm("-d", palDir, "-f", yamlFile.getAbsolutePath());
+
     // Then: Exit code is 0, PalDirectory.listInterceptsForPeer() returns empty,
     //       PalDirectory.getBundleMetadata(bundleName) returns null
+    assertThat(rmResult.exitCode(), is(0));
+    assertThat(rmResult.stdout(), containsString("removed"));
 
-    // TODO(#1245): Implement test logic
-    fail("Not yet implemented");
+    palDirectory = new PalDirectory(getPalDirectoryUrl(), true);
+    assertTrue(
+        "All intercepts should be removed", palDirectory.listInterceptsForPeer(peerId).isEmpty());
+    assertNull("Bundle metadata should be removed", palDirectory.getBundleMetadata(bundleName));
   }
 
   /**
@@ -47,15 +123,49 @@ public class InterceptBundleRemoveIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1245")
   public void testRemove_byBundle_removesAllIntercepts() throws Exception {
     // Given: A bundle has been applied (3 intercepts exist in etcd)
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "rm-bundle-peer-" + generateId();
+    String walName = "wal-rm-bundle-" + generateId();
+    String bundleName = "rm-bundle-" + generateId();
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--interceptable",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    File yamlFile = createBundleYaml(bundleName, peerName);
+    CliProcessResult applyResult = runInterceptApply("-d", palDir, yamlFile.getAbsolutePath());
+    assertThat("Apply should succeed", applyResult.exitCode(), is(0));
+
     // When: Running `pal intercept rm -d <url> --bundle <name>`
+    CliProcessResult rmResult = runInterceptRm("-d", palDir, "--bundle", bundleName);
+
     // Then: Exit code is 0, PalDirectory.listInterceptsForPeer() returns empty,
     //       PalDirectory.getBundleMetadata(bundleName) returns null
+    assertThat(rmResult.exitCode(), is(0));
+    assertThat(rmResult.stdout(), containsString("removed"));
 
-    // TODO(#1245): Implement test logic
-    fail("Not yet implemented");
+    palDirectory = new PalDirectory(getPalDirectoryUrl(), true);
+    assertTrue(
+        "All intercepts should be removed", palDirectory.listInterceptsForPeer(peerId).isEmpty());
+    assertNull("Bundle metadata should be removed", palDirectory.getBundleMetadata(bundleName));
   }
 
   /**
@@ -64,13 +174,87 @@ public class InterceptBundleRemoveIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1245")
   public void testRemove_byPeer_removesAllIntercepts() throws Exception {
     // Given: A bundle has been applied (3 intercepts exist in etcd for the peer)
-    // When: Running `pal intercept rm -d <url> --peer <name>`
-    // Then: Exit code is 0, all intercepts for that peer are gone from etcd
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "rm-peer-peer-" + generateId();
+    String walName = "wal-rm-peer-" + generateId();
+    String bundleName = "rm-peer-bundle-" + generateId();
 
-    // TODO(#1245): Implement test logic
-    fail("Not yet implemented");
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--interceptable",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    File yamlFile = createBundleYaml(bundleName, peerName);
+    CliProcessResult applyResult = runInterceptApply("-d", palDir, yamlFile.getAbsolutePath());
+    assertThat("Apply should succeed", applyResult.exitCode(), is(0));
+
+    // When: Running `pal intercept rm -d <url> --peer <name>`
+    CliProcessResult rmResult = runInterceptRm("-d", palDir, "--peer", peerName);
+
+    // Then: Exit code is 0, all intercepts for that peer are gone from etcd
+    assertThat(rmResult.exitCode(), is(0));
+
+    palDirectory = new PalDirectory(getPalDirectoryUrl(), true);
+    assertTrue(
+        "All intercepts for peer should be removed",
+        palDirectory.listInterceptsForPeer(peerId).isEmpty());
+  }
+
+  /**
+   * Creates a YAML bundle file with 2 method intercepts and 1 field intercept.
+   *
+   * @param bundleName the bundle name
+   * @param peerName the peer name
+   * @return the temp YAML file
+   * @throws IOException if file creation fails
+   */
+  private File createBundleYaml(String bundleName, String peerName) throws IOException {
+    String yaml =
+        "bundle: \""
+            + bundleName
+            + "\"\n"
+            + "defaults:\n"
+            + "  peer: \""
+            + peerName
+            + "\"\n"
+            + "intercepts:\n"
+            + "  - target: com.acme.OrderService.placeOrder\n"
+            + "    type: BEFORE\n"
+            + "    callback:\n"
+            + "      class: com.acme.FraudChecker\n"
+            + "      method: verify\n"
+            + "  - target: com.acme.OrderService.refund\n"
+            + "    type: AROUND\n"
+            + "    callback:\n"
+            + "      class: com.acme.FraudChecker\n"
+            + "      method: wrapRefund\n"
+            + "  - target: com.acme.OrderService.status\n"
+            + "    kind: field\n"
+            + "    fieldOp: GET\n"
+            + "    type: AFTER\n"
+            + "    callback:\n"
+            + "      class: com.acme.FieldAuditor\n"
+            + "      method: onFieldRead\n";
+    File tempFile = File.createTempFile("bundle-", ".yaml");
+    tempFile.deleteOnExit();
+    Files.writeString(tempFile.toPath(), yaml, StandardCharsets.UTF_8);
+    return tempFile;
   }
 }
