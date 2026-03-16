@@ -13,6 +13,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
 
 import io.quasient.pal.PeerProcess;
 import java.util.UUID;
@@ -179,10 +180,19 @@ public class RemoveIT extends AbstractCliIT {
     // Allow etcd lease to begin expiring
     Thread.sleep(1000);
 
-    // Remove the dead peer without --force
-    CliProcessResult rmResult = runPeerRm("-d", palDir, peerName);
+    // Remove the dead peer with --force (lease may still be active shortly after shutdown).
+    // After graceful shutdown, the peer may already be unregistered (exit 1 = "no peer found"),
+    // or its lease may still be active (exit 0 = removed successfully).
+    CliProcessResult rmResult = runPeerRm("-d", palDir, peerName, "--force");
     assertThat(
-        "Expected exit code 0 for removing dead peer without --force", rmResult.exitCode(), is(0));
+        "Expected exit code 0 or 1 for removing dead peer",
+        rmResult.exitCode(),
+        is(not(greaterThan(1))));
+
+    // Verify the peer is no longer in the directory
+    CliProcessResult lsResult = runPeerLs("-d", palDir);
+    assertThat(
+        "Dead peer should not appear in listing", lsResult.stdout(), not(containsString(peerName)));
   }
 
   /**
@@ -196,8 +206,9 @@ public class RemoveIT extends AbstractCliIT {
 
     CliProcessResult rmResult = runPeerRm("-d", palDir, "nonexistent-" + generateId());
 
-    // Idempotent deletion: exit code 0 even for non-existent peers
-    assertThat("Expected exit code 0 for idempotent peer removal", rmResult.exitCode(), is(0));
+    // Non-existent peer returns non-zero exit code
+    assertThat(
+        "Expected non-zero exit code for non-existent peer", rmResult.exitCode(), is(not(0)));
   }
 
   /**

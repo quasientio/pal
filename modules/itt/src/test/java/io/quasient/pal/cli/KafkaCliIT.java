@@ -282,6 +282,8 @@ public class KafkaCliIT extends AbstractCliIT {
     String source = "kcall-src-" + generateId();
     String wal = "kcall-wal-" + generateId();
 
+    // Use --source-log and --wal (not --log) to get separate source and WAL topics.
+    // --log sets both sourceLog and wal to the same value, making them the same topic.
     peerProcess =
         launchPeer(
             peerId,
@@ -289,10 +291,10 @@ public class KafkaCliIT extends AbstractCliIT {
             palDir,
             "-k",
             kafkaServers,
+            "--source-log",
+            source,
             "--wal",
             wal,
-            "--log",
-            source,
             "--wal-all-incoming-rpc",
             "--zmq-rpc",
             "auto",
@@ -300,6 +302,7 @@ public class KafkaCliIT extends AbstractCliIT {
             "-cp",
             getIttAppsClasspath());
 
+    // Write to the source log (peer reads from it), read response from the WAL (peer writes to it)
     CliProcessResult result =
         runLogCall(
             "-d",
@@ -312,6 +315,7 @@ public class KafkaCliIT extends AbstractCliIT {
             wal,
             "-m",
             "staticStringWithStringArgs",
+            source,
             METHODS_CLASS,
             "test-call-kafka-registry");
 
@@ -332,6 +336,7 @@ public class KafkaCliIT extends AbstractCliIT {
     String source = "kcall-dsrc-" + generateId();
     String wal = "kcall-dwal-" + generateId();
 
+    // Use --source-log and --wal (not --log) to get separate source and WAL topics
     peerProcess =
         launchPeer(
             peerId,
@@ -339,10 +344,10 @@ public class KafkaCliIT extends AbstractCliIT {
             palDir,
             "-k",
             kafkaServers,
+            "--source-log",
+            source,
             "--wal",
             wal,
-            "--log",
-            source,
             "--wal-all-incoming-rpc",
             "--zmq-rpc",
             "auto",
@@ -361,6 +366,7 @@ public class KafkaCliIT extends AbstractCliIT {
             wal,
             "-m",
             "staticStringWithStringArgs",
+            source,
             METHODS_CLASS,
             "test-call-kafka-direct");
 

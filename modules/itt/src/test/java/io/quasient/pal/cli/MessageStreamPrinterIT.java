@@ -716,7 +716,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     peerProcess = null;
 
     CliProcessResult result =
-        runLogPrint("-d", palDir, chronicleName, "-o", "0", "--with-return", "--full");
+        runLogPrint("-d", palDir, "file:" + chronicleName, "-o", "0", "--with-return", "--full");
     assertEquals(0, result.exitCode());
     assertThat(result.stdout().length(), greaterThan(0));
   }

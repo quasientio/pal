@@ -133,9 +133,9 @@ public class MessageStreamStatsIT extends AbstractCliIT {
             palDir,
             "-k",
             kafkaServers,
+            walName,
             "--types",
-            "CONSTRUCTOR",
-            walName);
+            "CONSTRUCTOR");
 
     // The command should complete (killed after timeout) or exit cleanly
     assertThat(
@@ -356,7 +356,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
 
     CliProcessResult result =
         runCliSubcommandForDuration(
-            new String[] {"peer", "stats"}, 5, "-d", palDir, "--types", "CONSTRUCTOR", pubAddress);
+            new String[] {"peer", "stats"}, 5, "-d", palDir, pubAddress, "--types", "CONSTRUCTOR");
 
     assertThat(
         "Exit code should be 0 or -1 (killed after timeout)",

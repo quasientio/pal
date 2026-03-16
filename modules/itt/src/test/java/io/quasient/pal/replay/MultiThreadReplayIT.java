@@ -500,6 +500,6 @@ public class MultiThreadReplayIT extends AbstractCliIT {
     }
     args.add("-v");
     args.add(walSpec);
-    return runWalIndex(args.toArray(new String[0]));
+    return runLogIndex(args.toArray(new String[0]));
   }
 }

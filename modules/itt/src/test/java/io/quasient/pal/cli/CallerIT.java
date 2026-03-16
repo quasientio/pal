@@ -15,6 +15,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 
 import io.quasient.pal.PeerProcess;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
@@ -753,19 +755,25 @@ public class CallerIT extends AbstractCliIT {
   @Test
   public void testLogCall_toChronicleLog_writesMessage() throws Exception {
     String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String suffix = generateId();
-    String sourceName = "logcall-csrc-" + suffix;
-    String walName = "logcall-cwal-" + suffix;
+    String sourceName = "/tmp/logcall-csrc-" + suffix;
+    String walName = "/tmp/logcall-cwal-" + suffix;
 
     trackChronicleLog(sourceName);
     trackChronicleLog(walName);
+
+    // Pre-create source directory — the peer's source log reader expects it to exist
+    Files.createDirectories(Path.of(sourceName));
 
     peerProcess =
         launchPeer(
             peerId,
             "-d",
             palDir,
+            "-k",
+            kafkaServers,
             "--source-log",
             "file:" + sourceName,
             "--wal",
@@ -787,6 +795,7 @@ public class CallerIT extends AbstractCliIT {
             "file:" + walName,
             "-m",
             "staticStringWithStringArgs",
+            "file:" + sourceName,
             METHODS_CLASS,
             "chronicle-log-test");
 

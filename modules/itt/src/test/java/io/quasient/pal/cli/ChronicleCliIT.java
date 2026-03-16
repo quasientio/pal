@@ -18,6 +18,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import io.quasient.pal.PeerProcess;
 import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.cxn.directory.PalDirectory;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
@@ -459,6 +461,9 @@ public class ChronicleCliIT extends AbstractCliIT {
     trackChronicleLog(source);
     trackChronicleLog(wal);
 
+    // Pre-create source directory — the peer's source log reader expects it to exist
+    Files.createDirectories(Path.of(source));
+
     peerProcess =
         launchPeer(
             peerId,
@@ -468,7 +473,7 @@ public class ChronicleCliIT extends AbstractCliIT {
             kafkaServers,
             "--wal",
             "file:" + wal,
-            "--log",
+            "--source-log",
             "file:" + source,
             "--wal-all-incoming-rpc",
             "--zmq-rpc",
@@ -487,6 +492,7 @@ public class ChronicleCliIT extends AbstractCliIT {
             "file:" + wal,
             "-m",
             "staticStringWithStringArgs",
+            "file:" + source,
             METHODS_CLASS,
             "test-call-registry");
 
@@ -510,6 +516,9 @@ public class ChronicleCliIT extends AbstractCliIT {
     trackChronicleLog(source);
     trackChronicleLog(wal);
 
+    // Pre-create source directory — the peer's source log reader expects it to exist
+    Files.createDirectories(Path.of(source));
+
     peerProcess =
         launchPeer(
             peerId,
@@ -519,7 +528,7 @@ public class ChronicleCliIT extends AbstractCliIT {
             kafkaServers,
             "--wal",
             "file:" + wal,
-            "--log",
+            "--source-log",
             "file:" + source,
             "--wal-all-incoming-rpc",
             "--zmq-rpc",
@@ -537,6 +546,7 @@ public class ChronicleCliIT extends AbstractCliIT {
             "file:" + wal,
             "-m",
             "staticStringWithStringArgs",
+            "file:" + source,
             METHODS_CLASS,
             "test-call-direct");
 

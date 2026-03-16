@@ -145,7 +145,7 @@ public class WalIndexMinimalReceiptCalculatorIT extends AbstractCliIT {
     }
     Collections.addAll(args, extraArgs);
     args.add(walSpec);
-    return runWalIndex(args.toArray(new String[0]));
+    return runLogIndex(args.toArray(new String[0]));
   }
 
   /**
