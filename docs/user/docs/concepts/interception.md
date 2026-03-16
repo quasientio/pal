@@ -1013,6 +1013,102 @@ new InterceptRequest<>(
 
 This is because async intercepts don't block the caller, so there's no synchronous path to propagate exceptions.
 
+## Intercept Bundles
+
+When working with multiple intercepts, defining them individually via the Java API can become tedious and error-prone. **Intercept bundles** let you declare a group of related intercepts in a single YAML file and manage them as a unit.
+
+### What is a Bundle?
+
+A bundle is a named collection of intercept definitions stored in a YAML file. It provides:
+
+- **Declarative configuration** --- define intercepts in YAML instead of Java code
+- **Shared defaults** --- set peer, priority, TTL, and exception policies once, override per-intercept as needed
+- **Lifecycle management** --- apply, diff, status-check, and remove all intercepts in one command
+- **Idempotency** --- re-applying a bundle skips intercepts that already exist
+- **Metadata tracking** --- PAL stores bundle metadata in etcd so you can query or remove by bundle name
+
+### Bundle YAML Format
+
+```yaml
+bundle: "fraud-check-v1"
+defaults:
+  peer: "fraud-checker"
+  priority: 0
+  ttl: 30s
+
+intercepts:
+  - target: com.acme.payment.OrderService.placeOrder
+    type: BEFORE
+    callback:
+      class: com.acme.fraud.FraudChecker
+      method: verify
+
+  - target: com.acme.payment.OrderService.refund
+    type: AROUND
+    callback:
+      class: com.acme.fraud.FraudChecker
+      method: wrapRefund
+    priority: 10
+
+  - target: com.acme.payment.OrderService.status
+    kind: field
+    fieldOp: GET
+    type: AFTER
+    callback:
+      class: com.acme.audit.FieldAuditor
+      method: onFieldRead
+```
+
+Each entry under `intercepts` uses the `target` field in `ClassName.memberName` format. The `defaults` section sets values inherited by all intercepts unless individually overridden.
+
+### Bundle Commands
+
+| Command | Description |
+|---------|-------------|
+| `pal intercept apply <file>` | Create intercepts from a YAML bundle |
+| `pal intercept apply --dry-run <file>` | Preview what would change without applying |
+| `pal intercept diff <file>` | Compare bundle against current directory state |
+| `pal intercept status -f <file>` | Check which bundle intercepts are active |
+| `pal intercept status --bundle <name>` | Check status by stored bundle name |
+| `pal intercept rm -f <file>` | Remove all intercepts defined in a bundle file |
+| `pal intercept rm --bundle <name>` | Remove all intercepts by bundle name |
+| `pal intercept rm --peer <name>` | Remove all intercepts for a peer |
+
+### Typical Workflow
+
+```bash
+# 1. Preview changes
+pal intercept diff -d localhost:2379 fraud-check.yaml
+
+# 2. Apply the bundle
+pal intercept apply -d localhost:2379 fraud-check.yaml
+
+# 3. Verify the intercepts are active
+pal intercept status -d localhost:2379 -f fraud-check.yaml
+
+# 4. When done, remove all intercepts
+pal intercept rm -d localhost:2379 -f fraud-check.yaml
+```
+
+### Idempotent Apply
+
+Running `pal intercept apply` on a bundle that has already been applied is safe --- existing intercepts are detected and skipped:
+
+```
+Applied: 0 created, 3 skipped, 0 failed
+```
+
+This makes bundles suitable for use in scripts and CI/CD pipelines.
+
+### Bundle Metadata
+
+When a bundle is applied, PAL stores lightweight metadata in etcd recording the bundle name, the peer UUID, and the UUIDs of the intercepts that were created. This metadata enables:
+
+- **`pal intercept rm --bundle <name>`** --- remove all intercepts by bundle name without needing the original YAML file
+- **`pal intercept status --bundle <name>`** --- check the status of a previously applied bundle
+
+For full CLI reference details, see the [CLI Reference](../cli-reference.md#pal-intercept-apply---apply-intercept-bundle).
+
 ## Limitations
 
 ### Only Woven Code
@@ -1039,6 +1135,7 @@ Anyone with directory access can register intercepts on any peer. To restrict:
 
 - [Peers and Logs](peers-and-logs.md) - Understanding peers
 - [RPC](rpc.md) - How callbacks are delivered
+- [CLI Reference: Intercept Commands](../cli-reference.md#pal-intercept-apply---apply-intercept-bundle) - Full reference for bundle CLI commands
 - [Writing Callback Handlers](../guides/writing-callback-handlers.md) - Implementing callback logic with practical examples
 - [Testing Guide](../guides/testing-with-interception.md) - Practical testing patterns
 - [Local Development](../guides/local-development.md) - Setting up for interception

@@ -385,6 +385,257 @@ UUID                                 Peer                                 Type  
 
 ---
 
+## pal intercept apply - Apply Intercept Bundle
+
+Apply intercepts from a YAML bundle file to the PAL directory. Reads a YAML bundle definition, resolves peers by name, and creates the intercepts. Supports a dry-run mode that shows what would be applied without making changes.
+
+For an introduction to intercept bundles, see [Intercept Bundles](concepts/interception.md#intercept-bundles).
+
+### Synopsis
+
+```bash
+pal intercept apply [OPTIONS] FILE
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `FILE` | Path to a YAML bundle file |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Show what would change without applying (equivalent to `pal intercept diff`) |
+| `-q, --quiet` | Suppress per-intercept detail, print only summary line |
+
+### YAML Bundle Format
+
+```yaml
+bundle: "fraud-check-v1"
+defaults:
+  peer: "fraud-checker"
+  priority: 0
+  ttl: 30s
+  forceImmediate: false
+  exceptionPolicy: PROPAGATE_CONTROLLED_ONLY
+  checkedExceptionPolicy: WRAP
+
+intercepts:
+  - target: com.acme.payment.OrderService.placeOrder
+    type: BEFORE
+    callback:
+      class: com.acme.fraud.FraudChecker
+      method: verify
+    params: [com.acme.payment.Order]
+    priority: 10
+    ttl: 15m
+
+  - target: com.acme.payment.OrderService.refund
+    type: AROUND
+    callback:
+      class: com.acme.fraud.FraudChecker
+      method: wrapRefund
+
+  - target: com.acme.payment.OrderService.status
+    kind: field
+    fieldOp: GET
+    type: AFTER
+    callback:
+      class: com.acme.audit.FieldAuditor
+      method: onFieldRead
+```
+
+**Required fields:**
+
+- `bundle` - A unique name for this bundle
+- `intercepts` - A list of intercept definitions, each with:
+    - `target` - Fully qualified `ClassName.methodOrFieldName`
+    - `type` - `BEFORE`, `AFTER`, `AROUND`, `BEFORE_ASYNC`, or `AFTER_ASYNC`
+    - `callback.class` and `callback.method` - The callback handler
+
+**Optional fields:**
+
+- `defaults` - Bundle-level defaults inherited by all intercepts:
+    - `peer` - Peer name (resolved via directory)
+    - `priority` - Default priority (0 = normal)
+    - `ttl` - Duration string (`30s`, `15m`, `1h`, `1d`)
+    - `forceImmediate` - Skip in-flight tracking (`true`/`false`)
+    - `exceptionPolicy` - `PROPAGATE_CONTROLLED_ONLY`, `PROPAGATE_ALL`, `SUPPRESS_ALL`
+    - `checkedExceptionPolicy` - `WRAP`, `SUPPRESS`
+- Per-intercept overrides: `peer`, `priority`, `ttl`, `forceImmediate`, `exceptionPolicy`, `checkedExceptionPolicy`
+- `kind` - `method` (default) or `field`
+- `fieldOp` - `GET` or `PUT` (required when `kind: field`)
+- `params` - List of parameter types for overloaded method matching
+
+### Examples
+
+```bash
+# Apply a bundle
+pal intercept apply -d localhost:2379 fraud-check.yaml
+
+# Preview what would change without applying
+pal intercept apply -d localhost:2379 --dry-run fraud-check.yaml
+
+# Apply quietly (summary only)
+pal intercept apply -d localhost:2379 -q fraud-check.yaml
+```
+
+### Output
+
+```
+Applying bundle "fraud-check-v1" (3 intercepts)...
+  + BEFORE com.acme.payment.OrderService.placeOrder -> created
+  + AROUND com.acme.payment.OrderService.refund -> created
+  + AFTER com.acme.payment.OrderService.status -> created
+Applied: 3 created, 0 skipped, 0 failed
+```
+
+Re-applying the same bundle is idempotent --- existing intercepts are skipped:
+
+```
+Applied: 0 created, 3 skipped, 0 failed
+```
+
+---
+
+## pal intercept rm - Remove Intercepts
+
+Remove intercepts from the PAL directory by UUID, YAML file, bundle name, or peer.
+
+### Synopsis
+
+```bash
+pal intercept rm [OPTIONS] [UUID...]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `UUID` | One or more intercept UUIDs to remove (mutually exclusive with options below) |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-f, --file FILE` | Remove all intercepts defined in a YAML bundle file |
+| `--bundle NAME` | Remove all intercepts tracked in the named bundle's metadata |
+| `--peer PEER` | Remove all intercepts for a peer (by name or UUID) |
+| `-q, --quiet` | Suppress per-intercept detail |
+
+Exactly one removal mode must be specified: positional UUIDs, `-f`, `--bundle`, or `--peer`.
+
+### Examples
+
+```bash
+# Remove individual intercepts by UUID
+pal intercept rm -d localhost:2379 abc12345-... def67890-...
+
+# Remove all intercepts from a YAML bundle
+pal intercept rm -d localhost:2379 -f fraud-check.yaml
+
+# Remove all intercepts by bundle name (uses stored metadata)
+pal intercept rm -d localhost:2379 --bundle fraud-check-v1
+
+# Remove all intercepts for a peer
+pal intercept rm -d localhost:2379 --peer fraud-checker
+```
+
+### Output
+
+```
+  - abc12345-...-6789 -> removed
+  - def67890-...-1234 -> removed
+Removed: 2, not found: 0
+```
+
+---
+
+## pal intercept diff - Compare Bundle Against Directory
+
+Compare a YAML bundle file against the current directory state to see what would change if applied.
+
+### Synopsis
+
+```bash
+pal intercept diff [OPTIONS] FILE
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `FILE` | Path to a YAML bundle file |
+
+### Examples
+
+```bash
+pal intercept diff -d localhost:2379 fraud-check.yaml
+```
+
+### Output
+
+Each intercept is shown with a marker:
+
+- `+` --- would be created (not in directory)
+- `=` --- unchanged (already exists and matches)
+- `~` --- modified (exists but differs)
+
+```
+Comparing bundle "fraud-check-v1" against directory...
+  + BEFORE com.acme.payment.OrderService.placeOrder   (would be created)
+  = AROUND com.acme.payment.OrderService.refund   (already exists, matches)
+  ~ AFTER com.acme.payment.OrderService.status   (exists, but differs: callback method changed)
+
+Summary: 1 to create, 1 unchanged, 1 to update
+```
+
+---
+
+## pal intercept status - Check Bundle Status
+
+Check whether the intercepts in a bundle are currently active in the directory.
+
+### Synopsis
+
+```bash
+pal intercept status [OPTIONS]
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-f, --file FILE` | Check status of intercepts defined in a YAML bundle file |
+| `--bundle NAME` | Check status using stored bundle metadata |
+
+One of `-f` or `--bundle` must be specified.
+
+### Examples
+
+```bash
+# Check status from a YAML file
+pal intercept status -d localhost:2379 -f fraud-check.yaml
+
+# Check status by bundle name
+pal intercept status -d localhost:2379 --bundle fraud-check-v1
+```
+
+### Output
+
+```
+Bundle "fraud-check-v1" (peer: fraud-checker / 00000000-...-0002)
+  + BEFORE com.acme.payment.OrderService.placeOrder   registered
+  + AROUND com.acme.payment.OrderService.refund   registered
+  - AFTER com.acme.payment.OrderService.status   not found
+
+Status: 2/3 active
+```
+
+---
+
 ## pal log print - Print Messages from a Log
 
 Print and stream messages from Kafka or Chronicle logs.
