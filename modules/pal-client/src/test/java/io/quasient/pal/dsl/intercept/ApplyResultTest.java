@@ -9,49 +9,87 @@
  */
 package io.quasient.pal.dsl.intercept;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
  * Unit tests for the {@code ApplyResult} value class.
  *
- * <p>These test stubs define the contract for {@code ApplyResult}. Each test documents expected
- * behavior via Given/When/Then comments. Implementation will be provided in #1233.
+ * <p>These tests define the contract for {@code ApplyResult}. Each test documents expected behavior
+ * via Given/When/Then comments.
  */
 public class ApplyResultTest {
 
   @Test
-  @Ignore("Awaiting implementation in #1233")
   public void countsAreCorrect() {
     // Given: An ApplyResult with 2 created, 1 skipped, and 0 failed entries
-    // When: getCreatedCount(), getSkippedCount(), and getFailedCount() are called
-    // Then: They return 2, 1, and 0 respectively
+    InterceptSpec spec = makeSpec();
 
-    // TODO(#1233): Implement test logic
-    fail("Not yet implemented");
+    ApplyResult result =
+        new ApplyResult(
+            Arrays.asList(
+                new ApplyResult.Entry(spec, UUID.randomUUID(), ApplyResult.Status.CREATED, null),
+                new ApplyResult.Entry(spec, UUID.randomUUID(), ApplyResult.Status.CREATED, null),
+                new ApplyResult.Entry(spec, UUID.randomUUID(), ApplyResult.Status.SKIPPED, null)));
+
+    // When/Then: counts match
+    assertThat(result.getCreatedCount(), is(2L));
+    assertThat(result.getSkippedCount(), is(1L));
+    assertThat(result.getFailedCount(), is(0L));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1233")
   public void entriesAreAccessible() {
     // Given: An ApplyResult with per-intercept detail entries
-    // When: The detail entries (list of per-intercept results) are retrieved
-    // Then: Each entry is accessible and contains the correct status and intercept info
+    InterceptSpec spec = makeSpec();
+    UUID uuid1 = UUID.randomUUID();
+    UUID uuid2 = UUID.randomUUID();
 
-    // TODO(#1233): Implement test logic
-    fail("Not yet implemented");
+    ApplyResult result =
+        new ApplyResult(
+            Arrays.asList(
+                new ApplyResult.Entry(spec, uuid1, ApplyResult.Status.CREATED, null),
+                new ApplyResult.Entry(spec, uuid2, ApplyResult.Status.FAILED, "timeout")));
+
+    // When/Then: each entry is accessible with correct status and info
+    assertThat(result.getEntries().size(), is(2));
+    assertThat(result.getEntries().get(0).getUuid(), is(uuid1));
+    assertThat(result.getEntries().get(0).getStatus(), is(ApplyResult.Status.CREATED));
+    assertThat(result.getEntries().get(1).getUuid(), is(uuid2));
+    assertThat(result.getEntries().get(1).getStatus(), is(ApplyResult.Status.FAILED));
+    assertThat(result.getEntries().get(1).getErrorMessage(), is("timeout"));
+    assertThat(result.getEntries().get(0).getInterceptSpec(), is(spec));
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1233")
   public void emptyResult() {
     // Given: An empty ApplyResult (no entries)
-    // When: getCreatedCount(), getSkippedCount(), and getFailedCount() are called
-    // Then: All counts return 0
+    ApplyResult result = new ApplyResult(Collections.emptyList());
 
-    // TODO(#1233): Implement test logic
-    fail("Not yet implemented");
+    // When/Then: all counts return 0
+    assertThat(result.getCreatedCount(), is(0L));
+    assertThat(result.getSkippedCount(), is(0L));
+    assertThat(result.getFailedCount(), is(0L));
+  }
+
+  /**
+   * Creates a minimal InterceptSpec for testing.
+   *
+   * @return a test InterceptSpec
+   */
+  private static InterceptSpec makeSpec() {
+    return InterceptSpec.builder()
+        .targetClass("com.acme.Foo")
+        .targetName("bar")
+        .type(InterceptType.BEFORE)
+        .callbackClass("com.acme.Cb")
+        .callbackMethod("onBar")
+        .build();
   }
 }

@@ -9,73 +9,124 @@
  */
 package io.quasient.pal.dsl.intercept;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertNotNull;
 
-import org.junit.Ignore;
+import io.quasient.pal.common.lang.intercept.InterceptType;
+import java.time.Duration;
 import org.junit.Test;
 
 /**
  * Unit tests for the {@code InterceptBundleSpec} value class.
  *
- * <p>These test stubs define the contract for {@code InterceptBundleSpec}. Each test documents
- * expected behavior via Given/When/Then comments. Implementation will be provided in #1233.
+ * <p>These tests define the contract for {@code InterceptBundleSpec}. Each test documents expected
+ * behavior via Given/When/Then comments.
  */
 public class InterceptBundleSpecTest {
 
   @Test
-  @Ignore("Awaiting implementation in #1233")
   public void builder_setsAllFields() {
     // Given: An InterceptBundleSpec builder with name, defaults, and 2 intercept specs
-    // When: build() is called
-    // Then: getName() returns the bundle name,
-    //       getDefaults() returns the configured defaults,
-    //       getIntercepts() returns a list of 2 InterceptSpecs
+    InterceptBundleDefaults defaults =
+        new InterceptBundleDefaults("peer-1", 5, Duration.ofMinutes(1), true, null, null);
 
-    // TODO(#1233): Implement test logic
-    fail("Not yet implemented");
+    InterceptSpec spec1 =
+        InterceptSpec.builder()
+            .targetClass("com.acme.Foo")
+            .targetName("bar")
+            .type(InterceptType.BEFORE)
+            .callbackClass("com.acme.Cb")
+            .callbackMethod("onBar")
+            .build();
+
+    InterceptSpec spec2 =
+        InterceptSpec.builder()
+            .targetClass("com.acme.Foo")
+            .targetName("baz")
+            .type(InterceptType.AFTER)
+            .callbackClass("com.acme.Cb")
+            .callbackMethod("onBaz")
+            .build();
+
+    // When: build() is called
+    InterceptBundleSpec bundle =
+        InterceptBundleSpec.builder("test-bundle")
+            .defaults(defaults)
+            .addIntercept(spec1)
+            .addIntercept(spec2)
+            .build();
+
+    // Then: getName() returns the bundle name, getDefaults() returns the configured defaults,
+    //       getIntercepts() returns a list of 2 InterceptSpecs
+    assertThat(bundle.getBundleName(), is("test-bundle"));
+    assertThat(bundle.getDefaults(), is(defaults));
+    assertThat(bundle.getIntercepts().size(), is(2));
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1233")
+  @Test(expected = NullPointerException.class)
   public void builder_requiresBundleName() {
     // Given: An InterceptBundleSpec builder with intercepts set but bundle name omitted
-    // When: build() is called
-    // Then: NullPointerException or IllegalStateException is thrown
+    InterceptSpec spec =
+        InterceptSpec.builder()
+            .targetClass("com.acme.Foo")
+            .targetName("bar")
+            .type(InterceptType.BEFORE)
+            .callbackClass("com.acme.Cb")
+            .callbackMethod("onBar")
+            .build();
 
-    // TODO(#1233): Implement test logic
-    fail("Not yet implemented");
+    // When: build() is called
+    // Then: NullPointerException is thrown
+    InterceptBundleSpec.builder(null).addIntercept(spec).build();
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1233")
+  @Test(expected = IllegalStateException.class)
   public void builder_requiresAtLeastOneIntercept() {
     // Given: An InterceptBundleSpec builder with bundle name set but empty intercept list
     // When: build() is called
     // Then: IllegalStateException is thrown
-
-    // TODO(#1233): Implement test logic
-    fail("Not yet implemented");
+    InterceptBundleSpec.builder("empty-bundle").build();
   }
 
   @Test
-  @Ignore("Awaiting implementation in #1233")
   public void builder_defaultsAreOptional() {
     // Given: An InterceptBundleSpec builder with name and intercepts but no defaults
-    // When: build() is called
-    // Then: getDefaults() returns a no-op defaults object (all fields null)
+    InterceptSpec spec =
+        InterceptSpec.builder()
+            .targetClass("com.acme.Foo")
+            .targetName("bar")
+            .type(InterceptType.BEFORE)
+            .callbackClass("com.acme.Cb")
+            .callbackMethod("onBar")
+            .build();
 
-    // TODO(#1233): Implement test logic
-    fail("Not yet implemented");
+    // When: build() is called
+    InterceptBundleSpec bundle =
+        InterceptBundleSpec.builder("my-bundle").addIntercept(spec).build();
+
+    // Then: getDefaults() returns a no-op defaults object (all fields null)
+    assertNotNull(bundle.getDefaults());
+    assertThat(bundle.getDefaults(), is(InterceptBundleDefaults.EMPTY));
   }
 
-  @Test
-  @Ignore("Awaiting implementation in #1233")
+  @Test(expected = UnsupportedOperationException.class)
   public void interceptsListIsImmutable() {
     // Given: A built InterceptBundleSpec with intercepts
+    InterceptSpec spec =
+        InterceptSpec.builder()
+            .targetClass("com.acme.Foo")
+            .targetName("bar")
+            .type(InterceptType.BEFORE)
+            .callbackClass("com.acme.Cb")
+            .callbackMethod("onBar")
+            .build();
+
+    InterceptBundleSpec bundle =
+        InterceptBundleSpec.builder("my-bundle").addIntercept(spec).build();
+
     // When: getIntercepts() is called and an attempt is made to add to the returned list
     // Then: UnsupportedOperationException is thrown
-
-    // TODO(#1233): Implement test logic
-    fail("Not yet implemented");
+    bundle.getIntercepts().add(spec);
   }
 }
