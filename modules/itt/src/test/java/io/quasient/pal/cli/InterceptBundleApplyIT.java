@@ -34,7 +34,7 @@ import org.junit.Test;
  * <p>Tests that applying an intercept bundle YAML file creates the expected intercepts in etcd,
  * that dry-run mode does not create anything, and that bundle metadata is stored correctly.
  *
- * <p>Requires running etcd and Kafka infrastructure as described in modules/itt/README.md.
+ * <p>Requires running etcd infrastructure as described in modules/itt/README.md.
  */
 public class InterceptBundleApplyIT extends AbstractCliIT {
 
@@ -78,28 +78,11 @@ public class InterceptBundleApplyIT extends AbstractCliIT {
     // Given: A YAML temp file with 2 method intercepts (BEFORE, AROUND) + 1 field intercept
     //        (AFTER GET), and a running peer whose name matches the YAML peer field
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String peerName = "apply-peer-" + generateId();
-    String walName = "wal-apply-" + generateId();
 
     peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            "-n",
-            peerName,
-            "--wal",
-            walName,
-            "--zmq-rpc",
-            "auto",
-            "--interceptable",
-            "--as-service",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDir, "-n", peerName, "--interceptable", "--as-service");
 
     File yamlFile = createBundleYaml("apply-bundle-" + generateId(), peerName);
 
@@ -125,28 +108,11 @@ public class InterceptBundleApplyIT extends AbstractCliIT {
   public void testApply_dryRun_doesNotCreateIntercepts() throws Exception {
     // Given: A YAML temp file with intercept definitions and a running peer
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String peerName = "dryrun-peer-" + generateId();
-    String walName = "wal-dryrun-" + generateId();
 
     peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            "-n",
-            peerName,
-            "--wal",
-            walName,
-            "--zmq-rpc",
-            "auto",
-            "--interceptable",
-            "--as-service",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDir, "-n", peerName, "--interceptable", "--as-service");
 
     File yamlFile = createBundleYaml("dryrun-bundle-" + generateId(), peerName);
 
@@ -173,29 +139,12 @@ public class InterceptBundleApplyIT extends AbstractCliIT {
   public void testApply_bundleMetadataStored() throws Exception {
     // Given: A YAML temp file defining a bundle with 3 intercepts and a running peer
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String peerName = "metadata-peer-" + generateId();
-    String walName = "wal-metadata-" + generateId();
     String bundleName = "metadata-bundle-" + generateId();
 
     peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            "-n",
-            peerName,
-            "--wal",
-            walName,
-            "--zmq-rpc",
-            "auto",
-            "--interceptable",
-            "--as-service",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDir, "-n", peerName, "--interceptable", "--as-service");
 
     File yamlFile = createBundleYaml(bundleName, peerName);
 

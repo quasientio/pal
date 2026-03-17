@@ -30,7 +30,7 @@ import org.junit.Test;
  * <p>Tests that double-apply is idempotent, that diff after apply shows unchanged state, and that
  * status after apply reports all intercepts as active.
  *
- * <p>Requires running etcd and Kafka infrastructure as described in modules/itt/README.md.
+ * <p>Requires running etcd infrastructure as described in modules/itt/README.md.
  */
 public class InterceptBundleIdempotencyIT extends AbstractCliIT {
 
@@ -73,29 +73,12 @@ public class InterceptBundleIdempotencyIT extends AbstractCliIT {
   public void testApply_idempotent_doubleApplySucceeds() throws Exception {
     // Given: A YAML temp file with 3 intercepts and a running peer
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String peerName = "idemp-peer-" + generateId();
-    String walName = "wal-idemp-" + generateId();
     String bundleName = "idemp-bundle-" + generateId();
 
     peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            "-n",
-            peerName,
-            "--wal",
-            walName,
-            "--zmq-rpc",
-            "auto",
-            "--interceptable",
-            "--as-service",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDir, "-n", peerName, "--interceptable", "--as-service");
 
     File yamlFile = createBundleYaml(bundleName, peerName);
 
@@ -124,29 +107,12 @@ public class InterceptBundleIdempotencyIT extends AbstractCliIT {
   public void testApply_thenDiff_showsUnchanged() throws Exception {
     // Given: A bundle has been applied (3 intercepts exist in etcd)
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String peerName = "diff-peer-" + generateId();
-    String walName = "wal-diff-" + generateId();
     String bundleName = "diff-bundle-" + generateId();
 
     peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            "-n",
-            peerName,
-            "--wal",
-            walName,
-            "--zmq-rpc",
-            "auto",
-            "--interceptable",
-            "--as-service",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDir, "-n", peerName, "--interceptable", "--as-service");
 
     File yamlFile = createBundleYaml(bundleName, peerName);
     CliProcessResult applyResult = runInterceptApply("-d", palDir, yamlFile.getAbsolutePath());
@@ -171,29 +137,12 @@ public class InterceptBundleIdempotencyIT extends AbstractCliIT {
   public void testApply_thenStatus_showsAllActive() throws Exception {
     // Given: A bundle has been applied (3 intercepts exist in etcd)
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String peerName = "status-peer-" + generateId();
-    String walName = "wal-status-" + generateId();
     String bundleName = "status-bundle-" + generateId();
 
     peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            "-n",
-            peerName,
-            "--wal",
-            walName,
-            "--zmq-rpc",
-            "auto",
-            "--interceptable",
-            "--as-service",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDir, "-n", peerName, "--interceptable", "--as-service");
 
     File yamlFile = createBundleYaml(bundleName, peerName);
     CliProcessResult applyResult = runInterceptApply("-d", palDir, yamlFile.getAbsolutePath());

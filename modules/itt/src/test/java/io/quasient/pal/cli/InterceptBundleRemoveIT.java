@@ -32,7 +32,7 @@ import org.junit.Test;
  * <p>Tests removal of intercept bundles by file, by bundle name, and by peer name. Each test first
  * applies a bundle, then removes it using a different strategy and verifies cleanup.
  *
- * <p>Requires running etcd and Kafka infrastructure as described in modules/itt/README.md.
+ * <p>Requires running etcd infrastructure as described in modules/itt/README.md.
  */
 public class InterceptBundleRemoveIT extends AbstractCliIT {
 
@@ -75,29 +75,12 @@ public class InterceptBundleRemoveIT extends AbstractCliIT {
   public void testRemove_byFile_removesAllIntercepts() throws Exception {
     // Given: A bundle has been applied (3 intercepts exist in etcd)
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String peerName = "rm-file-peer-" + generateId();
-    String walName = "wal-rm-file-" + generateId();
     String bundleName = "rm-file-bundle-" + generateId();
 
     peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            "-n",
-            peerName,
-            "--wal",
-            walName,
-            "--zmq-rpc",
-            "auto",
-            "--interceptable",
-            "--as-service",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDir, "-n", peerName, "--interceptable", "--as-service");
 
     File yamlFile = createBundleYaml(bundleName, peerName);
     CliProcessResult applyResult = runInterceptApply("-d", palDir, yamlFile.getAbsolutePath());
@@ -126,29 +109,12 @@ public class InterceptBundleRemoveIT extends AbstractCliIT {
   public void testRemove_byBundle_removesAllIntercepts() throws Exception {
     // Given: A bundle has been applied (3 intercepts exist in etcd)
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String peerName = "rm-bundle-peer-" + generateId();
-    String walName = "wal-rm-bundle-" + generateId();
     String bundleName = "rm-bundle-" + generateId();
 
     peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            "-n",
-            peerName,
-            "--wal",
-            walName,
-            "--zmq-rpc",
-            "auto",
-            "--interceptable",
-            "--as-service",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDir, "-n", peerName, "--interceptable", "--as-service");
 
     File yamlFile = createBundleYaml(bundleName, peerName);
     CliProcessResult applyResult = runInterceptApply("-d", palDir, yamlFile.getAbsolutePath());
@@ -177,29 +143,12 @@ public class InterceptBundleRemoveIT extends AbstractCliIT {
   public void testRemove_byPeer_removesAllIntercepts() throws Exception {
     // Given: A bundle has been applied (3 intercepts exist in etcd for the peer)
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String peerName = "rm-peer-peer-" + generateId();
-    String walName = "wal-rm-peer-" + generateId();
     String bundleName = "rm-peer-bundle-" + generateId();
 
     peerProcess =
-        launchPeer(
-            peerId,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            "-n",
-            peerName,
-            "--wal",
-            walName,
-            "--zmq-rpc",
-            "auto",
-            "--interceptable",
-            "--as-service",
-            "-cp",
-            getIttAppsClasspath());
+        launchPeer(peerId, "-d", palDir, "-n", peerName, "--interceptable", "--as-service");
 
     File yamlFile = createBundleYaml(bundleName, peerName);
     CliProcessResult applyResult = runInterceptApply("-d", palDir, yamlFile.getAbsolutePath());
