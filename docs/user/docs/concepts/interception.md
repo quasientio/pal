@@ -1015,15 +1015,15 @@ This is because async intercepts don't block the caller, so there's no synchrono
 
 ## Intercept Bundles
 
-When working with multiple intercepts, defining them individually via the Java API can become tedious and error-prone. **Intercept bundles** let you declare a group of related intercepts in a single YAML file and manage them as a unit.
+When working with multiple intercepts, defining them individually can become tedious and error-prone. **Intercept bundles** let you declare a group of related intercepts and manage them as a unit --- either via YAML files on the CLI, or programmatically from Java code.
 
 ### What is a Bundle?
 
-A bundle is a named collection of intercept definitions stored in a YAML file. It provides:
+A bundle is a named collection of intercept definitions with shared defaults. It provides:
 
-- **Declarative configuration** --- define intercepts in YAML instead of Java code
+- **Declarative or programmatic** --- define bundles in YAML files or build them with the Java builder API
 - **Shared defaults** --- set peer, priority, TTL, and exception policies once, override per-intercept as needed
-- **Lifecycle management** --- apply, diff, status-check, and remove all intercepts in one command
+- **Lifecycle management** --- apply, diff, status-check, and remove all intercepts in one operation
 - **Idempotency** --- re-applying a bundle skips intercepts that already exist
 - **Metadata tracking** --- PAL stores bundle metadata in etcd so you can query or remove by bundle name
 
@@ -1108,6 +1108,71 @@ When a bundle is applied, PAL stores lightweight metadata in etcd recording the 
 - **`pal intercept status --bundle <name>`** --- check the status of a previously applied bundle
 
 For full CLI reference details, see the [CLI Reference](../cli-reference.md#pal-intercept-apply---apply-intercept-bundle).
+
+### Programmatic API
+
+Bundles can also be built and managed entirely from Java code using the builder API. This is useful when intercepts are driven by application logic rather than static YAML files.
+
+**Building and applying a bundle:**
+
+```java
+// Define bundle-level defaults (peer name, priority, TTL, etc.)
+InterceptBundleDefaults defaults =
+    new InterceptBundleDefaults("fraud-checker", null, null, null, null, null);
+
+// Build the bundle with the fluent builder API
+InterceptBundleSpec bundle = InterceptBundleSpec.builder("fraud-check-v1")
+    .defaults(defaults)
+    .addIntercept(InterceptSpec.builder()
+        .targetClass("com.acme.OrderService")
+        .targetName("placeOrder")
+        .type(InterceptType.BEFORE)
+        .callbackClass("com.acme.FraudChecker")
+        .callbackMethod("verify")
+        .build())
+    .addIntercept(InterceptSpec.builder()
+        .targetClass("com.acme.OrderService")
+        .targetName("refund")
+        .type(InterceptType.AROUND)
+        .callbackClass("com.acme.FraudChecker")
+        .callbackMethod("wrapRefund")
+        .build())
+    .addIntercept(InterceptSpec.builder()
+        .targetClass("com.acme.OrderService")
+        .targetName("status")
+        .kind(InterceptableKind.FIELD)
+        .fieldOpType(FieldOpType.GET)
+        .type(InterceptType.AFTER)
+        .callbackClass("com.acme.FieldAuditor")
+        .callbackMethod("onFieldRead")
+        .build())
+    .build();
+
+// Apply the bundle
+InterceptManager manager = new InterceptManager(palDirectory);
+ApplyResult result = manager.apply(bundle);
+// result.getCreatedCount() == 3
+```
+
+**Checking status and removing:**
+
+```java
+// Check which intercepts are active
+BundleStatus status = manager.status(bundle);
+// status.getActiveCount() / status.getTotalCount()
+
+// Diff against current directory state
+List<InterceptDiff> diffs = manager.diff(bundle);
+// Each entry is CREATE, UNCHANGED, or MODIFIED
+
+// Remove all intercepts in the bundle
+RemoveResult removed = manager.remove(bundle);
+
+// Or remove by bundle name (without the original spec)
+RemoveResult removed = manager.removeByBundle("fraud-check-v1");
+```
+
+The programmatic API uses the same `InterceptManager` as the CLI commands. Applying a bundle is idempotent regardless of whether it was applied via YAML or the builder API.
 
 ## Limitations
 
