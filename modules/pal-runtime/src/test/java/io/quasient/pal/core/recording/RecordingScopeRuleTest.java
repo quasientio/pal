@@ -9,9 +9,11 @@
  */
 package io.quasient.pal.core.recording;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.rpc.policy.MemberCategory;
+import java.util.EnumSet;
 import org.junit.Test;
 
 /**
@@ -32,16 +34,12 @@ public class RecordingScopeRuleTest {
    * rejects a different member on the same class.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void exactClassAndMemberMatch() {
-    // Given: A RecordingScopeRule with class="com.example.Foo", member="bar", action=RECORD
-    // When: matches("com.example.Foo.bar", MemberCategory.METHOD)
-    // Then: The result is true
-    // When: matches("com.example.Foo.baz", MemberCategory.METHOD)
-    // Then: The result is false
+    RecordingScopeRule rule =
+        new RecordingScopeRule("com.example.Foo", "bar", RecordingScopeAction.RECORD, null);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(rule.matches("com.example.Foo", "baz", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -49,18 +47,13 @@ public class RecordingScopeRuleTest {
    * the specified class, including constructors represented as {@code new}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void wildcardMemberMatchesAllMembers() {
-    // Given: A RecordingScopeRule with class="com.example.Foo", member="**"
-    // When: matches("com.example.Foo.bar", ...)
-    // Then: true
-    // When: matches("com.example.Foo.baz", ...)
-    // Then: true
-    // When: matches("com.example.Foo.new", ...)
-    // Then: true
+    RecordingScopeRule rule =
+        new RecordingScopeRule("com.example.Foo", "**", RecordingScopeAction.RECORD, null);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(rule.matches("com.example.Foo", "baz", MemberCategory.METHOD), is(true));
+    assertThat(rule.matches("com.example.Foo", "new", MemberCategory.CONSTRUCTOR), is(true));
   }
 
   /**
@@ -68,18 +61,13 @@ public class RecordingScopeRuleTest {
    * nested sub-packages but does not match classes in unrelated packages.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void multiSegmentWildcardClass() {
-    // Given: A RecordingScopeRule with class="com.example.**", member="**"
-    // When: matches("com.example.Foo.bar", ...)
-    // Then: true
-    // When: matches("com.example.sub.pkg.Bar.baz", ...)
-    // Then: true
-    // When: matches("com.other.Foo.bar", ...)
-    // Then: false
+    RecordingScopeRule rule =
+        new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.RECORD, null);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(rule.matches("com.example.sub.pkg.Bar", "baz", MemberCategory.METHOD), is(true));
+    assertThat(rule.matches("com.other.Foo", "bar", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -87,16 +75,12 @@ public class RecordingScopeRuleTest {
    * directly under the package but does not match classes in nested sub-packages.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void singleSegmentWildcardClass() {
-    // Given: A RecordingScopeRule with class="com.example.*", member="**"
-    // When: matches("com.example.Foo.bar", ...)
-    // Then: true
-    // When: matches("com.example.sub.Foo.bar", ...)
-    // Then: false (single-segment wildcard does not cross dot boundaries)
+    RecordingScopeRule rule =
+        new RecordingScopeRule("com.example.*", "**", RecordingScopeAction.RECORD, null);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(rule.matches("com.example.sub.Foo", "bar", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -104,16 +88,12 @@ public class RecordingScopeRuleTest {
    * starting with that prefix but rejects members with a different prefix.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void wildcardMemberPrefix() {
-    // Given: A RecordingScopeRule with class="com.example.Foo", member="get*"
-    // When: matches("com.example.Foo.getName", ...)
-    // Then: true
-    // When: matches("com.example.Foo.setName", ...)
-    // Then: false
+    RecordingScopeRule rule =
+        new RecordingScopeRule("com.example.Foo", "get*", RecordingScopeAction.RECORD, null);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.Foo", "getName", MemberCategory.METHOD), is(true));
+    assertThat(rule.matches("com.example.Foo", "setName", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -121,16 +101,16 @@ public class RecordingScopeRuleTest {
    * of that category and rejects operations of a different category on the same path.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void categoryFilterMatchesCorrectCategory() {
-    // Given: A RecordingScopeRule with categories=[FIELD_GET]
-    // When: matches(path, MemberCategory.FIELD_GET)
-    // Then: true
-    // When: matches(same path, MemberCategory.METHOD)
-    // Then: false
+    RecordingScopeRule rule =
+        new RecordingScopeRule(
+            "com.example.**",
+            "**",
+            RecordingScopeAction.SKIP,
+            EnumSet.of(MemberCategory.FIELD_GET));
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.Foo", "value", MemberCategory.FIELD_GET), is(true));
+    assertThat(rule.matches("com.example.Foo", "value", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -138,22 +118,15 @@ public class RecordingScopeRuleTest {
    * including METHOD, FIELD_GET, FIELD_SET, CONSTRUCTOR, and STATIC_METHOD.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void nullCategoryFilterMatchesAllCategories() {
-    // Given: A RecordingScopeRule with categories=null
-    // When: matches(path, MemberCategory.METHOD)
-    // Then: true
-    // When: matches(path, MemberCategory.FIELD_GET)
-    // Then: true
-    // When: matches(path, MemberCategory.FIELD_SET)
-    // Then: true
-    // When: matches(path, MemberCategory.CONSTRUCTOR)
-    // Then: true
-    // When: matches(path, MemberCategory.STATIC_METHOD)
-    // Then: true
+    RecordingScopeRule rule =
+        new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.RECORD, null);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(rule.matches("com.example.Foo", "value", MemberCategory.FIELD_GET), is(true));
+    assertThat(rule.matches("com.example.Foo", "value", MemberCategory.FIELD_SET), is(true));
+    assertThat(rule.matches("com.example.Foo", "new", MemberCategory.CONSTRUCTOR), is(true));
+    assertThat(rule.matches("com.example.Foo", "bar", MemberCategory.STATIC_METHOD), is(true));
   }
 
   /**
@@ -161,14 +134,11 @@ public class RecordingScopeRuleTest {
    * member patterns matches paths in different casing.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void caseInsensitiveMatching() {
-    // Given: A RecordingScopeRule with class="com.Example.Foo", member="Bar"
-    // When: matches("com.example.foo.bar", ...)
-    // Then: true
+    RecordingScopeRule rule =
+        new RecordingScopeRule("com.Example.Foo", "Bar", RecordingScopeAction.RECORD, null);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.foo", "bar", MemberCategory.METHOD), is(true));
   }
 
   /**
@@ -177,17 +147,16 @@ public class RecordingScopeRuleTest {
    * non-constructor category is rejected.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void constructorNameIsNew() {
-    // Given: A RecordingScopeRule with class="com.example.Foo", member="new",
-    //        categories=[CONSTRUCTOR]
-    // When: matches("com.example.Foo.new", MemberCategory.CONSTRUCTOR)
-    // Then: true
-    // When: matches("com.example.Foo.new", MemberCategory.METHOD)
-    // Then: false (category filter rejects METHOD)
+    RecordingScopeRule rule =
+        new RecordingScopeRule(
+            "com.example.Foo",
+            "new",
+            RecordingScopeAction.RECORD,
+            EnumSet.of(MemberCategory.CONSTRUCTOR));
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.Foo", "new", MemberCategory.CONSTRUCTOR), is(true));
+    assertThat(rule.matches("com.example.Foo", "new", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -196,16 +165,12 @@ public class RecordingScopeRuleTest {
    * with "total" regardless of the field operation direction.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void fieldNamePatternMatching() {
-    // Given: A RecordingScopeRule with class="com.example.Order", member="total*"
-    // When: matches("com.example.Order.totalPrice", MemberCategory.FIELD_GET)
-    // Then: true
-    // When: matches("com.example.Order.totalPrice", MemberCategory.FIELD_SET)
-    // Then: true
+    RecordingScopeRule rule =
+        new RecordingScopeRule("com.example.Order", "total*", RecordingScopeAction.RECORD, null);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.Order", "totalPrice", MemberCategory.FIELD_GET), is(true));
+    assertThat(rule.matches("com.example.Order", "totalPrice", MemberCategory.FIELD_SET), is(true));
   }
 
   /**
@@ -213,17 +178,14 @@ public class RecordingScopeRuleTest {
    * for both RECORD and SKIP rules.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void actionIsPreserved() {
-    // Given: A RecordingScopeRule with action=RECORD
-    // When: getAction()
-    // Then: RECORD
-    // Given: A RecordingScopeRule with action=SKIP
-    // When: getAction()
-    // Then: SKIP
+    RecordingScopeRule recordRule =
+        new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.RECORD, null);
+    RecordingScopeRule skipRule =
+        new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.SKIP, null);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(recordRule.getAction(), is(RecordingScopeAction.RECORD));
+    assertThat(skipRule.getAction(), is(RecordingScopeAction.SKIP));
   }
 
   /**
@@ -232,17 +194,16 @@ public class RecordingScopeRuleTest {
    * categories.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void multipleCategoriesInSet() {
-    // Given: A RecordingScopeRule with categories=[FIELD_GET, FIELD_SET]
-    // When: matches(path, MemberCategory.FIELD_GET)
-    // Then: true
-    // When: matches(path, MemberCategory.FIELD_SET)
-    // Then: true
-    // When: matches(path, MemberCategory.METHOD)
-    // Then: false
+    RecordingScopeRule rule =
+        new RecordingScopeRule(
+            "com.example.**",
+            "**",
+            RecordingScopeAction.SKIP,
+            EnumSet.of(MemberCategory.FIELD_GET, MemberCategory.FIELD_SET));
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(rule.matches("com.example.Foo", "value", MemberCategory.FIELD_GET), is(true));
+    assertThat(rule.matches("com.example.Foo", "value", MemberCategory.FIELD_SET), is(true));
+    assertThat(rule.matches("com.example.Foo", "value", MemberCategory.METHOD), is(false));
   }
 }

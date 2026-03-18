@@ -9,9 +9,17 @@
  */
 package io.quasient.pal.core.recording;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.rpc.policy.MemberCategory;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Test;
 
 /**
@@ -36,14 +44,12 @@ public class RecordingScopeTest {
    * {@code RECORD}, every operation is in scope regardless of class, member, or category.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void emptyRulesWithDefaultRecordAlwaysInScope() {
-    // Given: A RecordingScope with no rules and default action RECORD
-    // When: isInScope is called with any class name, any member name, and any MemberCategory
-    // Then: The result is true (in scope) for all inputs
+    RecordingScope scope = new RecordingScope(List.of(), RecordingScopeAction.RECORD);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(scope.isInScope("java.util.HashMap", "put", MemberCategory.METHOD), is(true));
+    assertThat(scope.isInScope("any.Class", "field", MemberCategory.FIELD_GET), is(true));
   }
 
   /**
@@ -51,14 +57,12 @@ public class RecordingScopeTest {
    * is in scope.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void emptyRulesWithDefaultSkipNeverInScope() {
-    // Given: A RecordingScope with no rules and default action SKIP
-    // When: isInScope is called with any class name, any member name, and any MemberCategory
-    // Then: The result is false (not in scope) for all inputs
+    RecordingScope scope = new RecordingScope(List.of(), RecordingScopeAction.SKIP);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(false));
+    assertThat(scope.isInScope("java.util.HashMap", "put", MemberCategory.METHOD), is(false));
+    assertThat(scope.isInScope("any.Class", "field", MemberCategory.FIELD_GET), is(false));
   }
 
   /**
@@ -66,16 +70,14 @@ public class RecordingScopeTest {
    * same pattern. The earlier {@code RECORD} rule should win.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void firstMatchWinsRecordBeforeSkip() {
-    // Given: A RecordingScope with rules:
-    //   1. RECORD for com.example.**
-    //   2. SKIP for com.example.**
-    // When: isInScope("com.example.Foo", "bar", METHOD)
-    // Then: The result is true (RECORD rule matched first)
+    List<RecordingScopeRule> rules =
+        List.of(
+            new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.RECORD, null),
+            new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.SKIP, null));
+    RecordingScope scope = new RecordingScope(rules, RecordingScopeAction.SKIP);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
   }
 
   /**
@@ -84,19 +86,17 @@ public class RecordingScopeTest {
    * classes; the broader {@code RECORD} rule wins for non-matching classes.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void firstMatchWinsSkipBeforeRecord() {
-    // Given: A RecordingScope with rules:
-    //   1. SKIP for com.example.internal.**
-    //   2. RECORD for com.example.**
-    //   And a default action (e.g., SKIP)
-    // When: isInScope("com.example.internal.Util", "helper", METHOD)
-    // Then: The result is false (first SKIP rule matched)
-    // When: isInScope("com.example.Foo", "bar", METHOD)
-    // Then: The result is true (second RECORD rule matched)
+    List<RecordingScopeRule> rules =
+        List.of(
+            new RecordingScopeRule(
+                "com.example.internal.**", "**", RecordingScopeAction.SKIP, null),
+            new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.RECORD, null));
+    RecordingScope scope = new RecordingScope(rules, RecordingScopeAction.SKIP);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        scope.isInScope("com.example.internal.Util", "helper", MemberCategory.METHOD), is(false));
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
   }
 
   /**
@@ -104,16 +104,12 @@ public class RecordingScopeTest {
    * fallback.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void defaultFallbackWhenNoRuleMatches() {
-    // Given: A RecordingScope with rules:
-    //   1. RECORD for com.example.**
-    //   And default action SKIP
-    // When: isInScope("com.other.Foo", "bar", METHOD)
-    // Then: The result is false (no rule matched, default SKIP applies)
+    List<RecordingScopeRule> rules =
+        List.of(new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.RECORD, null));
+    RecordingScope scope = new RecordingScope(rules, RecordingScopeAction.SKIP);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope.isInScope("com.other.Foo", "bar", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -122,18 +118,19 @@ public class RecordingScopeTest {
    * field operations but allow method calls on the same class.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void fieldGetOutOfScopeWhenCategoryExcluded() {
-    // Given: A RecordingScope with rules:
-    //   1. SKIP for java.** with categories=[FIELD_GET, FIELD_SET]
-    //   2. RECORD for **
-    // When: isInScope("java.util.HashMap", "size", FIELD_GET)
-    // Then: The result is false (SKIP rule matched for FIELD_GET category)
-    // When: isInScope("java.util.HashMap", "put", METHOD)
-    // Then: The result is true (SKIP rule does not match METHOD category; RECORD ** matches)
+    List<RecordingScopeRule> rules =
+        List.of(
+            new RecordingScopeRule(
+                "java.**",
+                "**",
+                RecordingScopeAction.SKIP,
+                EnumSet.of(MemberCategory.FIELD_GET, MemberCategory.FIELD_SET)),
+            new RecordingScopeRule("**", "**", RecordingScopeAction.RECORD, null));
+    RecordingScope scope = new RecordingScope(rules, RecordingScopeAction.SKIP);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope.isInScope("java.util.HashMap", "size", MemberCategory.FIELD_GET), is(false));
+    assertThat(scope.isInScope("java.util.HashMap", "put", MemberCategory.METHOD), is(true));
   }
 
   /**
@@ -141,16 +138,17 @@ public class RecordingScopeTest {
    * with the same arguments, and that the cache is actually populated after the first call.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void cacheReturnsSameResultOnSecondCall() {
-    // Given: A RecordingScope with at least one rule
-    // When: isInScope is called twice with the same className, memberName, and category
-    // Then: Both calls return the same boolean value
-    // And: The internal cache contains an entry for that key (verify via reflection
-    //      or package-private accessor)
+    List<RecordingScopeRule> rules =
+        List.of(new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.RECORD, null));
+    RecordingScope scope = new RecordingScope(rules, RecordingScopeAction.SKIP);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    boolean first = scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD);
+    boolean second = scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD);
+
+    assertThat(first, is(true));
+    assertThat(second, is(true));
+    assertThat(first, is(second));
   }
 
   /**
@@ -159,18 +157,19 @@ public class RecordingScopeTest {
    * METHOD}).
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void cacheKeyIncludesCategory() {
-    // Given: A RecordingScope with rules that differentiate by category, e.g.:
-    //   1. SKIP for com.example.** with categories=[FIELD_GET]
-    //   2. RECORD for com.example.**
-    // When: isInScope("com.example.Foo", "value", FIELD_GET)
-    // Then: The result is false (SKIP rule matched for FIELD_GET)
-    // When: isInScope("com.example.Foo", "value", METHOD)
-    // Then: The result is true (SKIP rule does not match METHOD; RECORD rule matches)
+    List<RecordingScopeRule> rules =
+        List.of(
+            new RecordingScopeRule(
+                "com.example.**",
+                "**",
+                RecordingScopeAction.SKIP,
+                EnumSet.of(MemberCategory.FIELD_GET)),
+            new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.RECORD, null));
+    RecordingScope scope = new RecordingScope(rules, RecordingScopeAction.SKIP);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope.isInScope("com.example.Foo", "value", MemberCategory.FIELD_GET), is(false));
+    assertThat(scope.isInScope("com.example.Foo", "value", MemberCategory.METHOD), is(true));
   }
 
   /**
@@ -178,16 +177,53 @@ public class RecordingScopeTest {
    * calling with distinct and overlapping keys must all receive correct results with no exceptions.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
-  public void threadSafetyConcurrentAccess() {
-    // Given: A RecordingScope with several rules (mix of RECORD and SKIP)
-    // When: N threads concurrently call isInScope with distinct and overlapping
-    //       className/memberName/category combinations
-    // Then: All threads receive the correct result for their input
-    // And: No ConcurrentModificationException or other exceptions are thrown
+  public void threadSafetyConcurrentAccess() throws Exception {
+    List<RecordingScopeRule> rules =
+        List.of(
+            new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.RECORD, null),
+            new RecordingScopeRule("com.other.**", "**", RecordingScopeAction.SKIP, null));
+    RecordingScope scope = new RecordingScope(rules, RecordingScopeAction.SKIP);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    int threadCount = 16;
+    CountDownLatch startLatch = new CountDownLatch(1);
+    CountDownLatch doneLatch = new CountDownLatch(threadCount);
+    AtomicBoolean failed = new AtomicBoolean(false);
+    ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+
+    for (int i = 0; i < threadCount; i++) {
+      final int threadIdx = i;
+      var unused =
+          executor.submit(
+              () -> {
+                try {
+                  startLatch.await();
+                  for (int j = 0; j < 100; j++) {
+                    boolean inScope =
+                        scope.isInScope(
+                            "com.example.Foo", "method" + threadIdx, MemberCategory.METHOD);
+                    if (!inScope) {
+                      failed.set(true);
+                    }
+                    boolean outOfScope =
+                        scope.isInScope(
+                            "com.other.Bar", "method" + threadIdx, MemberCategory.METHOD);
+                    if (outOfScope) {
+                      failed.set(true);
+                    }
+                  }
+                } catch (Exception e) {
+                  failed.set(true);
+                } finally {
+                  doneLatch.countDown();
+                }
+              });
+    }
+
+    startLatch.countDown();
+    doneLatch.await();
+    executor.shutdown();
+
+    assertThat(failed.get(), is(false));
   }
 
   /**
@@ -196,16 +232,13 @@ public class RecordingScopeTest {
    * null-scope contract that dispatchers must honor.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void nullScopeBackwardCompatible() {
-    // Given: A null RecordingScope reference (feature not configured)
-    // When: The dispatcher evaluates whether an operation is in scope
-    // Then: The operation is treated as in scope (null scope = everything recorded)
-    // Note: This tests the contract "recordingScope == null || recordingScope.isInScope(...)"
-    //       that dispatchers must implement
+    RecordingScope scope = null;
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    boolean inScope =
+        scope == null || scope.isInScope("any.Class", "anyMethod", MemberCategory.METHOD);
+
+    assertThat(inScope, is(true));
   }
 
   /**
@@ -214,20 +247,17 @@ public class RecordingScopeTest {
    * JDK collections are skipped, and unmatched third-party code falls to the default.
    */
   @Test
-  @Ignore("Awaiting implementation in #1265")
   public void mixedIncludeExcludeRules() {
-    // Given: A RecordingScope with rules:
-    //   1. SKIP for com.example.internal.**
-    //   2. RECORD for com.example.**
-    //   3. SKIP for java.util.**
-    //   And default action SKIP
-    // When/Then:
-    //   isInScope("com.example.Foo", "bar", METHOD)          → true  (rule 2 matches)
-    //   isInScope("com.example.internal.Util", "x", METHOD)  → false (rule 1 matches)
-    //   isInScope("java.util.HashMap", "put", METHOD)        → false (rule 3 matches)
-    //   isInScope("org.apache.Foo", "bar", METHOD)           → false (no rule, default SKIP)
+    List<RecordingScopeRule> rules = new ArrayList<>();
+    rules.add(
+        new RecordingScopeRule("com.example.internal.**", "**", RecordingScopeAction.SKIP, null));
+    rules.add(new RecordingScopeRule("com.example.**", "**", RecordingScopeAction.RECORD, null));
+    rules.add(new RecordingScopeRule("java.util.**", "**", RecordingScopeAction.SKIP, null));
+    RecordingScope scope = new RecordingScope(rules, RecordingScopeAction.SKIP);
 
-    // TODO(#1265): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(scope.isInScope("com.example.internal.Util", "x", MemberCategory.METHOD), is(false));
+    assertThat(scope.isInScope("java.util.HashMap", "put", MemberCategory.METHOD), is(false));
+    assertThat(scope.isInScope("org.apache.Foo", "bar", MemberCategory.METHOD), is(false));
   }
 }
