@@ -41,6 +41,8 @@ import io.quasient.pal.core.intercept.PendingInterceptActivation;
 import io.quasient.pal.core.intercept.VirtualThreadCallbackExecutor;
 import io.quasient.pal.core.internal.concurrent.HwmMessageQueue;
 import io.quasient.pal.core.internal.concurrent.MpscKind;
+import io.quasient.pal.core.recording.RecordingScope;
+import io.quasient.pal.core.recording.RecordingScopeParser;
 import io.quasient.pal.core.replay.DivergenceDetector;
 import io.quasient.pal.core.replay.ReplayContext;
 import io.quasient.pal.core.replay.ReplayGate;
@@ -918,6 +920,52 @@ public class PeerWiring extends AbstractModule {
     String defaultAction = properties.getProperty("rpc.default_action");
     return new RpcPolicyFileWatcher(
         Path.of(policyPath), presets, defaultAction, policyHolder, pollInterval);
+  }
+
+  /**
+   * Provides the {@link RecordingScope} for filtering operations from WAL/PUB writes, or {@code
+   * null} when no scope is configured (backward compatible).
+   *
+   * <p>Reads scope configuration from properties set by the CLI layer:
+   *
+   * <ul>
+   *   <li>{@code scope.patterns} &mdash; comma-separated Ant-style include patterns
+   *   <li>{@code scope.exclude.patterns} &mdash; comma-separated Ant-style exclude patterns
+   *   <li>{@code scope.io} &mdash; whether to include built-in I/O boundary rules
+   *   <li>{@code scope.policy.path} &mdash; path to a YAML scope policy file
+   *   <li>{@code scope.default.action} &mdash; default action when no rule matches
+   * </ul>
+   *
+   * <p>Returns {@code null} when none of these properties are set, ensuring zero impact on existing
+   * deployments.
+   *
+   * @return the recording scope, or {@code null} if not configured
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Singleton
+  @Nullable
+  RecordingScope provideRecordingScope() {
+    String yamlPath = properties.getProperty("scope.policy.path");
+    boolean includeIo = Boolean.parseBoolean(properties.getProperty("scope.io", "false"));
+    String includePatterns = properties.getProperty("scope.patterns");
+    String excludePatterns = properties.getProperty("scope.exclude.patterns");
+    String defaultActionStr = properties.getProperty("scope.default.action");
+
+    if (yamlPath == null
+        && !includeIo
+        && includePatterns == null
+        && excludePatterns == null
+        && defaultActionStr == null) {
+      return null;
+    }
+
+    return RecordingScopeParser.fromOptions(
+        yamlPath,
+        includeIo,
+        includePatterns != null ? includePatterns.split(",") : null,
+        excludePatterns != null ? excludePatterns.split(",") : null,
+        defaultActionStr);
   }
 
   /**

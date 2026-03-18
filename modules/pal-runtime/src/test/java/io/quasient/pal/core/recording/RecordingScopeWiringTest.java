@@ -9,9 +9,16 @@
  */
 package io.quasient.pal.core.recording;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
-import org.junit.Ignore;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Properties;
 import org.junit.Test;
 
 /**
@@ -37,15 +44,19 @@ public class RecordingScopeWiringTest {
    * layer produces a non-null {@link RecordingScope} whose rules match the configured patterns.
    */
   @Test
-  @Ignore("Awaiting implementation in #1271")
   public void scopeInjectedWhenConfigured() {
     // Given: Properties with scope.patterns=com.example.**
-    // When: PeerWiring's provideRecordingScope() logic is applied (via
-    // RecordingScopeParser.fromOptions)
-    // Then: The returned RecordingScope is non-null and contains rules matching "com.example.**"
+    Properties props = new Properties();
+    props.setProperty("scope.patterns", "com.example.**");
 
-    // TODO(#1271): Implement test logic
-    fail("Not yet implemented");
+    // When: PeerWiring's provideRecordingScope() logic is applied
+    RecordingScope scope = buildScopeFromProperties(props);
+
+    // Then: The returned RecordingScope is non-null and contains rules matching "com.example.**"
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.getRules().size(), is(1));
+    assertThat(scope.getRules().get(0).getClassPattern(), is("com.example.**"));
+    assertThat(scope.getRules().get(0).getAction(), is(RecordingScopeAction.RECORD));
   }
 
   /**
@@ -53,15 +64,15 @@ public class RecordingScopeWiringTest {
    * null}, preserving backward compatibility where all operations are recorded.
    */
   @Test
-  @Ignore("Awaiting implementation in #1271")
   public void scopeNullWhenNotConfigured() {
     // Given: Properties with no scope.* properties set
-    // When: PeerWiring's provideRecordingScope() logic is applied (via
-    // RecordingScopeParser.fromOptions)
-    // Then: The result is null (no filtering, everything recorded)
+    Properties props = new Properties();
 
-    // TODO(#1271): Implement test logic
-    fail("Not yet implemented");
+    // When: PeerWiring's provideRecordingScope() logic is applied
+    RecordingScope scope = buildScopeFromProperties(props);
+
+    // Then: The result is null (no filtering, everything recorded)
+    assertThat(scope, is(nullValue()));
   }
 
   /**
@@ -69,15 +80,19 @@ public class RecordingScopeWiringTest {
    * includes the I/O boundary rules from {@link BuiltInScopeRules#getIoBoundaryRules()}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1271")
   public void scopeIoPropertyProducesScope() {
     // Given: Properties with scope.io=true (and no other scope.* properties)
-    // When: PeerWiring's provideRecordingScope() logic is applied (via
-    // RecordingScopeParser.fromOptions)
-    // Then: The returned RecordingScope is non-null and contains I/O boundary rules
+    Properties props = new Properties();
+    props.setProperty("scope.io", "true");
 
-    // TODO(#1271): Implement test logic
-    fail("Not yet implemented");
+    // When: PeerWiring's provideRecordingScope() logic is applied
+    RecordingScope scope = buildScopeFromProperties(props);
+
+    // Then: The returned RecordingScope is non-null and contains I/O boundary rules
+    assertThat(scope, is(notNullValue()));
+    int expectedIoRules = BuiltInScopeRules.getIoBoundaryRules().size();
+    assertThat(scope.getRules().size(), is(greaterThanOrEqualTo(expectedIoRules)));
+    assertThat(scope.getDefaultAction(), is(RecordingScopeAction.SKIP));
   }
 
   /**
@@ -85,15 +100,20 @@ public class RecordingScopeWiringTest {
    * non-null {@link RecordingScope} with SKIP rules for the excluded patterns.
    */
   @Test
-  @Ignore("Awaiting implementation in #1271")
   public void scopeExcludePatternsProduceScope() {
     // Given: Properties with scope.exclude.patterns=java.util.**
-    // When: PeerWiring's provideRecordingScope() logic is applied (via
-    // RecordingScopeParser.fromOptions)
-    // Then: The returned RecordingScope is non-null and has SKIP rules for java.util.**
+    Properties props = new Properties();
+    props.setProperty("scope.exclude.patterns", "java.util.**");
 
-    // TODO(#1271): Implement test logic
-    fail("Not yet implemented");
+    // When: PeerWiring's provideRecordingScope() logic is applied
+    RecordingScope scope = buildScopeFromProperties(props);
+
+    // Then: The returned RecordingScope is non-null and has SKIP rules for java.util.**
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.getRules().size(), is(1));
+    assertThat(scope.getRules().get(0).getClassPattern(), is("java.util.**"));
+    assertThat(scope.getRules().get(0).getAction(), is(RecordingScopeAction.SKIP));
+    assertThat(scope.getDefaultAction(), is(RecordingScopeAction.RECORD));
   }
 
   /**
@@ -102,15 +122,18 @@ public class RecordingScopeWiringTest {
    * scope's default action should be {@link RecordingScopeAction#RECORD}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1271")
   public void scopeDefaultActionPassedThrough() {
     // Given: Properties with scope.default.action=record and scope.exclude.patterns=java.**
-    // When: PeerWiring's provideRecordingScope() logic is applied (via
-    // RecordingScopeParser.fromOptions)
-    // Then: The returned RecordingScope has default action RECORD
+    Properties props = new Properties();
+    props.setProperty("scope.exclude.patterns", "java.**");
+    props.setProperty("scope.default.action", "record");
 
-    // TODO(#1271): Implement test logic
-    fail("Not yet implemented");
+    // When: PeerWiring's provideRecordingScope() logic is applied
+    RecordingScope scope = buildScopeFromProperties(props);
+
+    // Then: The returned RecordingScope has default action RECORD
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.getDefaultAction(), is(RecordingScopeAction.RECORD));
   }
 
   /**
@@ -118,15 +141,70 @@ public class RecordingScopeWiringTest {
    * RecordingScope} matching the YAML contents (rules, default action, categories).
    */
   @Test
-  @Ignore("Awaiting implementation in #1271")
-  public void scopePolicyPathProducesScope() {
+  public void scopePolicyPathProducesScope() throws IOException {
     // Given: Properties with scope.policy.path pointing to a temp YAML file containing scope rules
-    // When: PeerWiring's provideRecordingScope() logic is applied (via
-    // RecordingScopeParser.fromOptions)
-    // Then: The returned RecordingScope is non-null and its rules/defaultAction match the YAML
-    // contents
+    String yamlContent =
+        """
+        defaultAction: SKIP
+        rules:
+          - class: "com.mycompany.**"
+            action: RECORD
+          - class: "com.mycompany.internal.**"
+            action: SKIP
+        """;
 
-    // TODO(#1271): Implement test logic
-    fail("Not yet implemented");
+    Path tempFile = Files.createTempFile("scope-policy-", ".yaml");
+    try {
+      Files.writeString(tempFile, yamlContent);
+
+      Properties props = new Properties();
+      props.setProperty("scope.policy.path", tempFile.toString());
+
+      // When: PeerWiring's provideRecordingScope() logic is applied
+      RecordingScope scope = buildScopeFromProperties(props);
+
+      // Then: The returned RecordingScope is non-null and its rules/defaultAction match the YAML
+      assertThat(scope, is(notNullValue()));
+      assertThat(scope.getDefaultAction(), is(RecordingScopeAction.SKIP));
+      assertThat(scope.getRules().size(), is(2));
+      assertThat(scope.getRules().get(0).getClassPattern(), is("com.mycompany.**"));
+      assertThat(scope.getRules().get(0).getAction(), is(RecordingScopeAction.RECORD));
+      assertThat(scope.getRules().get(1).getClassPattern(), is("com.mycompany.internal.**"));
+      assertThat(scope.getRules().get(1).getAction(), is(RecordingScopeAction.SKIP));
+    } finally {
+      Files.deleteIfExists(tempFile);
+    }
+  }
+
+  /**
+   * Replicates the property-to-parameter mapping from {@link
+   * io.quasient.pal.core.service.PeerWiring#provideRecordingScope()}. This helper extracts the same
+   * property keys and applies the same null-guard logic, then delegates to {@link
+   * RecordingScopeParser#fromOptions}.
+   *
+   * @param props the properties to extract scope configuration from
+   * @return the recording scope, or {@code null} if no scope properties are configured
+   */
+  private static RecordingScope buildScopeFromProperties(Properties props) {
+    String yamlPath = props.getProperty("scope.policy.path");
+    boolean includeIo = Boolean.parseBoolean(props.getProperty("scope.io", "false"));
+    String includePatterns = props.getProperty("scope.patterns");
+    String excludePatterns = props.getProperty("scope.exclude.patterns");
+    String defaultActionStr = props.getProperty("scope.default.action");
+
+    if (yamlPath == null
+        && !includeIo
+        && includePatterns == null
+        && excludePatterns == null
+        && defaultActionStr == null) {
+      return null;
+    }
+
+    return RecordingScopeParser.fromOptions(
+        yamlPath,
+        includeIo,
+        includePatterns != null ? includePatterns.split(",") : null,
+        excludePatterns != null ? excludePatterns.split(",") : null,
+        defaultActionStr);
   }
 }
