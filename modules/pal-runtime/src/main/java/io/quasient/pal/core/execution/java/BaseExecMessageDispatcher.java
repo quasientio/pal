@@ -38,6 +38,7 @@ import io.quasient.pal.core.replay.ReplayContext;
 import io.quasient.pal.core.replay.ReplayCursor;
 import io.quasient.pal.core.replay.ReplayPolicy.ReplayAction;
 import io.quasient.pal.core.replay.SpanFieldMutationReplayer;
+import io.quasient.pal.core.rpc.policy.MemberCategory;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -194,9 +195,29 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             interceptChecker.checkIntercepts(pjp, beforeExecMsgType, ExecPhase.BEFORE);
       }
 
+      // Recording scope: determine if this operation should be recorded to WAL/PUB.
+      // When no scope is configured (null), all operations are in scope (backward compatible).
+      // When configured, extract class/method identity from the cached Signature and check scope.
+      // The scope check is cached per className.memberName#category, so steady-state cost is a
+      // single hash lookup.
+      final boolean inRecordingScope;
+      if (recordingScope == null) {
+        inRecordingScope = true;
+      } else {
+        final Signature sig = pjp.getStaticPart().getSignature();
+        final String scopeClassName = sig.getDeclaringTypeName();
+        final String scopeMethodName =
+            (sig instanceof ConstructorSignature) ? "new" : sig.getName();
+        final MemberCategory memberCategory = MemberCategory.fromMessageType(beforeExecMsgType);
+        inRecordingScope =
+            recordingScope.isInScope(scopeClassName, scopeMethodName, memberCategory);
+      }
+
       // Decide if we need to create messages
       boolean withPubOrWal =
-          runOptions.contains(RunOptions.WITH_WAL) || runOptions.contains(RunOptions.WITH_TCP_PUB);
+          inRecordingScope
+              && (runOptions.contains(RunOptions.WITH_WAL)
+                  || runOptions.contains(RunOptions.WITH_TCP_PUB));
       boolean needsBeforeMessages =
           withPubOrWal || (beforeInterceptCheck != null && beforeInterceptCheck.needsExecMessage());
 
@@ -559,6 +580,19 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @throws Throwable if the invoked operation throws
    */
   private Object dispatchReplay(ProceedingJoinPoint pjp) throws Throwable {
+    // Recording scope: out-of-scope operations have no WAL entries — invoke directly.
+    // Since these operations were not recorded during the recording phase, they should not
+    // consume WAL cursor entries or trigger false EXTRA_OPERATION divergences during replay.
+    if (recordingScope != null) {
+      final Signature sig = pjp.getStaticPart().getSignature();
+      final String className = sig.getDeclaringTypeName();
+      final String memberName = (sig instanceof ConstructorSignature) ? "new" : sig.getName();
+      final MemberCategory category = MemberCategory.fromMessageType(getBeforeExecMessageType());
+      if (!recordingScope.isInScope(className, memberName, category)) {
+        return invoke(pjp, pjp.getArgs());
+      }
+    }
+
     String threadName = Thread.currentThread().getName();
     ReplayCursor cursor = replayContext.getCursor(threadName);
 
@@ -1561,6 +1595,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       // The REPLAY_INJECTION exemption is handled inside RpcPolicyChecker.
       rpcPolicyChecker.checkAccess(incomingCall, messageType, messageChannel);
 
+      // Extract operation identity for recording scope filtering.
+      // Reuse className/methodName if already set from the tracking block above.
+      final String incomingClassName = className != null ? className : getClassname(incomingCall);
+      final String incomingMethodName =
+          methodName != null ? methodName : getExecutableName(incomingCall);
+      final MemberCategory incomingCategory = MemberCategory.fromMessageType(messageType);
+
       // Check intercepts BEFORE loading/invocation phases
       final boolean isMessageInterceptable = InterceptChecker.isInterceptableType(messageType);
       InterceptCheckResult beforeInterceptCheck = null;
@@ -1576,8 +1617,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                 ExecPhase.BEFORE);
       }
 
+      // Recording scope + channel-matrix gate for incoming WAL/PUB writes.
+      final boolean incomingInRecordingScope =
+          recordingScope == null
+              || recordingScope.isInScope(incomingClassName, incomingMethodName, incomingCategory);
+
       // Send BEFORE message to WAL/PUB (consistent with hot-path dispatch())
-      if (shouldWriteIncomingToWal(messageChannel)) {
+      if (incomingInRecordingScope && shouldWriteIncomingToWal(messageChannel)) {
         // Record the executor thread name (not the sender's thread) so that multi-threaded
         // replay can create per-thread injectors matching the actual execution topology.
         incomingCall.setThreadName(Thread.currentThread().getName());
@@ -2374,7 +2420,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
       // 11. Send object or exception to WAL/PUB (consistent with BEFORE message gating)
       final ExecMessage afterExecResponseMsg;
-      if (shouldWriteIncomingToWal(messageChannel)) {
+      if (incomingInRecordingScope && shouldWriteIncomingToWal(messageChannel)) {
         finalAfterExecMsg.setEntryPoint(true);
         afterExecResponseMsg =
             messageGateway.sendExecMessage(messageBuilder.wrap(finalAfterExecMsg), ExecPhase.AFTER);
@@ -2904,6 +2950,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * </ul>
    *
    * <p>All channels require at least {@code WITH_WAL} or {@code WITH_TCP_PUB} to be enabled.
+   *
+   * <p><b>Note:</b> Recording scope filtering is applied at the call sites in {@code
+   * dispatchIncoming()}, not in this method. This keeps the channel-matrix logic testable in
+   * isolation.
    *
    * @param messageChannel the transport channel through which the message was received
    * @return true if the incoming message should be written to WAL/PUB
