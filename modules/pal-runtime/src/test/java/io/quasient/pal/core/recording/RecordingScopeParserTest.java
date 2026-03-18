@@ -9,10 +9,18 @@
  */
 package io.quasient.pal.core.recording;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
-import org.junit.Ignore;
+import io.quasient.pal.core.rpc.policy.MemberCategory;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
  * Unit tests for {@code RecordingScopeParser}, the assembler that builds a {@link RecordingScope}
@@ -31,22 +39,22 @@ import org.junit.Test;
  */
 public class RecordingScopeParserTest {
 
+  @Rule public TemporaryFolder tempFolder = new TemporaryFolder();
+
   /**
    * Verifies that providing only {@code --scope} include patterns causes the parser to infer a
    * default action of SKIP. Operations matching the include pattern are in scope; operations not
    * matching are out of scope (default SKIP).
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
   public void onlyScopePatternsDefaultsToSkip() {
-    // Given: fromOptions with scopePatterns=["com.example.**"], no scopeExclude, no defaultAction
-    // When: RecordingScopeParser.fromOptions is called
-    // Then: Resulting scope has default=SKIP
-    //       isInScope("com.example.Foo", "bar", METHOD) → true
-    //       isInScope("org.other.Foo", "bar", METHOD) → false
+    RecordingScope scope =
+        RecordingScopeParser.fromOptions(null, false, new String[] {"com.example.**"}, null, null);
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.getDefaultAction(), is(RecordingScopeAction.SKIP));
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(scope.isInScope("org.other.Foo", "bar", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -55,17 +63,14 @@ public class RecordingScopeParserTest {
    * operations are in scope (default RECORD).
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
   public void onlyScopeExcludePatternsDefaultsToRecord() {
-    // Given: fromOptions with scopeExcludePatterns=["java.util.**"], no scopePatterns,
-    //        no defaultAction
-    // When: RecordingScopeParser.fromOptions is called
-    // Then: Resulting scope has default=RECORD
-    //       isInScope("com.example.Foo", "bar", METHOD) → true
-    //       isInScope("java.util.HashMap", "put", METHOD) → false
+    RecordingScope scope =
+        RecordingScopeParser.fromOptions(null, false, null, new String[] {"java.util.**"}, null);
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.getDefaultAction(), is(RecordingScopeAction.RECORD));
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(scope.isInScope("java.util.HashMap", "put", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -74,18 +79,20 @@ public class RecordingScopeParserTest {
    * exclude patterns match as SKIP, and non-matching operations fall to default SKIP.
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
   public void bothScopeAndExcludeDefaultsToSkip() {
-    // Given: fromOptions with scopePatterns=["com.example.**"] and
-    //        scopeExcludePatterns=["com.example.internal.**"], no defaultAction
-    // When: RecordingScopeParser.fromOptions is called
-    // Then: Default=SKIP
-    //       isInScope("com.example.Foo", "bar", METHOD) → true
-    //       isInScope("com.example.internal.Util", "x", METHOD) → false
-    //       isInScope("org.other.Foo", "bar", METHOD) → false
+    RecordingScope scope =
+        RecordingScopeParser.fromOptions(
+            null,
+            false,
+            new String[] {"com.example.**"},
+            new String[] {"com.example.internal.**"},
+            null);
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.getDefaultAction(), is(RecordingScopeAction.SKIP));
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(scope.isInScope("com.example.internal.Util", "x", MemberCategory.METHOD), is(false));
+    assertThat(scope.isInScope("org.other.Foo", "bar", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -94,15 +101,14 @@ public class RecordingScopeParserTest {
    * RECORD causes non-matching operations to be recorded.
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
   public void explicitDefaultOverridesInference() {
-    // Given: fromOptions with scopePatterns=["com.example.**"], defaultAction="record"
-    // When: RecordingScopeParser.fromOptions is called
-    // Then: Despite include patterns, explicit default=RECORD
-    //       isInScope("org.other.Foo", "bar", METHOD) → true (default is RECORD)
+    RecordingScope scope =
+        RecordingScopeParser.fromOptions(
+            null, false, new String[] {"com.example.**"}, null, "record");
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.getDefaultAction(), is(RecordingScopeAction.RECORD));
+    assertThat(scope.isInScope("org.other.Foo", "bar", MemberCategory.METHOD), is(true));
   }
 
   /**
@@ -111,15 +117,13 @@ public class RecordingScopeParserTest {
    * are in scope even without explicit CLI include patterns.
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
   public void scopeIoAddsIoBoundaryRules() {
-    // Given: fromOptions with scopeIo=true, no patterns
-    // When: RecordingScopeParser.fromOptions is called
-    // Then: Scope includes I/O rules
-    //       isInScope("java.sql.DriverManager", "getConnection", METHOD) → true
+    RecordingScope scope = RecordingScopeParser.fromOptions(null, true, null, null, null);
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope, is(notNullValue()));
+    assertThat(
+        scope.isInScope("java.sql.DriverManager", "getConnection", MemberCategory.METHOD),
+        is(true));
   }
 
   /**
@@ -128,16 +132,13 @@ public class RecordingScopeParserTest {
    * an exclude to win when both patterns match the same operation.
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
   public void excludeRulesHaveHigherPriorityThanInclude() {
-    // Given: fromOptions with scopePatterns=["com.example.**"] and
-    //        scopeExcludePatterns=["com.example.**"]
-    // When: RecordingScopeParser.fromOptions is called
-    // Then: The exclude patterns are ordered before include patterns, so
-    //       isInScope("com.example.Foo", "bar", METHOD) → false (SKIP matched first)
+    RecordingScope scope =
+        RecordingScopeParser.fromOptions(
+            null, false, new String[] {"com.example.**"}, new String[] {"com.example.**"}, null);
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -146,15 +147,29 @@ public class RecordingScopeParserTest {
    * RecordingScope} with the expected rules and default action.
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
-  public void yamlParsesCorrectly() {
-    // Given: A YAML string with defaultAction: SKIP and rules with class/member/categories/action
-    // When: The YAML is parsed by RecordingScopeParser
-    // Then: Rules are parsed into correct RecordingScopeRule objects with proper patterns,
-    //       categories, and actions
+  public void yamlParsesCorrectly() throws IOException {
+    String yaml =
+        """
+        defaultAction: SKIP
+        rules:
+          - class: "com.example.**"
+            member: "get*"
+            action: RECORD
+            categories: [METHOD]
+        """;
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    Path yamlFile = tempFolder.newFile("scope-policy.yaml").toPath();
+    Files.writeString(yamlFile, yaml);
+
+    RecordingScope scope =
+        RecordingScopeParser.fromOptions(yamlFile.toString(), false, null, null, null);
+
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.getDefaultAction(), is(RecordingScopeAction.SKIP));
+    assertThat(scope.isInScope("com.example.Foo", "getValue", MemberCategory.METHOD), is(true));
+    assertThat(scope.isInScope("com.example.Foo", "setValue", MemberCategory.METHOD), is(false));
+    // Category mismatch: rule only applies to METHOD, not FIELD_GET
+    assertThat(scope.isInScope("com.example.Foo", "getValue", MemberCategory.FIELD_GET), is(false));
   }
 
   /**
@@ -163,16 +178,25 @@ public class RecordingScopeParserTest {
    * gives CLI rules precedence.
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
-  public void yamlRulesHaveLowerPriorityThanCliRules() {
-    // Given: fromOptions with YAML file containing SKIP rule for "com.example.**"
-    //        and CLI scopePatterns=["com.example.**"] (RECORD)
-    // When: RecordingScopeParser.fromOptions is called
-    // Then: CLI RECORD rule takes priority over YAML SKIP rule
-    //       isInScope("com.example.Foo", "bar", METHOD) → true
+  public void yamlRulesHaveLowerPriorityThanCliRules() throws IOException {
+    String yaml =
+        """
+        defaultAction: RECORD
+        rules:
+          - class: "com.example.**"
+            action: SKIP
+        """;
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    Path yamlFile = tempFolder.newFile("scope-policy.yaml").toPath();
+    Files.writeString(yamlFile, yaml);
+
+    RecordingScope scope =
+        RecordingScopeParser.fromOptions(
+            yamlFile.toString(), false, new String[] {"com.example.**"}, null, null);
+
+    assertThat(scope, is(notNullValue()));
+    // CLI RECORD rule takes priority over YAML SKIP rule
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
   }
 
   /**
@@ -181,15 +205,10 @@ public class RecordingScopeParserTest {
    * means no filtering (everything is recorded by default).
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
   public void nullInputsProduceNull() {
-    // Given: fromOptions with all nulls/false/empty (no yamlPath, scopeIo=false,
-    //        no scopePatterns, no scopeExcludePatterns, no defaultAction)
-    // When: RecordingScopeParser.fromOptions is called
-    // Then: Returns null (no scope configured = backward compatible)
+    RecordingScope scope = RecordingScopeParser.fromOptions(null, false, null, null, null);
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    assertThat(scope, is(nullValue()));
   }
 
   /**
@@ -198,15 +217,39 @@ public class RecordingScopeParserTest {
    * rules, then preset rules, then YAML rules.
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
-  public void combinedCliAndPresetAndYaml() {
-    // Given: fromOptions with scopePatterns (include), scopeIo=true (preset), and yamlPath (YAML)
-    // When: RecordingScopeParser.fromOptions is called
-    // Then: All three sources contribute rules in correct priority order:
-    //       exclude first, then include, then preset, then YAML
+  public void combinedCliAndPresetAndYaml() throws IOException {
+    String yaml =
+        """
+        defaultAction: SKIP
+        rules:
+          - class: "org.yaml.only.**"
+            action: RECORD
+        """;
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    Path yamlFile = tempFolder.newFile("scope-policy.yaml").toPath();
+    Files.writeString(yamlFile, yaml);
+
+    RecordingScope scope =
+        RecordingScopeParser.fromOptions(
+            yamlFile.toString(),
+            true,
+            new String[] {"com.app.**"},
+            new String[] {"com.app.internal.**"},
+            null);
+
+    assertThat(scope, is(notNullValue()));
+    // Exclude wins for com.app.internal (exclude rule is first)
+    assertThat(scope.isInScope("com.app.internal.Util", "x", MemberCategory.METHOD), is(false));
+    // Include wins for com.app (include rule is second)
+    assertThat(scope.isInScope("com.app.Service", "run", MemberCategory.METHOD), is(true));
+    // I/O preset rule matches
+    assertThat(
+        scope.isInScope("java.sql.DriverManager", "getConnection", MemberCategory.METHOD),
+        is(true));
+    // YAML rule matches
+    assertThat(scope.isInScope("org.yaml.only.Config", "get", MemberCategory.METHOD), is(true));
+    // Nothing else matches → default SKIP
+    assertThat(scope.isInScope("org.other.Foo", "bar", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -214,14 +257,26 @@ public class RecordingScopeParserTest {
    * defaults the member pattern to {@code "**"}, matching all members of the specified class.
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
-  public void yamlMemberDefaultsToWildcard() {
-    // Given: A YAML rule with only class and action (no member field)
-    // When: The YAML is parsed by RecordingScopeParser
-    // Then: Member pattern defaults to "**"
+  public void yamlMemberDefaultsToWildcard() throws IOException {
+    String yaml =
+        """
+        defaultAction: SKIP
+        rules:
+          - class: "com.example.Foo"
+            action: RECORD
+        """;
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    Path yamlFile = tempFolder.newFile("scope-policy.yaml").toPath();
+    Files.writeString(yamlFile, yaml);
+
+    RecordingScope scope =
+        RecordingScopeParser.fromOptions(yamlFile.toString(), false, null, null, null);
+
+    assertThat(scope, is(notNullValue()));
+    // Member defaults to "**" — all members match
+    assertThat(scope.isInScope("com.example.Foo", "bar", MemberCategory.METHOD), is(true));
+    assertThat(scope.isInScope("com.example.Foo", "baz", MemberCategory.CONSTRUCTOR), is(true));
+    assertThat(scope.isInScope("com.example.Bar", "bar", MemberCategory.METHOD), is(false));
   }
 
   /**
@@ -230,13 +285,28 @@ public class RecordingScopeParserTest {
    * io.quasient.pal.core.rpc.policy.MemberCategory} set.
    */
   @Test
-  @Ignore("Awaiting implementation in #1269")
-  public void yamlCategoriesParsedCorrectly() {
-    // Given: A YAML rule with categories: [FIELD_GET, FIELD_SET]
-    // When: The YAML is parsed by RecordingScopeParser
-    // Then: Resulting rule has correct MemberCategory set containing FIELD_GET and FIELD_SET
+  public void yamlCategoriesParsedCorrectly() throws IOException {
+    String yaml =
+        """
+        defaultAction: SKIP
+        rules:
+          - class: "com.example.**"
+            action: RECORD
+            categories: [FIELD_GET, FIELD_SET]
+        """;
 
-    // TODO(#1269): Implement test logic
-    fail("Not yet implemented");
+    Path yamlFile = tempFolder.newFile("scope-policy.yaml").toPath();
+    Files.writeString(yamlFile, yaml);
+
+    RecordingScope scope =
+        RecordingScopeParser.fromOptions(yamlFile.toString(), false, null, null, null);
+
+    assertThat(scope, is(notNullValue()));
+    // FIELD_GET matches
+    assertThat(scope.isInScope("com.example.Order", "total", MemberCategory.FIELD_GET), is(true));
+    // FIELD_SET matches
+    assertThat(scope.isInScope("com.example.Order", "total", MemberCategory.FIELD_SET), is(true));
+    // METHOD does not match the category filter
+    assertThat(scope.isInScope("com.example.Order", "total", MemberCategory.METHOD), is(false));
   }
 }
