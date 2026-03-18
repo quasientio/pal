@@ -251,6 +251,64 @@ public class Replay extends AbstractPalSubcommand {
       description = "Proceed even when unsafe stubs are detected by side-effect analysis")
   private boolean forceStub;
 
+  // ---- Recording scope options (must match recording flags) ----
+
+  /**
+   * Ant-style class patterns for operations in recording scope. Must match the {@code --scope}
+   * patterns used during recording to ensure the WAL contains the expected entries.
+   */
+  @Option(
+      names = {"--scope"},
+      paramLabel = "patterns",
+      split = ",",
+      description =
+          "Ant-style class patterns for operations in recording scope"
+              + " (must match recording flags)")
+  private String[] scopePatterns;
+
+  /**
+   * Ant-style class patterns excluded from recording scope. Must match the {@code --scope-exclude}
+   * patterns used during recording.
+   */
+  @Option(
+      names = {"--scope-exclude"},
+      paramLabel = "patterns",
+      split = ",",
+      description =
+          "Ant-style class patterns excluded from recording scope (must match recording flags)")
+  private String[] scopeExcludePatterns;
+
+  /**
+   * Include common I/O boundary operations in recording scope. Must match the {@code --scope-io}
+   * flag used during recording.
+   */
+  @Option(
+      names = {"--scope-io"},
+      description =
+          "Include common I/O boundary operations in recording scope"
+              + " (must match recording flags)")
+  private boolean scopeIo;
+
+  /**
+   * Path to YAML recording scope policy file. Must match the {@code --scope-policy} path used
+   * during recording.
+   */
+  @Option(
+      names = {"--scope-policy"},
+      paramLabel = "path",
+      description = "Path to YAML recording scope policy file (must match recording flags)")
+  private String scopePolicyPath;
+
+  /**
+   * Default scope action when no rule matches. Accepted values: {@code record} or {@code skip}.
+   * Must match the {@code --scope-default} value used during recording.
+   */
+  @Option(
+      names = {"--scope-default"},
+      paramLabel = "record|skip",
+      description = "Default scope action when no rule matches (must match recording flags)")
+  private String scopeDefaultAction;
+
   /**
    * Positional arguments from the command line. When not using {@code -jar}, the first element is
    * the main class name and the rest are application arguments. When using {@code -jar}, all
@@ -412,6 +470,11 @@ public class Replay extends AbstractPalSubcommand {
    *   <li>{@code --replay-wal <walPath>} — the WAL path for deterministic replay
    *   <li>{@code --replay-divergence-policy <policy>} — the divergence handling policy
    *   <li>{@code -k <kafkaServers>} — Kafka bootstrap servers (if Kafka WAL, resolved or explicit)
+   *   <li>{@code --scope <patterns>} — recording scope include patterns (if specified)
+   *   <li>{@code --scope-exclude <patterns>} — recording scope exclude patterns (if specified)
+   *   <li>{@code --scope-io} — I/O boundary preset (if enabled)
+   *   <li>{@code --scope-policy <path>} — recording scope policy file (if specified)
+   *   <li>{@code --scope-default <action>} — default scope action (if specified)
    *   <li>{@code -cp <classpath>} — the application classpath (if provided)
    *   <li>{@code -jar <jarFile>} — the JAR file to replay (if specified), OR
    *   <li>The main class name (if not using -jar)
@@ -466,6 +529,25 @@ public class Replay extends AbstractPalSubcommand {
     }
     if (forceStub) {
       args.add("--replay-force-stub");
+    }
+    if (scopePatterns != null) {
+      args.add("--scope");
+      args.add(String.join(",", scopePatterns));
+    }
+    if (scopeExcludePatterns != null) {
+      args.add("--scope-exclude");
+      args.add(String.join(",", scopeExcludePatterns));
+    }
+    if (scopeIo) {
+      args.add("--scope-io");
+    }
+    if (scopePolicyPath != null) {
+      args.add("--scope-policy");
+      args.add(scopePolicyPath);
+    }
+    if (scopeDefaultAction != null) {
+      args.add("--scope-default");
+      args.add(scopeDefaultAction);
     }
     // Replay is a local operation that does not serve RPC, so always allow all operations
     args.add("--rpc-default-action");

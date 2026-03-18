@@ -856,6 +856,219 @@ public class ReplayTest {
     assertThat(args, not(hasItemInArray("--replay-force-stub")));
   }
 
+  // ===========================================================================
+  // Recording scope option tests
+  // ===========================================================================
+
+  /** Verifies that --scope parses comma-separated patterns. */
+  @Test
+  public void testParseScopePatterns() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--scope",
+            "com.example.**,com.other.**",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+
+    String[] patterns = (String[]) getField(replay, "scopePatterns");
+    assertThat(patterns, arrayContaining("com.example.**", "com.other.**"));
+  }
+
+  /** Verifies that --scope-exclude parses comma-separated patterns. */
+  @Test
+  public void testParseScopeExcludePatterns() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--scope-exclude",
+            "java.lang.**,java.util.**",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+
+    String[] patterns = (String[]) getField(replay, "scopeExcludePatterns");
+    assertThat(patterns, arrayContaining("java.lang.**", "java.util.**"));
+  }
+
+  /** Verifies that --scope-io is parsed as boolean. */
+  @Test
+  public void testParseScopeIoOption() throws Exception {
+    Replay replay =
+        parseReplay("--wal", "file:/tmp/wal", "--scope-io", "-cp", "app.jar", "com.example.Main");
+
+    assertThat(getField(replay, "scopeIo"), is(true));
+  }
+
+  /** Verifies that --scope-policy is parsed correctly. */
+  @Test
+  public void testParseScopePolicyOption() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--scope-policy",
+            "/tmp/scope.yaml",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+
+    assertThat(getField(replay, "scopePolicyPath"), is("/tmp/scope.yaml"));
+  }
+
+  /** Verifies that --scope-default is parsed correctly. */
+  @Test
+  public void testParseScopeDefaultOption() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--scope-default",
+            "skip",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+
+    assertThat(getField(replay, "scopeDefaultAction"), is("skip"));
+  }
+
+  /** Verifies that buildMainArgs includes --scope with joined patterns. */
+  @Test
+  public void testBuildMainArgsWithScopePatterns() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--scope",
+            "com.example.**,com.other.**",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--scope"));
+    assertThat(args, hasItemInArray("com.example.**,com.other.**"));
+  }
+
+  /** Verifies that buildMainArgs includes --scope-exclude with joined patterns. */
+  @Test
+  public void testBuildMainArgsWithScopeExcludePatterns() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--scope-exclude",
+            "java.lang.**,java.util.**",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--scope-exclude"));
+    assertThat(args, hasItemInArray("java.lang.**,java.util.**"));
+  }
+
+  /** Verifies that buildMainArgs includes --scope-io when set. */
+  @Test
+  public void testBuildMainArgsWithScopeIo() throws Exception {
+    Replay replay =
+        parseReplay("--wal", "file:/tmp/wal", "--scope-io", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--scope-io"));
+  }
+
+  /** Verifies that buildMainArgs includes --scope-policy when specified. */
+  @Test
+  public void testBuildMainArgsWithScopePolicy() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--scope-policy",
+            "/tmp/scope.yaml",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--scope-policy"));
+    assertThat(args, hasItemInArray("/tmp/scope.yaml"));
+  }
+
+  /** Verifies that buildMainArgs includes --scope-default when specified. */
+  @Test
+  public void testBuildMainArgsWithScopeDefault() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--scope-default",
+            "skip",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--scope-default"));
+    assertThat(args, hasItemInArray("skip"));
+  }
+
+  /** Verifies that buildMainArgs omits scope options when not specified. */
+  @Test
+  public void testBuildMainArgsOmitsScopeOptionsWhenNotSet() throws Exception {
+    Replay replay = parseReplay("--wal", "file:/tmp/wal", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, not(hasItemInArray("--scope")));
+    assertThat(args, not(hasItemInArray("--scope-exclude")));
+    assertThat(args, not(hasItemInArray("--scope-io")));
+    assertThat(args, not(hasItemInArray("--scope-policy")));
+    assertThat(args, not(hasItemInArray("--scope-default")));
+  }
+
+  /** Verifies that buildMainArgs includes all scope options together. */
+  @Test
+  public void testBuildMainArgsWithAllScopeOptions() throws Exception {
+    Replay replay =
+        parseReplay(
+            "--wal",
+            "file:/tmp/wal",
+            "--scope",
+            "com.example.**",
+            "--scope-exclude",
+            "com.example.internal.**",
+            "--scope-io",
+            "--scope-policy",
+            "/tmp/scope.yaml",
+            "--scope-default",
+            "skip",
+            "-cp",
+            "app.jar",
+            "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    assertThat(args, hasItemInArray("--scope"));
+    assertThat(args, hasItemInArray("com.example.**"));
+    assertThat(args, hasItemInArray("--scope-exclude"));
+    assertThat(args, hasItemInArray("com.example.internal.**"));
+    assertThat(args, hasItemInArray("--scope-io"));
+    assertThat(args, hasItemInArray("--scope-policy"));
+    assertThat(args, hasItemInArray("/tmp/scope.yaml"));
+    assertThat(args, hasItemInArray("--scope-default"));
+    assertThat(args, hasItemInArray("skip"));
+  }
+
   /** Verifies that buildMainArgs includes all side-effect options together. */
   @Test
   public void testBuildMainArgsWithAllSideEffectOptions() throws Exception {
