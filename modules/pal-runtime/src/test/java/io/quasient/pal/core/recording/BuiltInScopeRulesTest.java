@@ -9,10 +9,12 @@
  */
 package io.quasient.pal.core.recording;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -35,17 +37,13 @@ public class BuiltInScopeRulesTest {
    * java.sql.PreparedStatement.executeQuery}, and {@code java.sql.ResultSet.next}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1267")
   public void ioRulesMatchJdbcOperations() {
-    // Given: The built-in I/O boundary rules from BuiltInScopeRules.getIoBoundaryRules()
-    // When: Matching against JDBC operation paths
-    // Then: java.sql.DriverManager.getConnection matches
-    //       java.sql.Connection.prepareStatement matches
-    //       java.sql.PreparedStatement.executeQuery matches
-    //       java.sql.ResultSet.next matches
+    List<RecordingScopeRule> rules = BuiltInScopeRules.getIoBoundaryRules();
 
-    // TODO(#1267): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(anyRuleMatches(rules, "java.sql.DriverManager.getConnection"));
+    assertTrue(anyRuleMatches(rules, "java.sql.Connection.prepareStatement"));
+    assertTrue(anyRuleMatches(rules, "java.sql.PreparedStatement.executeQuery"));
+    assertTrue(anyRuleMatches(rules, "java.sql.ResultSet.next"));
   }
 
   /**
@@ -54,16 +52,12 @@ public class BuiltInScopeRulesTest {
    * java.net.HttpURLConnection.getInputStream}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1267")
   public void ioRulesMatchHttpOperations() {
-    // Given: The built-in I/O boundary rules from BuiltInScopeRules.getIoBoundaryRules()
-    // When: Matching against HTTP operation paths
-    // Then: java.net.http.HttpClient.send matches
-    //       java.net.URL.openConnection matches
-    //       java.net.HttpURLConnection.getInputStream matches
+    List<RecordingScopeRule> rules = BuiltInScopeRules.getIoBoundaryRules();
 
-    // TODO(#1267): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(anyRuleMatches(rules, "java.net.http.HttpClient.send"));
+    assertTrue(anyRuleMatches(rules, "java.net.URL.openConnection"));
+    assertTrue(anyRuleMatches(rules, "java.net.HttpURLConnection.getInputStream"));
   }
 
   /**
@@ -72,17 +66,13 @@ public class BuiltInScopeRulesTest {
    * java.nio.file.Files.readAllBytes}, and {@code java.nio.channels.FileChannel.open}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1267")
   public void ioRulesMatchFileOperations() {
-    // Given: The built-in I/O boundary rules from BuiltInScopeRules.getIoBoundaryRules()
-    // When: Matching against file I/O operation paths
-    // Then: java.io.FileInputStream.read matches
-    //       java.io.FileOutputStream.write matches
-    //       java.nio.file.Files.readAllBytes matches
-    //       java.nio.channels.FileChannel.open matches
+    List<RecordingScopeRule> rules = BuiltInScopeRules.getIoBoundaryRules();
 
-    // TODO(#1267): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(anyRuleMatches(rules, "java.io.FileInputStream.read"));
+    assertTrue(anyRuleMatches(rules, "java.io.FileOutputStream.write"));
+    assertTrue(anyRuleMatches(rules, "java.nio.file.Files.readAllBytes"));
+    assertTrue(anyRuleMatches(rules, "java.nio.channels.FileChannel.open"));
   }
 
   /**
@@ -91,16 +81,12 @@ public class BuiltInScopeRulesTest {
    * java.nio.channels.SocketChannel.open}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1267")
   public void ioRulesMatchNetworkOperations() {
-    // Given: The built-in I/O boundary rules from BuiltInScopeRules.getIoBoundaryRules()
-    // When: Matching against network operation paths
-    // Then: java.net.Socket.connect matches
-    //       java.net.ServerSocket.accept matches
-    //       java.nio.channels.SocketChannel.open matches
+    List<RecordingScopeRule> rules = BuiltInScopeRules.getIoBoundaryRules();
 
-    // TODO(#1267): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(anyRuleMatches(rules, "java.net.Socket.connect"));
+    assertTrue(anyRuleMatches(rules, "java.net.ServerSocket.accept"));
+    assertTrue(anyRuleMatches(rules, "java.nio.channels.SocketChannel.open"));
   }
 
   /**
@@ -110,18 +96,14 @@ public class BuiltInScopeRulesTest {
    * java.time.LocalDateTime.now}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1267")
   public void ioRulesMatchTimeOperations() {
-    // Given: The built-in I/O boundary rules from BuiltInScopeRules.getIoBoundaryRules()
-    // When: Matching against time operation paths
-    // Then: java.lang.System.currentTimeMillis matches
-    //       java.lang.System.nanoTime matches
-    //       java.time.Clock.instant matches
-    //       java.time.Instant.now matches
-    //       java.time.LocalDateTime.now matches
+    List<RecordingScopeRule> rules = BuiltInScopeRules.getIoBoundaryRules();
 
-    // TODO(#1267): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(anyRuleMatches(rules, "java.lang.System.currentTimeMillis"));
+    assertTrue(anyRuleMatches(rules, "java.lang.System.nanoTime"));
+    assertTrue(anyRuleMatches(rules, "java.time.Clock.instant"));
+    assertTrue(anyRuleMatches(rules, "java.time.Instant.now"));
+    assertTrue(anyRuleMatches(rules, "java.time.LocalDateTime.now"));
   }
 
   /**
@@ -130,16 +112,12 @@ public class BuiltInScopeRulesTest {
    * java.util.concurrent.ThreadLocalRandom.current}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1267")
   public void ioRulesMatchRandomOperations() {
-    // Given: The built-in I/O boundary rules from BuiltInScopeRules.getIoBoundaryRules()
-    // When: Matching against random operation paths
-    // Then: java.lang.Math.random matches
-    //       java.util.Random.nextInt matches
-    //       java.util.concurrent.ThreadLocalRandom.current matches
+    List<RecordingScopeRule> rules = BuiltInScopeRules.getIoBoundaryRules();
 
-    // TODO(#1267): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(anyRuleMatches(rules, "java.lang.Math.random"));
+    assertTrue(anyRuleMatches(rules, "java.util.Random.nextInt"));
+    assertTrue(anyRuleMatches(rules, "java.util.concurrent.ThreadLocalRandom.current"));
   }
 
   /**
@@ -147,15 +125,11 @@ public class BuiltInScopeRulesTest {
    * java.lang.ProcessBuilder.start} and {@code java.lang.Runtime.exec}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1267")
   public void ioRulesMatchProcessOperations() {
-    // Given: The built-in I/O boundary rules from BuiltInScopeRules.getIoBoundaryRules()
-    // When: Matching against process execution operation paths
-    // Then: java.lang.ProcessBuilder.start matches
-    //       java.lang.Runtime.exec matches
+    List<RecordingScopeRule> rules = BuiltInScopeRules.getIoBoundaryRules();
 
-    // TODO(#1267): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(anyRuleMatches(rules, "java.lang.ProcessBuilder.start"));
+    assertTrue(anyRuleMatches(rules, "java.lang.Runtime.exec"));
   }
 
   /**
@@ -163,15 +137,11 @@ public class BuiltInScopeRulesTest {
    * {@code java.lang.System.getProperty} and {@code java.lang.System.getenv}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1267")
   public void ioRulesMatchSystemPropertyOperations() {
-    // Given: The built-in I/O boundary rules from BuiltInScopeRules.getIoBoundaryRules()
-    // When: Matching against system property/env operation paths
-    // Then: java.lang.System.getProperty matches
-    //       java.lang.System.getenv matches
+    List<RecordingScopeRule> rules = BuiltInScopeRules.getIoBoundaryRules();
 
-    // TODO(#1267): Implement test logic
-    fail("Not yet implemented");
+    assertTrue(anyRuleMatches(rules, "java.lang.System.getProperty"));
+    assertTrue(anyRuleMatches(rules, "java.lang.System.getenv"));
   }
 
   /**
@@ -180,15 +150,20 @@ public class BuiltInScopeRulesTest {
    * are inclusion rules that capture I/O operations in the WAL.
    */
   @Test
-  @Ignore("Awaiting implementation in #1267")
   public void allIoRulesHaveRecordAction() {
-    // Given: The built-in I/O boundary rules from BuiltInScopeRules.getIoBoundaryRules()
-    // When: Inspecting the action of each rule
-    // Then: Every rule has action == RecordingScopeAction.RECORD
-    //       The rule list is not empty
+    List<RecordingScopeRule> rules = BuiltInScopeRules.getIoBoundaryRules();
 
-    // TODO(#1267): Implement test logic
-    fail("Not yet implemented");
+    assertFalse("I/O boundary rules should not be empty", rules.isEmpty());
+    for (RecordingScopeRule rule : rules) {
+      assertThat(
+          "Rule "
+              + rule.getClassPattern()
+              + "."
+              + rule.getMemberPattern()
+              + " should have RECORD action",
+          rule.getAction(),
+          is(RecordingScopeAction.RECORD));
+    }
   }
 
   /**
@@ -197,16 +172,12 @@ public class BuiltInScopeRulesTest {
    * com.example.Foo.bar} should not be matched by any I/O boundary rule.
    */
   @Test
-  @Ignore("Awaiting implementation in #1267")
   public void ioRulesDoNotMatchUnrelatedClasses() {
-    // Given: The built-in I/O boundary rules from BuiltInScopeRules.getIoBoundaryRules()
-    // When: Matching against unrelated operation paths
-    // Then: java.util.HashMap.put does not match
-    //       java.lang.String.split does not match
-    //       com.example.Foo.bar does not match
+    List<RecordingScopeRule> rules = BuiltInScopeRules.getIoBoundaryRules();
 
-    // TODO(#1267): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(anyRuleMatches(rules, "java.util.HashMap.put"));
+    assertFalse(anyRuleMatches(rules, "java.lang.String.split"));
+    assertFalse(anyRuleMatches(rules, "com.example.Foo.bar"));
   }
 
   /**
@@ -221,7 +192,6 @@ public class BuiltInScopeRulesTest {
    *     "java.sql.DriverManager.getConnection"})
    * @return {@code true} if at least one rule matches
    */
-  @SuppressWarnings("UnusedMethod") // Will be used when test stubs are implemented in #1267
   private static boolean anyRuleMatches(List<RecordingScopeRule> rules, String classMethodPath) {
     int lastDot = classMethodPath.lastIndexOf('.');
     String className = classMethodPath.substring(0, lastDot);
