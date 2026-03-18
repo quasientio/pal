@@ -76,6 +76,35 @@ This is recommended when `main()` is purely setup code. Omitting it keeps the WA
 
 **Note:** `--no-wal-incoming-cli` is **not** automatically enabled when `--wal-incoming-rpc` is specified. This is intentional: in some applications, `main()` contains business logic that should be replayed as an injected entry point rather than just running naturally. Add `--no-wal-incoming-cli` explicitly when you know that `main()` is purely setup code and does not contain injectable logic.
 
+### Recording with Scope
+
+By default, the WAL captures every quantized operation — including JDK internals like `String.split()`, `HashMap.put()`, and field reads on every object. For applications with heavy library use, this produces large WALs where most entries are noise.
+
+Use recording scope to filter the WAL down to what matters:
+
+```bash
+# Record only application code
+pal run --wal file:/tmp/my-wal \
+  --scope "com.mycompany.**" --scope-default skip \
+  -cp target/classes com.example.App arg1 arg2
+
+# Record application code + I/O boundaries (JDBC, HTTP, file, time, etc.)
+pal run --wal file:/tmp/my-wal \
+  --scope "com.mycompany.**" --scope-io --scope-default skip \
+  -cp target/classes com.example.App arg1 arg2
+```
+
+**Critical**: When replaying a scope-filtered WAL, the same `--scope` flags must be passed to `pal replay`. The replay system uses the scope to know which operations have WAL entries and which should execute directly without WAL matching. Mismatched flags produce cascading divergences.
+
+```bash
+# Replay with matching scope
+pal replay --wal file:/tmp/my-wal \
+  --scope "com.mycompany.**" --scope-io --scope-default skip \
+  -cp target/classes com.example.App arg1 arg2
+```
+
+See [Recording Scope](../concepts/recording-scope.md) for complete documentation on scope flags, YAML policies, field operation filtering, and the relationship with `--shield-io`.
+
 ## Replaying from a WAL
 
 ### Basic Replay

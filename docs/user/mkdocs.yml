@@ -10,6 +10,7 @@ nav:
     - Remote Procedure Calls: concepts/rpc.md
     - Interception: concepts/interception.md
     - RPC Policy: concepts/rpc-policy.md
+    - Recording Scope: concepts/recording-scope.md
     - Log Backends: concepts/logs.md
   - Guides:
     - Local Development: guides/local-development.md

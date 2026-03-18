@@ -190,6 +190,47 @@ pal run -d localhost:2379 --zmq-rpc auto \
   -cp app.jar com.example.Main
 ```
 
+### Recording Scope Flags
+
+Control which operations are written to the WAL and published via PUB. By default, all quantized operations are recorded. Recording scope lets you filter the WAL to include only relevant operations (e.g., your application code), reducing WAL size and noise. See [Recording Scope](concepts/recording-scope.md) for full documentation.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--scope <patterns>` | -- | Ant-style class patterns for operations to record (repeatable, comma-separated). Creates RECORD rules |
+| `--scope-exclude <patterns>` | -- | Ant-style class patterns for operations to exclude from recording (repeatable, comma-separated). Creates SKIP rules. Takes priority over `--scope` |
+| `--scope-io` | `false` | Include built-in I/O boundary rules: JDBC, HTTP, file I/O, network I/O, time, random, process, system properties. All added as RECORD rules |
+| `--scope-policy <path>` | -- | Path to a YAML recording scope policy file for fine-grained control (class, member, categories, action). Lowest priority |
+| `--scope-default <record\|skip>` | inferred | Default action when no rule matches. When omitted: inferred as `skip` if `--scope` or `--scope-io` is given, `record` if only `--scope-exclude` is given |
+
+These flags only take effect when a WAL or TCP PUB destination is configured (i.e., `--wal` or `--tcp-pub` is specified). Without a destination, the flags are silently ignored.
+
+Rules are evaluated in first-match-wins order: `--scope-exclude` rules (highest priority), then `--scope` rules, then `--scope-io` preset rules, then `--scope-policy` YAML rules, then the default action.
+
+**Important**: When using recording scope with deterministic replay (`pal replay`), the same `--scope` flags must be passed to the replay command. See [Recording Scope — Replay Requirement](concepts/recording-scope.md#replay-requirement).
+
+```bash
+# Record only application code (skip everything else)
+pal run --wal file:/tmp/my-wal \
+  --scope "com.mycompany.**" --scope-default skip \
+  -cp app.jar com.example.Main
+
+# Record everything except noisy JDK internals
+pal run --wal file:/tmp/my-wal \
+  --scope-exclude "java.lang.String.**" \
+  --scope-exclude "java.util.HashMap.**" \
+  -cp app.jar com.example.Main
+
+# Record application code + I/O boundaries
+pal run --wal file:/tmp/my-wal \
+  --scope "com.mycompany.**" --scope-io --scope-default skip \
+  -cp app.jar com.example.Main
+
+# Use a YAML policy file for fine-grained control
+pal run --wal file:/tmp/my-wal \
+  --scope-policy scope-policy.yaml \
+  -cp app.jar com.example.Main
+```
+
 ### Examples
 
 ```bash
@@ -1251,6 +1292,13 @@ pal replay [OPTIONS] class [args...]
 | `-cp, --classpath <CLASSPATH>` | Classpath for the application (required when replaying a class) |
 | `-jar <jarFile>` | JAR file to replay (Main-Class from manifest). Alternative to specifying a main class |
 | `--fx-thread` | Enable JavaFX Application Thread execution. Required for replaying JavaFX applications (default: `false`) |
+| `--scope <patterns>` | Ant-style class patterns for recording scope (must match the flags used during recording). See [Recording Scope](concepts/recording-scope.md) |
+| `--scope-exclude <patterns>` | Ant-style class patterns to exclude from recording scope (must match recording) |
+| `--scope-io` | Include built-in I/O boundary rules in recording scope (must match recording) |
+| `--scope-policy <path>` | Path to YAML recording scope policy file (must match recording) |
+| `--scope-default <record\|skip>` | Default recording scope action (must match recording) |
+
+**Recording scope on replay**: When the WAL was recorded with `--scope` flags, the same flags **must** be passed to `pal replay`. The replay system uses the scope to determine which operations have WAL entries (in-scope) and which should be executed directly without WAL matching (out-of-scope). Mismatched scope flags produce cascading divergences. See [Recording Scope — Replay Requirement](concepts/recording-scope.md#replay-requirement).
 
 ### Positional Arguments
 
