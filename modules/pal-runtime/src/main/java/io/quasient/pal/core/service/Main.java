@@ -385,6 +385,62 @@ public class Main implements Callable<Integer> {
       description = "Proceed even when unsafe stubs are detected by side-effect analysis")
   private boolean replayForceStub;
 
+  // ---- Recording scope options ----
+
+  /**
+   * Ant-style class patterns for operations to record to WAL/PUB. Repeatable, comma-separated. When
+   * specified, only matching operations are recorded (unless overridden by {@code
+   * --scope-default}).
+   */
+  @Option(
+      names = {"--scope"},
+      paramLabel = "patterns",
+      split = ",",
+      description =
+          "Ant-style class patterns for operations to record to WAL/PUB"
+              + " (repeatable, comma-separated)")
+  private String[] scopePatterns;
+
+  /**
+   * Ant-style class patterns for operations to exclude from recording. Repeatable, comma-separated.
+   */
+  @Option(
+      names = {"--scope-exclude"},
+      paramLabel = "patterns",
+      split = ",",
+      description =
+          "Ant-style class patterns for operations to exclude from recording"
+              + " (repeatable, comma-separated)")
+  private String[] scopeExcludePatterns;
+
+  /**
+   * Include common I/O boundary operations (JDBC, HTTP, file I/O, time, random) in recording scope.
+   */
+  @Option(
+      names = {"--scope-io"},
+      description =
+          "Include common I/O boundary operations"
+              + " (JDBC, HTTP, file I/O, time, random) in recording scope")
+  private boolean scopeIo;
+
+  /** Path to a YAML recording scope policy file. */
+  @Option(
+      names = {"--scope-policy"},
+      paramLabel = "path",
+      description = "Path to YAML recording scope policy file")
+  private String scopePolicyPath;
+
+  /**
+   * Default scope action when no rule matches. Accepted values: {@code record} or {@code skip}. If
+   * not specified, the default is inferred from the flags provided.
+   */
+  @Option(
+      names = {"--scope-default"},
+      paramLabel = "record|skip",
+      description =
+          "Default scope action when no rule matches" + " (inferred from flags if not specified)")
+  private String scopeDefaultAction;
+
   /**
    * Log configuration specifying the Log name for both reading and writing. Using 'auto' works only
    * when a PAL directory is specified.
@@ -1479,6 +1535,23 @@ public class Main implements Callable<Integer> {
     if (checkedExceptionPolicy != null && !checkedExceptionPolicy.isBlank()) {
       properties.setProperty(
           "pal.intercept.checked-exception-policy.default", checkedExceptionPolicy.trim());
+    }
+
+    // recording scope options
+    if (scopePatterns != null) {
+      properties.setProperty("scope.patterns", String.join(",", scopePatterns));
+    }
+    if (scopeExcludePatterns != null) {
+      properties.setProperty("scope.exclude.patterns", String.join(",", scopeExcludePatterns));
+    }
+    if (scopeIo) {
+      properties.setProperty("scope.io", "true");
+    }
+    if (scopePolicyPath != null) {
+      properties.setProperty("scope.policy.path", scopePolicyPath);
+    }
+    if (scopeDefaultAction != null) {
+      properties.setProperty("scope.default.action", scopeDefaultAction);
     }
   }
 
