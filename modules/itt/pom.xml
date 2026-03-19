@@ -163,6 +163,9 @@
                         <!-- Replay integration tests -->
                         <include>**/replay/**/*IT.java</include>
 
+                        <!-- Recording scope integration tests -->
+                        <include>**/recording/**/*IT.java</include>
+
                         <!-- RPC policy integration tests -->
                         <include>**/rpc/policy/*IT.java</include>
                     </includes>
