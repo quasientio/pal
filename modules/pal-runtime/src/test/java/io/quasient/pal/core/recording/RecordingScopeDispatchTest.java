@@ -102,6 +102,7 @@ public class RecordingScopeDispatchTest {
    * Finds a declared field in the class hierarchy by walking up from the given class. This avoids
    * needing to reference package-private superclasses like {@code AbstractDispatcher} directly.
    */
+  @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName") // Class clashes with colfer.Class
   private static java.lang.reflect.Field findDeclaredField(
       java.lang.Class<?> clazz, String fieldName) {
     java.lang.Class<?> current = clazz;
@@ -115,6 +116,7 @@ public class RecordingScopeDispatchTest {
     throw new RuntimeException("Field not found: " + fieldName + " in hierarchy of " + clazz);
   }
 
+  @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName") // Class clashes with colfer.Class
   private static void setFieldValue(Dispatcher d, String fieldName, Object value) throws Exception {
     java.lang.reflect.Field f = findDeclaredField(d.getClass(), fieldName);
     f.setAccessible(true);
@@ -200,6 +202,7 @@ public class RecordingScopeDispatchTest {
    * Builds a mock PJP for replay tests. Uses mock signatures (not PjpBuilder) because the replay
    * path does not call ContextFactory.
    */
+  @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName") // Class clashes with colfer.Class
   private static ProceedingJoinPoint buildReplayPjp(
       String className, String methodName, Object[] args, Object returnValue) throws Throwable {
     ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
