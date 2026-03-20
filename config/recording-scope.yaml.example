@@ -1,0 +1,55 @@
+#
+# Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
+#
+# Use of this software is governed by the Business Source License 1.1
+# included in the file LICENSE and at https://mariadb.com/bsl11
+#
+# Change Date: 2030-10-01
+# Change License: Apache 2.0
+#
+
+# Recording Scope Policy — Example
+#
+# Controls which operations are written to the WAL and published via PUB.
+# Rules are evaluated in first-match-wins order; unmatched operations fall
+# through to defaultAction.
+#
+# Usage:
+#   pal run --scope-policy recording-scope.yaml --wal file:/tmp/my-wal ...
+#
+# The same flags must be passed to pal replay for correct WAL matching:
+#   pal replay --scope-policy recording-scope.yaml --wal file:/tmp/my-wal ...
+
+# Default action when no rule matches. RECORD = write to WAL/PUB, SKIP = omit.
+defaultAction: SKIP
+
+rules:
+  # Record all application code
+  - class: "com.mycompany.**"
+    action: RECORD
+
+  # Exclude internal utilities (evaluated before the broader rule above
+  # only if placed first — rules are first-match-wins in list order)
+  - class: "com.mycompany.internal.util.**"
+    action: SKIP
+
+  # Record JDBC boundary operations
+  - class: "java.sql.DriverManager"
+    member: "getConnection"
+    action: RECORD
+
+  - class: "java.sql.Connection"
+    action: RECORD
+
+  - class: "java.sql.PreparedStatement"
+    action: RECORD
+
+  # Record field writes on domain models (audit trail)
+  - class: "com.mycompany.model.**"
+    categories: [FIELD_SET]
+    action: RECORD
+
+  # Skip all field reads on JDK types (noise reduction)
+  - class: "java.**"
+    categories: [FIELD_GET]
+    action: SKIP
