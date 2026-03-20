@@ -18,7 +18,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 import org.yaml.snakeyaml.error.YAMLException;
 
 /**
@@ -68,7 +70,7 @@ public final class ReplayPolicyParser {
   public static ReplayPolicy parseYaml(String yamlContent) {
     Map<String, Object> doc;
     try {
-      Yaml yaml = new Yaml();
+      Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
       Object loaded = yaml.load(yamlContent);
       if (loaded == null) {
         return new ReplayPolicy(Collections.emptyList(), ReplayAction.RE_EXECUTE);

