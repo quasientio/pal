@@ -226,28 +226,6 @@ public class RecordingScopeDispatchTest {
   // ──────────────────── Tests: dispatchInternal (WAL/PUB gating) ────────────────────
 
   /**
-   * Verifies that when {@code recordingScope} is null (no scope configured) and {@code runOptions}
-   * contains {@code WITH_WAL}, the {@code withPubOrWal} flag remains true — preserving backward
-   * compatibility where all operations are recorded.
-   */
-  @Test
-  public void nullScopeDoesNotAffectWithPubOrWal() throws Throwable {
-    // Given: dispatcher with null recordingScope (default) and WITH_WAL
-    OutboundMessageGateway gw = mockGateway();
-    InstanceMethodDispatcher d = createMethodDispatcher(gw, EnumSet.of(RunOptions.WITH_WAL));
-    // recordingScope is null by default — no injection needed
-
-    ProceedingJoinPoint pjp = buildMethodPjp("ok");
-
-    // When
-    Object result = d.dispatch(pjp);
-
-    // Then: operation executes and messages are sent to gateway (BEFORE + AFTER)
-    assertThat(result, is("ok"));
-    verify(gw, times(2)).sendExecMessage(any(), any());
-  }
-
-  /**
    * Verifies that when {@code recordingScope.isInScope()} returns true and {@code WITH_WAL} is set,
    * the operation produces ExecMessages that are written to the WAL via the {@code
    * OutboundMessageGateway}.

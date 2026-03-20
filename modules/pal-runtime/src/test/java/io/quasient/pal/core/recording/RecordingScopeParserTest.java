@@ -12,7 +12,6 @@ package io.quasient.pal.core.recording;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
 
 import io.quasient.pal.core.rpc.policy.MemberCategory;
 import java.io.IOException;
@@ -200,15 +199,16 @@ public class RecordingScopeParserTest {
   }
 
   /**
-   * Verifies that when all inputs are null, false, or empty, {@code fromOptions} returns {@code
-   * null} rather than an empty scope. This ensures backward compatibility: no scope configured
-   * means no filtering (everything is recorded by default).
+   * Verifies that when all inputs are null, false, or empty, {@code fromOptions} returns a
+   * permit-all scope with no rules and a default action of {@link RecordingScopeAction#RECORD}.
    */
   @Test
-  public void nullInputsProduceNull() {
+  public void noInputsProducePermitAllScope() {
     RecordingScope scope = RecordingScopeParser.fromOptions(null, false, null, null, null);
 
-    assertThat(scope, is(nullValue()));
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.getRules().isEmpty(), is(true));
+    assertThat(scope.getDefaultAction(), is(RecordingScopeAction.RECORD));
   }
 
   /**

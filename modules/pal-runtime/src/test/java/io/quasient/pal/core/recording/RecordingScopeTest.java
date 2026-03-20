@@ -40,8 +40,8 @@ import org.junit.Test;
 public class RecordingScopeTest {
 
   /**
-   * Verifies backward-compatible default: when no rules are configured and the default action is
-   * {@code RECORD}, every operation is in scope regardless of class, member, or category.
+   * Verifies permit-all default: when no rules are configured and the default action is {@code
+   * RECORD}, every operation is in scope regardless of class, member, or category.
    */
   @Test
   public void emptyRulesWithDefaultRecordAlwaysInScope() {
@@ -224,21 +224,6 @@ public class RecordingScopeTest {
     executor.shutdown();
 
     assertThat(failed.get(), is(false));
-  }
-
-  /**
-   * Verifies the backward-compatible contract: when {@code RecordingScope} is null (not
-   * configured), the dispatcher should treat all operations as in scope. This test documents the
-   * null-scope contract that dispatchers must honor.
-   */
-  @Test
-  public void nullScopeBackwardCompatible() {
-    RecordingScope scope = null;
-
-    boolean inScope =
-        scope == null || scope.isInScope("any.Class", "anyMethod", MemberCategory.METHOD);
-
-    assertThat(inScope, is(true));
   }
 
   /**

@@ -196,12 +196,10 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
 
       // Recording scope: determine if this operation should be recorded to WAL/PUB.
-      // When no scope is configured (null), all operations are in scope (backward compatible).
-      // When configured, extract class/method identity from the cached Signature and check scope.
-      // The scope check is cached per className.memberName#category, so steady-state cost is a
-      // single hash lookup.
+      // Permit-all scopes skip signature extraction entirely. Otherwise the scope check is
+      // cached per className.memberName#category, so steady-state cost is a single hash lookup.
       final boolean inRecordingScope;
-      if (recordingScope == null) {
+      if (recordingScope.isPermitAll()) {
         inRecordingScope = true;
       } else {
         final Signature sig = pjp.getStaticPart().getSignature();
@@ -583,12 +581,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // Recording scope: out-of-scope operations have no WAL entries — invoke directly.
     // Since these operations were not recorded during the recording phase, they should not
     // consume WAL cursor entries or trigger false EXTRA_OPERATION divergences during replay.
-    if (recordingScope != null) {
-      final Signature sig = pjp.getStaticPart().getSignature();
-      final String className = sig.getDeclaringTypeName();
-      final String memberName = (sig instanceof ConstructorSignature) ? "new" : sig.getName();
-      final MemberCategory category = MemberCategory.fromMessageType(getBeforeExecMessageType());
-      if (!recordingScope.isInScope(className, memberName, category)) {
+    if (!recordingScope.isPermitAll()) {
+      final Signature replaySig = pjp.getStaticPart().getSignature();
+      final String replayClassName = replaySig.getDeclaringTypeName();
+      final String replayMemberName =
+          (replaySig instanceof ConstructorSignature) ? "new" : replaySig.getName();
+      final MemberCategory replayCategory =
+          MemberCategory.fromMessageType(getBeforeExecMessageType());
+      if (!recordingScope.isInScope(replayClassName, replayMemberName, replayCategory)) {
         return invoke(pjp, pjp.getArgs());
       }
     }
@@ -1619,8 +1619,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
       // Recording scope + channel-matrix gate for incoming WAL/PUB writes.
       final boolean incomingInRecordingScope =
-          recordingScope == null
-              || recordingScope.isInScope(incomingClassName, incomingMethodName, incomingCategory);
+          recordingScope.isInScope(incomingClassName, incomingMethodName, incomingCategory);
 
       // Send BEFORE message to WAL/PUB (consistent with hot-path dispatch())
       if (incomingInRecordingScope && shouldWriteIncomingToWal(messageChannel)) {

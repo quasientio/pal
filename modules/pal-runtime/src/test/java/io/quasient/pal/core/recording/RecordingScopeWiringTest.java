@@ -13,7 +13,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,8 +29,8 @@ import org.junit.Test;
  * properties, invokes {@link RecordingScopeParser#fromOptions} with the same translation logic that
  * PeerWiring applies, and verifies the resulting {@link RecordingScope} (or lack thereof).
  *
- * <p>These tests ensure backward compatibility when no scope is configured (null scope) and correct
- * wiring for all supported scope configuration properties.
+ * <p>These tests verify correct wiring for all supported scope configuration properties, including
+ * the permit-all default when no scope is configured.
  *
  * @see RecordingScope
  * @see RecordingScopeParser
@@ -60,19 +59,21 @@ public class RecordingScopeWiringTest {
   }
 
   /**
-   * Verifies that when no {@code scope.*} properties are set, the wiring layer returns {@code
-   * null}, preserving backward compatibility where all operations are recorded.
+   * Verifies that when no {@code scope.*} properties are set, the wiring layer returns a permit-all
+   * scope with no rules and a default action of {@link RecordingScopeAction#RECORD}.
    */
   @Test
-  public void scopeNullWhenNotConfigured() {
+  public void permitAllScopeWhenNotConfigured() {
     // Given: Properties with no scope.* properties set
     Properties props = new Properties();
 
     // When: PeerWiring's provideRecordingScope() logic is applied
     RecordingScope scope = buildScopeFromProperties(props);
 
-    // Then: The result is null (no filtering, everything recorded)
-    assertThat(scope, is(nullValue()));
+    // Then: permit-all scope (no rules, default RECORD)
+    assertThat(scope, is(notNullValue()));
+    assertThat(scope.getRules().isEmpty(), is(true));
+    assertThat(scope.getDefaultAction(), is(RecordingScopeAction.RECORD));
   }
 
   /**
@@ -179,11 +180,10 @@ public class RecordingScopeWiringTest {
   /**
    * Replicates the property-to-parameter mapping from {@link
    * io.quasient.pal.core.service.PeerWiring#provideRecordingScope()}. This helper extracts the same
-   * property keys and applies the same null-guard logic, then delegates to {@link
-   * RecordingScopeParser#fromOptions}.
+   * property keys and delegates to {@link RecordingScopeParser#fromOptions}.
    *
    * @param props the properties to extract scope configuration from
-   * @return the recording scope, or {@code null} if no scope properties are configured
+   * @return the recording scope (permit-all when no scope properties are configured)
    */
   private static RecordingScope buildScopeFromProperties(Properties props) {
     String yamlPath = props.getProperty("scope.policy.path");
@@ -191,14 +191,6 @@ public class RecordingScopeWiringTest {
     String includePatterns = props.getProperty("scope.patterns");
     String excludePatterns = props.getProperty("scope.exclude.patterns");
     String defaultActionStr = props.getProperty("scope.default.action");
-
-    if (yamlPath == null
-        && !includeIo
-        && includePatterns == null
-        && excludePatterns == null
-        && defaultActionStr == null) {
-      return null;
-    }
 
     return RecordingScopeParser.fromOptions(
         yamlPath,

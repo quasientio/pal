@@ -87,8 +87,8 @@ public final class RecordingScopeParser {
   /**
    * Builds a {@link RecordingScope} from CLI options, presets, and an optional YAML policy file.
    *
-   * <p>Returns {@code null} when no scope configuration is provided (all arguments are null, false,
-   * or empty), ensuring backward compatibility: no scope configured means no filtering.
+   * <p>When no scope configuration is provided (all arguments are null, false, or empty), returns a
+   * permit-all scope with no rules and a default action of {@link RecordingScopeAction#RECORD}.
    *
    * @param yamlPath path to a YAML scope policy file, or {@code null} if not provided
    * @param includeIo whether to include built-in I/O boundary rules ({@code --scope-io})
@@ -98,7 +98,7 @@ public final class RecordingScopeParser {
    *     --scope-exclude}), or {@code null}
    * @param defaultActionStr explicit default action ({@code "record"} or {@code "skip"}), or {@code
    *     null} to infer
-   * @return a recording scope combining all sources, or {@code null} if no configuration is
+   * @return a recording scope combining all sources, or a permit-all scope if no configuration is
    *     provided
    * @throws IllegalArgumentException if the YAML file is malformed or contains invalid values
    * @throws UncheckedIOException if the YAML file cannot be read
@@ -113,13 +113,13 @@ public final class RecordingScopeParser {
     boolean hasPatterns = scopePatterns != null && scopePatterns.length > 0;
     boolean hasExcludePatterns = scopeExcludePatterns != null && scopeExcludePatterns.length > 0;
 
-    // Return null when no scope configuration is provided
+    // Return a permit-all scope when no scope configuration is provided
     if (yamlPath == null
         && !includeIo
         && !hasPatterns
         && !hasExcludePatterns
         && defaultActionStr == null) {
-      return null;
+      return new RecordingScope(List.of(), RecordingScopeAction.RECORD);
     }
 
     List<RecordingScopeRule> allRules = new ArrayList<>();

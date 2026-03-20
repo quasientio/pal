@@ -37,10 +37,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * ConcurrentHashMap.computeIfAbsent()} call is atomic and lock-free for existing entries, matching
  * the performance characteristics of other PAL caches.
  *
- * <p><b>Backward compatibility:</b> When no recording scope is configured, the dispatcher holds a
- * {@code null} reference. The contract {@code recordingScope == null ||
- * recordingScope.isInScope(...)} ensures all operations are recorded by default.
- *
  * @see RecordingScopeRule
  * @see RecordingScopeAction
  */
@@ -118,5 +114,16 @@ public class RecordingScope {
    */
   public RecordingScopeAction getDefaultAction() {
     return defaultAction;
+  }
+
+  /**
+   * Returns {@code true} when this scope has no rules and the default action is {@code RECORD},
+   * meaning every operation is in scope without evaluation. Callers can use this to skip signature
+   * extraction on the dispatch hot path.
+   *
+   * @return {@code true} if this scope permits all operations
+   */
+  public boolean isPermitAll() {
+    return rules.isEmpty() && defaultAction == RecordingScopeAction.RECORD;
   }
 }

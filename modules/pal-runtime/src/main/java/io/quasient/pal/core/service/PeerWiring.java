@@ -923,8 +923,7 @@ public class PeerWiring extends AbstractModule {
   }
 
   /**
-   * Provides the {@link RecordingScope} for filtering operations from WAL/PUB writes, or {@code
-   * null} when no scope is configured (backward compatible).
+   * Provides the {@link RecordingScope} for filtering operations from WAL/PUB writes.
    *
    * <p>Reads scope configuration from properties set by the CLI layer:
    *
@@ -936,29 +935,19 @@ public class PeerWiring extends AbstractModule {
    *   <li>{@code scope.default.action} &mdash; default action when no rule matches
    * </ul>
    *
-   * <p>Returns {@code null} when none of these properties are set, ensuring zero impact on existing
-   * deployments.
+   * <p>When none of these properties are set, returns a permit-all scope (no filtering).
    *
-   * @return the recording scope, or {@code null} if not configured
+   * @return the recording scope
    */
   @SuppressWarnings("unused")
   @Provides
   @Singleton
-  @Nullable
   RecordingScope provideRecordingScope() {
     String yamlPath = properties.getProperty("scope.policy.path");
     boolean includeIo = Boolean.parseBoolean(properties.getProperty("scope.io", "false"));
     String includePatterns = properties.getProperty("scope.patterns");
     String excludePatterns = properties.getProperty("scope.exclude.patterns");
     String defaultActionStr = properties.getProperty("scope.default.action");
-
-    if (yamlPath == null
-        && !includeIo
-        && includePatterns == null
-        && excludePatterns == null
-        && defaultActionStr == null) {
-      return null;
-    }
 
     return RecordingScopeParser.fromOptions(
         yamlPath,

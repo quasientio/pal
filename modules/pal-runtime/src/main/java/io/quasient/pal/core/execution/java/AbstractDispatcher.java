@@ -19,6 +19,7 @@ import io.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import io.quasient.pal.core.intercept.InterceptChecker;
 import io.quasient.pal.core.intercept.LocalInterceptCallbackDispatcher;
 import io.quasient.pal.core.recording.RecordingScope;
+import io.quasient.pal.core.recording.RecordingScopeAction;
 import io.quasient.pal.core.replay.ReplayContext;
 import io.quasient.pal.core.rpc.policy.RpcPolicy;
 import io.quasient.pal.core.rpc.policy.RpcPolicyAction;
@@ -105,14 +106,13 @@ abstract class AbstractDispatcher {
   protected ReplayContext replayContext;
 
   /**
-   * Recording scope for filtering operations from WAL/PUB writes, or {@code null} when no scope is
-   * configured (backward compatible — all operations are recorded).
+   * Recording scope for filtering operations from WAL/PUB writes.
    *
-   * <p>Injected as optional so that peers without recording scope configuration do not fail during
-   * Guice wiring. The dispatch path checks {@code recordingScope == null ||
-   * recordingScope.isInScope(...)} to decide whether an operation should be recorded.
+   * <p>Initialized with a permit-all default so that dispatchers work before Guice injection
+   * completes and in test harnesses that do not inject this field.
    */
-  protected RecordingScope recordingScope;
+  protected RecordingScope recordingScope =
+      new RecordingScope(List.of(), RecordingScopeAction.RECORD);
 
   /**
    * Dispatcher for routing invocations based on thread affinity (e.g., FX thread).
@@ -267,15 +267,10 @@ abstract class AbstractDispatcher {
   /**
    * Sets the {@link RecordingScope} for filtering operations from WAL/PUB writes.
    *
-   * <p>This injection is optional: when no recording scope is configured, Guice provides {@code
-   * null} and all operations are recorded (backward compatible). The dispatch path uses {@code
-   * recordingScope == null || recordingScope.isInScope(...)} so a {@code null} value is safe.
-   *
-   * @param recordingScope the recording scope, or {@code null} when not configured
+   * @param recordingScope the recording scope
    */
-  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  @com.google.inject.Inject(optional = true)
-  final void setRecordingScope(@Nullable RecordingScope recordingScope) {
+  @Inject
+  final void setRecordingScope(RecordingScope recordingScope) {
     this.recordingScope = recordingScope;
   }
 
