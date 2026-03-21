@@ -1233,6 +1233,9 @@ public class Main implements Callable<Integer> {
       properties.setProperty("replay.force.stub", String.valueOf(replayForceStub));
     }
 
+    // Validate Kafka/Chronicle flag consistency
+    validateLogBackendConsistency();
+
     if (tcpPub != null) {
       runOptions.add(RunOptions.WITH_TCP_PUB);
     }
@@ -1323,6 +1326,78 @@ public class Main implements Callable<Integer> {
       return logSpec.substring("file:".length());
     }
     return logSpec;
+  }
+
+  /**
+   * Validates that Kafka and Chronicle flags are used consistently with the configured log
+   * backends.
+   *
+   * <p>Detects and reports the following inconsistencies:
+   *
+   * <ul>
+   *   <li>{@code --kafka-servers} given but all configured logs use Chronicle (file: paths)
+   *   <li>{@code --chronicle-base-dir} given but all configured logs use Kafka
+   *   <li>{@code --source-log} and {@code --wal} use different backends (one Kafka, one Chronicle)
+   * </ul>
+   *
+   * <p>For replay mode ({@code --replay-wal}), checks are performed against the replay WAL path
+   * instead of the regular source-log and WAL.
+   */
+  private void validateLogBackendConsistency() {
+    if (replayWalPath != null) {
+      // Replay mode: check replayWalPath backend vs flags
+      if (kafkaServers != null && isChronicleLog(replayWalPath)) {
+        fatalExit(
+            null,
+            PeerException.FatalCode.ERROR_VALIDATING_PROPERTIES,
+            "ERROR: --kafka-servers (-k) given but --replay-wal uses a Chronicle queue"
+                + " (file: path). Remove --kafka-servers or use a Kafka topic name for"
+                + " --replay-wal.");
+      }
+      if (chronicleBaseDir != null
+          && !chronicleBaseDir.isBlank()
+          && !isChronicleLog(replayWalPath)) {
+        fatalExit(
+            null,
+            PeerException.FatalCode.ERROR_VALIDATING_PROPERTIES,
+            "ERROR: --chronicle-base-dir given but --replay-wal uses a Kafka topic."
+                + " Remove --chronicle-base-dir or use a file: path for --replay-wal.");
+      }
+    } else {
+      // Non-replay mode: check sourceLog and wal
+      boolean anyLog = sourceLog != null || wal != null;
+      if (anyLog) {
+        boolean anyKafkaLog =
+            (sourceLog != null && !isChronicleLog(sourceLog))
+                || (wal != null && !isChronicleLog(wal));
+        boolean anyChronicleLog =
+            (sourceLog != null && isChronicleLog(sourceLog))
+                || (wal != null && isChronicleLog(wal));
+
+        if (kafkaServers != null && !anyKafkaLog) {
+          fatalExit(
+              null,
+              PeerException.FatalCode.ERROR_VALIDATING_PROPERTIES,
+              "ERROR: --kafka-servers (-k) given but all configured logs use Chronicle"
+                  + " (file: paths). Remove --kafka-servers or use Kafka topic names for"
+                  + " --source-log/--wal.");
+        }
+
+        if (chronicleBaseDir != null && !chronicleBaseDir.isBlank() && !anyChronicleLog) {
+          fatalExit(
+              null,
+              PeerException.FatalCode.ERROR_VALIDATING_PROPERTIES,
+              "ERROR: --chronicle-base-dir given but all configured logs use Kafka."
+                  + " Remove --chronicle-base-dir or use file: paths for --source-log/--wal.");
+        }
+
+        if (sourceLog != null && wal != null && isChronicleLog(sourceLog) != isChronicleLog(wal)) {
+          System.err.println(
+              "WARNING: source-log and WAL use different backends"
+                  + " (one is Kafka, the other is Chronicle). Verify this is intentional.");
+        }
+      }
+    }
   }
 
   /**
