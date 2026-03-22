@@ -296,6 +296,7 @@ pal replay --wal file:/tmp/my-wal --shield-io \
 ```
 
 In this workflow:
+
 1. During recording, `--scope-io` ensures I/O operations are captured in the WAL (along with application code).
 2. During replay, `--shield-io` stubs those I/O operations — returning the WAL-recorded values without actually hitting the database, network, or filesystem.
 3. The `--scope` flags must be the same for both recording and replay (see below).
