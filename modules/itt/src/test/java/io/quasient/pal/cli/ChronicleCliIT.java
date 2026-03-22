@@ -84,7 +84,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_withoutPalDirectory() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String absPath = "/tmp/test-chr-nodir-" + generateId();
     trackChronicleLog(absPath);
@@ -94,8 +93,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + absPath,
             "-cp",
@@ -120,7 +117,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_withFilePrefix() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String absPath = "/tmp/test-chr-prefix-" + generateId();
     trackChronicleLog(absPath);
@@ -130,8 +126,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + absPath,
             "-cp",
@@ -162,7 +156,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testLogLs_chronicleLog_accurateSizeAndOffsets() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String absPath = "/tmp/test-chr-ls-" + generateId();
     trackChronicleLog(absPath);
@@ -172,8 +165,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + absPath,
             "-cp",
@@ -198,7 +189,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testLogLs_chronicleLog_offsetsIncrementOnRerun() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String absPath = "/tmp/test-chr-rerun-" + generateId();
     trackChronicleLog(absPath);
 
@@ -209,8 +199,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId1,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + absPath,
             "-cp",
@@ -231,8 +219,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId2,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + absPath,
             "-cp",
@@ -258,7 +244,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testLogLs_chronicleLog_withAbsolutePath() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String absPath = "/tmp/test-chr-abspath-" + generateId();
     trackChronicleLog(absPath);
@@ -268,8 +253,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + absPath,
             "-cp",
@@ -300,7 +283,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testLogRm_chronicleLog_withAbsolutePath() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String absPath = "/tmp/test-chr-rm-abs-" + generateId();
     trackChronicleLog(absPath);
@@ -310,8 +292,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + absPath,
             "-cp",
@@ -338,7 +318,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testLogRm_chronicleLog_withFilename() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String filename = "test-chr-rm-fname-" + generateId();
     String absPath = "/tmp/" + filename;
@@ -349,8 +328,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + absPath,
             "-cp",
@@ -373,7 +350,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testLogRm_chronicleLog_withoutPalDirectory() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String absPath = "/tmp/test-chr-rm-nodir-" + generateId();
     trackChronicleLog(absPath);
@@ -383,8 +359,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + absPath,
             "-cp",
@@ -411,7 +385,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testChronicleLog_storesAbsolutePath() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String walName = "chr-rel-" + generateId();
     trackChronicleLog(walName);
@@ -421,8 +394,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + walName,
             "-cp",
@@ -454,7 +425,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testLogCall_chronicleLog_withPalDirectory() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String source = "/tmp/test-chr-call-src-" + generateId();
     String wal = "/tmp/test-chr-call-wal-" + generateId();
@@ -469,8 +439,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + wal,
             "--source-log",
@@ -509,7 +477,6 @@ public class ChronicleCliIT extends AbstractCliIT {
   @Test
   public void testLogCall_chronicleLog_withoutPalDirectory() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String source = "/tmp/test-chr-call-dsrc-" + generateId();
     String wal = "/tmp/test-chr-call-dwal-" + generateId();
@@ -524,8 +491,6 @@ public class ChronicleCliIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + wal,
             "--source-log",

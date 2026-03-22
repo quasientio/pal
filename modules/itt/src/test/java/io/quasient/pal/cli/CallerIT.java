@@ -755,7 +755,6 @@ public class CallerIT extends AbstractCliIT {
   @Test
   public void testLogCall_toChronicleLog_writesMessage() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
     String suffix = generateId();
     String sourceName = "/tmp/logcall-csrc-" + suffix;
@@ -772,8 +771,6 @@ public class CallerIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--source-log",
             "file:" + sourceName,
             "--wal",

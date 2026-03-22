@@ -529,7 +529,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_fullFormat() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String chronicleName = "test-print-chr-full-" + generateId();
     trackChronicleLog(chronicleName);
     UUID peerId = UUID.randomUUID();
@@ -539,8 +538,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + chronicleName,
             "-cp",
@@ -562,7 +559,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_compactFormat() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String chronicleName = "test-print-chr-compact-" + generateId();
     trackChronicleLog(chronicleName);
     UUID peerId = UUID.randomUUID();
@@ -572,8 +568,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + chronicleName,
             "-cp",
@@ -595,7 +589,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_jsonFormat() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String chronicleName = "test-print-chr-json-" + generateId();
     trackChronicleLog(chronicleName);
     UUID peerId = UUID.randomUUID();
@@ -605,8 +598,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + chronicleName,
             "-cp",
@@ -628,7 +619,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_treeFormat() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String chronicleName = "test-print-chr-tree-" + generateId();
     trackChronicleLog(chronicleName);
     UUID peerId = UUID.randomUUID();
@@ -638,8 +628,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + chronicleName,
             "-cp",
@@ -661,7 +649,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_withStartOffset() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String chronicleName = "test-print-chr-offset-" + generateId();
     trackChronicleLog(chronicleName);
     UUID peerId = UUID.randomUUID();
@@ -671,8 +658,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + chronicleName,
             "-cp",
@@ -695,7 +680,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_withReturn() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String chronicleName = "test-print-chr-ret-" + generateId();
     trackChronicleLog(chronicleName);
     UUID peerId = UUID.randomUUID();
@@ -705,8 +689,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + chronicleName,
             "-cp",
@@ -730,7 +712,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_withReturn_throwingMethod() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String chronicleName = "test-print-chr-throw-" + generateId();
     trackChronicleLog(chronicleName);
     UUID peerId = UUID.randomUUID();
@@ -740,8 +721,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + chronicleName,
             "--no-wal-incoming-cli",
@@ -765,7 +744,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_filterByMessageType() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String chronicleName = "test-print-chr-type-" + generateId();
     trackChronicleLog(chronicleName);
     UUID peerId = UUID.randomUUID();
@@ -775,8 +753,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + chronicleName,
             "-cp",
@@ -798,7 +774,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_directFilePath() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String chronicleName = "test-print-chr-dirfile-" + generateId();
     trackChronicleLog(chronicleName);
     UUID peerId = UUID.randomUUID();
@@ -808,8 +783,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + chronicleName,
             "-cp",
@@ -832,7 +805,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   @Test
   public void testLogPrint_chronicleLog_filterByClass() throws Exception {
     String palDir = getPalDirectoryUrl();
-    String kafkaServers = getKafkaServers();
     String chronicleName = "test-print-chr-class-" + generateId();
     trackChronicleLog(chronicleName);
     UUID peerId = UUID.randomUUID();
@@ -842,8 +814,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId,
             "-d",
             palDir,
-            "-k",
-            kafkaServers,
             "--wal",
             "file:" + chronicleName,
             "-cp",
