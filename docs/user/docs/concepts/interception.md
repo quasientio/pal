@@ -323,6 +323,13 @@ Matches only `Calculator.add()`.
 ```
 Matches all classes in `com.example` package with methods starting with "process".
 
+#### Exact Match with Parameter Types
+```java
+// clazz and InterceptableMethodCall name + parameterTypes
+"com.example.Calculator", ..., new InterceptableMethodCall("add", Arrays.asList("int", "int"))
+```
+Matches only `Calculator.add(int, int)`. Other overloads like `add(double, double)` are not intercepted. Omit parameter types (empty list) to match all overloads.
+
 #### Recursive
 ```java
 // clazz and InterceptableMethodCall name
@@ -1042,6 +1049,8 @@ intercepts:
     callback:
       class: com.acme.fraud.FraudChecker
       method: verify
+    params:
+      - com.acme.payment.Order
 
   - target: com.acme.payment.OrderService.refund
     type: AROUND

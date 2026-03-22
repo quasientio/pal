@@ -1,0 +1,63 @@
+#
+# Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
+#
+# Use of this software is governed by the Business Source License 1.1
+# included in the file LICENSE and at https://mariadb.com/bsl11
+#
+# Change Date: 2030-10-01
+# Change License: Apache 2.0
+#
+
+# Intercept Bundle — Example
+#
+# Declares a group of intercepts that are applied and removed as a unit.
+# Each intercept matches a target class/method and routes callbacks to a
+# callback peer.  Shared settings go in "defaults" and can be overridden
+# per-intercept.
+#
+# Usage:
+#   pal intercept apply  -d localhost:2379 intercept-bundle.yaml
+#   pal intercept status -d localhost:2379 -f intercept-bundle.yaml
+#   pal intercept rm     -d localhost:2379 -f intercept-bundle.yaml
+#
+# Dry-run (preview without applying):
+#   pal intercept apply --dry-run -d localhost:2379 intercept-bundle.yaml
+#
+# Applying is idempotent — re-running skips intercepts that already exist.
+
+# Bundle name — used by "pal intercept rm --bundle <name>" and status queries.
+bundle: "my-app-monitoring"
+
+# Defaults inherited by every intercept unless overridden.
+defaults:
+  peer: "monitor-peer"       # callback peer name (must be running)
+  priority: 0                # lower values execute first (see docs)
+  ttl: 5m                    # auto-expire after 5 minutes; omit for peer-lifetime
+
+intercepts:
+  # --- 1. Audit: log every call to OrderService.placeOrder -----------------
+  #
+  # BEFORE_ASYNC is fire-and-forget — the caller is not blocked waiting for
+  # the callback, making it ideal for logging and telemetry.
+  - target: com.mycompany.orders.OrderService.placeOrder
+    type: BEFORE_ASYNC
+    callback:
+      class: com.mycompany.monitoring.AuditCallback
+      method: onPlaceOrder
+
+  # --- 2. Validation: check arguments before PaymentService.charge ---------
+  #
+  # BEFORE blocks execution until the callback completes, so the callback
+  # can inspect arguments and throw an exception to reject the call.
+  #
+  # "params" narrows the match to a specific overload.  Without it, all
+  # overloads of "charge" would be intercepted.
+  - target: com.mycompany.payments.PaymentService.charge
+    type: BEFORE
+    callback:
+      class: com.mycompany.monitoring.PaymentValidator
+      method: validateCharge
+    params:
+      - com.mycompany.payments.Order
+      - double
+    priority: -100            # run before default-priority intercepts
