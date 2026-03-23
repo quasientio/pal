@@ -83,6 +83,7 @@ public class Pal implements Callable<Integer>, PalCommand {
     // top-level commands
     commandLine.addSubcommand("run", new Main());
     commandLine.addSubcommand(new Replay());
+    commandLine.addSubcommand(new Init());
 
     // entity group commands (with nested subcommands declared via @Command(subcommands=...))
     commandLine.addSubcommand("peer", new PeerCommand());
@@ -192,7 +193,7 @@ public class Pal implements Callable<Integer>, PalCommand {
 
     StringBuilder sb = new StringBuilder();
     appendGroup(sb, "Management Commands", subs, "peer", "log", "intercept");
-    appendGroup(sb, "Commands", subs, "run", "replay");
+    appendGroup(sb, "Commands", subs, "run", "replay", "init");
     appendGroup(sb, "Shortcuts", subs, "peers", "logs", "intercepts");
     return sb.toString();
   }
