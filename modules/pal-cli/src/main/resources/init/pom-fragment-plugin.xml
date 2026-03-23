@@ -1,0 +1,32 @@
+<!--
+
+    Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
+
+    Use of this software is governed by the Business Source License 1.1
+    included in the file LICENSE and at https://mariadb.com/bsl11
+
+    Change Date: 2030-10-01
+    Change License: Apache 2.0
+
+-->
+            <plugin>
+                <groupId>dev.aspectj</groupId>
+                <artifactId>aspectj-maven-plugin</artifactId>
+                <version>${aspectj.plugin.version}</version>
+                <configuration>
+                    <complianceLevel>17</complianceLevel>
+                    <aspectLibraries>
+                        <aspectLibrary>
+                            <groupId>io.quasient.pal</groupId>
+                            <artifactId>pal-weave</artifactId>
+                        </aspectLibrary>
+                    </aspectLibraries>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>

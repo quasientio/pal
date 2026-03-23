@@ -81,7 +81,7 @@ public final class GradlePatcher {
     Path fileNamePath = buildFile.getFileName();
     String fileName = fileNamePath != null ? fileNamePath.toString() : "";
     boolean isKotlinDsl = fileName.endsWith(".kts");
-    PatchResult.Builder result = PatchResult.builder();
+    PatchResult.Builder result = PatchResult.builder().dryRun(config.isDryRun());
 
     content = patchPlugins(content, isKotlinDsl, result);
     content = patchDependencies(content, isKotlinDsl, config, result);

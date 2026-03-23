@@ -31,13 +31,13 @@ class MavenBuildToolStrategy implements BuildToolStrategy {
   /** {@inheritDoc} */
   @Override
   public void generate(InitConfig config, Path outputDir) throws IOException {
-    throw new UnsupportedOperationException("Maven generation not yet implemented");
+    new PomGenerator(config).generate(outputDir);
   }
 
   /** {@inheritDoc} */
   @Override
   public void patch(InitConfig config, Path buildFile) throws IOException {
-    throw new UnsupportedOperationException("Maven patching not yet implemented");
+    new PomPatcher().patch(config, buildFile);
   }
 
   /** {@inheritDoc} */

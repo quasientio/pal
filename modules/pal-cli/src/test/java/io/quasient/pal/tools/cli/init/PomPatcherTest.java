@@ -9,294 +9,574 @@
  */
 package io.quasient.pal.tools.cli.init;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import org.junit.Ignore;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 
 /**
- * Unit test specifications for {@code PomPatcher}, which modifies existing Maven {@code pom.xml}
- * files to add PAL weaving support.
+ * Unit tests for {@link PomPatcher}, which modifies existing Maven {@code pom.xml} files to add PAL
+ * weaving support.
  *
  * <p>PomPatcher uses the JDK's built-in {@code javax.xml.parsers.DocumentBuilder} and {@code
- * javax.xml.transform.Transformer} for XML DOM manipulation. This is the most delicate component in
- * the init system — XML manipulation of user-owned {@code pom.xml} files requires careful handling
- * of backup creation, XML validation before and after edits, idempotency, content preservation, and
- * dry-run support.
+ * javax.xml.transform.Transformer} for XML DOM manipulation.
  *
- * <p>Tests use a {@code @Rule TemporaryFolder} to create {@code pom.xml} files on disk and verify
- * patching behavior. A helper method writes test pom.xml content to temp files. Each test is a stub
- * awaiting implementation once {@code PomPatcher} is created in issue #1336.
- *
- * @see <a href="https://github.io/quasientinc/pal/issues/1335">#1335</a>
- * @see <a href="https://github.io/quasientinc/pal/issues/1336">#1336</a>
+ * @see PomPatcher
  */
 public class PomPatcherTest {
 
+  /** Temporary directory for build files. */
+  @Rule public TemporaryFolder tempDir = new TemporaryFolder();
+
   /**
-   * Verifies that patching a minimal valid {@code pom.xml} with a {@code <dependencies>} section
-   * but no {@code pal-weave} adds the {@code pal-weave} dependency with the correct {@code
-   * groupId}, {@code artifactId}, and {@code version} matching {@code palVersion} from config.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code pom.xml} with an existing {@code
-   * <dependencies>} section containing other dependencies.
+   * Verifies that patching a minimal valid pom.xml adds the pal-weave dependency with correct
+   * coordinates and version.
    */
   @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testAddsPalWeaveDependency() {
-    // Given: minimal valid pom.xml with a <dependencies> section but no pal-weave
-    // When: patch() called
-    // Then: pal-weave dependency added with correct groupId, artifactId,
-    //       and version matching palVersion from config
+  public void testAddsPalWeaveDependency() throws Exception {
+    // Given
+    Path pomFile = writePom(BASIC_POM);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+    // When
+    new PomPatcher().patch(config, pomFile);
+
+    // Then
+    Document doc = parsePom(pomFile);
+    XPath xpath = XPathFactory.newInstance().newXPath();
+    assertThat(
+        xpath.evaluate("/project/dependencies/dependency[artifactId='pal-weave']/groupId", doc),
+        is("io.quasient.pal"));
+    assertThat(
+        xpath.evaluate("/project/dependencies/dependency[artifactId='pal-weave']/version", doc),
+        is("1.0.0"));
   }
 
   /**
-   * Verifies that patching a {@code pom.xml} with {@code <build><plugins>} but no {@code
-   * aspectj-maven-plugin} adds the plugin with {@code pal-weave} in {@code aspectLibraries} and
-   * {@code complianceLevel} set to 17.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code pom.xml} with an existing {@code
-   * <build><plugins>} section.
+   * Verifies that patching adds the aspectj-maven-plugin with pal-weave in aspectLibraries and
+   * complianceLevel=17.
    */
   @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testAddsAspectjPlugin() {
-    // Given: pom.xml with <build><plugins> but no aspectj-maven-plugin
-    // When: patch() called
-    // Then: aspectj-maven-plugin added with pal-weave in aspectLibraries,
-    //       complianceLevel=17
+  public void testAddsAspectjPlugin() throws Exception {
+    // Given
+    Path pomFile = writePom(POM_WITH_BUILD_PLUGINS);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+    // When
+    new PomPatcher().patch(config, pomFile);
+
+    // Then
+    Document doc = parsePom(pomFile);
+    XPath xpath = XPathFactory.newInstance().newXPath();
+    String pluginPath = "/project/build/plugins/plugin[artifactId='aspectj-maven-plugin']";
+    NodeList plugins = (NodeList) xpath.evaluate(pluginPath, doc, XPathConstants.NODESET);
+    assertThat(plugins.getLength(), is(1));
+    assertThat(xpath.evaluate(pluginPath + "/configuration/complianceLevel", doc), is("17"));
+    assertThat(
+        xpath.evaluate(pluginPath + "/configuration/aspectLibraries/aspectLibrary/artifactId", doc),
+        is("pal-weave"));
+  }
+
+  /** Verifies that patching creates the dependencies section when missing and adds pal-weave. */
+  @Test
+  public void testCreatesDependenciesSectionIfMissing() throws Exception {
+    // Given
+    Path pomFile = writePom(MINIMAL_POM);
+    InitConfig config = defaultConfig().build();
+
+    // When
+    new PomPatcher().patch(config, pomFile);
+
+    // Then
+    Document doc = parsePom(pomFile);
+    XPath xpath = XPathFactory.newInstance().newXPath();
+    NodeList deps =
+        (NodeList)
+            xpath.evaluate(
+                "/project/dependencies/dependency[artifactId='pal-weave']",
+                doc,
+                XPathConstants.NODESET);
+    assertThat(deps.getLength(), is(1));
   }
 
   /**
-   * Verifies that patching a {@code pom.xml} with no {@code <dependencies>} element creates the
-   * section and adds {@code pal-weave} inside it.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code pom.xml} with only a {@code
-   * <project>} root and basic metadata but no dependencies section.
+   * Verifies that patching creates the build/plugins section when missing and adds the
+   * aspectj-maven-plugin.
    */
   @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testCreatesDependenciesSectionIfMissing() {
-    // Given: pom.xml with no <dependencies> element
-    // When: patch() called
-    // Then: <dependencies> section created with pal-weave
+  public void testCreatesPluginsSectionIfMissing() throws Exception {
+    // Given
+    Path pomFile = writePom(MINIMAL_POM);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+    // When
+    new PomPatcher().patch(config, pomFile);
+
+    // Then
+    Document doc = parsePom(pomFile);
+    XPath xpath = XPathFactory.newInstance().newXPath();
+    NodeList plugins =
+        (NodeList)
+            xpath.evaluate(
+                "/project/build/plugins/plugin[artifactId='aspectj-maven-plugin']",
+                doc,
+                XPathConstants.NODESET);
+    assertThat(plugins.getLength(), is(1));
   }
 
   /**
-   * Verifies that patching a {@code pom.xml} with no {@code <build>} or {@code <plugins>} element
-   * creates the full {@code <build><plugins>} section and adds the {@code aspectj-maven-plugin}
-   * inside it.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code pom.xml} with only basic project
-   * metadata and no build section.
+   * Verifies idempotency: patching twice produces no duplicate elements and the PatchResult reports
+   * already-configured on second pass.
    */
   @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testCreatesPluginsSectionIfMissing() {
-    // Given: pom.xml with no <build> or <plugins> element
-    // When: patch() called
-    // Then: <build><plugins> section created with aspectj-maven-plugin
+  public void testIdempotency() throws Exception {
+    // Given
+    Path pomFile = writePom(BASIC_POM);
+    InitConfig config = defaultConfig().build();
+    PomPatcher patcher = new PomPatcher();
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+    // When: patch twice
+    patcher.patch(config, pomFile);
+    String afterFirst = Files.readString(pomFile, StandardCharsets.UTF_8);
+    PatchResult secondResult = patcher.patch(config, pomFile);
+    String afterSecond = Files.readString(pomFile, StandardCharsets.UTF_8);
+
+    // Then: content identical after second patch
+    assertThat(afterSecond, is(afterFirst));
+    assertTrue(secondResult.isAlreadyConfigured());
+  }
+
+  /** Verifies that patching creates a backup of the original pom.xml with content preserved. */
+  @Test
+  public void testCreatesBackup() throws Exception {
+    // Given
+    Path pomFile = writePom(BASIC_POM);
+    String originalContent = Files.readString(pomFile, StandardCharsets.UTF_8);
+    InitConfig config = defaultConfig().build();
+
+    // When
+    new PomPatcher().patch(config, pomFile);
+
+    // Then
+    Path backupFile = pomFile.resolveSibling("pom.xml.backup");
+    assertTrue(Files.exists(backupFile));
+    String backupContent = Files.readString(backupFile, StandardCharsets.UTF_8);
+    assertThat(backupContent, is(originalContent));
   }
 
   /**
-   * Verifies idempotency: patching a {@code pom.xml} that already contains the {@code pal-weave}
-   * dependency and the {@code aspectj-maven-plugin} does not produce duplicate elements, and the
-   * output is identical to the input.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a pre-patched {@code pom.xml}.
+   * Verifies that patching a malformed XML file throws an IOException with a descriptive message
+   * and leaves the original file untouched.
    */
   @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testIdempotency() {
-    // Given: pom.xml already patched with pal-weave and aspectj plugin
-    // When: patch() called again
-    // Then: no duplicate elements; output identical to input
+  public void testValidatesXmlBeforePatching() throws Exception {
+    // Given
+    String malformed = "<project><groupId>com.example</groupId>";
+    Path pomFile = writePom(malformed);
+    String originalContent = Files.readString(pomFile, StandardCharsets.UTF_8);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+    // When
+    try {
+      new PomPatcher().patch(config, pomFile);
+      fail("Expected IOException for malformed XML");
+    } catch (IOException e) {
+      // Then
+      assertThat(e.getMessage(), containsString("not valid XML"));
+    }
+
+    // Original file unchanged
+    String afterContent = Files.readString(pomFile, StandardCharsets.UTF_8);
+    assertThat(afterContent, is(originalContent));
+  }
+
+  /** Verifies that the patched output is valid XML (round-trip validation). */
+  @Test
+  public void testValidatesXmlAfterPatching() throws Exception {
+    // Given
+    Path pomFile = writePom(BASIC_POM);
+    InitConfig config = defaultConfig().build();
+
+    // When
+    new PomPatcher().patch(config, pomFile);
+
+    // Then: re-parse to verify round-trip validity
+    Document doc = parsePom(pomFile);
+    assertNotNull(doc);
+    assertNotNull(doc.getDocumentElement());
   }
 
   /**
-   * Verifies that patching creates a backup of the original {@code pom.xml} at {@code pom.xml
-   * .backup} with the original file content preserved byte-for-byte.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code pom.xml} at a known path.
+   * Verifies that when the pom.xml already has an aspectj-maven-plugin without pal-weave in
+   * aspectLibraries, patching merges pal-weave into the existing aspectLibraries while preserving
+   * other entries.
    */
   @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testCreatesBackup() {
-    // Given: pom.xml at path P
-    // When: patch() called
-    // Then: P.backup exists and contains original content byte-for-byte
+  public void testMergesIntoExistingAspectjPlugin() throws Exception {
+    // Given
+    Path pomFile = writePom(POM_WITH_EXISTING_ASPECTJ_PLUGIN);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+    // When
+    PatchResult result = new PomPatcher().patch(config, pomFile);
+
+    // Then
+    Document doc = parsePom(pomFile);
+    XPath xpath = XPathFactory.newInstance().newXPath();
+    NodeList libs =
+        (NodeList)
+            xpath.evaluate(
+                "/project/build/plugins/plugin[artifactId='aspectj-maven-plugin']"
+                    + "/configuration/aspectLibraries/aspectLibrary",
+                doc,
+                XPathConstants.NODESET);
+    // Should have 2: existing + pal-weave
+    assertThat(libs.getLength(), is(2));
+    assertFalse(result.getAdditions().isEmpty());
   }
 
   /**
-   * Verifies that patching a malformed XML file (e.g., missing closing tag) throws an exception
-   * with a descriptive error message and leaves the original file untouched.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing an invalid XML file.
+   * Verifies that when the pom.xml has an aspectj-maven-plugin with a different version, the
+   * PatchResult contains a warning and the existing version is not overwritten.
    */
   @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testValidatesXmlBeforePatching() {
-    // Given: malformed XML file (missing closing tag)
-    // When: patch() called
-    // Then: throws exception with descriptive error; original file untouched
+  public void testWarnsOnConflictingAspectjVersion() throws Exception {
+    // Given
+    Path pomFile = writePom(POM_WITH_CONFLICTING_PLUGIN_VERSION);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+    // When
+    PatchResult result = new PomPatcher().patch(config, pomFile);
+
+    // Then
+    assertFalse(result.getWarnings().isEmpty());
+    assertTrue(
+        result.getWarnings().stream().anyMatch(w -> w.contains("1.14.0") && w.contains("1.15.0")));
+
+    // Existing version not overwritten
+    Document doc = parsePom(pomFile);
+    XPath xpath = XPathFactory.newInstance().newXPath();
+    assertThat(
+        xpath.evaluate(
+            "/project/build/plugins/plugin[artifactId='aspectj-maven-plugin']/version", doc),
+        is("1.14.0"));
+  }
+
+  /** Verifies that patching adds pal.version and aspectj.version properties when missing. */
+  @Test
+  public void testAddsVersionProperties() throws Exception {
+    // Given
+    Path pomFile = writePom(BASIC_POM);
+    InitConfig config = defaultConfig().palVersion("1.0.0").aspectjVersion("1.9.24").build();
+
+    // When
+    new PomPatcher().patch(config, pomFile);
+
+    // Then
+    Document doc = parsePom(pomFile);
+    XPath xpath = XPathFactory.newInstance().newXPath();
+    assertThat(xpath.evaluate("/project/properties/pal.version", doc), is("1.0.0"));
+    assertThat(xpath.evaluate("/project/properties/aspectj.version", doc), is("1.9.24"));
   }
 
   /**
-   * Verifies that after patching, the output file is valid XML that can be re-parsed by a {@code
-   * DocumentBuilder} (round-trip validation).
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a valid {@code pom.xml}.
+   * Verifies that patching preserves all existing content including custom dependencies, profiles,
+   * and repositories.
    */
   @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testValidatesXmlAfterPatching() {
-    // Given: valid pom.xml
-    // When: patch() called
-    // Then: output file is re-parseable by DocumentBuilder (round-trip validation)
+  public void testPreservesExistingContent() throws Exception {
+    // Given
+    Path pomFile = writePom(POM_WITH_EXISTING_CONTENT);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+    // When
+    new PomPatcher().patch(config, pomFile);
+
+    // Then
+    Document doc = parsePom(pomFile);
+    XPath xpath = XPathFactory.newInstance().newXPath();
+    // Existing dependency preserved
+    NodeList guavaDeps =
+        (NodeList)
+            xpath.evaluate(
+                "/project/dependencies/dependency[artifactId='guava']",
+                doc,
+                XPathConstants.NODESET);
+    assertThat(guavaDeps.getLength(), is(1));
+    // Existing profile preserved
+    NodeList profiles =
+        (NodeList) xpath.evaluate("/project/profiles/profile", doc, XPathConstants.NODESET);
+    assertThat(profiles.getLength(), is(1));
+    // Existing repository preserved
+    NodeList repos =
+        (NodeList) xpath.evaluate("/project/repositories/repository", doc, XPathConstants.NODESET);
+    assertThat(repos.getLength(), is(1));
+  }
+
+  /** Verifies that PatchResult accurately reports additions and skips across two scenarios. */
+  @Test
+  public void testPatchResultReportsActions() throws Exception {
+    // Given: unpatched pom
+    Path pomFile = writePom(BASIC_POM);
+    InitConfig config = defaultConfig().build();
+    PomPatcher patcher = new PomPatcher();
+
+    // When: first patch
+    PatchResult firstResult = patcher.patch(config, pomFile);
+
+    // Then: additions reported
+    assertFalse(firstResult.getAdditions().isEmpty());
+
+    // When: second patch (already configured)
+    PatchResult secondResult = patcher.patch(config, pomFile);
+
+    // Then: reports already configured
+    assertTrue(secondResult.isAlreadyConfigured());
+  }
+
+  /** Verifies dry-run mode: file not modified, no backup, PatchResult still reports actions. */
+  @Test
+  public void testDryRunDoesNotModifyFile() throws Exception {
+    // Given
+    Path pomFile = writePom(BASIC_POM);
+    String originalContent = Files.readString(pomFile, StandardCharsets.UTF_8);
+    InitConfig config = defaultConfig().dryRun(true).build();
+
+    // When
+    PatchResult result = new PomPatcher().patch(config, pomFile);
+
+    // Then: file unchanged
+    String afterContent = Files.readString(pomFile, StandardCharsets.UTF_8);
+    assertThat(afterContent, is(originalContent));
+
+    // No backup created
+    assertFalse(Files.exists(pomFile.resolveSibling("pom.xml.backup")));
+
+    // PatchResult still reports what would have been done
+    assertFalse(result.getAdditions().isEmpty());
+
+    // PatchResult reports dry-run status
+    assertTrue(result.isDryRun());
   }
 
   /**
-   * Verifies that patching a {@code pom.xml} which already has an {@code aspectj-maven-plugin}
-   * configured but without {@code pal-weave} in {@code aspectLibraries} merges the {@code
-   * pal-weave} entry into the existing {@code aspectLibraries} while preserving other aspect
-   * libraries.
+   * Writes a pom.xml file in the temporary directory.
    *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code pom.xml} with an existing {@code
-   * aspectj-maven-plugin} that has other aspect libraries configured.
+   * @param content the file content
+   * @return the path to the created file
+   * @throws Exception if the file cannot be written
    */
-  @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testMergesIntoExistingAspectjPlugin() {
-    // Given: pom.xml with aspectj-maven-plugin already configured but without
-    //        pal-weave in aspectLibraries
-    // When: patch() called
-    // Then: pal-weave added to existing aspectLibraries;
-    //       other aspect libraries preserved
-
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+  private Path writePom(String content) throws Exception {
+    Path pomFile = tempDir.getRoot().toPath().resolve("pom.xml");
+    Files.writeString(pomFile, content, StandardCharsets.UTF_8);
+    return pomFile;
   }
 
   /**
-   * Verifies that when a {@code pom.xml} has the {@code aspectj-maven-plugin} at a different
-   * version (e.g., 1.14.0) than PAL's expected version (e.g., 1.15.0), the {@code PatchResult}
-   * contains a warning about the version mismatch, and the existing version is not overwritten.
+   * Parses a pom.xml file into a DOM document.
    *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code pom.xml} with a pre-existing {@code
-   * aspectj-maven-plugin} at a different version.
+   * @param pomFile the path to the pom.xml
+   * @return the parsed document
+   * @throws Exception if parsing fails
    */
-  @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testWarnsOnConflictingAspectjVersion() {
-    // Given: pom.xml with aspectj-maven-plugin at version 1.14.0
-    //        (different from PAL's 1.15.0)
-    // When: patch() called
-    // Then: PatchResult contains a warning about version mismatch;
-    //       does not overwrite the existing version
-
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+  private static Document parsePom(Path pomFile) throws Exception {
+    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    DocumentBuilder builder = factory.newDocumentBuilder();
+    return builder.parse(Files.newInputStream(pomFile));
   }
 
   /**
-   * Verifies that patching a {@code pom.xml} with no {@code pal.version} or {@code aspectj.version}
-   * properties adds them to the {@code <properties>} section.
+   * Creates a default config builder for tests.
    *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code pom.xml} with no PAL-related
-   * properties.
+   * @return a builder with standard test values
    */
-  @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testAddsVersionProperties() {
-    // Given: pom.xml with no pal.version or aspectj.version properties
-    // When: patch() called
-    // Then: properties section includes pal.version and aspectj.version
-
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
+  private static InitConfig.Builder defaultConfig() {
+    return InitConfig.builder()
+        .groupId("com.example")
+        .artifactId("my-app")
+        .palVersion("1.0.0")
+        .aspectjVersion("1.9.24")
+        .buildTool(BuildTool.MAVEN);
   }
 
-  /**
-   * Verifies that patching preserves all existing content in the {@code pom.xml}, including custom
-   * dependencies, profiles, and repositories.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code pom.xml} with custom dependencies,
-   * profiles, and repositories.
-   */
-  @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testPreservesExistingContent() {
-    // Given: pom.xml with custom dependencies, profiles, and repositories
-    // When: patch() called
-    // Then: all existing content preserved in output
+  /** A basic pom.xml with dependencies section. */
+  private static final String BASIC_POM =
+      """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <project>
+          <modelVersion>4.0.0</modelVersion>
+          <groupId>com.example</groupId>
+          <artifactId>my-app</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <dependencies>
+              <dependency>
+                  <groupId>junit</groupId>
+                  <artifactId>junit</artifactId>
+                  <version>4.13.2</version>
+              </dependency>
+          </dependencies>
+      </project>
+      """;
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
-  }
+  /** A minimal pom.xml with no dependencies or build sections. */
+  private static final String MINIMAL_POM =
+      """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <project>
+          <modelVersion>4.0.0</modelVersion>
+          <groupId>com.example</groupId>
+          <artifactId>my-app</artifactId>
+          <version>1.0-SNAPSHOT</version>
+      </project>
+      """;
 
-  /**
-   * Verifies that the {@code PatchResult} returned by {@code patch()} accurately reports actions
-   * taken. When both dependency and plugin additions are needed, the result lists both. When the
-   * file is already patched, the result reports "already configured".
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} with two scenarios: an unpatched and a pre-patched
-   * {@code pom.xml}.
-   */
-  @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testPatchResultReportsActions() {
-    // Given: pom.xml needing both dependency and plugin additions
-    // When: patch() called
-    // Then: PatchResult lists both additions
-    // Given: already-patched pom.xml
-    // When: patch() called
-    // Then: PatchResult reports "already configured"
+  /** A pom.xml with build/plugins section but no aspectj plugin. */
+  private static final String POM_WITH_BUILD_PLUGINS =
+      """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <project>
+          <modelVersion>4.0.0</modelVersion>
+          <groupId>com.example</groupId>
+          <artifactId>my-app</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <dependencies>
+              <dependency>
+                  <groupId>junit</groupId>
+                  <artifactId>junit</artifactId>
+                  <version>4.13.2</version>
+              </dependency>
+          </dependencies>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>org.apache.maven.plugins</groupId>
+                      <artifactId>maven-compiler-plugin</artifactId>
+                      <version>3.11.0</version>
+                  </plugin>
+              </plugins>
+          </build>
+      </project>
+      """;
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
-  }
+  /** A pom.xml with an existing aspectj-maven-plugin but no pal-weave in aspectLibraries. */
+  private static final String POM_WITH_EXISTING_ASPECTJ_PLUGIN =
+      """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <project>
+          <modelVersion>4.0.0</modelVersion>
+          <groupId>com.example</groupId>
+          <artifactId>my-app</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <dependencies>
+              <dependency>
+                  <groupId>io.quasient.pal</groupId>
+                  <artifactId>pal-weave</artifactId>
+                  <version>1.0.0</version>
+              </dependency>
+          </dependencies>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>dev.aspectj</groupId>
+                      <artifactId>aspectj-maven-plugin</artifactId>
+                      <version>1.15.0</version>
+                      <configuration>
+                          <complianceLevel>17</complianceLevel>
+                          <aspectLibraries>
+                              <aspectLibrary>
+                                  <groupId>com.other</groupId>
+                                  <artifactId>other-aspect</artifactId>
+                              </aspectLibrary>
+                          </aspectLibraries>
+                      </configuration>
+                  </plugin>
+              </plugins>
+          </build>
+      </project>
+      """;
 
-  /**
-   * Verifies that when {@code InitConfig} has {@code dryRun=true}, the patcher does not modify the
-   * original {@code pom.xml}, does not create a backup file, but still returns a {@code
-   * PatchResult} listing what would have been changed.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a valid {@code pom.xml} and an {@code
-   * InitConfig} with {@code dryRun=true}.
-   */
-  @Test
-  @Ignore("Awaiting implementation in #1336")
-  public void testDryRunDoesNotModifyFile() {
-    // Given: valid pom.xml, InitConfig with dryRun=true
-    // When: patch() called
-    // Then: original pom.xml unchanged; no backup created;
-    //       PatchResult still lists what would have been changed
+  /** A pom.xml with aspectj-maven-plugin at a conflicting version. */
+  private static final String POM_WITH_CONFLICTING_PLUGIN_VERSION =
+      """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <project>
+          <modelVersion>4.0.0</modelVersion>
+          <groupId>com.example</groupId>
+          <artifactId>my-app</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <dependencies>
+              <dependency>
+                  <groupId>io.quasient.pal</groupId>
+                  <artifactId>pal-weave</artifactId>
+                  <version>1.0.0</version>
+              </dependency>
+          </dependencies>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>dev.aspectj</groupId>
+                      <artifactId>aspectj-maven-plugin</artifactId>
+                      <version>1.14.0</version>
+                      <configuration>
+                          <complianceLevel>17</complianceLevel>
+                          <aspectLibraries>
+                              <aspectLibrary>
+                                  <groupId>com.other</groupId>
+                                  <artifactId>other-aspect</artifactId>
+                              </aspectLibrary>
+                          </aspectLibraries>
+                      </configuration>
+                  </plugin>
+              </plugins>
+          </build>
+      </project>
+      """;
 
-    // TODO(#1336): Implement test logic
-    fail("Not yet implemented");
-  }
+  /** A pom.xml with custom dependencies, profiles, and repositories. */
+  private static final String POM_WITH_EXISTING_CONTENT =
+      """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <project>
+          <modelVersion>4.0.0</modelVersion>
+          <groupId>com.example</groupId>
+          <artifactId>my-app</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <dependencies>
+              <dependency>
+                  <groupId>com.google.guava</groupId>
+                  <artifactId>guava</artifactId>
+                  <version>33.0.0-jre</version>
+              </dependency>
+          </dependencies>
+          <repositories>
+              <repository>
+                  <id>central</id>
+                  <url>https://repo.maven.apache.org/maven2</url>
+              </repository>
+          </repositories>
+          <profiles>
+              <profile>
+                  <id>release</id>
+              </profile>
+          </profiles>
+      </project>
+      """;
 }

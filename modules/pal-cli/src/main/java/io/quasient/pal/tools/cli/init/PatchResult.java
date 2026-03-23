@@ -38,6 +38,9 @@ public final class PatchResult {
   /** Warning messages about potential issues encountered during patching. */
   private final List<String> warnings;
 
+  /** Whether this result was produced during a dry-run (no files written). */
+  private final boolean dryRun;
+
   /**
    * Constructs a {@code PatchResult} from the given builder.
    *
@@ -47,6 +50,7 @@ public final class PatchResult {
     this.additions = Collections.unmodifiableList(new ArrayList<>(builder.additions));
     this.skips = Collections.unmodifiableList(new ArrayList<>(builder.skips));
     this.warnings = Collections.unmodifiableList(new ArrayList<>(builder.warnings));
+    this.dryRun = builder.dryRun;
   }
 
   /**
@@ -96,6 +100,16 @@ public final class PatchResult {
   }
 
   /**
+   * Returns {@code true} if this result was produced during a dry-run operation where no files were
+   * actually written or modified.
+   *
+   * @return whether this is a dry-run result
+   */
+  public boolean isDryRun() {
+    return dryRun;
+  }
+
+  /**
    * Builder for {@link PatchResult}.
    *
    * @since 1.0.0
@@ -110,6 +124,9 @@ public final class PatchResult {
 
     /** Accumulated warning messages. */
     private final List<String> warnings = new ArrayList<>();
+
+    /** Whether this result is from a dry-run operation. */
+    private boolean dryRun;
 
     /** Creates a new builder. */
     private Builder() {}
@@ -144,6 +161,17 @@ public final class PatchResult {
      */
     public Builder warning(String message) {
       warnings.add(message);
+      return this;
+    }
+
+    /**
+     * Sets whether this result is from a dry-run operation.
+     *
+     * @param dryRun {@code true} if this is a dry-run result
+     * @return this builder
+     */
+    public Builder dryRun(boolean dryRun) {
+      this.dryRun = dryRun;
       return this;
     }
 
