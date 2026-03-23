@@ -9,23 +9,32 @@
  */
 package io.quasient.pal.tools.cli.init;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
- * Unit test specifications for {@code PalWeaveResolver}, which checks the local Maven repository
- * for pal-weave and fetches it from Maven Central if missing.
+ * Unit tests for {@code PalWeaveResolver}, which checks the local Maven repository for pal-weave
+ * and fetches it from Maven Central if missing.
  *
  * <p>These tests verify local repo detection, URL construction, fetch behavior, graceful failure
- * handling, and dry-run mode. Each test is a stub awaiting implementation once {@code
- * PalWeaveResolver} is created in issue #1345.
- *
- * @see <a href="https://github.io/quasientinc/pal/issues/1344">#1344</a>
- * @see <a href="https://github.io/quasientinc/pal/issues/1345">#1345</a>
+ * handling, and dry-run mode.
  */
 public class PalWeaveResolverTest {
+
+  /** Temporary folder for simulating a local Maven repository. */
+  @Rule public TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
    * Verifies that {@code isAvailableLocally} returns {@code true} when the pal-weave JAR exists in
@@ -35,15 +44,18 @@ public class PalWeaveResolverTest {
    * ({@code io/quasient/pal/pal-weave/1.0.0/pal-weave-1.0.0.jar}) pre-created.
    */
   @Test
-  @Ignore("Awaiting implementation in #1345")
-  public void testDetectsPalWeaveInLocalRepo() {
-    // Given: ~/.m2/repository/io/quasient/pal/pal-weave/1.0.0/pal-weave-1.0.0.jar exists
-    //        (mocked via temp dir as repo root)
-    // When: PalWeaveResolver.isAvailableLocally("1.0.0", repoRoot) called
-    // Then: returns true
+  public void testDetectsPalWeaveInLocalRepo() throws IOException {
+    // Given: pal-weave JAR exists at the expected repo path
+    Path repoRoot = tempDir.getRoot().toPath();
+    Path jarDir = repoRoot.resolve("io/quasient/pal/pal-weave/1.0.0");
+    Files.createDirectories(jarDir);
+    Files.write(jarDir.resolve("pal-weave-1.0.0.jar"), new byte[] {0x50, 0x4B});
 
-    // TODO(#1345): Implement test logic
-    fail("Not yet implemented");
+    // When: isAvailableLocally called
+    boolean available = PalWeaveResolver.isAvailableLocally("1.0.0", repoRoot);
+
+    // Then: returns true
+    assertThat(available, is(true));
   }
 
   /**
@@ -53,15 +65,15 @@ public class PalWeaveResolverTest {
    * <p>Uses an empty temporary directory as the repository root.
    */
   @Test
-  @Ignore("Awaiting implementation in #1345")
   public void testDetectsMissingPalWeave() {
-    // Given: ~/.m2/repository does not contain pal-weave for version 1.0.0
-    //        (temp dir as empty repo root)
-    // When: isAvailableLocally("1.0.0", repoRoot) called
-    // Then: returns false
+    // Given: empty repo root (no pal-weave present)
+    Path repoRoot = tempDir.getRoot().toPath();
 
-    // TODO(#1345): Implement test logic
-    fail("Not yet implemented");
+    // When: isAvailableLocally called
+    boolean available = PalWeaveResolver.isAvailableLocally("1.0.0", repoRoot);
+
+    // Then: returns false
+    assertThat(available, is(false));
   }
 
   /**
@@ -69,14 +81,15 @@ public class PalWeaveResolverTest {
    * ({@code ~/.m2/repository}), or respects {@code M2_HOME} / {@code settings.xml} overrides.
    */
   @Test
-  @Ignore("Awaiting implementation in #1345")
   public void testResolvesLocalRepoPath() {
-    // Given: default Maven home
-    // When: PalWeaveResolver.getLocalRepoPath() called
-    // Then: returns path to ~/.m2/repository (or respects M2_HOME / settings.xml override)
+    // Given: a temporary home directory with no settings.xml
+    Path fakeHome = tempDir.getRoot().toPath();
 
-    // TODO(#1345): Implement test logic
-    fail("Not yet implemented");
+    // When: resolving local repo path using the testable overload
+    Path repoPath = PalWeaveResolver.resolveLocalRepoPath(fakeHome);
+
+    // Then: returns .m2/repository under the given home
+    assertThat(repoPath, is(fakeHome.resolve(".m2").resolve("repository")));
   }
 
   /**
@@ -87,15 +100,16 @@ public class PalWeaveResolverTest {
    * https://repo1.maven.org/maven2/io/quasient/pal/pal-weave/1.0.0/pal-weave-1.0.0.jar}
    */
   @Test
-  @Ignore("Awaiting implementation in #1345")
   public void testConstructsMavenCentralUrl() {
-    // Given: palVersion="1.0.0"
-    // When: PalWeaveResolver.getMavenCentralUrl("1.0.0") called
-    // Then: returns correct URL for io/quasient/pal/pal-weave/1.0.0/pal-weave-1.0.0.jar
-    //       on Maven Central
+    // When: constructing Maven Central URL for version 1.0.0
+    String url = PalWeaveResolver.getMavenCentralUrl("1.0.0");
 
-    // TODO(#1345): Implement test logic
-    fail("Not yet implemented");
+    // Then: returns correct URL
+    assertThat(
+        url,
+        is(
+            "https://repo1.maven.org/maven2/io/quasient/pal/pal-weave/1.0.0/"
+                + "pal-weave-1.0.0.jar"));
   }
 
   /**
@@ -107,16 +121,23 @@ public class PalWeaveResolverTest {
    * should exist at the expected path.
    */
   @Test
-  @Ignore("Awaiting implementation in #1345")
   public void testFetchPlacesJarInCorrectLocation() {
-    // Given: pal-weave not in local repo (mock temp dir), mock HTTP response returning
-    //        dummy JAR bytes
-    // When: PalWeaveResolver.fetchFromMavenCentral("1.0.0", repoRoot) called
-    // Then: pal-weave-1.0.0.jar and pal-weave-1.0.0.pom placed in correct repo
-    //       directory structure
+    // Given: empty repo root, mock downloader that writes dummy bytes
+    Path repoRoot = tempDir.getRoot().toPath();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(baos, true, StandardCharsets.UTF_8);
+    PalWeaveResolver.Downloader mockDownloader =
+        (url, target) -> Files.write(target, new byte[] {0x50, 0x4B});
+    PalWeaveResolver resolver = new PalWeaveResolver(out, false, mockDownloader);
 
-    // TODO(#1345): Implement test logic
-    fail("Not yet implemented");
+    // When: fetching from Maven Central
+    PalWeaveResolver.ResolveResult result = resolver.fetchFromMavenCentral("1.0.0", repoRoot);
+
+    // Then: both JAR and POM placed in correct directory structure
+    assertThat(result.isSuccess(), is(true));
+    Path artifactDir = repoRoot.resolve("io/quasient/pal/pal-weave/1.0.0");
+    assertThat(Files.exists(artifactDir.resolve("pal-weave-1.0.0.jar")), is(true));
+    assertThat(Files.exists(artifactDir.resolve("pal-weave-1.0.0.pom")), is(true));
   }
 
   /**
@@ -125,15 +146,25 @@ public class PalWeaveResolverTest {
    * unchecked exception.
    */
   @Test
-  @Ignore("Awaiting implementation in #1345")
   public void testFetchFailsGracefully() {
-    // Given: network unavailable or 404 response
-    // When: fetchFromMavenCentral() called
-    // Then: returns a failure result with descriptive message (does not throw
-    //       unchecked exception)
+    // Given: a downloader that simulates network failure
+    Path repoRoot = tempDir.getRoot().toPath();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(baos, true, StandardCharsets.UTF_8);
+    PalWeaveResolver.Downloader failingDownloader =
+        (url, target) -> {
+          throw new IOException("Connection refused");
+        };
+    PalWeaveResolver resolver = new PalWeaveResolver(out, false, failingDownloader);
 
-    // TODO(#1345): Implement test logic
-    fail("Not yet implemented");
+    // When: fetching from Maven Central
+    PalWeaveResolver.ResolveResult result = resolver.fetchFromMavenCentral("1.0.0", repoRoot);
+
+    // Then: returns a failure result with descriptive message
+    assertThat(result.isSuccess(), is(false));
+    assertThat(result.getMessage(), containsString("Failed to fetch pal-weave"));
+    assertThat(result.getMessage(), containsString("Connection refused"));
+    assertThat(result.getMessage(), containsString("mvn dependency:resolve"));
   }
 
   /**
@@ -141,14 +172,27 @@ public class PalWeaveResolverTest {
    * pal-weave is already present in the local Maven repository.
    */
   @Test
-  @Ignore("Awaiting implementation in #1345")
-  public void testSkipsFetchWhenAlreadyAvailable() {
-    // Given: pal-weave already in local repo
-    // When: ensureAvailable("1.0.0", repoRoot) called
-    // Then: returns immediately without attempting download
+  public void testSkipsFetchWhenAlreadyAvailable() throws IOException {
+    // Given: pal-weave JAR already exists in local repo
+    Path repoRoot = tempDir.getRoot().toPath();
+    Path jarDir = repoRoot.resolve("io/quasient/pal/pal-weave/1.0.0");
+    Files.createDirectories(jarDir);
+    Files.write(jarDir.resolve("pal-weave-1.0.0.jar"), new byte[] {0x50, 0x4B});
 
-    // TODO(#1345): Implement test logic
-    fail("Not yet implemented");
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(baos, true, StandardCharsets.UTF_8);
+    AtomicInteger downloadCount = new AtomicInteger(0);
+    PalWeaveResolver.Downloader countingDownloader =
+        (url, target) -> downloadCount.incrementAndGet();
+    PalWeaveResolver resolver = new PalWeaveResolver(out, false, countingDownloader);
+
+    // When: ensureAvailable called
+    PalWeaveResolver.ResolveResult result = resolver.ensureAvailable("1.0.0", repoRoot);
+
+    // Then: returns success without attempting any downloads
+    assertThat(result.isSuccess(), is(true));
+    assertThat(result.getMessage(), containsString("already available"));
+    assertThat(downloadCount.get(), is(0));
   }
 
   /**
@@ -156,14 +200,25 @@ public class PalWeaveResolverTest {
    * but does not actually download any artifacts.
    */
   @Test
-  @Ignore("Awaiting implementation in #1345")
   public void testDryRunSkipsFetch() {
     // Given: pal-weave not available, dryRun=true
-    // When: ensureAvailable() called
-    // Then: reports that fetch would be performed but does not actually download
+    Path repoRoot = tempDir.getRoot().toPath();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(baos, true, StandardCharsets.UTF_8);
+    AtomicInteger downloadCount = new AtomicInteger(0);
+    PalWeaveResolver.Downloader countingDownloader =
+        (url, target) -> downloadCount.incrementAndGet();
+    PalWeaveResolver resolver = new PalWeaveResolver(out, true, countingDownloader);
 
-    // TODO(#1345): Implement test logic
-    fail("Not yet implemented");
+    // When: ensureAvailable called
+    PalWeaveResolver.ResolveResult result = resolver.ensureAvailable("1.0.0", repoRoot);
+
+    // Then: reports dry-run without performing any downloads
+    assertThat(result.isSuccess(), is(true));
+    assertThat(result.getMessage(), containsString("Dry run"));
+    assertThat(downloadCount.get(), is(0));
+    String output = baos.toString(StandardCharsets.UTF_8);
+    assertThat(output, containsString("Would fetch"));
   }
 
   /**
@@ -171,13 +226,22 @@ public class PalWeaveResolverTest {
    * pal-weave for a given version.
    */
   @Test
-  @Ignore("Awaiting implementation in #1345")
   public void testResolvesPomAndJar() {
-    // Given: version "1.0.0"
-    // When: checking expected artifacts
-    // Then: expects both pal-weave-1.0.0.jar and pal-weave-1.0.0.pom in local repo
+    // Given: empty repo root, mock downloader that writes dummy bytes
+    Path repoRoot = tempDir.getRoot().toPath();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(baos, true, StandardCharsets.UTF_8);
+    PalWeaveResolver.Downloader mockDownloader =
+        (url, target) -> Files.write(target, new byte[] {0x50, 0x4B});
+    PalWeaveResolver resolver = new PalWeaveResolver(out, false, mockDownloader);
 
-    // TODO(#1345): Implement test logic
-    fail("Not yet implemented");
+    // When: fetching version 1.0.0
+    PalWeaveResolver.ResolveResult result = resolver.fetchFromMavenCentral("1.0.0", repoRoot);
+
+    // Then: both JAR and POM exist in local repo
+    assertThat(result.isSuccess(), is(true));
+    Path versionDir = repoRoot.resolve("io/quasient/pal/pal-weave/1.0.0");
+    assertThat(Files.exists(versionDir.resolve("pal-weave-1.0.0.jar")), is(true));
+    assertThat(Files.exists(versionDir.resolve("pal-weave-1.0.0.pom")), is(true));
   }
 }

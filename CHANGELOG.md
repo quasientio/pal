@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Feature] Add PalWeaveResolver for checking local Maven repository for pal-weave and fetching from Maven Central when missing, with dry-run support and graceful failure handling
 - [Enhancement] Validate Kafka/Chronicle flag consistency in Main: fatal exit when --kafka-servers is given with all-Chronicle logs or --chronicle-base-dir with all-Kafka logs, and warn when source-log and WAL use different backends
 - [Security] Use SafeConstructor in ReplayPolicyParser, RpcPolicyParser, and RecordingScopeParser to prevent arbitrary object deserialization via SnakeYAML type tags
 - [Doc] Add user documentation for recording scope feature: concept overview (WAL size reduction, orthogonality with intercepts), all five CLI flags with examples (--scope, --scope-exclude, --scope-io, --scope-policy, --scope-default), YAML policy format reference with field operation categories, I/O boundary preset reference, --scope-io/--shield-io relationship, replay same-scope requirement, and usage examples for common scenarios
