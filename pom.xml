@@ -98,6 +98,7 @@
         <spring-boot-loader.version>3.2.1</spring-boot-loader.version>
         <jmh.version>1.37</jmh.version>
         <snakeyaml.version>2.2</snakeyaml.version>
+        <jline.version>3.26.3</jline.version>
 
         <!-- LOGGING -->
         <logs.dir>logs</logs.dir>
@@ -877,6 +878,13 @@
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>${snakeyaml.version}</version>
+            </dependency>
+
+            <!-- JLine terminal -->
+            <dependency>
+                <groupId>org.jline</groupId>
+                <artifactId>jline</artifactId>
+                <version>${jline.version}</version>
             </dependency>
 
             <!-- JMH benchmarks -->

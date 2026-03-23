@@ -166,6 +166,10 @@
                             <pattern>org.yaml</pattern>
                             <shadedPattern>${shading.prefix}.yaml</shadedPattern>
                         </relocation>
+                        <relocation>
+                            <pattern>org.jline</pattern>
+                            <shadedPattern>${shading.prefix}.org.jline</shadedPattern>
+                        </relocation>
                     </relocations>
                     <filters>
                         <filter>
@@ -232,6 +236,12 @@
                                  <include>org/aspectj/**</include>
                             </includes>
                         </filter>
+                        <filter>
+                            <artifact>org.jline:jline</artifact>
+                            <includes>
+                                <include>org/jline/**</include>
+                            </includes>
+                        </filter>
                         <!-- End: force inclusion of required classes that are discarded by minimization -->
                     </filters>
                     <createDependencyReducedPom>false</createDependencyReducedPom>
@@ -263,7 +273,13 @@
                 <excludes>
                     <exclude>.gitignore</exclude>
                     <exclude>cli-logging.xml.example</exclude>
+                    <exclude>init/**</exclude>
                 </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources/init</directory>
+                <filtering>true</filtering>
+                <targetPath>init</targetPath>
             </resource>
         </resources>
     </build>
@@ -328,6 +344,10 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline</artifactId>
         </dependency>
     </dependencies>
 </project>
