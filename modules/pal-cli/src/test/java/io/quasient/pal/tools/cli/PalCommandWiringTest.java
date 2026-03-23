@@ -12,8 +12,10 @@ package io.quasient.pal.tools.cli;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Map;
+import org.junit.Ignore;
 import org.junit.Test;
 import picocli.CommandLine;
 
@@ -172,5 +174,38 @@ public class PalCommandWiringTest {
     CommandLine.ParseResult sub = result.subcommand();
     assertTrue(sub.commandSpec().userObject() instanceof PeersAlias);
     assertTrue(sub.commandSpec().userObject() instanceof PeerList);
+  }
+
+  /**
+   * Tests that the "init" command is registered as a top-level subcommand.
+   *
+   * <p>Verifies that {@code Pal.createCommandLine()} includes "init" in its subcommands map.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1347")
+  public void testInitCommandRegistered() {
+    // Given: Pal.createCommandLine()
+    // When: subcommands queried
+    // Then: "init" present in subcommands map
+
+    // TODO(#1347): Implement test logic
+    fail("Not yet implemented");
+  }
+
+  /**
+   * Tests that the root help output includes the "init" command.
+   *
+   * <p>Verifies that the Pal help text mentions "init" in the "Commands" group with its
+   * description.
+   */
+  @Test
+  @Ignore("Awaiting implementation in #1347")
+  public void testHelpIncludesInitCommand() {
+    // Given: Pal help output rendered
+    // When: content inspected
+    // Then: "init" appears in "Commands" group with description
+
+    // TODO(#1347): Implement test logic
+    fail("Not yet implemented");
   }
 }
