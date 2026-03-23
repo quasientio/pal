@@ -9,9 +9,10 @@
  */
 package io.quasient.pal.tools.cli.init;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import java.nio.file.Paths;
 import org.junit.Test;
 
 /**
@@ -23,11 +24,6 @@ import org.junit.Test;
  * interceptBundle, infra), build tool selection, PAL version, and optional existing build file
  * path. These tests verify default values, derived properties (package name inference, source
  * directory layout, new-vs-existing project detection), and enum convenience methods.
- *
- * <p>Each test is a stub awaiting implementation once {@code InitConfig} is created in issue #1332.
- *
- * @see <a href="https://github.io/quasientinc/pal/issues/1331">#1331</a>
- * @see <a href="https://github.io/quasientinc/pal/issues/1332">#1332</a>
  */
 public class InitConfigTest {
 
@@ -40,16 +36,27 @@ public class InitConfigTest {
    * true}, interceptBundle is {@code false}, infra is {@code false}, buildTool is {@code MAVEN}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testDefaultValues() {
     // Given: InitConfig built with only required fields (groupId, artifactId, mainClass)
-    // When: default values queried
-    // Then: version="1.0-SNAPSHOT", mode=LOCAL, sampleApp=true, rpcPolicy=false,
-    //       scopePolicy=false, loggingConfig=true, interceptBundle=false, infra=false,
-    //       buildTool=MAVEN
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .artifactId("my-app")
+            .mainClass("com.example.Main")
+            .build();
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Then: default values are correct
+    assertThat(config.getProjectVersion(), is("1.0-SNAPSHOT"));
+    assertThat(config.getDeploymentMode(), is(DeploymentMode.LOCAL));
+    assertThat(config.isSampleApp(), is(true));
+    assertThat(config.isRpcPolicy(), is(false));
+    assertThat(config.isScopePolicy(), is(false));
+    assertThat(config.isLoggingConfig(), is(true));
+    assertThat(config.isInterceptBundle(), is(false));
+    assertThat(config.isInfra(), is(false));
+    assertThat(config.getBuildTool(), is(BuildTool.MAVEN));
+    assertThat(config.isForce(), is(false));
+    assertThat(config.isDryRun(), is(false));
   }
 
   /**
@@ -60,14 +67,17 @@ public class InitConfigTest {
    * set.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testPackageNameInferredFromGroupId() {
     // Given: InitConfig with groupId="com.example" and no explicit package
-    // When: getPackageName() called
-    // Then: returns "com.example"
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .artifactId("my-app")
+            .mainClass("com.example.Main")
+            .build();
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Then: getPackageName() returns the groupId
+    assertThat(config.getPackageName(), is("com.example"));
   }
 
   /**
@@ -77,14 +87,18 @@ public class InitConfigTest {
    * packageName="com.example.app"}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testExplicitPackageOverridesGroupId() {
     // Given: InitConfig with groupId="com.example" and package="com.example.app"
-    // When: getPackageName() called
-    // Then: returns "com.example.app"
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .artifactId("my-app")
+            .mainClass("com.example.Main")
+            .packageName("com.example.app")
+            .build();
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Then: getPackageName() returns the explicit package
+    assertThat(config.getPackageName(), is("com.example.app"));
   }
 
   /**
@@ -92,14 +106,17 @@ public class InitConfigTest {
    * set (i.e., {@code existingBuildFile} is {@code null}).
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testIsNewProject() {
-    // Given: InitConfig with existingBuildFile set to null
-    // When: isNewProject() called
-    // Then: returns true
+    // Given: InitConfig with existingBuildFile set to null (default)
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .artifactId("my-app")
+            .mainClass("com.example.Main")
+            .build();
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Then: isNewProject() returns true
+    assertThat(config.isNewProject(), is(true));
   }
 
   /**
@@ -107,14 +124,18 @@ public class InitConfigTest {
    * set (i.e., {@code existingBuildFile} points to a {@code Path}).
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testIsExistingProject() {
     // Given: InitConfig with existingBuildFile set to a Path
-    // When: isNewProject() called
-    // Then: returns false
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .artifactId("my-app")
+            .mainClass("com.example.Main")
+            .existingBuildFile(Paths.get("pom.xml"))
+            .build();
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Then: isNewProject() returns false
+    assertThat(config.isNewProject(), is(false));
   }
 
   /**
@@ -122,14 +143,11 @@ public class InitConfigTest {
    * GRADLE}) and their string representations are correct.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testBuildToolEnum() {
-    // Given: BuildTool.MAVEN and BuildTool.GRADLE
-    // When: toString/name called
-    // Then: correct string representations
-
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Given/When: BuildTool enum values
+    assertThat(BuildTool.MAVEN.name(), is("MAVEN"));
+    assertThat(BuildTool.GRADLE.name(), is("GRADLE"));
+    assertThat(BuildTool.values().length, is(2));
   }
 
   /**
@@ -139,16 +157,18 @@ public class InitConfigTest {
    * isDistributed()}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testModeEnum() {
-    // Given: DeploymentMode.LOCAL, DISTRIBUTED, BOTH
-    // When: isLocal() and isDistributed() called on each
-    // Then: LOCAL.isLocal()=true, LOCAL.isDistributed()=false,
-    //       DISTRIBUTED.isDistributed()=true, DISTRIBUTED.isLocal()=false,
-    //       BOTH.isLocal()=true, BOTH.isDistributed()=true
+    // LOCAL
+    assertThat(DeploymentMode.LOCAL.isLocal(), is(true));
+    assertThat(DeploymentMode.LOCAL.isDistributed(), is(false));
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // DISTRIBUTED
+    assertThat(DeploymentMode.DISTRIBUTED.isLocal(), is(false));
+    assertThat(DeploymentMode.DISTRIBUTED.isDistributed(), is(true));
+
+    // BOTH
+    assertThat(DeploymentMode.BOTH.isLocal(), is(true));
+    assertThat(DeploymentMode.BOTH.isDistributed(), is(true));
   }
 
   /**
@@ -159,14 +179,18 @@ public class InitConfigTest {
    * {@code "src/main/java/com/example/app"}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testSourceDirectoryLayout() {
     // Given: InitConfig with package="com.example.app"
-    // When: getSourceDirectory() called
-    // Then: returns "src/main/java/com/example/app"
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .artifactId("my-app")
+            .mainClass("com.example.Main")
+            .packageName("com.example.app")
+            .build();
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Then: getSourceDirectory() returns the correct path
+    assertThat(config.getSourceDirectory(), is("src/main/java/com/example/app"));
   }
 
   /**
@@ -176,13 +200,17 @@ public class InitConfigTest {
    * <p>Uses an {@code InitConfig} with {@code palVersion="1.0.0"}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testPalVersionFromRuntime() {
     // Given: InitConfig with palVersion set to "1.0.0"
-    // When: getPalVersion() called
-    // Then: returns "1.0.0"
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .artifactId("my-app")
+            .mainClass("com.example.Main")
+            .palVersion("1.0.0")
+            .build();
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Then: getPalVersion() returns "1.0.0"
+    assertThat(config.getPalVersion(), is("1.0.0"));
   }
 }

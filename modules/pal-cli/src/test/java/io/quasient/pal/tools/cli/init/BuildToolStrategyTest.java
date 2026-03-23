@@ -9,10 +9,15 @@
  */
 package io.quasient.pal.tools.cli.init;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import java.io.IOException;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
  * Unit test specifications for {@code BuildToolStrategy}, the interface and factory that abstracts
@@ -26,27 +31,24 @@ import org.junit.Test;
  * build.gradle.kts}), and precedence rules when multiple build files exist.
  *
  * <p>Tests that inspect the filesystem use a {@code @Rule TemporaryFolder} to create isolated
- * directories with specific build file markers. Each test is a stub awaiting implementation once
- * {@code BuildToolStrategy} is created in issue #1332.
- *
- * @see <a href="https://github.io/quasientinc/pal/issues/1331">#1331</a>
- * @see <a href="https://github.io/quasientinc/pal/issues/1332">#1332</a>
+ * directories with specific build file markers.
  */
 public class BuildToolStrategyTest {
+
+  @Rule public TemporaryFolder tempFolder = new TemporaryFolder();
 
   /**
    * Verifies that {@code BuildToolStrategy.forType(BuildTool.MAVEN)} returns an instance of {@code
    * MavenBuildToolStrategy}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testFactoryReturnsMavenStrategy() {
     // Given: BuildTool.MAVEN
     // When: BuildToolStrategy.forType(MAVEN) called
-    // Then: returns instance of MavenBuildToolStrategy
+    BuildToolStrategy strategy = BuildToolStrategy.forType(BuildTool.MAVEN);
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Then: returns instance of MavenBuildToolStrategy
+    assertThat(strategy, is(instanceOf(MavenBuildToolStrategy.class)));
   }
 
   /**
@@ -54,14 +56,13 @@ public class BuildToolStrategyTest {
    * GradleBuildToolStrategy}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testFactoryReturnsGradleStrategy() {
     // Given: BuildTool.GRADLE
     // When: BuildToolStrategy.forType(GRADLE) called
-    // Then: returns instance of GradleBuildToolStrategy
+    BuildToolStrategy strategy = BuildToolStrategy.forType(BuildTool.GRADLE);
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Then: returns instance of GradleBuildToolStrategy
+    assertThat(strategy, is(instanceOf(GradleBuildToolStrategy.class)));
   }
 
   /**
@@ -71,14 +72,15 @@ public class BuildToolStrategyTest {
    * <p>Uses a {@code @Rule TemporaryFolder} with a {@code pom.xml} file created inside it.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
-  public void testDetectMavenProject() {
+  public void testDetectMavenProject() throws IOException {
     // Given: temp directory containing pom.xml
-    // When: BuildToolStrategy.detect(dir) called
-    // Then: returns MAVEN
+    tempFolder.newFile("pom.xml");
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // When: BuildToolStrategy.detect(dir) called
+    BuildTool detected = BuildToolStrategy.detect(tempFolder.getRoot().toPath());
+
+    // Then: returns MAVEN
+    assertThat(detected, is(BuildTool.MAVEN));
   }
 
   /**
@@ -88,14 +90,15 @@ public class BuildToolStrategyTest {
    * <p>Uses a {@code @Rule TemporaryFolder} with a {@code build.gradle} file created inside it.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
-  public void testDetectGradleProject() {
+  public void testDetectGradleProject() throws IOException {
     // Given: temp directory containing build.gradle
-    // When: BuildToolStrategy.detect(dir) called
-    // Then: returns GRADLE
+    tempFolder.newFile("build.gradle");
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // When: BuildToolStrategy.detect(dir) called
+    BuildTool detected = BuildToolStrategy.detect(tempFolder.getRoot().toPath());
+
+    // Then: returns GRADLE
+    assertThat(detected, is(BuildTool.GRADLE));
   }
 
   /**
@@ -105,14 +108,15 @@ public class BuildToolStrategyTest {
    * <p>Uses a {@code @Rule TemporaryFolder} with a {@code build.gradle.kts} file created inside it.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
-  public void testDetectGradleKotlinProject() {
+  public void testDetectGradleKotlinProject() throws IOException {
     // Given: temp directory containing build.gradle.kts
-    // When: BuildToolStrategy.detect(dir) called
-    // Then: returns GRADLE
+    tempFolder.newFile("build.gradle.kts");
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // When: BuildToolStrategy.detect(dir) called
+    BuildTool detected = BuildToolStrategy.detect(tempFolder.getRoot().toPath());
+
+    // Then: returns GRADLE
+    assertThat(detected, is(BuildTool.GRADLE));
   }
 
   /**
@@ -122,14 +126,13 @@ public class BuildToolStrategyTest {
    * <p>Uses a {@code @Rule TemporaryFolder} with no files created inside it.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
   public void testDetectNoBuildFile() {
     // Given: empty temp directory
     // When: BuildToolStrategy.detect(dir) called
-    // Then: returns null (new project)
+    BuildTool detected = BuildToolStrategy.detect(tempFolder.getRoot().toPath());
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // Then: returns null (new project)
+    assertThat(detected, is(nullValue()));
   }
 
   /**
@@ -141,13 +144,15 @@ public class BuildToolStrategyTest {
    * files created inside it.
    */
   @Test
-  @Ignore("Awaiting implementation in #1332")
-  public void testDetectPrefersPomWhenBothExist() {
+  public void testDetectPrefersPomWhenBothExist() throws IOException {
     // Given: temp directory with both pom.xml and build.gradle
-    // When: BuildToolStrategy.detect(dir) called
-    // Then: returns MAVEN (Maven takes precedence)
+    tempFolder.newFile("pom.xml");
+    tempFolder.newFile("build.gradle");
 
-    // TODO(#1332): Implement test logic
-    fail("Not yet implemented");
+    // When: BuildToolStrategy.detect(dir) called
+    BuildTool detected = BuildToolStrategy.detect(tempFolder.getRoot().toPath());
+
+    // Then: returns MAVEN (Maven takes precedence)
+    assertThat(detected, is(BuildTool.MAVEN));
   }
 }
