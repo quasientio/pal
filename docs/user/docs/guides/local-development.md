@@ -20,12 +20,47 @@ This guide shows you how to develop PAL applications locally without setting up 
 - Performance benchmarking
 - Learning PAL
 
+## Quick Setup with `pal init`
+
+The fastest way to set up a local PAL project is with `pal init --mode local`:
+
+**Maven:**
+
+```bash
+pal init my-local-app --mode local
+cd my-local-app
+source .env.pal
+mvn compile
+pal run --wal file:./wal -cp target/classes com.example.Main
+```
+
+**Gradle:**
+
+```bash
+pal init my-local-app --mode local --build-tool gradle
+cd my-local-app
+source .env.pal
+gradle build
+pal run --wal file:./wal -cp build/classes/java/main com.example.Main
+```
+
+For an existing project, run `pal init` in the project directory to patch your build file:
+
+```bash
+cd my-existing-project
+pal init --mode local
+```
+
+This adds the `pal-weave` dependency and AspectJ weaving plugin to your `pom.xml` or `build.gradle` automatically (a backup is created before patching). Use `--dry-run` to preview the changes first.
+
+For full control over the build configuration, see the [Manual Setup](#manual-setup) section below.
+
 ## Prerequisites
 
 **Required**:
 
 - JDK 17 or later (set `JAVA_HOME`)
-- Maven 3.x
+- Maven 3.x or Gradle
 - PAL installed and on PATH
 
 **Not required**:
@@ -35,9 +70,7 @@ This guide shows you how to develop PAL applications locally without setting up 
 - Kafka
 - Network configuration
 
-## Quick Setup
-
-### 1. Verify PAL Installation
+## Verify PAL Installation
 
 ```bash
 $ pal help
@@ -53,78 +86,6 @@ If `pal` command not found, add PAL to your PATH:
 export PAL_HOME="/path/to/pal"
 export PATH="$PAL_HOME/bin:$PATH"
 ```
-
-### 2. Create a Simple Application
-
-**HelloService.java**:
-
-```java
-package com.example;
-
-public class HelloService {
-    public static void main(String[] args) {
-        System.out.println("Hello Service started");
-
-        for (String arg : args) {
-            processMessage(arg);
-        }
-    }
-
-    public static void processMessage(String msg) {
-        System.out.println("Processing: " + msg);
-        String result = msg.toUpperCase();
-        System.out.println("Result: " + result);
-    }
-}
-```
-
-### 3. Configure AspectJ Weaving
-
-**pom.xml**:
-
-```xml
-<dependencies>
-    <dependency>
-        <groupId>io.quasient.pal</groupId>
-        <artifactId>pal-api</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
-    </dependency>
-</dependencies>
-
-<build>
-    <plugins>
-        <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>aspectj-maven-plugin</artifactId>
-            <version>1.14.0</version>
-            <configuration>
-                <complianceLevel>17</complianceLevel>
-                <aspectLibraries>
-                    <aspectLibrary>
-                        <groupId>io.quasient.pal</groupId>
-                        <artifactId>pal-weave</artifactId>
-                    </aspectLibrary>
-                </aspectLibraries>
-            </configuration>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>compile</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
-    </plugins>
-</build>
-```
-
-### 4. Build
-
-```bash
-mvn clean install
-```
-
-Your application is now ready to run with PAL!
 
 ## Basic Development Workflow
 
@@ -534,41 +495,104 @@ If not, rebuild with AspectJ plugin:
 mvn clean compile
 ```
 
+## Manual Setup
+
+If you prefer full control over the build configuration instead of using `pal init`, you can set up PAL weaving manually.
+
+**Maven (`pom.xml`):**
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>io.quasient.pal</groupId>
+        <artifactId>pal-weave</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+</dependencies>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>dev.aspectj</groupId>
+            <artifactId>aspectj-maven-plugin</artifactId>
+            <version>1.15.0</version>
+            <configuration>
+                <complianceLevel>17</complianceLevel>
+                <aspectLibraries>
+                    <aspectLibrary>
+                        <groupId>io.quasient.pal</groupId>
+                        <artifactId>pal-weave</artifactId>
+                    </aspectLibrary>
+                </aspectLibraries>
+            </configuration>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>compile</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+```
+
+**Gradle (`build.gradle`):**
+
+```groovy
+plugins {
+    id 'java'
+    id 'io.freefair.aspectj.post-compile-weaving' version '8.6'
+}
+
+dependencies {
+    aspect 'io.quasient.pal:pal-weave:1.0.0-SNAPSHOT'
+    implementation 'org.aspectj:aspectjrt:1.9.24'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+```
+
+Build with `mvn clean install` (Maven) or `gradle build` (Gradle). Your application is then ready to run with PAL.
+
 ## Example: Complete Development Session
 
 ```bash
-# 1. Create project
-mkdir my-pal-app && cd my-pal-app
+# 1. Create project with pal init
+pal init my-pal-app --mode local
+cd my-pal-app
+source .env.pal
 
-# 2. Add pom.xml and source code (see above)
-
-# 3. Build
-mvn clean install
-
-# 4. Run and test locally
-pal run --wal file:dev-wal \
-  -cp target/classes com.example.HelloService test1 test2
-
-# 5. Check results
-pal log print file:dev-wal --compact
-
-# 6. Make changes to code
-vim src/main/java/com/example/HelloService.java
-
-# 7. Rebuild
+# 2. Build
 mvn compile
 
-# 8. Test changes
-pal run --wal file:dev-wal2 \
-  -cp target/classes com.example.HelloService test3
+# 3. Run and test locally
+pal run --wal file:dev-wal \
+  -cp target/classes com.example.Main
 
-# 9. Compare logs
+# 4. Check results
+pal log print file:dev-wal --compact
+
+# 5. Make changes to code
+vim src/main/java/com/example/SampleService.java
+
+# 6. Rebuild
+mvn compile
+
+# 7. Test changes
+pal run --wal file:dev-wal2 \
+  -cp target/classes com.example.Main
+
+# 8. Compare logs
 diff <(pal log print file:dev-wal) <(pal log print file:dev-wal2)
 
-# 10. When satisfied, package
+# 9. When satisfied, package
 mvn package
 
-# 11. Ready for distributed testing or deployment
+# 10. Ready for distributed testing or deployment
 ```
 
 ## Further Reading

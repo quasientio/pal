@@ -61,6 +61,7 @@ Management Commands:
 Commands:
   run     Run a new peer
   replay  Deterministic WAL replay
+  init    Initialize a project for PAL
 
 Shortcuts:
   peers       List peers (shorthand for 'peer ls')
@@ -74,148 +75,85 @@ Run 'pal COMMAND --help' for more information on a command.
 
 Let's build a simple application and run it with PAL to see operations become messages.
 
-### 1. Create a Simple Application
+### 1. Create a Project with `pal init`
 
-Create a directory for your project:
+The fastest way to get started is with `pal init`, which sets up everything you need — build configuration, AspectJ weaving, sample code, and environment files:
 
 ```bash
-mkdir pal-tutorial
+pal init pal-tutorial
+```
+
+The interactive wizard guides you through the setup:
+
+```
+Welcome to PAL! Let's set up your project.
+
+? Project type:
+  ❯ New project (create from scratch)
+    Existing project (add PAL to current project)
+
+? Build tool:
+  ❯ Maven
+    Gradle
+
+? Project group ID: [com.example]
+? Project artifact ID: [pal-tutorial]
+? Project version: [1.0-SNAPSHOT]
+? Main class (fully qualified): [com.example.Main]
+? Package name: [com.example]
+
+? Deployment mode:
+  ❯ Local only (Chronicle Queue, no infrastructure needed)
+    Distributed (etcd + Kafka)
+    Both (local dev + distributed prod configs)
+
+? Generate sample application code? [Y/n]
+? Generate logging config? [Y/n]
+
+Generating project...
+  ✓ Created pom.xml with AspectJ weaving
+  ✓ Created src/main/java/com/example/Main.java
+  ✓ Created src/main/java/com/example/SampleService.java
+  ✓ Created config/peer-logging.xml
+  ✓ Created .env.pal (environment variables)
+
+Next steps:
+  1. cd pal-tutorial
+  2. source .env.pal
+  3. mvn compile
+  4. pal run --wal file:./wal -cp target/classes com.example.Main
+```
+
+For scripted or CI environments, use non-interactive mode:
+
+```bash
+pal init pal-tutorial -y \
+  --group-id com.example \
+  --artifact-id pal-tutorial \
+  --main-class com.example.Main \
+  --mode local \
+  --sample-app
+```
+
+**Tip:** Use `--dry-run` to preview what `pal init` would generate without writing any files:
+
+```bash
+pal init pal-tutorial --dry-run
+```
+
+### 2. Build the Application
+
+```bash
 cd pal-tutorial
-```
-
-Create `src/main/java/tutorial/OrderService.java`:
-
-```java
-package tutorial;
-
-public class OrderService {
-    private int orderCount = 0;
-
-    public void processOrder(String product, int quantity, double price) {
-        orderCount++;
-        double total = quantity * price;
-        System.out.println("Processing order #" + orderCount);
-        System.out.println("Product: " + product);
-        System.out.println("Quantity: " + quantity);
-        System.out.println("Total: $" + total);
-
-        if (total > 100) {
-            applyDiscount(total);
-        }
-    }
-
-    private void applyDiscount(double total) {
-        double discount = total * 0.1;
-        System.out.println("Discount applied: $" + discount);
-    }
-
-    public int getOrderCount() {
-        return orderCount;
-    }
-}
-```
-
-Create `src/main/java/tutorial/Main.java`:
-
-```java
-package tutorial;
-
-public class Main {
-    public static void main(String[] args) {
-        OrderService service = new OrderService();
-
-        System.out.println("=== Order Processing Demo ===\n");
-
-        service.processOrder("Laptop", 1, 999.99);
-        System.out.println();
-
-        service.processOrder("Mouse", 2, 29.99);
-        System.out.println();
-
-        service.processOrder("Keyboard", 1, 149.99);
-        System.out.println();
-
-        System.out.println("Total orders processed: " + service.getOrderCount());
-    }
-}
-```
-
-### 2. Configure PAL with AspectJ
-
-Create `pom.xml`:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-
-    <groupId>com.example</groupId>
-    <artifactId>pal-tutorial</artifactId>
-    <version>1.0-SNAPSHOT</version>
-
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <pal.version>0.1.0-SNAPSHOT</pal.version>
-        <aspectj.version>1.9.19</aspectj.version>
-    </properties>
-
-    <dependencies>
-        <!-- PAL weave aspect library -->
-        <dependency>
-            <groupId>io.quasient.pal</groupId>
-            <artifactId>pal-weave</artifactId>
-            <version>${pal.version}</version>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <!-- AspectJ compiler plugin -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>aspectj-maven-plugin</artifactId>
-                <version>1.14.0</version>
-                <configuration>
-                    <complianceLevel>17</complianceLevel>
-                    <source>17</source>
-                    <target>17</target>
-                    <aspectLibraries>
-                        <aspectLibrary>
-                            <groupId>io.quasient.pal</groupId>
-                            <artifactId>pal-weave</artifactId>
-                        </aspectLibrary>
-                    </aspectLibraries>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
-</project>
-```
-
-### 3. Build the Application
-
-```bash
 mvn clean compile
 
 # Verify AspectJ weaving worked
-javap -c target/classes/tutorial/OrderService.class | grep aspectOf
+javap -c target/classes/com/example/SampleService.class | grep aspectOf
 
 # You should see references to PAL aspects
 ```
 
-### 4. Run with PAL (Local Mode)
+### 3. Run with PAL (Local Mode)
 
 Let's start simple: run with Chronicle Queue (no Kafka/etcd needed).
 
@@ -223,7 +161,7 @@ Let's start simple: run with Chronicle Queue (no Kafka/etcd needed).
 # Run the application with PAL
 pal run --wal file:/tmp/tutorial-wal --json-rpc auto \
   -cp target/classes \
-  tutorial.Main
+  com.example.Main
 ```
 
 You should see the application output plus PAL startup messages:
@@ -261,7 +199,7 @@ Total orders processed: 3
 
 Every method call (`processOrder`, `applyDiscount`, `getOrderCount`) was converted to a message and logged to `/tmp/tutorial-wal`.
 
-### 5. Inspect the Messages
+### 4. Inspect the Messages
 
 Let's see what PAL captured:
 
@@ -308,7 +246,7 @@ Message 4:
 
 **This is the key insight:** Every operation is now a discrete, inspectable message.
 
-### 6. Replay the Execution
+### 5. Replay the Execution
 
 You can replay the execution from the log:
 
@@ -320,6 +258,130 @@ pal run --source-log file:/tmp/tutorial-wal -cp target/classes
 You'll see the same output as before, but this time it's being replayed from messages, not executed from Main.main().
 
 **This enables time-travel debugging:** Any execution can be replayed exactly as it happened.
+
+## Adding PAL to an Existing Project
+
+If you already have a Maven or Gradle project, run `pal init` in the project directory. It detects the existing build file and patches it to add PAL weaving:
+
+```bash
+cd my-existing-project
+pal init
+```
+
+```
+Detected existing Maven project: com.acme:order-service (1.2.0)
+
+? Add PAL AspectJ weaving to this project? [Y/n]
+? Main class (for pal run): [com.acme.OrderServiceMain]
+? Deployment mode:
+  ❯ Local only
+    Distributed
+    Both
+
+Patching pom.xml...
+  ✓ Added pal-weave dependency
+  ✓ Added aspectj-maven-plugin with pal-weave aspect library
+  ✓ Created config/peer-logging.xml
+  ✓ Created .env.pal
+```
+
+A backup of your original build file is created automatically (`pom.xml.backup` or `build.gradle.backup`). Use `--dry-run` to preview the changes before applying them:
+
+```bash
+pal init --dry-run
+```
+
+For Gradle projects, the same flow applies:
+
+```bash
+cd my-gradle-project
+pal init --build-tool gradle
+```
+
+## Manual Setup (Alternative)
+
+If you prefer full control over the build configuration, you can set up PAL manually instead of using `pal init`.
+
+Create a `pom.xml` with the AspectJ weaving plugin and `pal-weave` dependency:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>pal-tutorial</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <pal.version>1.0.0-SNAPSHOT</pal.version>
+        <aspectj.version>1.9.24</aspectj.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.quasient.pal</groupId>
+            <artifactId>pal-weave</artifactId>
+            <version>${pal.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>dev.aspectj</groupId>
+                <artifactId>aspectj-maven-plugin</artifactId>
+                <version>1.15.0</version>
+                <configuration>
+                    <complianceLevel>17</complianceLevel>
+                    <source>17</source>
+                    <target>17</target>
+                    <aspectLibraries>
+                        <aspectLibrary>
+                            <groupId>io.quasient.pal</groupId>
+                            <artifactId>pal-weave</artifactId>
+                        </aspectLibrary>
+                    </aspectLibraries>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+For Gradle, add the AspectJ post-compile weaving plugin and PAL dependency to your `build.gradle`:
+
+```groovy
+plugins {
+    id 'java'
+    id 'io.freefair.aspectj.post-compile-weaving' version '8.6'
+}
+
+dependencies {
+    aspect 'io.quasient.pal:pal-weave:1.0.0-SNAPSHOT'
+    implementation 'org.aspectj:aspectjrt:1.9.24'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+```
+
+Then create your Java source files, build with `mvn compile` (or `gradle build`), and run with `pal run` as described above.
 
 ## Distributed Mode: Multiple Peers
 
@@ -681,6 +743,8 @@ Now that you've experienced PAL's core capabilities:
 You've learned:
 
 - ✓ How to install and set up PAL
+- ✓ How to scaffold a project with `pal init` (or configure manually)
+- ✓ How to add PAL to an existing project with `pal init`
 - ✓ How to compile applications with AspectJ weaving
 - ✓ How operations become messages (quantization)
 - ✓ How to run peers locally (Chronicle) and distributed (Kafka/etcd)

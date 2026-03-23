@@ -24,6 +24,7 @@ pal <entity> <operation> [OPTIONS] [ARGUMENTS]
 |---------|-------------|
 | `pal run` | Run a new peer |
 | `pal replay` | Deterministic WAL replay |
+| `pal init` | Initialize a project for PAL |
 
 **Shortcuts** (aliases for common operations):
 
@@ -248,6 +249,136 @@ pal run -k localhost:29092 --wal my-wal --no-wal-incoming-cli --json-rpc auto \
 # Consume from one Kafka topic, re-publish all messages (including replayed) to another
 pal run -k localhost:29092 --source-log input-topic --wal output-topic \
   --wal-all-incoming-rpc -cp app.jar
+```
+
+---
+
+## pal init - Initialize a Project for PAL
+
+Scaffold a new project or add PAL weaving to an existing Maven or Gradle project. In interactive mode (default), a wizard guides you through the setup. In non-interactive mode (`-y`), all choices are specified via flags.
+
+### Synopsis
+
+```bash
+pal init [OPTIONS] [DIRECTORY]
+pal init                             # Interactive wizard in current directory
+pal init my-project                  # Create new project in my-project/
+pal init -y --group-id com.example   # Non-interactive mode with flags
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `DIRECTORY` | Target directory (default: current directory). If specified and the directory does not exist, it is created |
+
+### Options
+
+#### Project Identity
+
+| Option | Description |
+|--------|-------------|
+| `--group-id <GROUP_ID>` | Maven/Gradle group ID (e.g., `com.example`) |
+| `--artifact-id <ARTIFACT_ID>` | Maven/Gradle artifact ID (e.g., `my-app`) |
+| `--version <VERSION>` | Project version (default: `1.0-SNAPSHOT`) |
+| `--main-class <CLASS>` | Fully qualified main class name (e.g., `com.example.Main`) |
+| `--package <PACKAGE>` | Java package name (inferred from group ID if omitted) |
+
+#### Build and Mode
+
+| Option | Description |
+|--------|-------------|
+| `--build-tool <maven\|gradle>` | Build tool selection (default: auto-detect from existing project, or `maven` for new projects) |
+| `--mode <local\|distributed\|both>` | Deployment mode (default: `local`). `local` uses Chronicle Queue (no infrastructure needed), `distributed` uses etcd + Kafka, `both` generates configs for both |
+| `-y, --non-interactive` | Skip interactive prompts, use defaults and flag values |
+
+#### Feature Toggles
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--sample-app` / `--no-sample-app` | `true` | Generate sample application code |
+| `--rpc-policy` / `--no-rpc-policy` | `false` | Generate RPC policy config |
+| `--scope-policy` / `--no-scope-policy` | `false` | Generate recording scope config |
+| `--logging-config` / `--no-logging-config` | `true` | Generate logging configuration |
+| `--intercept-bundle` / `--no-intercept-bundle` | `false` | Generate intercept bundle example |
+| `--infra` / `--no-infra` | `false` | Generate Docker infrastructure files (etcd + Kafka) |
+
+#### Safety
+
+| Option | Description |
+|--------|-------------|
+| `--force` | Overwrite existing files without prompting |
+| `--dry-run` | Preview changes without writing any files. Shows what would be generated or patched |
+
+### Behavior
+
+**New project:** When the target directory does not contain a `pom.xml` or `build.gradle`, `pal init` creates a complete project structure including the build file, source directories, sample code (if enabled), and configuration files.
+
+**Existing project:** When a `pom.xml` or `build.gradle` is detected, `pal init` patches the existing build file to add PAL weaving. A backup is created (`pom.xml.backup` or `build.gradle.backup`) before modification. The patcher is idempotent — running it twice produces no duplicate elements.
+
+**Dry run:** With `--dry-run`, no files are written to disk. Instead, the command shows what would be generated or patched, allowing you to review the changes before committing.
+
+### Examples
+
+#### New Maven Project
+
+```bash
+# Interactive wizard
+pal init my-pal-app
+
+# Non-interactive with defaults
+pal init my-pal-app -y \
+  --group-id com.example \
+  --artifact-id my-pal-app \
+  --main-class com.example.Main
+```
+
+#### New Gradle Project
+
+```bash
+# Interactive wizard with Gradle
+pal init my-pal-app --build-tool gradle
+
+# Non-interactive
+pal init my-pal-app -y \
+  --build-tool gradle \
+  --group-id com.example \
+  --artifact-id my-pal-app \
+  --main-class com.example.Main
+```
+
+#### Existing Project
+
+```bash
+# Patch an existing Maven project in the current directory
+cd my-existing-project
+pal init
+
+# Patch an existing Gradle project
+pal init --build-tool gradle
+```
+
+#### Distributed Mode
+
+```bash
+# New project with etcd + Kafka infrastructure files
+pal init my-distributed-app -y \
+  --group-id com.example \
+  --artifact-id my-distributed-app \
+  --main-class com.example.Main \
+  --mode distributed \
+  --infra
+```
+
+#### Preview Changes (Dry Run)
+
+```bash
+# See what pal init would generate for a new project
+pal init my-app --dry-run
+
+# See what pal init would patch on an existing project
+cd my-existing-project
+pal init --dry-run
 ```
 
 ---

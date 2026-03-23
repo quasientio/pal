@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Doc] Update user-facing documentation for `pal init`: add `pal init` as primary onboarding path in getting-started guide (interactive wizard, non-interactive, existing project, dry-run), document full `init` command with all options and examples in CLI reference, add quick setup with `pal init --mode local` to local development guide with Maven and Gradle coverage
 - [Feature] Add PalWeaveResolver for checking local Maven repository for pal-weave and fetching from Maven Central when missing, with dry-run support and graceful failure handling
 - [Enhancement] Validate Kafka/Chronicle flag consistency in Main: fatal exit when --kafka-servers is given with all-Chronicle logs or --chronicle-base-dir with all-Kafka logs, and warn when source-log and WAL use different backends
 - [Security] Use SafeConstructor in ReplayPolicyParser, RpcPolicyParser, and RecordingScopeParser to prevent arbitrary object deserialization via SnakeYAML type tags
