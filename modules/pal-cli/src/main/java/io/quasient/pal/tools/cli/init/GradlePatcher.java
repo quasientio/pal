@@ -83,6 +83,8 @@ public final class GradlePatcher {
     boolean isKotlinDsl = fileName.endsWith(".kts");
     PatchResult.Builder result = PatchResult.builder().dryRun(config.isDryRun());
 
+    validateBraces(content);
+
     content = patchPlugins(content, isKotlinDsl, result);
     content = patchDependencies(content, isKotlinDsl, config, result);
 
@@ -184,6 +186,31 @@ public final class GradlePatcher {
     openBrace = findBlockOpenBrace(content, "dependencies");
     int closeBrace = findMatchingCloseBrace(content, openBrace);
     return insertBeforeCloseBrace(content, closeBrace, newDeps.toString().stripTrailing());
+  }
+
+  /**
+   * Validates that braces are balanced in the Gradle build file content. Throws if unbalanced,
+   * preventing corruption of malformed input.
+   *
+   * @param content the file content to validate
+   * @throws IOException if braces are unbalanced
+   */
+  private static void validateBraces(String content) throws IOException {
+    int depth = 0;
+    for (int i = 0; i < content.length(); i++) {
+      char c = content.charAt(i);
+      if (c == '{') {
+        depth++;
+      } else if (c == '}') {
+        depth--;
+        if (depth < 0) {
+          throw new IOException("Invalid Gradle build file: unexpected closing brace");
+        }
+      }
+    }
+    if (depth != 0) {
+      throw new IOException("Invalid Gradle build file: unbalanced braces");
+    }
   }
 
   /**
