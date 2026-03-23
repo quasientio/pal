@@ -16,7 +16,8 @@ import java.nio.file.Path;
  * Gradle-specific implementation of {@link BuildToolStrategy}.
  *
  * <p>Handles generation and patching of Gradle build files ({@code build.gradle} / {@code
- * build.gradle.kts}) with PAL AspectJ weaving configuration.
+ * build.gradle.kts}) with PAL AspectJ weaving configuration. Delegates to {@link GradleGenerator}
+ * for new project generation and {@link GradlePatcher} for patching existing projects.
  *
  * @since 1.0.0
  */
@@ -31,13 +32,13 @@ class GradleBuildToolStrategy implements BuildToolStrategy {
   /** {@inheritDoc} */
   @Override
   public void generate(InitConfig config, Path outputDir) throws IOException {
-    throw new UnsupportedOperationException("Gradle generation not yet implemented");
+    new GradleGenerator(config).generate(outputDir);
   }
 
   /** {@inheritDoc} */
   @Override
   public void patch(InitConfig config, Path buildFile) throws IOException {
-    throw new UnsupportedOperationException("Gradle patching not yet implemented");
+    new GradlePatcher().patch(config, buildFile);
   }
 
   /** {@inheritDoc} */

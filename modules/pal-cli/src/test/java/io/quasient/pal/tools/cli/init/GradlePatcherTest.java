@@ -9,245 +9,336 @@
  */
 package io.quasient.pal.tools.cli.init;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
- * Unit test specifications for {@code GradlePatcher}, which modifies existing Gradle build files to
- * add PAL weaving support.
+ * Unit tests for {@link GradlePatcher}, which modifies existing Gradle build files to add PAL
+ * weaving support.
  *
  * <p>GradlePatcher uses text-based manipulation (not DOM) since Gradle files are Groovy/Kotlin
  * scripts, not structured XML. This makes thorough testing critical — edge cases around block
  * detection, idempotency, and syntax preservation must all be covered.
  *
- * <p>Tests use a {@code @Rule TemporaryFolder} to create build files on disk and verify patching
- * behavior. Each test is a stub awaiting implementation once {@code GradlePatcher} is created in
- * issue #1339.
- *
- * @see <a href="https://github.io/quasientinc/pal/issues/1338">#1338</a>
- * @see <a href="https://github.io/quasientinc/pal/issues/1339">#1339</a>
+ * @see GradlePatcher
  */
 public class GradlePatcherTest {
+
+  /** Temporary directory for build files. */
+  @Rule public TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
    * Verifies that patching a {@code build.gradle} with an existing {@code dependencies} block adds
    * {@code pal-weave} as an {@code aspect} dependency with the correct PAL version.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code build.gradle} with {@code
-   * dependencies { implementation 'some:lib:1.0' }}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testAddsPalWeaveDependency() {
-    // Given: build.gradle with dependencies { implementation 'some:lib:1.0' }
-    // When: patch() called
-    // Then: pal-weave added as aspect dependency with correct version
+  public void testAddsPalWeaveDependency() throws Exception {
+    // Given
+    Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+    // When
+    PatchResult result = new GradlePatcher().patch(config, buildFile);
+
+    // Then
+    String content = Files.readString(buildFile, StandardCharsets.UTF_8);
+    assertThat(content, containsString("aspect 'io.quasient.pal:pal-weave:1.0.0'"));
+    assertFalse(result.getAdditions().isEmpty());
   }
 
   /**
    * Verifies that patching a {@code build.gradle} with an existing {@code plugins} block adds the
    * {@code io.freefair.aspectj.post-compile-weaving} plugin.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code build.gradle} with {@code plugins {
-   * id 'java' }}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testAddsAspectjPlugin() {
-    // Given: build.gradle with plugins { id 'java' }
-    // When: patch() called
-    // Then: io.freefair.aspectj.post-compile-weaving plugin added to plugins block
+  public void testAddsAspectjPlugin() throws Exception {
+    // Given
+    Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+    // When
+    new GradlePatcher().patch(config, buildFile);
+
+    // Then
+    String content = Files.readString(buildFile, StandardCharsets.UTF_8);
+    assertThat(content, containsString("io.freefair.aspectj.post-compile-weaving"));
   }
 
   /**
    * Verifies that patching a {@code build.gradle} with no {@code dependencies} block creates one
    * and adds the {@code pal-weave} dependency.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code build.gradle} with only a plugins
-   * block and no dependencies block.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testCreatesDependenciesBlockIfMissing() {
-    // Given: build.gradle with no dependencies block
-    // When: patch() called
-    // Then: dependencies block created with pal-weave
+  public void testCreatesDependenciesBlockIfMissing() throws Exception {
+    // Given
+    String noDeps = "plugins {\n    id 'java'\n}\n";
+    Path buildFile = writeBuildGradle(noDeps);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+    // When
+    new GradlePatcher().patch(config, buildFile);
+
+    // Then
+    String content = Files.readString(buildFile, StandardCharsets.UTF_8);
+    assertThat(content, containsString("dependencies {"));
+    assertThat(content, containsString("pal-weave"));
   }
 
   /**
    * Verifies idempotency: patching a {@code build.gradle} that already contains the {@code
    * pal-weave} dependency and the AspectJ plugin does not produce duplicate entries.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a pre-patched {@code build.gradle}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testIdempotency() {
-    // Given: build.gradle already patched with pal-weave and aspectj plugin
-    // When: patch() called again
-    // Then: no duplicate entries
+  public void testIdempotency() throws Exception {
+    // Given
+    Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
+    InitConfig config = defaultConfig().build();
+    GradlePatcher patcher = new GradlePatcher();
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+    // When: patch twice
+    patcher.patch(config, buildFile);
+    String afterFirst = Files.readString(buildFile, StandardCharsets.UTF_8);
+    patcher.patch(config, buildFile);
+    String afterSecond = Files.readString(buildFile, StandardCharsets.UTF_8);
+
+    // Then: content should be the same after second patch
+    assertThat(afterSecond, is(afterFirst));
   }
 
   /**
    * Verifies that patching creates a backup of the original {@code build.gradle} at {@code
    * build.gradle.backup} with the original file content preserved.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code build.gradle} at a known path.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testCreatesBackup() {
-    // Given: build.gradle at path P
-    // When: patch() called
-    // Then: P.backup exists with original content
+  public void testCreatesBackup() throws Exception {
+    // Given
+    Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
+    String originalContent = Files.readString(buildFile, StandardCharsets.UTF_8);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+    // When
+    new GradlePatcher().patch(config, buildFile);
+
+    // Then
+    Path backupFile = buildFile.resolveSibling("build.gradle.backup");
+    assertTrue(Files.exists(backupFile));
+    String backupContent = Files.readString(backupFile, StandardCharsets.UTF_8);
+    assertThat(backupContent, is(originalContent));
   }
 
   /**
    * Verifies that patching preserves all existing dependencies in the {@code build.gradle} while
    * adding the {@code pal-weave} dependency alongside them.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code build.gradle} with multiple
-   * existing dependencies.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testPreservesExistingDependencies() {
-    // Given: build.gradle with existing dependencies
-    // When: patch() called
-    // Then: all original dependencies preserved; pal-weave added alongside them
+  public void testPreservesExistingDependencies() throws Exception {
+    // Given
+    Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+    // When
+    new GradlePatcher().patch(config, buildFile);
+
+    // Then
+    String content = Files.readString(buildFile, StandardCharsets.UTF_8);
+    assertThat(content, containsString("implementation 'com.google.guava:guava:33.0.0-jre'"));
+    assertThat(content, containsString("pal-weave"));
   }
 
   /**
    * Verifies that patching preserves all existing plugins in the {@code build.gradle} while adding
    * the AspectJ plugin alongside them.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code build.gradle} with multiple
-   * existing plugins.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testPreservesExistingPlugins() {
-    // Given: build.gradle with existing plugins
-    // When: patch() called
-    // Then: all original plugins preserved; AspectJ plugin added
+  public void testPreservesExistingPlugins() throws Exception {
+    // Given
+    Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+    // When
+    new GradlePatcher().patch(config, buildFile);
+
+    // Then
+    String content = Files.readString(buildFile, StandardCharsets.UTF_8);
+    assertThat(content, containsString("id 'java'"));
+    assertThat(content, containsString("io.freefair.aspectj.post-compile-weaving"));
   }
 
   /**
    * Verifies that patching a {@code build.gradle.kts} file uses Kotlin DSL syntax for the {@code
-   * pal-weave} dependency (e.g., {@code aspect("io.quasient.pal:pal-weave:...")}).
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code build.gradle.kts} with Kotlin DSL
-   * syntax.
+   * pal-weave} dependency.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testHandlesBuildGradleKts() {
-    // Given: build.gradle.kts with Kotlin DSL syntax
-    // When: patch() called
-    // Then: adds pal-weave using Kotlin DSL syntax (aspect("io.quasient.pal:pal-weave:..."))
+  public void testHandlesBuildGradleKts() throws Exception {
+    // Given
+    String kotlinBuild =
+        """
+        plugins {
+            id("java")
+        }
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+        dependencies {
+            implementation("com.google.guava:guava:33.0.0-jre")
+        }
+        """;
+    Path buildFile = tempDir.getRoot().toPath().resolve("build.gradle.kts");
+    Files.writeString(buildFile, kotlinBuild, StandardCharsets.UTF_8);
+    InitConfig config = defaultConfig().build();
+
+    // When
+    new GradlePatcher().patch(config, buildFile);
+
+    // Then
+    String content = Files.readString(buildFile, StandardCharsets.UTF_8);
+    assertThat(content, containsString("aspect(\"io.quasient.pal:pal-weave:1.0.0\")"));
+    assertThat(content, containsString("implementation(\"org.aspectj:aspectjrt:"));
+    assertThat(content, containsString("id(\"io.freefair.aspectj.post-compile-weaving\")"));
   }
 
   /**
    * Verifies that the {@code PatchResult} returned by {@code patch()} accurately reports actions
-   * taken. When both plugin and dependency need adding, the result lists the additions. When the
-   * file is already patched, the result reports "already configured".
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} with two scenarios: an unpatched and a pre-patched
-   * {@code build.gradle}.
+   * taken.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testPatchResultReportsActions() {
-    // Given: build.gradle needing both plugin and dependency
-    // When: patch() called
-    // Then: PatchResult lists additions
-    // Given: already-patched file
-    // When: patch() called
-    // Then: PatchResult reports "already configured"
+  public void testPatchResultReportsActions() throws Exception {
+    // Given: unpatched file
+    Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
+    InitConfig config = defaultConfig().build();
+    GradlePatcher patcher = new GradlePatcher();
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+    // When
+    PatchResult firstResult = patcher.patch(config, buildFile);
+
+    // Then: first patch reports additions
+    assertFalse(firstResult.getAdditions().isEmpty());
+
+    // Given: already-patched file
+    // When
+    PatchResult secondResult = patcher.patch(config, buildFile);
+
+    // Then: second patch reports already configured
+    assertTrue(secondResult.isAlreadyConfigured());
   }
 
   /**
    * Verifies that when a {@code build.gradle} already contains a different AspectJ plugin, the
-   * patcher emits a warning in the {@code PatchResult} and does not add a conflicting plugin.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code build.gradle} with a pre-existing
-   * different AspectJ plugin.
+   * patcher emits a warning and does not add a conflicting plugin.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testWarnsOnExistingAspectjPlugin() {
-    // Given: build.gradle with a different AspectJ plugin
-    // When: patch() called
-    // Then: PatchResult contains warning; does not add conflicting plugin
+  public void testWarnsOnExistingAspectjPlugin() throws Exception {
+    // Given
+    String buildWithOtherPlugin =
+        """
+        plugins {
+            id 'java'
+            id 'io.github.nickhudkins.aspectj-pipeline' version '0.1'
+        }
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+        dependencies {
+            implementation 'com.google.guava:guava:33.0.0-jre'
+        }
+        """;
+    Path buildFile = writeBuildGradle(buildWithOtherPlugin);
+    InitConfig config = defaultConfig().build();
+
+    // When
+    PatchResult result = new GradlePatcher().patch(config, buildFile);
+
+    // Then
+    assertFalse(result.getWarnings().isEmpty());
+    String content = Files.readString(buildFile, StandardCharsets.UTF_8);
+    assertThat(content, not(containsString("io.freefair.aspectj.post-compile-weaving")));
   }
 
   /**
    * Verifies that patching adds {@code aspectjrt} as an {@code implementation} dependency when it
    * is not already present.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code build.gradle} without {@code
-   * aspectjrt}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testAddsAspectjRuntimeDependency() {
-    // Given: build.gradle without aspectjrt
-    // When: patch() called
-    // Then: aspectjrt added as implementation dependency
+  public void testAddsAspectjRuntimeDependency() throws Exception {
+    // Given
+    Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
+    InitConfig config = defaultConfig().build();
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+    // When
+    new GradlePatcher().patch(config, buildFile);
+
+    // Then
+    String content = Files.readString(buildFile, StandardCharsets.UTF_8);
+    assertThat(content, containsString("implementation 'org.aspectj:aspectjrt:"));
   }
 
   /**
-   * Verifies that when {@code InitConfig} has {@code dryRun=true}, the patcher does not modify the
-   * original file, does not create a backup, but still returns a {@code PatchResult} listing what
-   * would have been changed.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a valid {@code build.gradle} and an {@code
-   * InitConfig} with {@code dryRun=true}.
+   * Verifies that when {@code dryRun=true}, the patcher does not modify the original file, does not
+   * create a backup, but still returns a {@code PatchResult} listing what would have been changed.
    */
   @Test
-  @Ignore("Awaiting implementation in #1339")
-  public void testDryRunDoesNotModifyFile() {
-    // Given: valid build.gradle, InitConfig with dryRun=true
-    // When: patch() called
-    // Then: original file unchanged; no backup created;
-    //       PatchResult still lists what would have been changed
+  public void testDryRunDoesNotModifyFile() throws Exception {
+    // Given
+    Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
+    String originalContent = Files.readString(buildFile, StandardCharsets.UTF_8);
+    InitConfig config = defaultConfig().dryRun(true).build();
 
-    // TODO(#1339): Implement test logic
-    fail("Not yet implemented");
+    // When
+    PatchResult result = new GradlePatcher().patch(config, buildFile);
+
+    // Then: file unchanged
+    String afterContent = Files.readString(buildFile, StandardCharsets.UTF_8);
+    assertThat(afterContent, is(originalContent));
+
+    // No backup created
+    assertFalse(Files.exists(buildFile.resolveSibling("build.gradle.backup")));
+
+    // PatchResult still reports what would have been done
+    assertFalse(result.getAdditions().isEmpty());
   }
+
+  /**
+   * Writes a build.gradle file in the temporary directory.
+   *
+   * @param content the file content
+   * @return the path to the created file
+   * @throws Exception if the file cannot be written
+   */
+  private Path writeBuildGradle(String content) throws Exception {
+    Path buildFile = tempDir.getRoot().toPath().resolve("build.gradle");
+    Files.writeString(buildFile, content, StandardCharsets.UTF_8);
+    return buildFile;
+  }
+
+  /**
+   * Creates a default config builder for tests.
+   *
+   * @return a builder with standard test values
+   */
+  private static InitConfig.Builder defaultConfig() {
+    return InitConfig.builder()
+        .groupId("com.example")
+        .artifactId("my-app")
+        .palVersion("1.0.0")
+        .buildTool(BuildTool.GRADLE);
+  }
+
+  /** A basic build.gradle with plugins and dependencies blocks. */
+  private static final String BASIC_BUILD_GRADLE =
+      """
+      plugins {
+          id 'java'
+      }
+
+      dependencies {
+          implementation 'com.google.guava:guava:33.0.0-jre'
+      }
+      """;
 }

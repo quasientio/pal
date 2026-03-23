@@ -1,0 +1,21 @@
+plugins {
+    id 'java'
+    id 'io.freefair.aspectj.post-compile-weaving' version '${freefair.aspectj.version}'
+}
+
+group = '{{groupId}}'
+version = '{{projectVersion}}'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    aspect 'io.quasient.pal:pal-weave:{{palVersion}}'
+    implementation 'org.aspectj:aspectjrt:{{aspectjVersion}}'
+}

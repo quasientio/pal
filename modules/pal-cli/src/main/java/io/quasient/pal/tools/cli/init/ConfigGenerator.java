@@ -122,7 +122,10 @@ public final class ConfigGenerator {
     if (Files.exists(file) && !config.isForce()) {
       return;
     }
-    Files.createDirectories(file.getParent());
+    Path parent = file.getParent();
+    if (parent != null) {
+      Files.createDirectories(parent);
+    }
     Files.writeString(file, content, StandardCharsets.UTF_8);
   }
 

@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.tools.cli.init;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -76,6 +77,9 @@ public final class JLinePromptProvider implements PromptProvider {
    *
    * @param out the output stream for messages
    */
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "PrintStream is intentionally shared")
   public JLinePromptProvider(PrintStream out) {
     this.out = out;
     Terminal term = null;

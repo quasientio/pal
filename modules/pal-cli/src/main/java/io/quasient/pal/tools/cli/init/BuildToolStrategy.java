@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.tools.cli.init;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -28,18 +29,18 @@ public interface BuildToolStrategy {
    *
    * @param config the init configuration
    * @param outputDir the directory in which to create the build file
-   * @throws java.io.IOException if an I/O error occurs
+   * @throws IOException if an I/O error occurs
    */
-  void generate(InitConfig config, Path outputDir) throws java.io.IOException;
+  void generate(InitConfig config, Path outputDir) throws IOException;
 
   /**
    * Patches an existing project build file to add PAL weaving configuration.
    *
    * @param config the init configuration
    * @param buildFile the path to the existing build file
-   * @throws java.io.IOException if an I/O error occurs
+   * @throws IOException if an I/O error occurs
    */
-  void patch(InitConfig config, Path buildFile) throws java.io.IOException;
+  void patch(InitConfig config, Path buildFile) throws IOException;
 
   /**
    * Returns the primary build file name for this build tool (e.g., {@code "pom.xml"}).
