@@ -1,0 +1,26 @@
+package ${package};
+
+/**
+ * Application entry point.
+ *
+ * <p>PAL transparently intercepts method calls via AspectJ weaving,
+ * so no PAL imports or annotations are needed in your code.
+ */
+public class ${mainClassName} {
+
+  /**
+   * Starts the application.
+   *
+   * @param args command-line arguments
+   */
+  public static void main(String[] args) {
+    SampleService service = new SampleService();
+
+    service.processOrder("Laptop", 1, 999.99);
+    service.processOrder("Mouse", 5, 29.99);
+    service.processOrder("Keyboard", 2, 79.99);
+
+    System.out.println("Orders processed: " + service.getOrderCount());
+    System.out.println("Total revenue: $" + String.format("%.2f", service.getTotalRevenue()));
+  }
+}

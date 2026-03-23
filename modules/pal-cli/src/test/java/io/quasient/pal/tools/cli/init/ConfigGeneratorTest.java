@@ -9,147 +9,214 @@
  */
 package io.quasient.pal.tools.cli.init;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
- * Unit test specifications for {@code ConfigGenerator}, which produces PAL configuration files
- * (logging XML, RPC policy YAML, recording scope YAML, intercept bundle YAML) based on {@code
- * InitConfig} settings.
+ * Unit tests for {@link ConfigGenerator}.
  *
- * <p>The generator must respect individual enable/disable flags for each config file, honour {@code
- * dryRun} and {@code force} modes, and customize generated content using the package name and main
- * class from the configuration.
- *
- * <p>Each test is a stub awaiting implementation once {@code ConfigGenerator} is created in issue
- * #1341.
- *
- * @see <a href="https://github.io/quasientinc/pal/issues/1340">#1340</a>
- * @see <a href="https://github.io/quasientinc/pal/issues/1341">#1341</a>
+ * @see ConfigGenerator
  */
 public class ConfigGeneratorTest {
+
+  @Rule public TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
    * Verifies that when {@code loggingConfig=true}, the generator creates a valid XML file at {@code
    * config/peer-logging.xml} containing a logger entry for the configured package.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testGeneratesPeerLoggingConfig() {
-    // Given: InitConfig with loggingConfig=true, package="com.example"
-    // When: generate()
-    // Then: config/peer-logging.xml exists and is valid XML with package logger
+  public void testGeneratesPeerLoggingConfig() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .packageName("com.example")
+            .loggingConfig(true)
+            .build();
+    ConfigGenerator generator = new ConfigGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path loggingFile = tempDir.getRoot().toPath().resolve("config/peer-logging.xml");
+    assertTrue("peer-logging.xml should exist", Files.exists(loggingFile));
+    String content = Files.readString(loggingFile);
+    assertThat(content, containsString("com.example"));
+    assertThat(content, containsString("<configuration"));
   }
 
   /**
    * Verifies that when {@code rpcPolicy=true}, the generator creates a YAML file at {@code
    * config/rpc-policy.yaml} containing package patterns derived from the configured package.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testGeneratesRpcPolicy() {
-    // Given: InitConfig with rpcPolicy=true, package="com.example"
-    // When: generate()
-    // Then: config/rpc-policy.yaml exists with package patterns from config
+  public void testGeneratesRpcPolicy() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .packageName("com.example")
+            .rpcPolicy(true)
+            .loggingConfig(false)
+            .build();
+    ConfigGenerator generator = new ConfigGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path rpcFile = tempDir.getRoot().toPath().resolve("config/rpc-policy.yaml");
+    assertTrue("rpc-policy.yaml should exist", Files.exists(rpcFile));
+    String content = Files.readString(rpcFile);
+    assertThat(content, containsString("com.example"));
   }
 
   /**
    * Verifies that when {@code scopePolicy=true}, the generator creates a YAML file at {@code
    * config/recording-scope.yaml} containing include patterns derived from the configured package.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testGeneratesRecordingScope() {
-    // Given: InitConfig with scopePolicy=true, package="com.example"
-    // When: generate()
-    // Then: config/recording-scope.yaml exists with include patterns from package
+  public void testGeneratesRecordingScope() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .packageName("com.example")
+            .scopePolicy(true)
+            .loggingConfig(false)
+            .build();
+    ConfigGenerator generator = new ConfigGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path scopeFile = tempDir.getRoot().toPath().resolve("config/recording-scope.yaml");
+    assertTrue("recording-scope.yaml should exist", Files.exists(scopeFile));
+    String content = Files.readString(scopeFile);
+    assertThat(content, containsString("com.example"));
   }
 
   /**
    * Verifies that when {@code interceptBundle=true}, the generator creates a YAML file at {@code
    * config/intercept-bundle.yaml}.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testGeneratesInterceptBundle() {
-    // Given: InitConfig with interceptBundle=true, mainClass="com.example.Main"
-    // When: generate()
-    // Then: config/intercept-bundle.yaml exists
+  public void testGeneratesInterceptBundle() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .packageName("com.example")
+            .mainClass("com.example.Main")
+            .interceptBundle(true)
+            .loggingConfig(false)
+            .build();
+    ConfigGenerator generator = new ConfigGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path bundleFile = tempDir.getRoot().toPath().resolve("config/intercept-bundle.yaml");
+    assertTrue("intercept-bundle.yaml should exist", Files.exists(bundleFile));
+    String content = Files.readString(bundleFile);
+    assertThat(content, containsString("com.example.Main"));
   }
 
   /**
    * Verifies that when all config flags are {@code false}, the generator does not create any config
    * files.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory and asserts the {@code config/}
-   * directory is not created or remains empty.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testSkipsDisabledConfigs() {
-    // Given: InitConfig with all config flags=false
-    // When: generate()
-    // Then: no config files created
+  public void testSkipsDisabledConfigs() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .loggingConfig(false)
+            .rpcPolicy(false)
+            .scopePolicy(false)
+            .interceptBundle(false)
+            .build();
+    ConfigGenerator generator = new ConfigGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    List<Path> generated = generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    assertTrue("Should return empty list", generated.isEmpty());
+    Path configDir = tempDir.getRoot().toPath().resolve("config");
+    assertFalse("config directory should not be created", Files.exists(configDir));
   }
 
   /**
    * Verifies that the generator does not overwrite an existing {@code config/peer-logging.xml} file
    * when {@code force=false}.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} pre-populated with an existing {@code
-   * config/peer-logging.xml} containing known content. After generation, the file content should
-   * remain unchanged.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testDoesNotOverwriteExistingWithoutForce() {
-    // Given: existing config/peer-logging.xml in targetDir
-    // When: generate() without force=true
-    // Then: existing file not overwritten
+  public void testDoesNotOverwriteExistingWithoutForce() throws Exception {
+    // Given
+    Path configDir = tempDir.getRoot().toPath().resolve("config");
+    Files.createDirectories(configDir);
+    Path existingFile = configDir.resolve("peer-logging.xml");
+    String originalContent = "<!-- existing content -->";
+    Files.writeString(existingFile, originalContent);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .packageName("com.example")
+            .loggingConfig(true)
+            .force(false)
+            .build();
+    ConfigGenerator generator = new ConfigGenerator(config);
+
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    assertEquals(
+        "Existing file should not be overwritten", originalContent, Files.readString(existingFile));
   }
 
   /**
    * Verifies that when {@code dryRun=true}, the generator does not write any config files to disk.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory and asserts it remains empty
-   * after generation.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testDryRunDoesNotWriteFiles() {
-    // Given: InitConfig with dryRun=true
-    // When: generate()
-    // Then: no config files created on disk
+  public void testDryRunDoesNotWriteFiles() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .packageName("com.example")
+            .loggingConfig(true)
+            .rpcPolicy(true)
+            .scopePolicy(true)
+            .interceptBundle(true)
+            .mainClass("com.example.Main")
+            .dryRun(true)
+            .build();
+    ConfigGenerator generator = new ConfigGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    List<Path> generated = generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    assertFalse("Should report files", generated.isEmpty());
+    Path configDir = tempDir.getRoot().toPath().resolve("config");
+    assertFalse("config directory should not be created in dry-run", Files.exists(configDir));
   }
 }

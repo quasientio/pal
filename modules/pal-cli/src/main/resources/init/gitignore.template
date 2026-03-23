@@ -1,0 +1,4 @@
+# PAL artifacts
+wal/
+logs/
+.env.pal

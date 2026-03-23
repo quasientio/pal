@@ -1,0 +1,9 @@
+# PAL Environment Configuration
+# Source this file: source .env.pal
+
+export PAL_HOME="${palHome}"
+export PATH="$PAL_HOME/bin:$PATH"
+
+# Deployment mode: ${mode}
+${localSection}
+${distributedSection}

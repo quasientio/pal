@@ -1,0 +1,21 @@
+# Intercept Bundle
+#
+# Declares a group of intercepts that are applied and removed as a unit.
+#
+# Usage:
+#   pal intercept apply  -d localhost:2379 config/intercept-bundle.yaml
+#   pal intercept rm     -d localhost:2379 -f config/intercept-bundle.yaml
+
+bundle: "${artifactId}-intercepts"
+
+defaults:
+  peer: "monitor-peer"
+  priority: 0
+
+intercepts:
+  # Example: log every call to the main class entry point
+  - target: ${mainClass}.main
+    type: BEFORE_ASYNC
+    callback:
+      class: ${package}.MonitorCallback
+      method: onMain

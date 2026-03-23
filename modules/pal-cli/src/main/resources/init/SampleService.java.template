@@ -1,0 +1,63 @@
+package ${package};
+
+/**
+ * Sample service demonstrating operations that PAL can intercept.
+ *
+ * <p>This class uses only standard Java — no PAL imports needed.
+ * PAL's AspectJ weaving transparently captures method calls, field
+ * access, and constructor invocations at build time.
+ */
+public class SampleService {
+
+  private int orderCount = 0;
+  private double totalRevenue = 0.0;
+
+  /**
+   * Processes an order and updates running totals.
+   *
+   * @param product  the product name
+   * @param quantity the quantity ordered
+   * @param price    the unit price
+   */
+  public void processOrder(String product, int quantity, double price) {
+    orderCount++;
+    double total = quantity * price;
+    totalRevenue += total;
+
+    System.out.println("Processing order: " + quantity + "x " + product + " @ $" + price);
+
+    if (total > 500) {
+      double discounted = applyDiscount(total, 0.10);
+      System.out.println("  Discount applied! Total: $" + String.format("%.2f", discounted));
+    }
+  }
+
+  /**
+   * Applies a percentage discount to the given amount.
+   *
+   * @param amount   the original amount
+   * @param discount the discount rate (0.0 to 1.0)
+   * @return the discounted amount
+   */
+  private double applyDiscount(double amount, double discount) {
+    return amount * (1.0 - discount);
+  }
+
+  /**
+   * Returns the number of orders processed.
+   *
+   * @return the order count
+   */
+  public int getOrderCount() {
+    return orderCount;
+  }
+
+  /**
+   * Returns the total revenue from all orders.
+   *
+   * @return the total revenue
+   */
+  public double getTotalRevenue() {
+    return totalRevenue;
+  }
+}

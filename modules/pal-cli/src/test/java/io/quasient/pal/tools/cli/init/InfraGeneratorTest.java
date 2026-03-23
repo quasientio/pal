@@ -9,110 +9,123 @@
  */
 package io.quasient.pal.tools.cli.init;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
- * Unit test specifications for {@code InfraGenerator}, which produces Docker infrastructure files
- * (compose configuration, environment file, start/stop scripts) for running etcd and Kafka locally.
+ * Unit tests for {@link InfraGenerator}.
  *
- * <p>The generator must respect the {@code infra} enable flag, honour the {@code dryRun} flag, and
- * produce functional Docker Compose files with start/stop wrapper scripts.
- *
- * <p>Each test is a stub awaiting implementation once {@code InfraGenerator} is created in issue
- * #1341.
- *
- * @see <a href="https://github.io/quasientinc/pal/issues/1340">#1340</a>
- * @see <a href="https://github.io/quasientinc/pal/issues/1341">#1341</a>
+ * @see InfraGenerator
  */
 public class InfraGeneratorTest {
+
+  @Rule public TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
    * Verifies that when {@code infra=true}, the generator creates a {@code infra/docker-compose.yml}
    * file containing service definitions for etcd and Kafka.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testGeneratesDockerCompose() {
-    // Given: InitConfig with infra=true
-    // When: generate()
-    // Then: infra/docker-compose.yml exists with etcd and kafka services
+  public void testGeneratesDockerCompose() throws Exception {
+    // Given
+    InitConfig config = InitConfig.builder().groupId("com.example").infra(true).build();
+    InfraGenerator generator = new InfraGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path composeFile = tempDir.getRoot().toPath().resolve("infra/docker-compose.yml");
+    assertTrue("docker-compose.yml should exist", Files.exists(composeFile));
+    String content = Files.readString(composeFile);
+    assertThat(content, containsString("etcd"));
+    assertThat(content, containsString("kafka"));
   }
 
   /**
    * Verifies that when {@code infra=true}, the generator creates an {@code infra/.env} file
-   * containing port configurations for the Docker services.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory.
+   * containing port configurations.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testGeneratesDockerEnv() {
-    // Given: InitConfig with infra=true
-    // When: generate()
-    // Then: infra/.env exists with port configurations
+  public void testGeneratesDockerEnv() throws Exception {
+    // Given
+    InitConfig config = InitConfig.builder().groupId("com.example").infra(true).build();
+    InfraGenerator generator = new InfraGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path envFile = tempDir.getRoot().toPath().resolve("infra/.env");
+    assertTrue("infra/.env should exist", Files.exists(envFile));
+    String content = Files.readString(envFile);
+    assertThat(content, containsString("KAFKA_PORT"));
+    assertThat(content, containsString("ETCD_CLIENT_PORT"));
+  }
+
+  /** Verifies that when {@code infra=true}, the generator creates start.sh and stop.sh scripts. */
+  @Test
+  public void testGeneratesStartStopScripts() throws Exception {
+    // Given
+    InitConfig config = InitConfig.builder().groupId("com.example").infra(true).build();
+    InfraGenerator generator = new InfraGenerator(config);
+
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path startScript = tempDir.getRoot().toPath().resolve("infra/start.sh");
+    Path stopScript = tempDir.getRoot().toPath().resolve("infra/stop.sh");
+    assertTrue("start.sh should exist", Files.exists(startScript));
+    assertTrue("stop.sh should exist", Files.exists(stopScript));
+    assertThat(Files.readString(startScript), containsString("docker compose"));
+    assertThat(Files.readString(stopScript), containsString("docker compose"));
   }
 
   /**
-   * Verifies that when {@code infra=true}, the generator creates {@code infra/start.sh} and {@code
-   * infra/stop.sh} scripts that contain docker compose commands.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory.
+   * Verifies that when {@code infra=false}, the generator does not create any infrastructure files.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testGeneratesStartStopScripts() {
-    // Given: InitConfig with infra=true
-    // When: generate()
-    // Then: infra/start.sh and infra/stop.sh exist and contain docker compose commands
+  public void testSkipsWhenDisabled() throws Exception {
+    // Given
+    InitConfig config = InitConfig.builder().groupId("com.example").infra(false).build();
+    InfraGenerator generator = new InfraGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    List<Path> generated = generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    assertTrue("Should return empty list", generated.isEmpty());
+    Path infraDir = tempDir.getRoot().toPath().resolve("infra");
+    assertFalse("infra directory should not be created", Files.exists(infraDir));
   }
 
   /**
-   * Verifies that when {@code infra=false}, the generator does not create any infrastructure files
-   * or the {@code infra/} directory.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory and asserts no {@code infra/}
-   * directory is created.
+   * Verifies that when {@code dryRun=true}, the generator does not write any files even when {@code
+   * infra=true}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testSkipsWhenDisabled() {
-    // Given: InitConfig with infra=false
-    // When: generate()
-    // Then: no infra/ directory created
+  public void testDryRunDoesNotWriteFiles() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder().groupId("com.example").infra(true).dryRun(true).build();
+    InfraGenerator generator = new InfraGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
-  }
+    // When
+    List<Path> generated = generator.generate(tempDir.getRoot().toPath());
 
-  /**
-   * Verifies that when {@code dryRun=true}, the generator does not write any infrastructure files
-   * to disk even when {@code infra=true}.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory and asserts it remains empty
-   * after generation.
-   */
-  @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testDryRunDoesNotWriteFiles() {
-    // Given: InitConfig with dryRun=true, infra=true
-    // When: generate()
-    // Then: no infra files created
-
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // Then
+    assertFalse("Should report files", generated.isEmpty());
+    Path infraDir = tempDir.getRoot().toPath().resolve("infra");
+    assertFalse("infra directory should not be created in dry-run", Files.exists(infraDir));
   }
 }

@@ -9,131 +9,183 @@
  */
 package io.quasient.pal.tools.cli.init;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
- * Unit test specifications for {@code SampleAppGenerator}, which produces sample Java source files
- * (main class and optional service class) for new PAL projects.
+ * Unit tests for {@link SampleAppGenerator}.
  *
- * <p>The generator must respect the package name from {@code InitConfig}, create correct directory
- * structures under {@code src/main/java/}, honour the {@code sampleApp} and {@code dryRun} flags,
- * and never import PAL classes (weaving is transparent).
- *
- * <p>Each test is a stub awaiting implementation once {@code SampleAppGenerator} is created in
- * issue #1341.
- *
- * @see <a href="https://github.io/quasientinc/pal/issues/1340">#1340</a>
- * @see <a href="https://github.io/quasientinc/pal/issues/1341">#1341</a>
+ * @see SampleAppGenerator
  */
 public class SampleAppGeneratorTest {
+
+  @Rule public TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
    * Verifies that the generator creates a main class file at the correct path with the right
    * package declaration and a {@code public static void main} method.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory. The generated file should be
-   * at {@code src/main/java/com/example/Main.java}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testGeneratesMainClass() {
-    // Given: InitConfig with mainClass="com.example.Main", package="com.example"
-    // When: generate(config, tempDir)
-    // Then: src/main/java/com/example/Main.java exists with correct package declaration
-    //       and main method
+  public void testGeneratesMainClass() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .mainClass("com.example.Main")
+            .packageName("com.example")
+            .sampleApp(true)
+            .build();
+    SampleAppGenerator generator = new SampleAppGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    List<Path> generated = generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path mainFile = tempDir.getRoot().toPath().resolve("src/main/java/com/example/Main.java");
+    assertTrue("Main.java should exist", Files.exists(mainFile));
+    String content = Files.readString(mainFile);
+    assertThat(content, containsString("package com.example;"));
+    assertThat(content, containsString("public static void main(String[] args)"));
+    assertTrue("Generated list should include Main.java", generated.contains(mainFile));
   }
 
   /**
    * Verifies that when {@code sampleApp=true}, the generator creates a {@code SampleService.java}
    * file containing some interesting operations suitable for demonstrating PAL features.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testGeneratesSampleService() {
-    // Given: InitConfig with sampleApp=true, package="com.example"
-    // When: generate()
-    // Then: SampleService.java exists with some interesting operations
+  public void testGeneratesSampleService() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .mainClass("com.example.Main")
+            .packageName("com.example")
+            .sampleApp(true)
+            .build();
+    SampleAppGenerator generator = new SampleAppGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path serviceFile =
+        tempDir.getRoot().toPath().resolve("src/main/java/com/example/SampleService.java");
+    assertTrue("SampleService.java should exist", Files.exists(serviceFile));
+    String content = Files.readString(serviceFile);
+    assertThat(content, containsString("processOrder"));
   }
 
   /**
    * Verifies that when {@code sampleApp=false}, the generator does not create any Java source
    * files.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory and asserts no files are
-   * created.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testSkipsWhenDisabled() {
-    // Given: InitConfig with sampleApp=false
-    // When: generate()
-    // Then: no Java source files created
+  public void testSkipsWhenDisabled() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .mainClass("com.example.Main")
+            .sampleApp(false)
+            .build();
+    SampleAppGenerator generator = new SampleAppGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    List<Path> generated = generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    assertTrue("Should return empty list", generated.isEmpty());
+    Path srcDir = tempDir.getRoot().toPath().resolve("src");
+    assertFalse("src directory should not be created", Files.exists(srcDir));
   }
 
   /**
    * Verifies that all generated source files contain the correct {@code package} declaration
    * matching the configured package name.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory with package {@code
-   * "com.acme.orders"}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testCorrectPackageDeclaration() {
-    // Given: InitConfig with package="com.acme.orders"
-    // When: generate()
-    // Then: generated files have `package com.acme.orders;` declaration
+  public void testCorrectPackageDeclaration() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.acme")
+            .mainClass("com.acme.orders.Main")
+            .packageName("com.acme.orders")
+            .sampleApp(true)
+            .build();
+    SampleAppGenerator generator = new SampleAppGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path mainFile = tempDir.getRoot().toPath().resolve("src/main/java/com/acme/orders/Main.java");
+    Path serviceFile =
+        tempDir.getRoot().toPath().resolve("src/main/java/com/acme/orders/SampleService.java");
+    assertThat(Files.readString(mainFile), containsString("package com.acme.orders;"));
+    assertThat(Files.readString(serviceFile), containsString("package com.acme.orders;"));
   }
 
   /**
    * Verifies that generated source files do not import any {@code io.quasient.pal.*} classes, since
    * PAL weaving is transparent and application code should not depend on PAL APIs directly.
-   *
-   * <p>Reads the content of all generated {@code .java} files and asserts none contain PAL import
-   * statements.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testNoDirectPalImports() {
-    // Given: any InitConfig
-    // When: generate()
-    // Then: generated source files do not import any io.quasient.pal.* classes
+  public void testNoDirectPalImports() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .mainClass("com.example.Main")
+            .packageName("com.example")
+            .sampleApp(true)
+            .build();
+    SampleAppGenerator generator = new SampleAppGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path mainFile = tempDir.getRoot().toPath().resolve("src/main/java/com/example/Main.java");
+    Path serviceFile =
+        tempDir.getRoot().toPath().resolve("src/main/java/com/example/SampleService.java");
+    assertThat(Files.readString(mainFile), not(containsString("io.quasient.pal")));
+    assertThat(Files.readString(serviceFile), not(containsString("io.quasient.pal")));
   }
 
   /**
    * Verifies that when {@code dryRun=true}, the generator does not write any source files to disk.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} as the target directory and asserts it remains empty
-   * after generation.
    */
   @Test
-  @Ignore("Awaiting implementation in #1341")
-  public void testDryRunDoesNotWriteFiles() {
-    // Given: InitConfig with dryRun=true
-    // When: generate()
-    // Then: no source files created on disk
+  public void testDryRunDoesNotWriteFiles() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .mainClass("com.example.Main")
+            .packageName("com.example")
+            .sampleApp(true)
+            .dryRun(true)
+            .build();
+    SampleAppGenerator generator = new SampleAppGenerator(config);
 
-    // TODO(#1341): Implement test logic
-    fail("Not yet implemented");
+    // When
+    List<Path> generated = generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    assertFalse("Should report files", generated.isEmpty());
+    Path srcDir = tempDir.getRoot().toPath().resolve("src");
+    assertFalse("src directory should not be created in dry-run", Files.exists(srcDir));
   }
 }

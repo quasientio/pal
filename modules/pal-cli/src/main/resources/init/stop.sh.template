@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Stop PAL infrastructure
+set -euo pipefail
+cd "$(dirname "$0")"
+docker compose stop
+echo "PAL infrastructure stopped."

@@ -1,0 +1,141 @@
+/*
+ * Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
+ *
+ * Use of this software is governed by the Business Source License 1.1
+ * included in the file LICENSE and at https://mariadb.com/bsl11
+ *
+ * Change Date: 2030-10-01
+ * Change License: Apache 2.0
+ */
+package io.quasient.pal.tools.cli.init;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Generates a {@code .env.pal} sourceable shell file with environment variable exports.
+ *
+ * <p>Content varies by deployment mode:
+ *
+ * <ul>
+ *   <li>{@code LOCAL} — WAL path set, distributed variables commented out
+ *   <li>{@code DISTRIBUTED} — PAL_DIRECTORY and KAFKA_SERVERS set, local WAL commented out
+ *   <li>{@code BOTH} — local defaults active, distributed settings present as comments
+ * </ul>
+ *
+ * <p>Respects {@link InitConfig#isDryRun()}: when true, computes and reports what would be
+ * generated but does not write files.
+ *
+ * @since 1.0.0
+ */
+public final class EnvFileGenerator {
+
+  /** The init configuration. */
+  private final InitConfig config;
+
+  /**
+   * Creates a new generator with the given configuration.
+   *
+   * @param config the init configuration
+   */
+  public EnvFileGenerator(InitConfig config) {
+    this.config = config;
+  }
+
+  /**
+   * Generates the {@code .env.pal} file.
+   *
+   * <p>When {@code dryRun=true}, returns the file path without writing.
+   *
+   * @param targetDir the project root directory
+   * @return the list containing the generated file path
+   * @throws IOException if an I/O error occurs during file writing
+   */
+  public List<Path> generate(Path targetDir) throws IOException {
+    Path envFile = targetDir.resolve(".env.pal");
+    String content = buildContent();
+
+    List<Path> generated = new ArrayList<>();
+    generated.add(envFile);
+
+    if (!config.isDryRun()) {
+      Files.createDirectories(targetDir);
+      Files.writeString(envFile, content, StandardCharsets.UTF_8);
+    }
+
+    return Collections.unmodifiableList(generated);
+  }
+
+  /**
+   * Builds the env file content based on the deployment mode.
+   *
+   * @return the file content
+   */
+  private String buildContent() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("# PAL Environment Configuration\n");
+    sb.append("# Source this file: source .env.pal\n");
+    sb.append('\n');
+    sb.append("export PAL_HOME=\"").append(palHome()).append("\"\n");
+    sb.append("export PATH=\"$PAL_HOME/bin:$PATH\"\n");
+    sb.append('\n');
+
+    DeploymentMode mode = config.getDeploymentMode();
+
+    if (mode == DeploymentMode.DISTRIBUTED) {
+      appendLocalSection(sb, true);
+      sb.append('\n');
+      appendDistributedSection(sb, false);
+    } else {
+      // LOCAL and BOTH: local active, distributed commented
+      appendLocalSection(sb, false);
+      sb.append('\n');
+      appendDistributedSection(sb, true);
+    }
+
+    return sb.toString();
+  }
+
+  /**
+   * Appends the local WAL configuration section.
+   *
+   * @param sb the string builder
+   * @param commented whether to comment out the variables
+   */
+  private void appendLocalSection(StringBuilder sb, boolean commented) {
+    String prefix = commented ? "# " : "";
+    sb.append("# Local mode (Chronicle Queue)\n");
+    sb.append(prefix).append("export WAL=\"file:./wal\"\n");
+  }
+
+  /**
+   * Appends the distributed configuration section.
+   *
+   * @param sb the string builder
+   * @param commented whether to comment out the variables
+   */
+  private void appendDistributedSection(StringBuilder sb, boolean commented) {
+    String prefix = commented ? "# " : "";
+    sb.append("# Distributed mode (etcd + Kafka)\n");
+    sb.append(prefix).append("export PAL_DIRECTORY=\"localhost:2379\"\n");
+    sb.append(prefix).append("export KAFKA_SERVERS=\"localhost:29092\"\n");
+  }
+
+  /**
+   * Returns the PAL_HOME value, defaulting to a placeholder if not determinable.
+   *
+   * @return the PAL_HOME path
+   */
+  private String palHome() {
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome != null && !palHome.isEmpty()) {
+      return palHome;
+    }
+    return "/path/to/pal";
+  }
+}
