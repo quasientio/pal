@@ -619,6 +619,16 @@ public final class InitConfig {
     }
 
     /**
+     * Returns the current deployment mode without building. Used by the wizard to conditionally
+     * adjust defaults based on the mode already set.
+     *
+     * @return the current deployment mode
+     */
+    public DeploymentMode peekDeploymentMode() {
+      return deploymentMode;
+    }
+
+    /**
      * Builds an immutable {@link InitConfig} from this builder's state.
      *
      * @return a new {@code InitConfig}

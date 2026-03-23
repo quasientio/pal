@@ -9,136 +9,239 @@
  */
 package io.quasient.pal.tools.cli.init;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
- * Unit test specifications for {@code InitWizard}, the interactive prompt orchestrator that guides
- * users through project setup.
+ * Unit tests for {@link InitWizard}, the interactive prompt orchestrator that guides users through
+ * project setup.
  *
- * <p>Tests use a mock {@code PromptProvider} to supply deterministic answers instead of requiring a
+ * <p>Tests use {@link TestPromptProvider} to supply deterministic answers instead of requiring a
  * real terminal. The wizard must detect existing projects (Maven or Gradle), pre-populate fields
- * from build files, apply sensible defaults, and collect all required configuration for {@code
+ * from build files, apply sensible defaults, and collect all required configuration for {@link
  * InitConfig}.
- *
- * <p>Each test is a stub awaiting implementation once {@code InitWizard} and {@code PromptProvider}
- * are created in issue #1343.
- *
- * @see <a href="https://github.io/quasientinc/pal/issues/1342">#1342</a>
- * @see <a href="https://github.io/quasientinc/pal/issues/1343">#1343</a>
  */
 public class InitWizardTest {
+
+  /** Temporary directory for each test. */
+  @Rule public TemporaryFolder tempFolder = new TemporaryFolder();
 
   /**
    * Verifies that the wizard detects an existing Maven project by reading {@code pom.xml} and
    * pre-populates the {@code InitConfig} with the project's groupId and artifactId.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code pom.xml} with {@code
-   * groupId="com.acme"} and {@code artifactId="order-service"}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
-  public void testDetectsExistingMavenProject() {
+  public void testDetectsExistingMavenProject() throws IOException {
     // Given: directory with pom.xml containing groupId="com.acme", artifactId="order-service"
-    // When: wizard runs
-    // Then: InitConfig.isNewProject()=false, groupId/artifactId pre-populated from pom.xml
+    Path dir = tempFolder.getRoot().toPath();
+    Files.writeString(
+        dir.resolve("pom.xml"),
+        """
+        <project>
+          <groupId>com.acme</groupId>
+          <artifactId>order-service</artifactId>
+          <version>1.2.0</version>
+        </project>
+        """,
+        StandardCharsets.UTF_8);
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    // Prompts for: mainClass, deploymentMode, feature toggles
+    provider.enqueueText("com.acme.Main"); // mainClass
+    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
+    provider.enqueueYesNo(true); // sampleApp
+    provider.enqueueYesNo(true); // loggingConfig
+    provider.enqueueYesNo(false); // rpcPolicy
+    provider.enqueueYesNo(false); // scopePolicy
+    provider.enqueueYesNo(false); // interceptBundle
+    provider.enqueueYesNo(false); // infra
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: InitConfig.isNewProject()=false, groupId/artifactId pre-populated from pom.xml
+    assertThat(config.isNewProject(), is(false));
+    assertThat(config.getGroupId(), is("com.acme"));
+    assertThat(config.getArtifactId(), is("order-service"));
+    assertThat(config.getBuildTool(), is(BuildTool.MAVEN));
   }
 
   /**
    * Verifies that the wizard detects an existing Gradle project by reading {@code build.gradle} and
    * sets the build tool to GRADLE in the resulting {@code InitConfig}.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} containing a {@code build.gradle} with {@code group =
-   * 'com.acme'}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
-  public void testDetectsExistingGradleProject() {
+  public void testDetectsExistingGradleProject() throws IOException {
     // Given: directory with build.gradle containing group = 'com.acme'
-    // When: wizard runs
-    // Then: InitConfig.isNewProject()=false, buildTool=GRADLE
+    Path dir = tempFolder.getRoot().toPath();
+    Files.writeString(
+        dir.resolve("build.gradle"),
+        "group = 'com.acme'\nversion = '2.0.0'\n",
+        StandardCharsets.UTF_8);
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueText("com.acme.App"); // mainClass
+    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
+    provider.enqueueYesNo(true); // sampleApp
+    provider.enqueueYesNo(true); // loggingConfig
+    provider.enqueueYesNo(false); // rpcPolicy
+    provider.enqueueYesNo(false); // scopePolicy
+    provider.enqueueYesNo(false); // interceptBundle
+    provider.enqueueYesNo(false); // infra
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: InitConfig.isNewProject()=false, buildTool=GRADLE
+    assertThat(config.isNewProject(), is(false));
+    assertThat(config.getBuildTool(), is(BuildTool.GRADLE));
   }
 
   /**
    * Verifies that the wizard recognizes an empty directory as a new project and prompts for all
    * required fields.
-   *
-   * <p>Uses a {@code @Rule TemporaryFolder} with no build files present.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
   public void testDetectsNewProject() {
     // Given: empty directory (no pom.xml, no build.gradle)
-    // When: wizard runs
-    // Then: InitConfig.isNewProject()=true, prompts for all fields
+    Path dir = tempFolder.getRoot().toPath();
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.MAVEN); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-app"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueText("com.test.Main"); // mainClass
+    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
+    provider.enqueueYesNo(true); // sampleApp
+    provider.enqueueYesNo(true); // loggingConfig
+    provider.enqueueYesNo(false); // rpcPolicy
+    provider.enqueueYesNo(false); // scopePolicy
+    provider.enqueueYesNo(false); // interceptBundle
+    provider.enqueueYesNo(false); // infra
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: InitConfig.isNewProject()=true
+    assertThat(config.isNewProject(), is(true));
+    assertThat(config.getExistingBuildFile(), is(nullValue()));
   }
 
   /**
    * Verifies that the wizard correctly collects all fields for a new project and stores them in the
    * resulting {@code InitConfig}.
-   *
-   * <p>The mock {@code PromptProvider} returns: groupId="com.test", artifactId="my-app",
-   * version="1.0", mainClass="com.test.Main", mode=LOCAL, buildTool=MAVEN.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
   public void testNewProjectWizardCollectsAllFields() {
-    // Given: new project (empty directory), PromptProvider returns:
-    //        groupId="com.test", artifactId="my-app", version="1.0",
-    //        mainClass="com.test.Main", mode=LOCAL, buildTool=MAVEN
-    // When: wizard runs
-    // Then: InitConfig has all values correctly set
+    // Given: new project (empty directory)
+    Path dir = tempFolder.getRoot().toPath();
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.MAVEN); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-app"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueText("com.test.Main"); // mainClass
+    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
+    provider.enqueueYesNo(true); // sampleApp
+    provider.enqueueYesNo(true); // loggingConfig
+    provider.enqueueYesNo(false); // rpcPolicy
+    provider.enqueueYesNo(false); // scopePolicy
+    provider.enqueueYesNo(false); // interceptBundle
+    provider.enqueueYesNo(false); // infra
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: InitConfig has all values correctly set
+    assertThat(config.getGroupId(), is("com.test"));
+    assertThat(config.getArtifactId(), is("my-app"));
+    assertThat(config.getProjectVersion(), is("1.0"));
+    assertThat(config.getMainClass(), is("com.test.Main"));
+    assertThat(config.getBuildTool(), is(BuildTool.MAVEN));
+    assertThat(config.getDeploymentMode(), is(DeploymentMode.LOCAL));
   }
 
   /**
    * Verifies that sensible defaults are applied when the user accepts default values for all
    * optional fields.
-   *
-   * <p>The mock {@code PromptProvider} returns empty/default for all optional fields. Expected
-   * defaults: version="1.0-SNAPSHOT", sampleApp=true, loggingConfig=true.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
   public void testDefaultsAppliedWhenUserAccepts() {
-    // Given: new project, PromptProvider returns empty/default for all optional fields
-    // When: wizard runs
-    // Then: InitConfig has sensible defaults (version="1.0-SNAPSHOT", sampleApp=true,
-    //       loggingConfig=true)
+    // Given: new project, TestPromptProvider returns empty/default for all optional fields
+    Path dir = tempFolder.getRoot().toPath();
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    // All prompts return defaults (empty queues trigger default values)
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: defaults applied
+    assertThat(config.getProjectVersion(), is("1.0-SNAPSHOT"));
+    assertThat(config.isSampleApp(), is(true));
+    assertThat(config.isLoggingConfig(), is(true));
+    assertThat(config.getBuildTool(), is(BuildTool.MAVEN));
+    assertThat(config.getDeploymentMode(), is(DeploymentMode.LOCAL));
   }
 
   /**
    * Verifies that the wizard skips identity prompts (groupId, artifactId, version) for existing
    * Maven projects, reading those values from the {@code pom.xml} instead.
-   *
-   * <p>Only mainClass, mode, and feature toggles should be prompted.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
-  public void testExistingProjectSkipsIdentityPrompts() {
+  public void testExistingProjectSkipsIdentityPrompts() throws IOException {
     // Given: existing Maven project with pom.xml containing groupId, artifactId, version
-    // When: wizard runs
-    // Then: does NOT prompt for groupId, artifactId, version (reads from pom.xml).
-    //       Only prompts for mainClass, mode, and feature toggles.
+    Path dir = tempFolder.getRoot().toPath();
+    Files.writeString(
+        dir.resolve("pom.xml"),
+        """
+        <project>
+          <groupId>com.acme</groupId>
+          <artifactId>order-service</artifactId>
+          <version>2.0.0</version>
+        </project>
+        """,
+        StandardCharsets.UTF_8);
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    // Only enqueue non-identity prompts: mainClass, mode, feature toggles
+    // No buildTool, groupId, artifactId, version prompts for existing projects
+    provider.enqueueText("com.acme.OrderMain"); // mainClass
+    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
+    provider.enqueueYesNo(true); // sampleApp
+    provider.enqueueYesNo(true); // loggingConfig
+    provider.enqueueYesNo(false); // rpcPolicy
+    provider.enqueueYesNo(false); // scopePolicy
+    provider.enqueueYesNo(false); // interceptBundle
+    provider.enqueueYesNo(false); // infra
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: reads from pom.xml, does NOT prompt for groupId, artifactId, version
+    assertThat(config.getGroupId(), is("com.acme"));
+    assertThat(config.getArtifactId(), is("order-service"));
+    assertThat(config.getProjectVersion(), is("2.0.0"));
+    assertThat(config.getMainClass(), is("com.acme.OrderMain"));
+    assertThat(config.getExistingBuildFile(), is(notNullValue()));
   }
 
   /**
@@ -146,14 +249,30 @@ public class InitWizardTest {
    * the selection is reflected in the resulting {@code InitConfig}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
   public void testBuildToolSelectionForNewProject() {
     // Given: new project, PromptProvider returns buildTool=GRADLE
-    // When: wizard runs
-    // Then: InitConfig.getBuildTool()=GRADLE
+    Path dir = tempFolder.getRoot().toPath();
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.GRADLE); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-gradle-app"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueText("com.test.Main"); // mainClass
+    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
+    provider.enqueueYesNo(true); // sampleApp
+    provider.enqueueYesNo(true); // loggingConfig
+    provider.enqueueYesNo(false); // rpcPolicy
+    provider.enqueueYesNo(false); // scopePolicy
+    provider.enqueueYesNo(false); // interceptBundle
+    provider.enqueueYesNo(false); // infra
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: InitConfig.getBuildTool()=GRADLE
+    assertThat(config.getBuildTool(), is(BuildTool.GRADLE));
   }
 
   /**
@@ -161,43 +280,81 @@ public class InitWizardTest {
    * default to {@code true}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
   public void testDistributedModeEnablesInfra() {
     // Given: user selects mode=DISTRIBUTED
-    // When: wizard runs
-    // Then: infra flag is prompted / defaults to true
+    Path dir = tempFolder.getRoot().toPath();
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.MAVEN); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-app"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueText("com.test.Main"); // mainClass
+    provider.enqueueSelect(DeploymentMode.DISTRIBUTED); // deploymentMode
+    provider.enqueueYesNo(true); // sampleApp
+    provider.enqueueYesNo(true); // loggingConfig
+    provider.enqueueYesNo(false); // rpcPolicy
+    provider.enqueueYesNo(false); // scopePolicy
+    provider.enqueueYesNo(false); // interceptBundle
+    // infra: no answer enqueued, so it uses the default (true for distributed)
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: infra defaults to true for distributed mode
+    assertThat(config.isInfra(), is(true));
+    assertThat(config.getDeploymentMode(), is(DeploymentMode.DISTRIBUTED));
   }
 
   /**
    * Verifies that selecting LOCAL mode causes the infrastructure flag to default to {@code false}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
   public void testLocalModeDisablesInfraByDefault() {
     // Given: user selects mode=LOCAL
-    // When: wizard runs
-    // Then: infra defaults to false
+    Path dir = tempFolder.getRoot().toPath();
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.MAVEN); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-app"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueText("com.test.Main"); // mainClass
+    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
+    provider.enqueueYesNo(true); // sampleApp
+    provider.enqueueYesNo(true); // loggingConfig
+    provider.enqueueYesNo(false); // rpcPolicy
+    provider.enqueueYesNo(false); // scopePolicy
+    provider.enqueueYesNo(false); // interceptBundle
+    // infra: no answer enqueued, so it uses the default (false for local)
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: infra defaults to false for local mode
+    assertThat(config.isInfra(), is(false));
   }
 
   /**
    * Verifies that the PAL version in the resulting {@code InitConfig} is set from the runtime,
-   * matching the currently running PAL version.
+   * matching the provided PAL version.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
   public void testPalVersionSetFromRuntime() {
     // Given: wizard runs with PAL version "1.0.0" available at runtime
-    // When: InitConfig built
-    // Then: palVersion="1.0.0"
+    Path dir = tempFolder.getRoot().toPath();
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    // All defaults
+
+    // When: InitConfig built
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: palVersion="1.0.0"
+    assertThat(config.getPalVersion(), is("1.0.0"));
   }
 
   /**
@@ -205,14 +362,35 @@ public class InitWizardTest {
    * pom.xml} and pre-populates it in the {@code InitConfig}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
-  public void testParsesGroupIdFromExistingPom() {
+  public void testParsesGroupIdFromExistingPom() throws IOException {
     // Given: pom.xml with <groupId>com.acme</groupId>
-    // When: wizard detects existing project
-    // Then: pre-populates groupId="com.acme" in InitConfig
+    Path dir = tempFolder.getRoot().toPath();
+    Files.writeString(
+        dir.resolve("pom.xml"),
+        """
+        <project>
+          <groupId>com.acme</groupId>
+          <artifactId>my-service</artifactId>
+        </project>
+        """,
+        StandardCharsets.UTF_8);
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueText("com.acme.Main"); // mainClass
+    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
+    provider.enqueueYesNo(true); // sampleApp
+    provider.enqueueYesNo(true); // loggingConfig
+    provider.enqueueYesNo(false); // rpcPolicy
+    provider.enqueueYesNo(false); // scopePolicy
+    provider.enqueueYesNo(false); // interceptBundle
+    provider.enqueueYesNo(false); // infra
+
+    // When: wizard detects existing project
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: pre-populates groupId="com.acme" in InitConfig
+    assertThat(config.getGroupId(), is("com.acme"));
   }
 
   /**
@@ -220,13 +398,29 @@ public class InitWizardTest {
    * build.gradle} and pre-populates it in the {@code InitConfig}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1343")
-  public void testParsesGroupIdFromExistingGradle() {
+  public void testParsesGroupIdFromExistingGradle() throws IOException {
     // Given: build.gradle with group = 'com.acme'
-    // When: wizard detects existing project
-    // Then: pre-populates groupId="com.acme" in InitConfig
+    Path dir = tempFolder.getRoot().toPath();
+    Files.writeString(
+        dir.resolve("build.gradle"),
+        "group = 'com.acme'\nversion = '1.0.0'\n",
+        StandardCharsets.UTF_8);
 
-    // TODO(#1343): Implement test logic
-    fail("Not yet implemented");
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueText("com.acme.Main"); // mainClass
+    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
+    provider.enqueueYesNo(true); // sampleApp
+    provider.enqueueYesNo(true); // loggingConfig
+    provider.enqueueYesNo(false); // rpcPolicy
+    provider.enqueueYesNo(false); // scopePolicy
+    provider.enqueueYesNo(false); // interceptBundle
+    provider.enqueueYesNo(false); // infra
+
+    // When: wizard detects existing project
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: pre-populates groupId="com.acme" in InitConfig
+    assertThat(config.getGroupId(), is("com.acme"));
   }
 }
