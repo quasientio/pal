@@ -100,13 +100,13 @@ public enum CheckedExceptionPolicy {
    * wrapping or validation.
    *
    * <p><b>Warning:</b> This policy bypasses Java's checked exception system, which can lead to
-   * unexpected {@link UndeclaredThrowableException} if the caller is not prepared to handle
-   * arbitrary exception types. This was the default behavior in earlier versions for backward
-   * compatibility but is not recommended for new code.
+   * unexpected {@link java.lang.reflect.UndeclaredThrowableException} if the caller is not prepared
+   * to handle arbitrary exception types. This was the default behavior in earlier versions for
+   * backward compatibility but is not recommended for new code.
    *
    * <p><b>Trade-off:</b> Provides maximum flexibility but completely bypasses type safety,
-   * potentially leading to runtime surprises and {@link UndeclaredThrowableException} in reflection
-   * or proxy scenarios.
+   * potentially leading to runtime surprises and {@link
+   * java.lang.reflect.UndeclaredThrowableException} in reflection or proxy scenarios.
    */
   ALLOW_ALL((byte) 2);
 
