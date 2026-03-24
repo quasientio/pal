@@ -727,7 +727,9 @@ public class Init extends AbstractPalSubcommand {
       runCmd =
           "pal run -d localhost:2379 -k localhost:29092 --wal my-wal --zmq-rpc auto"
               + " -cp target/classes "
-              + (config.getMainClass() != null ? config.getMainClass() : "com.example.Main");
+              + (config.getMainClass() != null
+                  ? config.getMainClass()
+                  : config.getGroupId() + ".Main");
     } else {
       String cpDir =
           config.getBuildTool() == BuildTool.GRADLE ? "build/classes/java/main" : "target/classes";
@@ -735,7 +737,9 @@ public class Init extends AbstractPalSubcommand {
           "pal run --wal file:./wal -cp "
               + cpDir
               + " "
-              + (config.getMainClass() != null ? config.getMainClass() : "com.example.Main");
+              + (config.getMainClass() != null
+                  ? config.getMainClass()
+                  : config.getGroupId() + ".Main");
     }
     out.println("  " + step + ". " + runCmd);
   }

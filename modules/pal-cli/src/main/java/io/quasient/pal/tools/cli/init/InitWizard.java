@@ -50,8 +50,8 @@ public final class InitWizard {
   /** Default project version. */
   private static final String DEFAULT_VERSION = "1.0-SNAPSHOT";
 
-  /** Default main class name. */
-  private static final String DEFAULT_MAIN_CLASS = "com.example.Main";
+  /** Default simple class name appended to the group ID for the main class default. */
+  private static final String DEFAULT_MAIN_CLASS_SIMPLE = "Main";
 
   /** Regex pattern for extracting Maven groupId from pom.xml. */
   private static final Pattern POM_GROUP_ID =
@@ -121,13 +121,14 @@ public final class InitWizard {
     BuildTool detectedBuildTool = BuildToolStrategy.detect(targetDir);
     boolean isExistingProject = detectedBuildTool != null;
 
+    String groupId;
     if (isExistingProject) {
-      configureExistingProject(builder, detectedBuildTool);
+      groupId = configureExistingProject(builder, detectedBuildTool);
     } else {
-      configureNewProject(builder);
+      groupId = configureNewProject(builder);
     }
 
-    promptMainClass(builder, isExistingProject);
+    promptMainClass(builder, groupId);
     promptDeploymentMode(builder);
     promptFeatureToggles(builder);
     setPalVersion(builder);
@@ -141,8 +142,9 @@ public final class InitWizard {
    *
    * @param builder the config builder
    * @param detectedBuildTool the detected build tool
+   * @return the detected group ID, or {@code null} if not found in the build file
    */
-  private void configureExistingProject(InitConfig.Builder builder, BuildTool detectedBuildTool) {
+  private String configureExistingProject(InitConfig.Builder builder, BuildTool detectedBuildTool) {
     builder.buildTool(detectedBuildTool);
 
     Path buildFile = resolveBuildFile(detectedBuildTool);
@@ -168,14 +170,17 @@ public final class InitWizard {
             + (identity.artifactId != null ? ":" + identity.artifactId : "")
             + (identity.version != null ? " (" + identity.version + ")" : "");
     promptProvider.println(desc);
+
+    return identity.groupId;
   }
 
   /**
    * Configures the builder for a new project by prompting for build tool and project coordinates.
    *
    * @param builder the config builder
+   * @return the group ID entered by the user
    */
-  private void configureNewProject(InitConfig.Builder builder) {
+  private String configureNewProject(InitConfig.Builder builder) {
     promptProvider.println("Welcome to PAL! Let's set up your project.");
     promptProvider.println("");
 
@@ -191,19 +196,19 @@ public final class InitWizard {
 
     String version = promptProvider.promptText("Project version", DEFAULT_VERSION);
     builder.projectVersion(version);
+
+    return groupId;
   }
 
   /**
-   * Prompts for the main class name.
+   * Prompts for the main class name, defaulting to {@code <groupId>.Main}.
    *
    * @param builder the config builder
-   * @param isExistingProject whether this is an existing project
+   * @param groupId the project group ID, or {@code null} if unknown
    */
-  private void promptMainClass(InitConfig.Builder builder, boolean isExistingProject) {
-    String defaultMainClass = DEFAULT_MAIN_CLASS;
-    if (isExistingProject) {
-      defaultMainClass = DEFAULT_MAIN_CLASS;
-    }
+  private void promptMainClass(InitConfig.Builder builder, String groupId) {
+    String defaultMainClass =
+        (groupId != null ? groupId : DEFAULT_GROUP_ID) + "." + DEFAULT_MAIN_CLASS_SIMPLE;
     String mainClass = promptProvider.promptText("Main class (for pal run)", defaultMainClass);
     builder.mainClass(mainClass);
   }
