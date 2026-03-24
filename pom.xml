@@ -440,6 +440,8 @@
                                 <exclude>.java-version</exclude>
                                 <exclude>**/*.env</exclude>
                                 <exclude>**/*.env.example</exclude>
+                                <exclude>**/pom-fragment-*.xml</exclude>
+                                <exclude>modules/pal-cli/src/main/resources/init/*.template</exclude>
                                 <exclude>**/*.bak</exclude>
                                 <exclude>venv/**</exclude>
                                 <exclude>.local/**</exclude>
