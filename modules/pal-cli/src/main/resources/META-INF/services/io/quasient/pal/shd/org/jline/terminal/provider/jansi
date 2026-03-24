@@ -1,0 +1,1 @@
+class = io.quasient.pal.shd.org.jline.terminal.impl.jansi.JansiTerminalProvider

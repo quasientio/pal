@@ -88,7 +88,7 @@ public final class JLinePromptProvider implements PromptProvider {
     try {
       term = TerminalBuilder.builder().system(true).dumb(false).build();
       reader = LineReaderBuilder.builder().terminal(term).build();
-    } catch (IOException e) {
+    } catch (IOException | IllegalStateException e) {
       useFallback = true;
     }
     this.terminal = term;
