@@ -325,28 +325,7 @@ public class Init extends AbstractPalSubcommand {
 
     // Redirect out to picocli's writer so captured output works in tests
     PrintWriter pw = spec.commandLine().getOut();
-    this.out =
-        new PrintStream(
-            new OutputStream() {
-              @Override
-              public void write(int b) throws IOException {
-                pw.write(b);
-                pw.flush();
-              }
-
-              @Override
-              public void write(byte[] buf, int off, int len) throws IOException {
-                pw.write(new String(buf, off, len, StandardCharsets.UTF_8));
-                pw.flush();
-              }
-
-              @Override
-              public void flush() throws IOException {
-                pw.flush();
-              }
-            },
-            true,
-            StandardCharsets.UTF_8);
+    this.out = new PrintStream(new PrintWriterOutputStream(pw), true, StandardCharsets.UTF_8);
   }
 
   /**
@@ -768,4 +747,32 @@ public class Init extends AbstractPalSubcommand {
    * @param path the file path
    */
   private record FileAction(String action, Path path) {}
+
+  /** An {@link OutputStream} that delegates to a {@link PrintWriter}. */
+  private static class PrintWriterOutputStream extends OutputStream {
+    /** The underlying writer to delegate to. */
+    private final PrintWriter pw;
+
+    /** Creates a new stream that delegates to the given writer. */
+    PrintWriterOutputStream(PrintWriter pw) {
+      this.pw = pw;
+    }
+
+    @Override
+    public void write(int b) throws IOException {
+      pw.write(b);
+      pw.flush();
+    }
+
+    @Override
+    public void write(byte[] buf, int off, int len) throws IOException {
+      pw.write(new String(buf, off, len, StandardCharsets.UTF_8));
+      pw.flush();
+    }
+
+    @Override
+    public void flush() throws IOException {
+      pw.flush();
+    }
+  }
 }

@@ -16,12 +16,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -684,11 +687,10 @@ public class InitTest {
 
     // Verify patched pom.xml is parseable XML
     String patchedPom = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
-    javax.xml.parsers.DocumentBuilderFactory factory =
-        javax.xml.parsers.DocumentBuilderFactory.newInstance();
-    javax.xml.parsers.DocumentBuilder builder = factory.newDocumentBuilder();
+    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    DocumentBuilder builder = factory.newDocumentBuilder();
     // This will throw if the XML is malformed
-    builder.parse(new java.io.ByteArrayInputStream(patchedPom.getBytes(StandardCharsets.UTF_8)));
+    builder.parse(new ByteArrayInputStream(patchedPom.getBytes(StandardCharsets.UTF_8)));
 
     // Verify it contains pal-weave
     assertThat("Patched pom.xml should contain pal-weave", patchedPom, containsString("pal-weave"));
