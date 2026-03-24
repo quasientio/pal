@@ -754,3 +754,7 @@ You've learned:
 - ✓ The basics of interception for dynamic behavior
 
 PAL converts your operations into messages. Everything else flows from that simple transformation.
+
+## Need Help?
+
+Join us on [Discord](https://discord.gg/k4XsMyUA) — ask questions, share feedback, or just say hello.

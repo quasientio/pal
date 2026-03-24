@@ -170,6 +170,7 @@ Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 
 ## Community
 
+- **Discord:** [Join the PAL community](https://discord.gg/k4XsMyUA)
 - **Documentation:** [Full docs](docs/user/docs/)
 - **Examples:** [pal-examples repository](https://github.com/cometera/pal-examples)
 - **Discussion:** [GitHub Discussions](https://github.io/quasient/pal/discussions)
