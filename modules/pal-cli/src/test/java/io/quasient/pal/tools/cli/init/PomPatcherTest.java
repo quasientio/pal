@@ -495,7 +495,7 @@ public class PomPatcherTest {
           <build>
               <plugins>
                   <plugin>
-                      <groupId>dev.aspectj</groupId>
+                      <groupId>org.codehaus.mojo</groupId>
                       <artifactId>aspectj-maven-plugin</artifactId>
                       <version>1.15.0</version>
                       <configuration>
@@ -532,7 +532,7 @@ public class PomPatcherTest {
           <build>
               <plugins>
                   <plugin>
-                      <groupId>dev.aspectj</groupId>
+                      <groupId>org.codehaus.mojo</groupId>
                       <artifactId>aspectj-maven-plugin</artifactId>
                       <version>1.14.0</version>
                       <configuration>

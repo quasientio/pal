@@ -335,7 +335,7 @@ Create a `pom.xml` with the AspectJ weaving plugin and `pal-weave` dependency:
     <build>
         <plugins>
             <plugin>
-                <groupId>dev.aspectj</groupId>
+                <groupId>org.codehaus.mojo</groupId>
                 <artifactId>aspectj-maven-plugin</artifactId>
                 <version>1.15.0</version>
                 <configuration>

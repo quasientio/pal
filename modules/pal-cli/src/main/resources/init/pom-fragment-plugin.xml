@@ -1,9 +1,18 @@
             <plugin>
-                <groupId>dev.aspectj</groupId>
+                <groupId>org.codehaus.mojo</groupId>
                 <artifactId>aspectj-maven-plugin</artifactId>
                 <version>${aspectj.plugin.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjtools</artifactId>
+                        <version>${aspectj.version}</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <complianceLevel>17</complianceLevel>
+                    <source>17</source>
+                    <target>17</target>
                     <aspectLibraries>
                         <aspectLibrary>
                             <groupId>io.quasient.pal</groupId>

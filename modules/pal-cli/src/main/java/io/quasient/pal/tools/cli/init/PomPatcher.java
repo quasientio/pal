@@ -62,7 +62,7 @@ public final class PomPatcher {
   private static final String PAL_WEAVE_ARTIFACT = "pal-weave";
 
   /** AspectJ Maven plugin groupId. */
-  private static final String ASPECTJ_PLUGIN_GROUP_ID = "dev.aspectj";
+  private static final String ASPECTJ_PLUGIN_GROUP_ID = "org.codehaus.mojo";
 
   /** AspectJ Maven plugin artifactId. */
   private static final String ASPECTJ_PLUGIN_ARTIFACT = "aspectj-maven-plugin";
