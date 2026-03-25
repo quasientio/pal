@@ -38,6 +38,14 @@ import org.jline.utils.NonBlockingReader;
  */
 public final class JLinePromptProvider implements PromptProvider {
 
+  /**
+   * System property that suppresses the JLine deprecation warning for the JNA terminal provider.
+   * The property name uses the un-relocated JLine package prefix because the shade plugin
+   * automatically relocates {@code org.jline} string literals in bytecode.
+   */
+  private static final String JLINE_DEPRECATED_PROVIDER_WARNING_PROPERTY =
+      "org.jline.terminal.disableDeprecatedProviderWarning";
+
   /** ANSI escape: move cursor up one line. */
   private static final String CURSOR_UP = "\033[A";
 
@@ -86,6 +94,7 @@ public final class JLinePromptProvider implements PromptProvider {
     LineReader reader = null;
     boolean useFallback = false;
     try {
+      System.setProperty(JLINE_DEPRECATED_PROVIDER_WARNING_PROPERTY, "true");
       term = TerminalBuilder.builder().system(true).dumb(false).build();
       reader = LineReaderBuilder.builder().terminal(term).build();
     } catch (IOException | IllegalStateException e) {
