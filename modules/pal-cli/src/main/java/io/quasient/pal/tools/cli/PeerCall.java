@@ -47,18 +47,24 @@ import picocli.CommandLine.ParentCommand;
  * requests via ZMQ or JSON-RPC. Supports synchronous operations, multithreaded request handling,
  * configurable RPC types, and thread affinity hints.
  *
+ * <p>Alternatively, raw JSON-RPC requests can be piped via standard input (one per line) instead of
+ * specifying a class name. The two modes are mutually exclusive.
+ *
  * <p>Usage examples:
  *
  * <pre>
  *   pal peer call 550e8400-e29b-41d4-a716-446655440000 com.example.Main arg1 arg2
  *   pal peer call tcp://localhost:5555 com.example.Main
  *   pal peer call my-peer com.example.Main -r ZMQ_RPC --thread-affinity fx-thread
+ *   echo '{"jsonrpc":"2.0","method":"com.example.Main","id":1}' | pal peer call ws://localhost:8080
  * </pre>
  */
 @Command(
     name = "call",
-    customSynopsis = "pal peer call [OPTIONS] PEER [class args...]%n",
-    description = "Send RPC calls to a peer",
+    customSynopsis =
+        "pal peer call [OPTIONS] PEER [class args...]%n"
+            + "  or: <json-rpc-requests> | pal peer call [OPTIONS] PEER%n",
+    description = "Send RPC calls to a peer (via class name or JSON-RPC on stdin)",
     separator = " ",
     sortOptions = false,
     optionListHeading = "%nOptions:%n")

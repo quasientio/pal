@@ -197,6 +197,8 @@ Requires object creation first:
 {"jsonrpc":"2.0","id":"2","method":"call","params":{"target":"550e8400-e29b...","method":"add","args":[5,3]}}
 ```
 
+For multi-step workflows where you need to create objects, pass them as arguments, and track references across calls, see the [RpcChain DSL](rpc-chain.md) — a Java API that handles ObjectRef management automatically.
+
 ### Constructors
 
 ```json
@@ -410,6 +412,7 @@ For custom objects, PAL creates ObjectRefs (UUIDs) instead of copying data.
 
 ## Further Reading
 
+- [RpcChain DSL](rpc-chain.md) - Java DSL for multi-step JSON-RPC workflows with automatic ObjectRef tracking
 - [Peers and Logs](peers-and-logs.md) - Understanding peers
 - [Interception](interception.md) - Intercepting RPC calls
 - [CLI Reference](../cli-reference.md) - Complete `pal peer call` and `pal log call` documentation
