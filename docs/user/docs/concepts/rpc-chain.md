@@ -1,6 +1,8 @@
 # RpcChain DSL
 
-The `RpcChain` DSL is a Java API for building multi-step JSON-RPC workflows where each step can depend on the results of previous ones. It handles object reference tracking automatically, so you can create objects, call methods on them, pass them as arguments to other calls, and read back results — all without manually managing ObjectRefs.
+The `RpcChain` DSL is the highest of PAL's [three JSON-RPC abstraction layers](rpc.md#json-rpc-abstraction-layers) — a Java API for building multi-step JSON-RPC workflows where each step can depend on the results of previous ones. It handles object reference tracking automatically, so you can create objects, call methods on them, pass them as arguments to other calls, and read back results — all without manually managing ObjectRefs.
+
+For single requests or lower-level control, see [JsonRpcMessageFactory](rpc.md#jsonrpcmessagefactory). For the raw wire format, see the [JSON-RPC API Reference](rpc.md#json-rpc-api-reference).
 
 **Module**: `pal-client`
 
