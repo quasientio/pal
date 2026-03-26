@@ -21,14 +21,14 @@ PAL supports two message formats:
 
 ### Binary RPC (ZeroMQ)
 
-- **Protocol**: Custom binary format (Colfer)
+- **Protocol**: Custom binary format ([Colfer](https://github.com/pascaldekloe/colfer))
 - **Transport**: ZeroMQ (TCP sockets)
 - **Performance**: Very fast (microseconds)
-- **Use case**: High-throughput, low-latency communication
+- **Use case**: High-throughput, low-latency communication, PAL internals (intercept callbacks, WAL, PUB)
 
 Start peer with binary RPC:
 ```bash
-pal run -d localhost:2379 --json-rpc auto \
+pal run -d localhost:2379 --zmq-rpc auto \
   -cp app.jar com.example.Service
 ```
 
@@ -37,6 +37,8 @@ Call with binary RPC:
 pal peer call -d localhost:2379 my-peer \
   com.example.Calculator add 5 3
 ```
+
+For programmatic usage from Java, see [Binary RPC (MessageBuilder)](rpc-binary.md).
 
 ### JSON-RPC (WebSocket)
 
@@ -57,9 +59,11 @@ echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Ca
   pal peer call -d localhost:2379 ws://localhost:9001
 ```
 
-## JSON-RPC Abstraction Layers
+## Abstraction Layers
 
-PAL's JSON-RPC API is available at three levels of abstraction. Pick the one that matches your use case:
+PAL provides programmatic APIs for both RPC formats, at varying levels of abstraction.
+
+### JSON-RPC layers
 
 | Level | What you use | Best for |
 |-------|-------------|----------|
@@ -72,6 +76,14 @@ Each layer produces the same wire-format messages — they differ only in how mu
 - **Raw JSON** — you construct the JSON, manage request IDs, and track ObjectRefs yourself. See [JSON-RPC API Reference](#json-rpc-api-reference) below.
 - **JsonRpcMessageFactory** — you call Java methods that return `JsonRpcRequest` objects; the factory handles JSON structure and ID generation. See [JsonRpcMessageFactory](#jsonrpcmessagefactory) in the API Reference.
 - **RpcChain DSL** — you describe a sequence of operations; the DSL handles ObjectRef resolution, request ordering, and result extraction. See [RpcChain DSL](rpc-chain.md).
+
+### Binary RPC layer
+
+| Level | What you use | Best for |
+|-------|-------------|----------|
+| **MessageBuilder** | Java factory that builds `ExecMessage` / `ControlMessage` objects | High-performance Java clients, PAL internal communication |
+
+Binary messages are always constructed through `MessageBuilder` — there is no hand-crafted wire format. See [Binary RPC (MessageBuilder)](rpc-binary.md).
 
 ## Making RPC Calls
 
@@ -1136,7 +1148,9 @@ Use the [RpcChain DSL](rpc-chain.md) when you have multi-step workflows with obj
 
 ## Further Reading
 
+- [Binary RPC (MessageBuilder)](rpc-binary.md) - Binary RPC API for high-performance Java-to-Java communication
 - [RpcChain DSL](rpc-chain.md) - Java DSL for multi-step JSON-RPC workflows with automatic ObjectRef tracking
+- [RPC Policy](rpc-policy.md) - Access control for RPC operations
 - [Peers and Logs](peers-and-logs.md) - Understanding peers
 - [Interception](interception.md) - Intercepting RPC calls
 - [CLI Reference](../cli-reference.md) - Complete `pal peer call` and `pal log call` documentation

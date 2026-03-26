@@ -41,7 +41,9 @@ Each `.create()` constructs an object on the remote peer and tracks its ObjectRe
 
 ## Connecting to a Peer
 
-Before using RpcChain, you need a `ThinPeer` connected to a running peer via JSON-RPC:
+Before using RpcChain, you need a `ThinPeer` connected to a running peer via JSON-RPC.
+
+### Lookup by UUID
 
 ```java
 import io.quasient.pal.cxn.ThinPeer;
@@ -49,26 +51,49 @@ import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.messages.types.RpcType;
 
-// Connect to the PAL directory (etcd)
 DirectoryConnectionProvider directoryProvider =
     new DirectoryConnectionProvider("localhost:2379");
 
-// Find a peer that has JSON-RPC enabled
 PeerInfo peer = directoryProvider.get()
     .orElseThrow()
-    .listPeers().stream()
-    .filter(p -> p.getJsonrpcAddress() != null)
-    .findFirst()
-    .orElseThrow(() -> new RuntimeException("No JSON-RPC peer found"));
+    .getPeer(targetPeerUuid);
 
-// Create and initialize a ThinPeer
 ThinPeer thinPeer = new ThinPeer()
     .withUuid(UUID.randomUUID())
     .withDirectoryProvider(directoryProvider)
     .withInitialPeer(peer)
     .withOutboundRpcType(RpcType.JSON_RPC)
     .init();
+```
 
+### Lookup by name
+
+Peers registered with a name can be looked up by that name (names must be unique):
+
+```java
+PeerInfo peer = directoryProvider.get()
+    .orElseThrow()
+    .getPeerByName("my-service");
+```
+
+### Direct connection by address
+
+If you know the peer's WebSocket address, connect directly without a directory:
+
+```java
+PeerInfo peer = new PeerInfo();
+peer.setJsonrpcAddress("ws://192.168.1.100:9001");
+
+ThinPeer thinPeer = new ThinPeer()
+    .withUuid(UUID.randomUUID())
+    .withInitialPeer(peer)
+    .withOutboundRpcType(RpcType.JSON_RPC)
+    .init();
+```
+
+### Using with RpcChain
+
+```java
 // Use it with RpcChain
 RpcChain chain = new RpcChain(thinPeer);
 
