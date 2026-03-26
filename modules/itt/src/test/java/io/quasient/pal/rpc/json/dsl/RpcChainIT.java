@@ -332,4 +332,57 @@ public class RpcChainIT extends AbstractIntegrationTest {
     assertNotNull(chain.getChainResult().getRef("numList"));
     assertThat(chain.getChainResult().getValue("arr"), is(new Integer[] {5, 10}));
   }
+
+  /* callStatic + with(): factory method pattern */
+
+  /**
+   * Common case: callStatic factory returns an object ref, then call an instance method on it.
+   * Collections.emptyList() returns a List — with() resolves the class and call("size") works.
+   */
+  @Test
+  public void testCallStaticFactoryThenWithAndCallInstanceMethod() throws Exception {
+    chain
+        .callStatic("java.util.Collections", "emptyList", "list")
+        .with("list")
+        .call("size", "sz")
+        .send();
+
+    assertNotNull(chain.getChainResult().getRef("list"));
+    assertThat(chain.getChainResult().getValue("sz"), is(0));
+  }
+
+  /**
+   * Non-common case: callStatic where the return type differs from the declaring class.
+   * Collections.singletonList(42) returns a List implementation, not Collections. The response type
+   * overwrites the build-time declaring class so that the subsequent instance method call uses the
+   * correct type.
+   */
+  @Test
+  public void testCallStaticWithDifferentReturnTypeThenWithAndCall() throws Exception {
+    chain
+        .callStatic("java.util.Collections", "singletonList", "list", args(42))
+        .with("list")
+        .call("size", "sz")
+        .send();
+
+    assertNotNull(chain.getChainResult().getRef("list"));
+    assertThat(chain.getChainResult().getValue("sz"), is(1));
+  }
+
+  /**
+   * Chained: callStatic factory result passed by name as argument to another call. Verifies the
+   * ObjectRef from callStatic is usable in subsequent operations.
+   */
+  @Test
+  public void testCallStaticResultPassedAsArgToInstanceMethod() throws Exception {
+    chain
+        .create("java.util.ArrayList", "list")
+        .call("add", args(10))
+        .callStatic("java.lang.Integer", "valueOf", "num", args(99))
+        .call("add", args("num"))
+        .call("size", "sz")
+        .send();
+
+    assertThat(chain.getChainResult().getValue("sz"), is(2));
+  }
 }

@@ -221,6 +221,9 @@ public class RpcChain {
    */
   public RpcChain callStatic(String className, String methodName, String resultVarName) {
     addOperation(DeferredOperation.staticMethod(className, methodName, resultVarName, null));
+    if (resultVarName != null) {
+      storeClassForVarName(resultVarName, className);
+    }
     return this;
   }
 
@@ -238,6 +241,9 @@ public class RpcChain {
   public RpcChain callStatic(
       String className, String methodName, @Nullable String resultVarName, Object[] args) {
     addOperation(DeferredOperation.staticMethod(className, methodName, resultVarName, args));
+    if (resultVarName != null) {
+      storeClassForVarName(resultVarName, className);
+    }
     return this;
   }
 
@@ -375,9 +381,19 @@ public class RpcChain {
       }
       case INSTANCE_METHOD -> {
         ref = resolveInstanceRef(op.getInstanceVarName(), op.getDirectInstanceRef());
+        // Resolve class name at send-time: the response from a prior callStatic may
+        // have updated the type to the actual return type (vs. the declaring class
+        // stored at build-time).
+        String className = op.getClassName();
+        if (op.getInstanceVarName() != null) {
+          String resolved = getClassForVarName(op.getInstanceVarName());
+          if (resolved != null) {
+            className = resolved;
+          }
+        }
         req =
             JsonRpcMessageFactory.buildInstanceMethodCall(
-                id, op.getClassName(), op.getMethodName(), ref.getRef(), argumentList);
+                id, className, op.getMethodName(), ref.getRef(), argumentList);
       }
       case STATIC_FIELD_GET -> {
         req = JsonRpcMessageFactory.buildStaticFieldGet(id, op.getClassName(), op.getFieldName());
@@ -474,6 +490,13 @@ public class RpcChain {
       Object returnedValue = Unwrapper.unwrapObject(responseObject);
       // Store the value in the requestId -> value map
       requestIdToValueMap.put(request.getId(), returnedValue);
+    } catch (ClassNotFoundException e) {
+      // Class not on client classpath — store raw string value so getValue() still works.
+      // The ObjectRef is stored separately below, so chain operations continue regardless.
+      logger.debug("Class not on classpath ({}), storing raw value", responseObject.getType());
+      if (responseObject.getValue() != null) {
+        requestIdToValueMap.put(request.getId(), responseObject.getValue());
+      }
     } catch (Exception e) {
       logger.error("Error unwrapping response value", e);
     }
@@ -494,9 +517,14 @@ public class RpcChain {
     if (varName != null && valueRef != null) {
       // It's a reference, like a 'new' call result
       varNameToInstanceRefMap.put(varName, valueRef);
-      // If needed, store class type if available
-      if (request.getParams() != null && request.getParams().getType() != null) {
-        storeClassForVarName(varName, request.getParams().getType());
+      // Prefer the actual return type from the response over the declaring class
+      // from the request (they differ for factory methods, utility methods, etc.)
+      String resolvedType = (responseObject != null) ? responseObject.getType() : null;
+      if (resolvedType == null && request.getParams() != null) {
+        resolvedType = request.getParams().getType();
+      }
+      if (resolvedType != null) {
+        storeClassForVarName(varName, resolvedType);
       }
     }
   }
