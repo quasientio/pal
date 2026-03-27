@@ -185,13 +185,15 @@ public class ChronicleWalWriter extends WalWriter {
             : DEFAULT_BLOCK_SIZE;
     this.syncEvery = (syncEvery != null && !syncEvery.isBlank()) ? Integer.parseInt(syncEvery) : -1;
     this.queueFactory = queueFactory;
-    logger.debug(
-        "new ChronicleWalWriter initialized w/offsetPubAddress={}, flushOnClose={}, baseDir={}, rollCycle={}, and syncEvery={}",
-        offsetPubAddress,
-        flushOnClose,
-        baseDir,
-        rollCycle,
-        syncEvery);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "new ChronicleWalWriter initialized w/offsetPubAddress={}, flushOnClose={}, baseDir={}, rollCycle={}, and syncEvery={}",
+          offsetPubAddress,
+          flushOnClose,
+          baseDir,
+          rollCycle,
+          syncEvery);
+    }
   }
 
   // ─────────────────────────────── Lifecycle ───────────────────────────────
@@ -298,21 +300,29 @@ public class ChronicleWalWriter extends WalWriter {
           ADAPTIVE_100_MICROSECONDS,
           () -> !(shutdownRequested || Thread.currentThread().isInterrupted()));
 
-      logger.debug("Thread interrupted or shutdown requested.");
+      if (logger.isDebugEnabled()) {
+        logger.debug("Thread interrupted or shutdown requested.");
+      }
 
       if (!isFlushOnClose) {
-        logger.debug("Shutting down immediately...");
+        if (logger.isDebugEnabled()) {
+          logger.debug("Shutting down immediately...");
+        }
         return;
       }
 
       // after shutdown request, drain queue until empty
-      logger.debug("Processing messages remaining in queue...");
+      if (logger.isDebugEnabled()) {
+        logger.debug("Processing messages remaining in queue...");
+      }
       OutboundMsg msg;
       while ((msg = walQueue.poll()) != null) {
         writeMessageUsingAppender(msg, queueAppender);
       }
 
-      logger.debug("Wal queue empty, shutting down...");
+      if (logger.isDebugEnabled()) {
+        logger.debug("Wal queue empty, shutting down...");
+      }
       return;
     }
 
@@ -328,7 +338,9 @@ public class ChronicleWalWriter extends WalWriter {
         }
       }
     }
-    logger.debug("Thread interrupted or shutdown requested.");
+    if (logger.isDebugEnabled()) {
+      logger.debug("Thread interrupted or shutdown requested.");
+    }
   }
 
   /**

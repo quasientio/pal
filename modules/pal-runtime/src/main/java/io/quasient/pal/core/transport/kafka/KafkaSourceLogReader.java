@@ -377,20 +377,8 @@ public class KafkaSourceLogReader extends SourceLogReader {
     while (!Thread.interrupted()) {
 
       // wait until we are ready to accept requests
-      if (!acceptingRequests) {
-        lock.lock();
-        try {
-          while (!acceptingRequests) {
-            logger.debug("Waiting to start accepting requests");
-            acceptingRequestsCondition.await();
-          }
-        } catch (InterruptedException e) {
-          logger.error("Interrupted while waiting to start request polling", e);
-          break;
-        } finally {
-          lock.unlock();
-        }
-        logger.debug("Accepting requests now - polling from log: {}", kafkaTopic);
+      if (!waitForAcceptingRequests(kafkaTopic)) {
+        break;
       }
 
       // read from kafka
@@ -539,7 +527,9 @@ public class KafkaSourceLogReader extends SourceLogReader {
           }
         } else {
           // Everything already flushed by the async callback
-          logger.debug("All processed offsets already committed (up-to {})", committed);
+          if (logger.isDebugEnabled()) {
+            logger.debug("All processed offsets already committed (up-to {})", committed);
+          }
         }
       }
 
@@ -555,7 +545,9 @@ public class KafkaSourceLogReader extends SourceLogReader {
         }
       } finally {
         if (wasInterrupted) {
-          logger.debug("Restoring thread interrupt for outer handlers");
+          if (logger.isDebugEnabled()) {
+            logger.debug("Restoring thread interrupt for outer handlers");
+          }
           Thread.currentThread().interrupt();
         }
       }

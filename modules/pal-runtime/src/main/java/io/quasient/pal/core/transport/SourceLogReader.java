@@ -161,6 +161,37 @@ public abstract class SourceLogReader extends ConnectedService {
   }
 
   /**
+   * Blocks until the reader is ready to accept requests. Returns {@code true} if the reader is now
+   * accepting requests, or {@code false} if the thread was interrupted while waiting.
+   *
+   * @param logName descriptive name of the log being read, used in log messages
+   * @return true if ready to accept requests, false if interrupted
+   */
+  protected boolean waitForAcceptingRequests(String logName) {
+    if (acceptingRequests) {
+      return true;
+    }
+    lock.lock();
+    try {
+      while (!acceptingRequests) {
+        if (logger.isDebugEnabled()) {
+          logger.debug("Waiting to start accepting requests");
+        }
+        acceptingRequestsCondition.await();
+      }
+    } catch (InterruptedException e) {
+      logger.error("Interrupted while waiting to start request polling", e);
+      return false;
+    } finally {
+      lock.unlock();
+    }
+    if (logger.isDebugEnabled()) {
+      logger.debug("Accepting requests now - reading from log: {}", logName);
+    }
+    return true;
+  }
+
+  /**
    * Logs debug-level statistics including messages received, total polling duration, and poll
    * count.
    */

@@ -214,8 +214,10 @@ public class InterceptLease implements AutoCloseable {
     try {
       @SuppressWarnings("unused")
       var unused = leaseClient.revoke(leaseId);
-    } catch (Exception ignored) {
-      // Intentionally ignored — same pattern as PeerLease
+    } catch (Exception ex) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Error revoking lease for intercept {}", interceptUuid, ex);
+      }
     }
   }
 

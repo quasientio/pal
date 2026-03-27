@@ -73,11 +73,15 @@ public final class EtcdHealthCheck {
             httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() == 200 && response.body().contains("\"health\":\"true\"")) {
-          logger.debug("etcd endpoint {} is healthy (via {})", baseUri, path);
+          if (logger.isDebugEnabled()) {
+            logger.debug("etcd endpoint {} is healthy (via {})", baseUri, path);
+          }
           return true;
         }
       } catch (IOException | InterruptedException e) {
-        logger.trace("Health check failed for {} via {}: {}", baseUri, path, e.getMessage());
+        if (logger.isTraceEnabled()) {
+          logger.trace("Health check failed for {} via {}: {}", baseUri, path, e.getMessage());
+        }
         if (e instanceof InterruptedException) {
           Thread.currentThread().interrupt();
         }
@@ -85,7 +89,9 @@ public final class EtcdHealthCheck {
       }
     }
 
-    logger.debug("etcd endpoint {} is not healthy", baseUri);
+    if (logger.isDebugEnabled()) {
+      logger.debug("etcd endpoint {} is not healthy", baseUri);
+    }
     return false;
   }
 
@@ -102,10 +108,14 @@ public final class EtcdHealthCheck {
   public static boolean canConnect(String host, int port, int timeoutMs) {
     try (Socket socket = new Socket()) {
       socket.connect(new InetSocketAddress(host, port), timeoutMs);
-      logger.debug("TCP connection successful to {}:{}", host, port);
+      if (logger.isDebugEnabled()) {
+        logger.debug("TCP connection successful to {}:{}", host, port);
+      }
       return true;
     } catch (IOException e) {
-      logger.trace("TCP connection failed to {}:{}: {}", host, port, e.getMessage());
+      if (logger.isTraceEnabled()) {
+        logger.trace("TCP connection failed to {}:{}: {}", host, port, e.getMessage());
+      }
       return false;
     }
   }
@@ -142,10 +152,12 @@ public final class EtcdHealthCheck {
                 healthyEndpoints.add(endpoint);
               }
             } catch (IllegalArgumentException e) {
-              logger.trace(
-                  "TCP connected but HTTP health check failed for {}: {}",
-                  endpoint,
-                  e.getMessage());
+              if (logger.isTraceEnabled()) {
+                logger.trace(
+                    "TCP connected but HTTP health check failed for {}: {}",
+                    endpoint,
+                    e.getMessage());
+              }
             }
           }
         } catch (NumberFormatException e) {

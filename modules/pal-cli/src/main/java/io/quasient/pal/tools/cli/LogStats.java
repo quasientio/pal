@@ -313,10 +313,6 @@ public class LogStats extends AbstractStatsCommand {
       shutdownLatch.await();
     } catch (Throwable e) {
       logger.error("Uncaught error processing stream", e);
-      if (!externalPrinting) {
-        //noinspection CallToPrintStackTrace
-        e.printStackTrace();
-      }
       return 1;
     }
     return 0;
@@ -386,11 +382,7 @@ public class LogStats extends AbstractStatsCommand {
         }
       }
     } catch (InterruptedException | ExecutionException ex) {
-      logger.error("Error processing stream", ex);
-      if (!externalPrinting) {
-        //noinspection CallToPrintStackTrace
-        ex.printStackTrace();
-      }
+      logger.error("Error waiting for Kafka Streams to reach running state", ex);
     }
   }
 }

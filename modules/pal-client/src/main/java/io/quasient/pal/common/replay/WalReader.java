@@ -113,8 +113,10 @@ public final class WalReader {
         }
 
         if (outboundMsg.getMessageType().getFamily() != MessageFamily.EXEC) {
-          logger.debug(
-              "Skipping non-EXEC message at index {}: {}", index, outboundMsg.getMessageType());
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Skipping non-EXEC message at index {}: {}", index, outboundMsg.getMessageType());
+          }
           continue;
         }
 
@@ -196,7 +198,9 @@ public final class WalReader {
     long endOffset = endOffsets.getOrDefault(partition0, 0L);
 
     if (endOffset == 0) {
-      logger.debug("Kafka topic {} is empty, no messages to read", topic);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Kafka topic {} is empty, no messages to read", topic);
+      }
       return new ArrayList<>();
     }
 
@@ -219,7 +223,10 @@ public final class WalReader {
         }
 
         if (messageType.getFamily() != MessageFamily.EXEC) {
-          logger.debug("Skipping non-EXEC message at offset {}: {}", record.offset(), messageType);
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Skipping non-EXEC message at offset {}: {}", record.offset(), messageType);
+          }
           continue;
         }
 

@@ -24,6 +24,7 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -33,6 +34,9 @@ import org.slf4j.LoggerFactory;
  * #initialize()}, and {@link #runCommand()} methods.
  */
 public abstract class AbstractPalSubcommand extends AbstractTool implements Callable<Integer> {
+
+  /** Class logger. */
+  private static final Logger logger = LoggerFactory.getLogger(AbstractPalSubcommand.class);
 
   /** Path to the logging configuration file used by Logback. */
   private static final String LOGGING_CONFIG = "/cli-logging-fallback.xml";
@@ -127,16 +131,13 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
           givenFileExists = true;
         }
       } catch (InvalidPathException | SecurityException ex) {
-        ex.printStackTrace(System.err);
+        logger.error("Error checking logging configuration path: {}", palLogging, ex);
       }
       if (givenFileExists) {
         try {
           configurator.doConfigure(palLogging);
         } catch (JoranException ex) {
-          System.err.printf("Error loading logging configuration from %s%n", palLogging);
-          // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
-          //noinspection CallToPrintStackTrace
-          ex.printStackTrace();
+          logger.error("Error loading logging configuration from {}", palLogging, ex);
         }
         return;
       }
@@ -146,10 +147,7 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
     try (final InputStream stream = Main.class.getResourceAsStream(LOGGING_CONFIG)) {
       configurator.doConfigure(stream);
     } catch (JoranException | IOException ex) {
-      System.err.printf("Error loading logging configuration from %s%n", LOGGING_CONFIG);
-      // for more info: StatusPrinter.printInCaseOfErrorsOrWarnings(context);
-      //noinspection CallToPrintStackTrace
-      ex.printStackTrace();
+      logger.error("Error loading fallback logging configuration from {}", LOGGING_CONFIG, ex);
     }
   }
 

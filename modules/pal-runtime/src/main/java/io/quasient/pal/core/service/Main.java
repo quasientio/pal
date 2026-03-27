@@ -1970,7 +1970,7 @@ public class Main implements Callable<Integer> {
       // wait a bit for exec service to finish closing zmq context
       boolean terminated =
           singleExecutor.awaitTermination(EXECUTOR_AWAIT_TERM.toMillis(), TimeUnit.MILLISECONDS);
-      if (!terminated) {
+      if (!terminated && logger.isDebugEnabled()) {
         logger.debug("Executor service did not terminate gracefully.");
       }
 
@@ -1981,7 +1981,9 @@ public class Main implements Callable<Integer> {
             Key.get(new TypeLiteral<HwmMessageQueue<OutboundMsg>>() {}, Names.named("wal_queue"));
         HwmMessageQueue<OutboundMsg> walQueue = injector.getInstance(walKey);
         walQueue.clear();
-        logger.debug("Cleared internal WAL queue");
+        if (logger.isDebugEnabled()) {
+          logger.debug("Cleared internal WAL queue");
+        }
       }
       if (runOptions.contains(RunOptions.WITH_TCP_PUB)) {
         // NOTE: explicit type required for errorprone (do not replace by <>)
@@ -1989,7 +1991,9 @@ public class Main implements Callable<Integer> {
             Key.get(new TypeLiteral<HwmMessageQueue<OutboundMsg>>() {}, Names.named("pub_queue"));
         HwmMessageQueue<OutboundMsg> pubQueue = injector.getInstance(pubKey);
         pubQueue.clear();
-        logger.debug("Cleared internal PUB queue");
+        if (logger.isDebugEnabled()) {
+          logger.debug("Cleared internal PUB queue");
+        }
       }
 
       // print aggregated stats

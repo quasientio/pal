@@ -165,7 +165,9 @@ class JsonRpcWebSocketServer extends WebSocketServer {
           // delete metadata file
           Files.deleteIfExists(metadataFilePath);
           peerStatsMap.get(peerId).incrementTotalMessagesSent();
-          logger.debug("Sent back response to peer w/id: {}", peerId);
+          if (logger.isDebugEnabled()) {
+            logger.debug("Sent back response to peer w/id: {}", peerId);
+          }
           return;
         }
       } catch (JsonSerializationException | IOException e) {
@@ -178,7 +180,9 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     try {
       connSocket.send(response);
       peerStatsMap.get(peerId).incrementTotalMessagesSent();
-      logger.debug("Sent back response to peer w/id: {}", peerId);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Sent back response to peer w/id: {}", peerId);
+      }
     } catch (RuntimeException e) {
       // WebSocket send can throw IllegalStateException or other runtime exceptions on disconnect
       logger.error("Error sending back response to peer w/id: {}", peerId, e);
@@ -282,7 +286,9 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     }
     if (peerId == null) {
       peerId = UUID.randomUUID();
-      logger.debug("No valid peer-id found in handshake. Assigned new id: {}", peerId);
+      if (logger.isDebugEnabled()) {
+        logger.debug("No valid peer-id found in handshake. Assigned new id: {}", peerId);
+      }
     }
 
     webSocketConnectionMapping.put(conn, peerId);
@@ -333,7 +339,9 @@ class JsonRpcWebSocketServer extends WebSocketServer {
   public void onMessage(WebSocket conn, String message) {
     UUID peerId = webSocketConnectionMapping.get(conn);
     peerStatsMap.get(peerId).incrementTotalMessagesReceived();
-    logger.debug("New message from peer w/id: {}", peerId);
+    if (logger.isDebugEnabled()) {
+      logger.debug("New message from peer w/id: {}", peerId);
+    }
     if (logger.isTraceEnabled()) {
       logger.trace("Message received: {}", message);
     }

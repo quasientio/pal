@@ -12,6 +12,8 @@ package io.quasient.pal.cxn.directory;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.etcd.jetcd.Lease;
 import java.util.concurrent.ScheduledFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents a lease-holder that maintains a keep-alive for an etcd lease and can revoke it when
@@ -23,6 +25,9 @@ import java.util.concurrent.ScheduledFuture;
     value = {"DE_MIGHT_IGNORE", "DLS_DEAD_LOCAL_STORE"},
     justification = "close() intentionally ignores revoke failures - best-effort cleanup")
 public class PeerLease implements AutoCloseable {
+
+  /** Class logger. */
+  private static final Logger logger = LoggerFactory.getLogger(PeerLease.class);
 
   /** The identifier of the etcd lease. */
   public final long leaseId;
@@ -62,8 +67,10 @@ public class PeerLease implements AutoCloseable {
     try {
       @SuppressWarnings("unused")
       var unused = leaseClient.revoke(leaseId);
-    } catch (Exception ignored) {
-      // Intentionally ignored
+    } catch (Exception ex) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Error revoking peer lease {}", leaseId, ex);
+      }
     }
   }
 }

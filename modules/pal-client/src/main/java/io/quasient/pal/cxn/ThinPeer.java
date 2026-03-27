@@ -1143,11 +1143,15 @@ public class ThinPeer {
       long endOffset = endOffsets.getOrDefault(inTopicPartition, 0L);
 
       if (endOffset == 0) {
-        logger.debug("Log is empty, no messages to retrieve");
+        if (logger.isDebugEnabled()) {
+          logger.debug("Log is empty, no messages to retrieve");
+        }
         return messages;
       }
 
-      logger.debug("Reading all {} messages from WAL", endOffset);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Reading all {} messages from WAL", endOffset);
+      }
 
       // Seek to beginning
       consumer.seek(inTopicPartition, 0);
@@ -1163,7 +1167,9 @@ public class ThinPeer {
       }
     }
 
-    logger.debug("Retrieved {} messages from WAL", messages.size());
+    if (logger.isDebugEnabled()) {
+      logger.debug("Retrieved {} messages from WAL", messages.size());
+    }
     return messages;
   }
 
@@ -1876,7 +1882,9 @@ public class ThinPeer {
       ControlMessage responseMessage = sendToPeer(msg);
       ControlStatusType statusType = ControlStatusType.fromId(responseMessage.getStatus());
       if (ControlStatusType.OK.equals(statusType)) {
-        logger.debug("Session w/id {} was deleted.", sessionId);
+        if (logger.isDebugEnabled()) {
+          logger.debug("Session w/id {} was deleted.", sessionId);
+        }
       } else {
         logger.error("Error deleting session w/id: {} - status: {}", sessionId, statusType);
       }
@@ -1885,7 +1893,9 @@ public class ThinPeer {
       try {
         JsonRpcResponse response = sendJsonRpcRequestToPeer(request).get();
         if (response.getError() == null) {
-          logger.debug("Session w/id {} was deleted.", sessionId);
+          if (logger.isDebugEnabled()) {
+            logger.debug("Session w/id {} was deleted.", sessionId);
+          }
         } else {
           logger.error(
               "Error deleting session w/id: {} - error: {}", sessionId, response.getError());
@@ -2348,7 +2358,9 @@ public class ThinPeer {
                     continue;
                   }
 
-                  logger.debug("Received message on inbound socket: {}", message);
+                  if (logger.isDebugEnabled()) {
+                    logger.debug("Received message on inbound socket: {}", message);
+                  }
 
                   // accumulate message
                   receivedMessages.add(message);

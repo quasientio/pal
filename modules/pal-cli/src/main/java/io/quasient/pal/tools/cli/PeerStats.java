@@ -227,11 +227,7 @@ public class PeerStats extends AbstractStatsCommand {
               Thread thread = new Thread(r);
               thread.setUncaughtExceptionHandler(
                   (t, e) -> {
-                    logger.error("Uncaught exception", e);
-                    if (!externalPrinting) {
-                      //noinspection CallToPrintStackTrace
-                      e.printStackTrace();
-                    }
+                    logger.error("Uncaught exception in thread {}", t.getName(), e);
                   });
               return thread;
             });
@@ -288,11 +284,7 @@ public class PeerStats extends AbstractStatsCommand {
       executor.shutdownNow();
       streamer.close();
     } catch (Throwable e) {
-      logger.error("Uncaught error", e);
-      if (!externalPrinting) {
-        //noinspection CallToPrintStackTrace
-        e.printStackTrace();
-      }
+      logger.error("Uncaught error during stream processing", e);
       return 1;
     }
     return 0;

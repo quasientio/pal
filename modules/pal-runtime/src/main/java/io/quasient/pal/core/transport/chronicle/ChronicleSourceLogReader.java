@@ -219,20 +219,8 @@ public class ChronicleSourceLogReader extends SourceLogReader {
     while (!Thread.interrupted()) {
 
       // wait until we are ready to accept requests
-      if (!acceptingRequests) {
-        lock.lock();
-        try {
-          while (!acceptingRequests) {
-            logger.debug("Waiting to start accepting requests");
-            acceptingRequestsCondition.await();
-          }
-        } catch (InterruptedException e) {
-          logger.error("Interrupted while waiting to start request polling", e);
-          break;
-        } finally {
-          lock.unlock();
-        }
-        logger.debug("Accepting requests now - reading from Chronicle log: {}", queueName);
+      if (!waitForAcceptingRequests(queueName)) {
+        break;
       }
 
       // read from Chronicle queue
@@ -279,7 +267,9 @@ public class ChronicleSourceLogReader extends SourceLogReader {
     if (tailer != null) {
       try {
         tailer.close();
-        logger.debug("Tailer resources released");
+        if (logger.isDebugEnabled()) {
+          logger.debug("Tailer resources released");
+        }
       } catch (Exception e) {
         logger.warn("Error releasing tailer", e);
       }
@@ -288,7 +278,9 @@ public class ChronicleSourceLogReader extends SourceLogReader {
     if (chronicleQueue != null) {
       try {
         chronicleQueue.close();
-        logger.debug("Chronicle log closed");
+        if (logger.isDebugEnabled()) {
+          logger.debug("Chronicle log closed");
+        }
       } catch (Exception e) {
         logger.warn("Error closing Chronicle log", e);
       }

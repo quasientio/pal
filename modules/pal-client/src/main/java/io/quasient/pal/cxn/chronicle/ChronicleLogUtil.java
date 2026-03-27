@@ -83,7 +83,9 @@ public class ChronicleLogUtil {
     try (DirectoryStream<Path> stream = Files.newDirectoryStream(queuePath, "*.cq4*")) {
       return stream.iterator().hasNext();
     } catch (IOException e) {
-      logger.debug("Error checking queue existence at {}", queuePath, e);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Error checking queue existence at {}", queuePath, e);
+      }
       return false;
     }
   }
@@ -105,7 +107,9 @@ public class ChronicleLogUtil {
       }
       return count;
     } catch (Exception e) {
-      logger.debug("Error counting messages in queue at {}", queuePath, e);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Error counting messages in queue at {}", queuePath, e);
+      }
       // If queue doesn't exist or can't be read, return 0
       return 0;
     }
@@ -123,7 +127,9 @@ public class ChronicleLogUtil {
       tailer.toStart();
       return OutboundMsg.readNext(tailer) == null;
     } catch (Exception e) {
-      logger.debug("Error checking if queue is empty at {}", queuePath, e);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Error checking if queue is empty at {}", queuePath, e);
+      }
       // If queue doesn't exist or can't be read, consider it empty
       return true;
     }
@@ -162,7 +168,9 @@ public class ChronicleLogUtil {
       long lastIndex = messageCount - 1;
       return new QueueIndexInfo(firstIndex, lastIndex);
     } catch (Exception e) {
-      logger.debug("Error getting queue index info at {}", queuePath, e);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Error getting queue index info at {}", queuePath, e);
+      }
       return null;
     }
   }
@@ -218,18 +226,24 @@ public class ChronicleLogUtil {
                 }
               }
             } catch (Exception storeEx) {
-              logger.debug("Could not get store for cycle {}: {}", cycle, storeEx.getMessage());
+              if (logger.isDebugEnabled()) {
+                logger.debug("Could not get store for cycle {}: {}", cycle, storeEx.getMessage());
+              }
             }
           }
 
           if (totalSize > 0) {
-            logger.debug("Chronicle queue size from write positions: {} bytes", totalSize);
+            if (logger.isDebugEnabled()) {
+              logger.debug("Chronicle queue size from write positions: {} bytes", totalSize);
+            }
             return totalSize;
           }
         } catch (Exception internalApiEx) {
-          logger.debug(
-              "Could not use Chronicle internal API for size calculation: {}",
-              internalApiEx.getMessage());
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Could not use Chronicle internal API for size calculation: {}",
+                internalApiEx.getMessage());
+          }
           // Fall through to sampling approach
         }
       }
@@ -267,13 +281,17 @@ public class ChronicleLogUtil {
       if (sampleCount > 0) {
         long averageMessageSize = totalBytesRead / sampleCount;
         long estimatedSize = averageMessageSize * messageCount;
-        logger.debug("Chronicle queue size estimated from sampling: {} bytes", estimatedSize);
+        if (logger.isDebugEnabled()) {
+          logger.debug("Chronicle queue size estimated from sampling: {} bytes", estimatedSize);
+        }
         return estimatedSize;
       }
 
       return 0L;
     } catch (Exception e) {
-      logger.debug("Error calculating queue size at {}", queuePath, e);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Error calculating queue size at {}", queuePath, e);
+      }
       return 0L;
     }
   }
@@ -289,7 +307,9 @@ public class ChronicleLogUtil {
    */
   public static boolean deleteQueue(Path queuePath) {
     if (queuePath == null || !Files.exists(queuePath)) {
-      logger.debug("Queue path does not exist: {}", queuePath);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Queue path does not exist: {}", queuePath);
+      }
       return false;
     }
 
@@ -302,7 +322,9 @@ public class ChronicleLogUtil {
                 path -> {
                   try {
                     Files.delete(path);
-                    logger.debug("Deleted: {}", path);
+                    if (logger.isDebugEnabled()) {
+                      logger.debug("Deleted: {}", path);
+                    }
                   } catch (IOException e) {
                     logger.error("Failed to delete: {}", path, e);
                   }

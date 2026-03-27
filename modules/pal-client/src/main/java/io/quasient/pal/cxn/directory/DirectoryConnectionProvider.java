@@ -14,6 +14,8 @@ import jakarta.inject.Named;
 import jakarta.inject.Provider;
 import java.time.Duration;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides a null-safe, singleton {@link Provider} for {@link PalDirectory} instances.
@@ -28,6 +30,9 @@ import java.util.Optional;
  * Optional}.
  */
 public class DirectoryConnectionProvider implements Provider<Optional<PalDirectory>> {
+
+  /** Class logger. */
+  private static final Logger logger = LoggerFactory.getLogger(DirectoryConnectionProvider.class);
 
   // PalDirectory constructor parameters
 
@@ -165,8 +170,10 @@ public class DirectoryConnectionProvider implements Provider<Optional<PalDirecto
         long ms = Long.parseLong(millisStr.trim());
         if (ms > 0) return Duration.ofMillis(ms);
       }
-    } catch (Exception ignored) {
-      // fall back to default
+    } catch (Exception ex) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Error parsing connect timeout '{}', using default", millisStr, ex);
+      }
     }
     return defaultSupplier.get();
   }

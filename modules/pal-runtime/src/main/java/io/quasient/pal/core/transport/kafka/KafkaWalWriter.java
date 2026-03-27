@@ -193,10 +193,12 @@ public class KafkaWalWriter extends WalWriter {
     // set Kafka's Producer properties
     setProducerProperties(lingerMs, batchSize, compressionType, bufferMemory);
 
-    logger.debug(
-        "new KafkaLogWriter initialized w/offsetPubAddress={}, flushOnClose={}",
-        offsetPubAddress,
-        flushOnClose);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "new KafkaLogWriter initialized w/offsetPubAddress={}, flushOnClose={}",
+          offsetPubAddress,
+          flushOnClose);
+    }
   }
 
   /** Optionally opens ZeroMQ connection for the offset publisher. */
@@ -289,21 +291,29 @@ public class KafkaWalWriter extends WalWriter {
           ADAPTIVE_100_MICROSECONDS,
           () -> !(shutdownRequested || Thread.currentThread().isInterrupted()));
 
-      logger.debug("Thread interrupted or shutdown requested.");
+      if (logger.isDebugEnabled()) {
+        logger.debug("Thread interrupted or shutdown requested.");
+      }
 
       if (!isFlushOnClose) {
-        logger.debug("Shutting down immediately...");
+        if (logger.isDebugEnabled()) {
+          logger.debug("Shutting down immediately...");
+        }
         return;
       }
 
       // after shutdown request, drain queue until empty
-      logger.debug("Processing messages remaining in queue...");
+      if (logger.isDebugEnabled()) {
+        logger.debug("Processing messages remaining in queue...");
+      }
       OutboundMsg msg;
       while ((msg = walQueue.poll()) != null) {
         writeMessage(msg);
       }
 
-      logger.debug("Wal queue empty, shutting down...");
+      if (logger.isDebugEnabled()) {
+        logger.debug("Wal queue empty, shutting down...");
+      }
       return;
     }
 
@@ -319,7 +329,9 @@ public class KafkaWalWriter extends WalWriter {
         }
       }
     }
-    logger.debug("Thread interrupted or shutdown requested.");
+    if (logger.isDebugEnabled()) {
+      logger.debug("Thread interrupted or shutdown requested.");
+    }
   }
 
   /**
@@ -514,9 +526,13 @@ public class KafkaWalWriter extends WalWriter {
       // make producer flush all outstanding sends (blocks until callbacks run)
       try {
         if (producer != null) {
-          logger.debug("Flushing producer...");
+          if (logger.isDebugEnabled()) {
+            logger.debug("Flushing producer...");
+          }
           producer.flush();
-          logger.debug("Producer flushed");
+          if (logger.isDebugEnabled()) {
+            logger.debug("Producer flushed");
+          }
         }
       } catch (Exception e) {
         logger.warn("flush failed during close", e);
@@ -525,7 +541,9 @@ public class KafkaWalWriter extends WalWriter {
       // wait a little for any callbacks still running (defensive)
       long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(500);
       if (messagesInFlight.get() > 0) {
-        logger.debug("Waiting a little for callbacks still running");
+        if (logger.isDebugEnabled()) {
+          logger.debug("Waiting a little for callbacks still running");
+        }
         while (messagesInFlight.get() > 0 && System.nanoTime() < deadline) {
           Thread.onSpinWait();
         }
@@ -560,12 +578,16 @@ public class KafkaWalWriter extends WalWriter {
     }
 
     // close the producer
-    logger.debug("Closing producer");
+    if (logger.isDebugEnabled()) {
+      logger.debug("Closing producer");
+    }
     closeProducer();
 
     // close the offset publisher socket
     if (offsetPublisherSocket != null) {
-      logger.debug("Closing PUB socket");
+      if (logger.isDebugEnabled()) {
+        logger.debug("Closing PUB socket");
+      }
       closeConnection(offsetPublisherSocket, "Error closing offset publisher");
     }
 
