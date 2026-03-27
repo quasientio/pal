@@ -162,7 +162,8 @@ public class JsonRpcRequestServer extends ConnectedService {
             logger.debug("Sent message from peer w/id: {} to dispatchers", requestMsg.getPeerId());
           }
           if (!sent) {
-            logger.error("Error dealing message for dispatch: {}", requestMsg);
+            logger.error(
+                "Error dealing message for dispatch from peer w/id: {}", requestMsg.getPeerId());
           }
         }
 

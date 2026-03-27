@@ -125,7 +125,10 @@ public class KafkaLogMessageSerializer implements Serializer<LogMessage<?>> {
       try {
         json = JsonRpcSerializer.toJson(jsonRpcMessage);
       } catch (JsonSerializationException e) {
-        logger.error("Failed to serialize JsonRpcMessage: {}", jsonRpcMessage, e);
+        logger.error(
+            "Failed to serialize JsonRpcMessage of type {}",
+            jsonRpcMessage.getClass().getSimpleName(),
+            e);
         return new byte[0];
       }
       data = json.getBytes(StandardCharsets.UTF_8);

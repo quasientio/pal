@@ -712,7 +712,10 @@ public class InterceptCallbackDispatcher {
       }
       return exception;
     } else {
-      logger.info("Swallowing business exception from callback (policy={}): {}", policy, exception);
+      logger.info(
+          "Swallowing business exception from callback (policy={}, exceptionType={})",
+          policy,
+          exception.getClass().getName());
       return null;
     }
   }
