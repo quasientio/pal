@@ -601,7 +601,7 @@ InterceptRequest<InterceptableFieldOp> fieldIntercept = new InterceptRequest<>(
     new InterceptableFieldOp("maxRetries", FieldOpType.GET));
 ```
 
-Parameter types are also considered: intercepting `process(String)` does not affect `process(String, int)`. This means tests for overloaded methods can safely target specific signatures without interfering with other overloads.
+When parameter types are specified, they are matched exactly: intercepting `process(String)` does not affect `process(String, int)`. This means tests for overloaded methods can safely target specific signatures without interfering with other overloads. When parameter types are omitted (empty list), the intercept matches all overloads of that method.
 
 ## Debugging Tests
 

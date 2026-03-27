@@ -400,13 +400,14 @@ public class AntPathMatcherThreadSafetyTest {
     assertTrue(!entryWildcard.matches("com.example.Handler", "process", new String[] {"int"}));
 
     assertTrue(entryNoArgs.matches("com.example.Foo", "bar", new String[0]));
-    assertTrue(!entryNoArgs.matches("com.example.Foo", "bar", new String[] {"int"}));
+    // No param types specified = wildcard: matches any parameter list
+    assertTrue(entryNoArgs.matches("com.example.Foo", "bar", new String[] {"int"}));
 
     // Verify optimized overload
     assertTrue(entryFooBar.matches("com.example.Foo.bar", "int,String"));
     assertTrue(!entryFooBar.matches("com.example.Foo.bar", "int,int"));
     assertTrue(entryNoArgs.matches("com.example.Foo.bar", ""));
-    assertTrue(!entryNoArgs.matches("com.example.Foo.bar", "int"));
+    assertTrue(entryNoArgs.matches("com.example.Foo.bar", "int"));
 
     CyclicBarrier barrier = new CyclicBarrier(THREAD_COUNT);
     AtomicInteger failures = new AtomicInteger(0);
@@ -442,11 +443,11 @@ public class AntPathMatcherThreadSafetyTest {
                       failures.incrementAndGet();
                     }
 
-                    // entryNoArgs: com.example.Foo.bar()
+                    // entryNoArgs: com.example.Foo.bar() — wildcard, matches any params
                     if (!entryNoArgs.matches("com.example.Foo", "bar", new String[0])) {
                       failures.incrementAndGet();
                     }
-                    if (entryNoArgs.matches("com.example.Foo", "bar", new String[] {"int"})) {
+                    if (!entryNoArgs.matches("com.example.Foo", "bar", new String[] {"int"})) {
                       failures.incrementAndGet();
                     }
 
@@ -460,7 +461,7 @@ public class AntPathMatcherThreadSafetyTest {
                     if (!entryNoArgs.matches("com.example.Foo.bar", "")) {
                       failures.incrementAndGet();
                     }
-                    if (entryNoArgs.matches("com.example.Foo.bar", "int")) {
+                    if (!entryNoArgs.matches("com.example.Foo.bar", "int")) {
                       failures.incrementAndGet();
                     }
                   }

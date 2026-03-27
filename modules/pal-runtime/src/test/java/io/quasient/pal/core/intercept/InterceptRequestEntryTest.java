@@ -160,6 +160,73 @@ public class InterceptRequestEntryTest {
   }
 
   @Test
+  public void matchesMethodWithNoParamsSpecified_matchesAnySignature() {
+    // When an intercept is registered without specifying parameter types,
+    // it should match any overload of the method (wildcard behavior).
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
+            UUID.randomUUID(),
+            InterceptType.BEFORE,
+            "com.example.Calculator",
+            "add",
+            List.of(), // no param types specified
+            "org.some.package.MyInterceptor",
+            "callMe");
+
+    InterceptRequestEntry entry = new InterceptRequestEntry(interceptMessage);
+
+    // Should match a call with (int, int) params
+    assertThat(
+        entry.matches("com.example.Calculator", "add", new String[] {"int", "int"}), is(true));
+
+    // Should match a call with (double, double) params
+    assertThat(
+        entry.matches("com.example.Calculator", "add", new String[] {"double", "double"}),
+        is(true));
+
+    // Should match a call with (java.lang.String) param
+    assertThat(
+        entry.matches("com.example.Calculator", "add", new String[] {"java.lang.String"}),
+        is(true));
+
+    // Should still match zero-arg overload
+    assertThat(entry.matches("com.example.Calculator", "add", new String[0]), is(true));
+
+    // Should NOT match a different method name
+    assertThat(
+        entry.matches("com.example.Calculator", "subtract", new String[] {"int", "int"}),
+        is(false));
+  }
+
+  @Test
+  public void matchesMethodWithExplicitParams_matchesOnlyThatSignature() {
+    // When param types ARE specified, only that exact signature should match.
+    InterceptMessage interceptMessage =
+        msgBuilder.buildInterceptMessage(
+            UUID.randomUUID(),
+            InterceptType.BEFORE,
+            "com.example.Calculator",
+            "add",
+            List.of("int", "int"),
+            "org.some.package.MyInterceptor",
+            "callMe");
+
+    InterceptRequestEntry entry = new InterceptRequestEntry(interceptMessage);
+
+    // Should match exact param types
+    assertThat(
+        entry.matches("com.example.Calculator", "add", new String[] {"int", "int"}), is(true));
+
+    // Should NOT match different param types
+    assertThat(
+        entry.matches("com.example.Calculator", "add", new String[] {"double", "double"}),
+        is(false));
+
+    // Should NOT match zero-arg
+    assertThat(entry.matches("com.example.Calculator", "add", new String[0]), is(false));
+  }
+
+  @Test
   public void testGetPriorityDelegatesToMessage() {
     InterceptMessage interceptMessage =
         msgBuilder

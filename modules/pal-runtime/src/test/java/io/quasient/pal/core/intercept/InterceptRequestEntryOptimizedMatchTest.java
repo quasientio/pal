@@ -246,6 +246,40 @@ public class InterceptRequestEntryOptimizedMatchTest {
   }
 
   /**
+   * Verifies that a method entry with no parameter types specified (empty list) acts as a wildcard,
+   * matching any parameter signature via the optimized overload.
+   */
+  @Test
+  public void shouldMatchAnyParamsWhenEntryHasNoParamsSpecified() {
+    InterceptRequestEntry entry = buildMethodEntry("com.example.Foo", "bar", List.of());
+
+    // Should match method calls with any parameter types
+    assertThat(entry.matches("com.example.Foo.bar", "int,int"), is(true));
+    assertThat(entry.matches("com.example.Foo.bar", "java.lang.String"), is(true));
+    assertThat(entry.matches("com.example.Foo.bar", "double,java.lang.String,boolean"), is(true));
+
+    // Should still match zero-arg
+    assertThat(entry.matches("com.example.Foo.bar", ""), is(true));
+
+    // Should NOT match a different method
+    assertThat(entry.matches("com.example.Foo.baz", "int,int"), is(false));
+  }
+
+  /**
+   * Verifies that a method entry with explicit parameter types only matches that exact signature
+   * via the optimized overload (no wildcard).
+   */
+  @Test
+  public void shouldNotWildcardWhenParamsAreExplicitlySpecified() {
+    InterceptRequestEntry entry =
+        buildMethodEntry("com.example.Foo", "bar", List.of("int", "java.lang.String"));
+
+    assertThat(entry.matches("com.example.Foo.bar", "int,java.lang.String"), is(true));
+    assertThat(entry.matches("com.example.Foo.bar", "int,int"), is(false));
+    assertThat(entry.matches("com.example.Foo.bar", ""), is(false));
+  }
+
+  /**
    * Verifies that both the original and optimized matches() methods handle null parameter types
    * consistently.
    *

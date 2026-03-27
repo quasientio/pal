@@ -159,6 +159,12 @@ public class InterceptRequestEntry {
       return parameterTypes == null;
     }
 
+    // empty paramTypes on a method entry means "match any parameter list" (wildcard),
+    // but should not match field access (null parameterTypes)
+    if (isMethod && paramTypes.isEmpty()) {
+      return parameterTypes != null;
+    }
+
     return Objects.equals(paramTypes, String.join(",", parameterTypes));
   }
 
@@ -187,6 +193,11 @@ public class InterceptRequestEntry {
     }
     if (paramTypes == null) {
       return joinedParamTypes == null;
+    }
+    // empty paramTypes on a method entry means "match any parameter list" (wildcard),
+    // but should not match field access (null joinedParamTypes)
+    if (isMethod && paramTypes.isEmpty()) {
+      return joinedParamTypes != null;
     }
     return Objects.equals(paramTypes, joinedParamTypes);
   }
