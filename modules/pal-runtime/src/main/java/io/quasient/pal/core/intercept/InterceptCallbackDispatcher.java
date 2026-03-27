@@ -481,13 +481,14 @@ public class InterceptCallbackDispatcher {
       boolean isVoid,
       Throwable thrownException) {
 
-    System.out.println(
-        "===== sendAfterCallbacks CALLED: returnValue=" + returnValue + ", isVoid=" + isVoid);
-    logger.info("===== sendAfterCallbacks called: returnValue={}, isVoid={}", returnValue, isVoid);
+    if (logger.isDebugEnabled()) {
+      logger.debug("sendAfterCallbacks called: returnValue={}, isVoid={}", returnValue, isVoid);
+    }
 
     if (!interceptCheckResult.hasRemoteIntercepts()) {
-      System.out.println("===== sendAfterCallbacks: NO remote intercepts");
-      logger.info("===== sendAfterCallbacks: no remote intercepts, returning proceed");
+      if (logger.isDebugEnabled()) {
+        logger.debug("sendAfterCallbacks: no remote intercepts, returning proceed");
+      }
       return ConsolidatedCallbackResponse.proceed();
     }
 
@@ -505,14 +506,18 @@ public class InterceptCallbackDispatcher {
       }
     }
 
-    logger.info(
-        "===== sendAfterCallbacks: found {} AFTER intercepts, {} AFTER_ASYNC intercepts",
-        afterSyncIntercepts.size(),
-        afterAsyncIntercepts.size());
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "sendAfterCallbacks: found {} AFTER intercepts, {} AFTER_ASYNC intercepts",
+          afterSyncIntercepts.size(),
+          afterAsyncIntercepts.size());
+    }
 
     if (afterSyncIntercepts.isEmpty() && afterAsyncIntercepts.isEmpty()) {
-      logger.info(
-          "===== sendAfterCallbacks: no AFTER/AFTER_ASYNC intercepts after filtering, returning proceed");
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "sendAfterCallbacks: no AFTER/AFTER_ASYNC intercepts after filtering, returning proceed");
+      }
       return ConsolidatedCallbackResponse.proceed();
     }
 
@@ -526,15 +531,16 @@ public class InterceptCallbackDispatcher {
     for (InterceptMessage interceptMessage : afterSyncIntercepts) {
       try {
         UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
-        logger.info(
-            "===== AFTER callback: interceptMessage.getPeerUuid()='{}', "
-                + "interceptMessage.getMessageId()='{}', interceptMessage.getClazz()='{}', "
-                + "interceptMessage.getCallbackClass()='{}', interceptMessage.getCallbackMethod()='{}'",
-            interceptMessage.getPeerUuid(),
-            interceptMessage.getMessageId(),
-            interceptMessage.getClazz(),
-            interceptMessage.getCallbackClass(),
-            interceptMessage.getCallbackMethod());
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "AFTER callback: peer='{}', messageId='{}', class='{}', "
+                  + "callbackClass='{}', callbackMethod='{}'",
+              interceptMessage.getPeerUuid(),
+              interceptMessage.getMessageId(),
+              interceptMessage.getClazz(),
+              interceptMessage.getCallbackClass(),
+              interceptMessage.getCallbackMethod());
+        }
 
         // Build the callback request with return value and exception
         InterceptCallbackRequestMessage request =
@@ -562,18 +568,16 @@ public class InterceptCallbackDispatcher {
 
         // Collect return value override
         if (response.getOverrideReturn()) {
-          logger.info("===== sendAfterCallbacks: response has overrideReturn=true");
           Obj overriddenReturnObj = response.getNewReturnValue();
           if (overriddenReturnObj != null) {
             currentReturnValue = deserializeArg(overriddenReturnObj);
             hasOverride = true;
-            logger.info(
-                "===== sendAfterCallbacks: overridden return value: {}", currentReturnValue);
+            if (logger.isDebugEnabled()) {
+              logger.debug("sendAfterCallbacks: overridden return value: {}", currentReturnValue);
+            }
           } else {
-            logger.warn("===== sendAfterCallbacks: overrideReturn=true but newReturnValue is null");
+            logger.warn("sendAfterCallbacks: overrideReturn=true but newReturnValue is null");
           }
-        } else {
-          logger.info("===== sendAfterCallbacks: response has overrideReturn=false");
         }
 
         // Note: shouldProceed is not checked here because AFTER intercepts
@@ -593,15 +597,16 @@ public class InterceptCallbackDispatcher {
     for (InterceptMessage interceptMessage : afterAsyncIntercepts) {
       try {
         UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
-        logger.info(
-            "===== AFTER_ASYNC callback: interceptMessage.getPeerUuid()='{}', "
-                + "interceptMessage.getMessageId()='{}', interceptMessage.getClazz()='{}', "
-                + "interceptMessage.getCallbackClass()='{}', interceptMessage.getCallbackMethod()='{}'",
-            interceptMessage.getPeerUuid(),
-            interceptMessage.getMessageId(),
-            interceptMessage.getClazz(),
-            interceptMessage.getCallbackClass(),
-            interceptMessage.getCallbackMethod());
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "AFTER_ASYNC callback: peer='{}', messageId='{}', class='{}', "
+                  + "callbackClass='{}', callbackMethod='{}'",
+              interceptMessage.getPeerUuid(),
+              interceptMessage.getMessageId(),
+              interceptMessage.getClazz(),
+              interceptMessage.getCallbackClass(),
+              interceptMessage.getCallbackMethod());
+        }
 
         // Build the callback request for async with return value and exception
         InterceptCallbackRequestMessage request =
@@ -629,10 +634,12 @@ public class InterceptCallbackDispatcher {
       }
     }
 
-    logger.info(
-        "===== sendAfterCallbacks: returning hasOverride={}, currentReturnValue={}",
-        hasOverride,
-        currentReturnValue);
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          "sendAfterCallbacks: returning hasOverride={}, currentReturnValue={}",
+          hasOverride,
+          currentReturnValue);
+    }
     return new ConsolidatedCallbackResponse(
         shouldProceed, new HashMap<>(), exceptionToThrow, currentReturnValue, hasOverride);
   }
@@ -699,8 +706,10 @@ public class InterceptCallbackDispatcher {
         };
 
     if (shouldPropagate) {
-      logger.debug(
-          "Propagating business exception from callback (policy={}): {}", policy, exception);
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Propagating business exception from callback (policy={}): {}", policy, exception);
+      }
       return exception;
     } else {
       logger.info("Swallowing business exception from callback (policy={}): {}", policy, exception);
