@@ -19,6 +19,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.Properties;
 import java.util.function.Function;
 import org.apache.kafka.clients.admin.Admin;
@@ -124,9 +125,9 @@ public class KafkaAdminHelperTest {
     // When
     helper.closeResources();
 
-    // Then: both clients are closed
-    verify(mockAdminA).close();
-    verify(mockAdminB).close();
+    // Then: both clients are closed with a bounded timeout
+    verify(mockAdminA).close(any(Duration.class));
+    verify(mockAdminB).close(any(Duration.class));
   }
 
   /**

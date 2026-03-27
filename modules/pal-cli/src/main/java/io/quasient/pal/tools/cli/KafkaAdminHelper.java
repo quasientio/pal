@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.tools.cli;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -88,13 +89,23 @@ public class KafkaAdminHelper {
   }
 
   /**
+   * Maximum time to wait for each Kafka Admin client to close. This bounds the shutdown time when
+   * pending operations (e.g., deleteTopics retries) would otherwise block {@link Admin#close()}
+   * indefinitely.
+   */
+  private static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(5);
+
+  /**
    * Closes all cached Kafka {@link Admin} clients and clears the cache.
+   *
+   * <p>Each client is closed with a bounded timeout to prevent indefinite blocking when pending
+   * operations are retrying against an unresponsive broker.
    *
    * <p>This method should be called when the helper is no longer needed. It is safe to call on an
    * empty cache.
    */
   public void closeResources() {
-    adminClientsPerServer.values().forEach(Admin::close);
+    adminClientsPerServer.values().forEach(admin -> admin.close(CLOSE_TIMEOUT));
     adminClientsPerServer.clear();
   }
 }
