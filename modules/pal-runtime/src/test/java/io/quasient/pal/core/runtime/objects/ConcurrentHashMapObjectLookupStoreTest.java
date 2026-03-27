@@ -11,6 +11,7 @@ package io.quasient.pal.core.runtime.objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.collection.IsMapWithSize.aMapWithSize;
 import static org.hamcrest.collection.IsMapWithSize.anEmptyMap;
 import static org.junit.Assert.assertEquals;
@@ -24,7 +25,10 @@ import io.quasient.pal.common.objects.ObjectRef;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CyclicBarrier;
 import org.junit.Test;
 
 /** Naming convention to use: MethodName_StateUnderTest_ExpectedBehavior. */
@@ -364,86 +368,309 @@ public class ConcurrentHashMapObjectLookupStoreTest {
     }
   }
 
+  // <editor-fold desc="Collision handling (two-level map)">
+
   /**
-   * Verifies that storing two objects with the same identity hash code results in replacement
-   * behavior.
-   *
-   * <p>Given: Two different objects with the same identity hash (requires mocking
-   * System.identityHashCode or using special test objects) When: Both objects stored Then: Warning
-   * is logged about the collision; second object replaces first
-   *
-   * <p>Implementation notes: This test is challenging because System.identityHashCode cannot be
-   * directly mocked. Consider:
-   *
-   * <ul>
-   *   <li>Using a log capture framework (e.g., LogCaptor) to verify warning is logged
-   *   <li>Accepting that hash collisions are rare and may require many iterations
-   *   <li>Or testing the observable behavior: when two objects have the same hash, the second
-   *       replaces the first
-   * </ul>
-   *
-   * <p>Note: The current implementation does NOT log warnings for hash collisions. This test
-   * specification documents the expected behavior per the acceptance criteria. If the
-   * implementation does not support this, the test should verify the actual collision behavior
-   * (replacement semantics) instead.
+   * Two distinct objects forced to the same identity hash must each receive a unique {@link
+   * ObjectRef} and be individually retrievable.
    */
   @Test
-  public void storeObject_hashCollision_logsWarning() {
-    // The current implementation uses System.identityHashCode to generate ObjectRef keys.
-    // When two different objects happen to have the same identity hash code (which is rare
-    // but possible), the second object replaces the first.
-    //
-    // Since System.identityHashCode cannot be easily mocked without PowerMock, and the
-    // implementation does not currently log warnings for collisions, this test verifies
-    // the documented replacement semantics by simulating the scenario through direct
-    // manipulation of the internal map.
-    //
-    // The test verifies:
-    // 1. When an object is stored, a new entry with same hash replaces the existing one
-    // 2. The lookupObject returns the new referent (or null if cleared)
-    //
-    // This tests the behavior documented in the class Javadoc:
-    // "WARNING: System.identityHashCode is not guaranteed unique; if two live objects
-    // share the same code, the earlier entry will be replaced."
-
+  public void storeObject_twoObjectsSameHash_bothStoredWithDistinctRefs() {
     ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
     ConcurrentHashMapObjectLookupStore store =
-        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats, obj -> 42);
     try {
-      // Store first object
-      Object obj1 = new Object();
-      ObjectRef ref1 = store.storeObject(obj1);
-      assertThat(store.size(), is(1L));
-      assertEquals("First object should be retrievable", obj1, store.lookupObject(ref1));
+      Object a = new Object();
+      Object b = new Object();
 
-      // Verify replacement behavior when same object stored again (same identity hash)
-      // This is the documented happy path - same object returns same ref
-      ObjectRef ref1Again = store.storeObject(obj1);
-      assertEquals("Same object should return same ref", ref1, ref1Again);
-      assertThat("Size should remain 1", store.size(), is(1L));
+      ObjectRef refA = store.storeObject(a);
+      ObjectRef refB = store.storeObject(b);
 
-      // Store a different object - this will get a different hash (unless collision)
-      Object obj2 = new Object();
-      ObjectRef ref2 = store.storeObject(obj2);
+      assertThat("Refs must differ", refA, is(not(refB)));
+      assertThat("Both stored", store.size(), is(2L));
+      assertEquals("Ref A resolves to A", a, store.lookupObject(refA));
+      assertEquals("Ref B resolves to B", b, store.lookupObject(refB));
 
-      // In the rare case of hash collision, ref2 would equal ref1 and obj1 would be replaced.
-      // Since we can't force a collision without mocking System.identityHashCode,
-      // we verify the documented behavior: if hashes differ, both objects coexist;
-      // if hashes match (collision), the second replaces the first.
-      if (ref1.equals(ref2)) {
-        // Collision occurred (extremely rare)
-        assertThat("Size should be 1 due to collision replacement", store.size(), is(1L));
-        assertEquals("Second object should replace first", obj2, store.lookupObject(ref2));
-      } else {
-        // No collision - normal case
-        assertThat("Size should be 2 (no collision)", store.size(), is(2L));
-        assertEquals("First object still retrievable", obj1, store.lookupObject(ref1));
-        assertEquals("Second object retrievable", obj2, store.lookupObject(ref2));
-      }
+      // Verify bucket state
+      List<IdentifiableObject> bucket = store.getByHash().get(42);
+      assertNotNull("Bucket should exist", bucket);
+      assertThat("Bucket should contain both entries", bucket.size(), is(2));
     } finally {
       store.close();
     }
   }
+
+  /** Storing the same object (identity) twice returns the same {@link ObjectRef}. */
+  @Test
+  public void storeObject_sameObjectTwice_returnsSameRef() {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats, obj -> 42);
+    try {
+      Object obj = new Object();
+
+      ObjectRef first = store.storeObject(obj);
+      ObjectRef second = store.storeObject(obj);
+
+      assertEquals("Same object must return same ref", first, second);
+      assertThat("Size must be 1", store.size(), is(1L));
+      assertThat(
+          "Successful lookup stat incremented", stats.getSuccessfulStoreLookups().get(), is(1L));
+    } finally {
+      store.close();
+    }
+  }
+
+  /** Dead entries in a bucket are evicted opportunistically during a subsequent store. */
+  @Test
+  public void storeObject_collision_deadEntryEvictedDuringScan() {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats, obj -> 42);
+    try {
+      Object dead = new Object();
+      ObjectRef deadRef = store.storeObject(dead);
+
+      // Simulate GC of the first object
+      IdentifiableObject wrapper = store.getObjects().get(deadRef);
+      wrapper.clear();
+      // Note: NOT enqueued on the ReferenceQueue — eviction happens inside the bucket scan
+
+      Object alive = new Object();
+      store.storeObject(alive);
+
+      // Dead entry should have been evicted from both maps
+      assertFalse("Dead ref should be gone from byRef", store.containsObjectRef(deadRef));
+      assertThat("Only the live object remains", store.size(), is(1L));
+
+      List<IdentifiableObject> bucket = store.getByHash().get(42);
+      assertThat("Bucket should contain only the live entry", bucket.size(), is(1));
+    } finally {
+      store.close();
+    }
+  }
+
+  /** Three objects with the same hash all coexist in a single bucket. */
+  @Test
+  public void storeObject_collision_threeObjects_allRetrievable() {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats, obj -> 7);
+    try {
+      Object a = new Object();
+      Object b = new Object();
+      Object c = new Object();
+
+      ObjectRef ra = store.storeObject(a);
+      ObjectRef rb = store.storeObject(b);
+      ObjectRef rc = store.storeObject(c);
+
+      assertThat("All three stored", store.size(), is(3L));
+      assertEquals(a, store.lookupObject(ra));
+      assertEquals(b, store.lookupObject(rb));
+      assertEquals(c, store.lookupObject(rc));
+
+      Set<ObjectRef> refs = new HashSet<>();
+      refs.add(ra);
+      refs.add(rb);
+      refs.add(rc);
+      assertThat("All refs must be distinct", refs.size(), is(3));
+    } finally {
+      store.close();
+    }
+  }
+
+  /** Removing one collision partner leaves the other intact. */
+  @Test
+  public void remove_collision_removesOnlyTargeted() {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats, obj -> 42);
+    try {
+      Object a = new Object();
+      Object b = new Object();
+      ObjectRef ra = store.storeObject(a);
+      ObjectRef rb = store.storeObject(b);
+
+      store.remove(ra);
+
+      assertFalse("A's ref should be gone", store.containsObjectRef(ra));
+      assertTrue("B's ref should survive", store.containsObjectRef(rb));
+      assertEquals("B still retrievable", b, store.lookupObject(rb));
+      assertThat("Size should be 1", store.size(), is(1L));
+
+      // Bucket should still exist with one entry
+      List<IdentifiableObject> bucket = store.getByHash().get(42);
+      assertNotNull("Bucket should still exist", bucket);
+      assertThat("Bucket should have 1 entry", bucket.size(), is(1));
+    } finally {
+      store.close();
+    }
+  }
+
+  /** drainRefQueue removes the dead entry from both byRef and byHash. */
+  @Test
+  public void drainRefQueue_collision_cleansBothMaps() {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats, obj -> 42);
+    try {
+      Object a = new Object();
+      Object b = new Object();
+      ObjectRef ra = store.storeObject(a);
+      ObjectRef rb = store.storeObject(b);
+
+      // Simulate GC of object A
+      IdentifiableObject wrapperA = store.getObjects().get(ra);
+      wrapperA.clear();
+      wrapperA.enqueue();
+
+      int cleared = store.drainRefQueue();
+      assertThat("Should clear 1 entry", cleared, is(1));
+      assertFalse("A removed from byRef", store.containsObjectRef(ra));
+      assertTrue("B survives in byRef", store.containsObjectRef(rb));
+      assertEquals("B still retrievable", b, store.lookupObject(rb));
+      assertThat("Size should be 1", store.size(), is(1L));
+
+      // Bucket should still exist with one entry
+      List<IdentifiableObject> bucket = store.getByHash().get(42);
+      assertNotNull("Bucket should still exist", bucket);
+      assertThat("Bucket should have 1 entry", bucket.size(), is(1));
+    } finally {
+      store.close();
+    }
+  }
+
+  /** When the last entry in a bucket is drained, the bucket itself is removed from byHash. */
+  @Test
+  public void drainRefQueue_lastInBucket_removesBucket() {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats, obj -> 42);
+    try {
+      Object obj = new Object();
+      ObjectRef ref = store.storeObject(obj);
+
+      IdentifiableObject wrapper = store.getObjects().get(ref);
+      wrapper.clear();
+      wrapper.enqueue();
+
+      store.drainRefQueue();
+
+      assertNull("Bucket should be removed from byHash", store.getByHash().get(42));
+      assertTrue("Store should be empty", store.isEmpty());
+    } finally {
+      store.close();
+    }
+  }
+
+  /** clear() empties both byRef and byHash. */
+  @Test
+  public void clear_resetsBothMaps() {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats, obj -> 42);
+    try {
+      store.storeObject(new Object());
+      store.storeObject(new Object());
+      assertThat(store.size(), is(2L));
+      assertFalse(store.getByHash().isEmpty());
+
+      store.clear();
+
+      assertThat(store.size(), is(0L));
+      assertTrue("byHash should be empty after clear", store.getByHash().isEmpty());
+    } finally {
+      store.close();
+    }
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Counter-based ObjectRef generation">
+
+  /** Consecutive stores of distinct objects yield unique, non-zero refs. */
+  @Test
+  public void storeObject_producesUniqueRefs() {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+    try {
+      Set<ObjectRef> refs = new HashSet<>();
+      for (int i = 0; i < 100; i++) {
+        refs.add(store.storeObject(new Object()));
+      }
+      assertThat("All 100 refs must be unique", refs.size(), is(100));
+    } finally {
+      store.close();
+    }
+  }
+
+  /** The first generated ObjectRef must not be zero (0 = "no reference" on the wire). */
+  @Test
+  public void storeObject_refStartsAtOne() {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+    try {
+      ObjectRef ref = store.storeObject(new Object());
+      assertThat("First ref must be 1 (0 is reserved for null on wire)", ref.getRef(), is(1));
+    } finally {
+      store.close();
+    }
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="Concurrency">
+
+  /** Multiple threads storing the same object must all receive the same ObjectRef. */
+  @Test
+  public void storeObject_concurrentSameObject_returnsSameRef() throws Exception {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store =
+        ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
+    try {
+      Object shared = new Object();
+      int threadCount = 8;
+      CyclicBarrier barrier = new CyclicBarrier(threadCount);
+      List<Thread> threads = new ArrayList<>();
+      List<ObjectRef> results = new ArrayList<>();
+      Object lock = new Object();
+
+      for (int i = 0; i < threadCount; i++) {
+        Thread t =
+            new Thread(
+                () -> {
+                  try {
+                    barrier.await();
+                    ObjectRef ref = store.storeObject(shared);
+                    synchronized (lock) {
+                      results.add(ref);
+                    }
+                  } catch (Exception e) {
+                    throw new RuntimeException(e);
+                  }
+                });
+        threads.add(t);
+        t.start();
+      }
+      for (Thread t : threads) {
+        t.join(5000);
+      }
+
+      assertThat("All threads should have completed", results.size(), is(threadCount));
+      ObjectRef expected = results.get(0);
+      for (ObjectRef ref : results) {
+        assertEquals("All threads must get the same ref", expected, ref);
+      }
+      assertThat("Only one entry in store", store.size(), is(1L));
+    } finally {
+      store.close();
+    }
+  }
+
+  // </editor-fold>
 
   /**
    * Verifies that drainRefQueue removes all cleared entries in the queue.

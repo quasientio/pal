@@ -18,6 +18,8 @@ import static org.hamcrest.Matchers.nullValue;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 
@@ -165,13 +167,13 @@ public class ObjectLookupStoreBackgroundProcessorTest {
     try {
       store = ConcurrentHashMapObjectLookupStore.createUnmanaged(stats);
 
-      // add 10 objects
-      for (int i = 0; i < 10; i++) store.storeObject(i);
+      // add 10 objects, capturing their refs for later removal
+      List<ObjectRef> refs = new ArrayList<>();
+      for (int i = 0; i < 10; i++) refs.add(store.storeObject(i));
       assertThat(stats.getMaxSize().get() >= 10, is(true));
 
-      // remove 9
-      for (int i = 1; i < 10; i++)
-        store.remove(ObjectRef.from(String.valueOf(System.identityHashCode(i))));
+      // remove 9 (keep the first)
+      for (int i = 1; i < 10; i++) store.remove(refs.get(i));
 
       // add one more – peak should stay at least 10
       store.storeObject("another");
@@ -683,6 +685,58 @@ public class ObjectLookupStoreBackgroundProcessorTest {
       // Verify store is empty
       assertThat("Store should be empty", store.size(), is(0L));
 
+    } finally {
+      if (proc != null) {
+        proc.stop();
+      }
+      if (store != null) {
+        store.close();
+      }
+    }
+  }
+
+  /**
+   * Verifies that the background processor correctly cleans entries from both the primary ({@code
+   * byRef}) and secondary ({@code byHash}) maps when two objects share the same identity hash and
+   * one is garbage collected.
+   */
+  @Test
+  public void backgroundProcessor_collision_cleansBothMaps() throws Exception {
+    ObjectLookupStoreStats stats = new ObjectLookupStoreStats();
+    ConcurrentHashMapObjectLookupStore store = null;
+    ObjectLookupStoreBackgroundProcessor proc = null;
+    try {
+      store = ConcurrentHashMapObjectLookupStore.createUnmanaged(stats, obj -> 42);
+      proc = new ObjectLookupStoreBackgroundProcessor(store, stats, 5);
+
+      Object alive = new Object();
+      Object dead = new Object();
+      ObjectRef aliveRef = store.storeObject(alive);
+      ObjectRef deadRef = store.storeObject(dead);
+      assertThat("Both stored", store.size(), is(2L));
+
+      // Simulate GC of one collision partner
+      IdentifiableObject deadWrapper = store.getObjects().get(deadRef);
+      deadWrapper.clear();
+      deadWrapper.enqueue();
+
+      proc.start();
+
+      // Wait for background cleanup
+      long deadline = System.currentTimeMillis() + 500;
+      while (store.containsObjectRef(deadRef) && System.currentTimeMillis() < deadline) {
+        Thread.sleep(10);
+      }
+
+      assertThat("Dead ref removed from byRef", store.containsObjectRef(deadRef), is(false));
+      assertThat("Live ref still in byRef", store.containsObjectRef(aliveRef), is(true));
+      assertThat("Live object still retrievable", store.lookupObject(aliveRef), is(alive));
+      assertThat("Size should be 1", store.size(), is(1L));
+
+      // Bucket should still exist with one entry
+      List<IdentifiableObject> bucket = store.getByHash().get(42);
+      assertThat("Bucket should have 1 entry", bucket, notNullValue());
+      assertThat("Bucket size should be 1", bucket.size(), is(1));
     } finally {
       if (proc != null) {
         proc.stop();

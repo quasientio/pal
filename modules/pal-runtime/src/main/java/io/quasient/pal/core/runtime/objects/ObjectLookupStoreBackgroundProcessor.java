@@ -102,14 +102,14 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
                   IdentifiableObject first =
                       (IdentifiableObject) objectLookupStore.getRefQueue().remove(cleanupTimeoutMs);
                   if (first != null) {
-                    objectLookupStore.getObjects().remove(first.getKey());
+                    objectLookupStore.removeEntry(first);
                     cleared++;
 
                     // Drain the rest without blocking.
                     for (IdentifiableObject ref;
                         (ref = (IdentifiableObject) objectLookupStore.getRefQueue().poll())
                             != null; ) {
-                      objectLookupStore.getObjects().remove(ref.getKey());
+                      objectLookupStore.removeEntry(ref);
                       cleared++;
                     }
                   }
