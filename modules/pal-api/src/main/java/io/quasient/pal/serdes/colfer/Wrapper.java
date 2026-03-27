@@ -172,6 +172,24 @@ public final class Wrapper {
         }
       }
     }
+
+    // For arrays of non-simple objects that have a ref but no serialized value,
+    // fall back to an array of per-element identity refs (int[]).
+    // The original array type is preserved so that consumers can identify the source type.
+    if (object != null
+        && objectRef != null
+        && object.getClass().isArray()
+        && !isSimpleTypeArray
+        && wrappedObject.getValue().isEmpty()) {
+      int len = Array.getLength(object);
+      int[] refs = new int[len];
+      for (int i = 0; i < len; i++) {
+        Object elem = Array.get(object, i);
+        refs[i] = elem != null ? System.identityHashCode(elem) : 0;
+      }
+      wrappedObject.setValue(JsonUtil.toJson(refs));
+    }
+
     if (logger.isTraceEnabled()) {
       logger.trace("out with wrappedValue: {}", ColferUtils.format(wrappedObject));
     }

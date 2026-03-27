@@ -22,7 +22,6 @@ import io.quasient.pal.serdes.Unwrapper;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -784,7 +783,6 @@ public class CallMessageIT extends AbstractJsonRpcMessageIT {
   }
 
   @Test
-  @Ignore
   public void callClassMethod_returningObjectRefArray_refRetValue() throws Exception {
     String methodName = "getThreadArray";
 

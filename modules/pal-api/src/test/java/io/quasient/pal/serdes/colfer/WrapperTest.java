@@ -268,7 +268,7 @@ public class WrapperTest extends WrappingTestBase {
   }
 
   @Test
-  public void getWrappedObject_arrayOfObjects_onlyWrappedRef() {
+  public void getWrappedObject_arrayOfObjects_wrappedRefArrayAndRef() {
     @SuppressWarnings("InstantiatingAThreadWithDefaultRunMethod")
     Thread[] threadArray = new Thread[] {new Thread(), new Thread()};
     Obj wrapped =
@@ -279,7 +279,10 @@ public class WrapperTest extends WrappingTestBase {
             WrapPolicy.PREFER_REFERENCE);
     assertNotNull(wrapped);
     assertFalse(wrapped.isNull);
-    assertThat(wrapped.getValue(), is(emptyString()));
+    // Non-serializable array elements are replaced by per-element identity refs;
+    // the original array type is preserved
+    assertThat(wrapped.getValue(), is(not(emptyString())));
+    assertThat(wrapped.getClazz().getName(), is("[Ljava.lang.Thread;"));
     assertThat(wrapped.getRef(), is(not(0)));
   }
 

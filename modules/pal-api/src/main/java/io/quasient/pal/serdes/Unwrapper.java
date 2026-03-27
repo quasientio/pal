@@ -9,6 +9,7 @@
  */
 package io.quasient.pal.serdes;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.quasient.pal.common.util.Classes;
 import io.quasient.pal.messages.colfer.Obj;
@@ -92,6 +93,17 @@ public class Unwrapper {
       return JsonUtil.MAPPER.readValue(valueAsJson, clazz);
 
     } catch (Exception e) {
+      // For arrays of non-simple objects, the value may contain per-element identity refs
+      // serialized as int[] by the Wrapper fallback.
+      if (clazz.isArray()
+          && !Classes.isPrimitiveOrWrapper(clazz.getComponentType())
+          && !String.class.equals(clazz.getComponentType())) {
+        try {
+          return JsonUtil.MAPPER.readValue(valueAsJson, int[].class);
+        } catch (JsonProcessingException e2) {
+          // fall through to original error
+        }
+      }
       throw new RuntimeException("Error deserializing JSON into: " + className, e);
     }
   }
