@@ -574,8 +574,8 @@ public class IncomingInterceptCallbackDispatcher {
             request.getExec(), InterceptType.AROUND, request.getInterceptedPeer(), args);
 
     // Inject the socket accessor for proceed()
-    int timeoutMs = request.getTimeoutMs();
-    context.setAroundAccessor(socketAccessor, request.getCallbackId(), timeoutMs);
+    int proceedTimeoutMs = request.getProceedTimeoutMs();
+    context.setAroundAccessor(socketAccessor, request.getCallbackId(), proceedTimeoutMs);
 
     return context;
   }

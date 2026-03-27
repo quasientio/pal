@@ -309,33 +309,33 @@ directory.createIntercept(intercept);
 
 Use ant-style patterns to match classes and methods:
 
-#### Exact Match
+#### Exact Match (all overloads)
 ```java
 // clazz and InterceptableMethodCall name
 "com.example.Calculator", ..., new InterceptableMethodCall("add", Collections.emptyList())
 ```
-Matches only `Calculator.add()`.
+Matches all overloads of `Calculator.add` regardless of parameter types. An empty parameter list acts as a wildcard.
 
 #### Wildcard
 ```java
 // clazz and InterceptableMethodCall name
 "com.example.*", ..., new InterceptableMethodCall("process*", Collections.emptyList())
 ```
-Matches all classes in `com.example` package with methods starting with "process".
+Matches all classes in `com.example` package with methods starting with "process" (any parameter types).
 
 #### Exact Match with Parameter Types
 ```java
 // clazz and InterceptableMethodCall name + parameterTypes
 "com.example.Calculator", ..., new InterceptableMethodCall("add", Arrays.asList("int", "int"))
 ```
-Matches only `Calculator.add(int, int)`. Other overloads like `add(double, double)` are not intercepted. Omit parameter types (empty list) to match all overloads.
+Matches only `Calculator.add(int, int)`. Other overloads like `add(double, double)` are not intercepted. Parameter types must be fully qualified (e.g., `java.lang.String`, not `String`). Omit parameter types (empty list) to match all overloads.
 
 #### Recursive
 ```java
 // clazz and InterceptableMethodCall name
 "com.example.**.*", ..., new InterceptableMethodCall("*", Collections.emptyList())
 ```
-Matches all classes in `com.example` and subpackages, all methods.
+Matches all classes in `com.example` and subpackages, all methods (any parameter types).
 
 ## Receiving Callbacks
 
@@ -549,7 +549,7 @@ When a new intercept is registered, PAL:
 
 This guarantees that every call either completes entirely without the intercept or executes entirely with it -- never a mix.
 
-Tracking is **per-operation-signature**: parameter types are considered when matching. Fencing `add(int)` does **not** block `add(int, int)` -- only the exact overload being intercepted is fenced. Similarly, constructors and field operations are tracked separately from methods, even if they share a name.
+Tracking is **per-operation-signature**: when parameter types are specified, fencing `add(int)` does **not** block `add(int, int)` -- only the exact overload being intercepted is fenced. When parameter types are omitted (wildcard), all overloads are fenced. Similarly, constructors and field operations are tracked separately from methods, even if they share a name.
 
 ### Enabling and Configuring
 
@@ -894,9 +894,8 @@ new InterceptRequest<>(
 #### Example 1: Validation with Explicit Exceptions
 
 ```java
-public class ValidationCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class ValidationCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         String input = (String) ctx.getArgs()[0];
         if (input == null || input.isEmpty()) {
             // This will propagate with PROPAGATE_CONTROLLED_ONLY
@@ -920,9 +919,8 @@ new InterceptRequest<>(
 #### Example 2: Resilient Monitoring
 
 ```java
-public class MetricsCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class MetricsCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         // Even if metrics system crashes, don't break application
         metrics.record(ctx.getMethod(), ctx.getReturnValue());
         return new InterceptCallbackResponse();
@@ -946,9 +944,8 @@ new InterceptRequest<>(
 #### Example 3: Exception Transformation in AROUND
 
 ```java
-public class ExceptionWrapperCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class ExceptionWrapperCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         ProceedResult result = ctx.proceed();
 
         if (result.hasException()) {
@@ -972,7 +969,7 @@ PAL throws specific exceptions when callback code violates the intercept API con
 
 ```java
 // ERROR: Can't get return value in BEFORE intercept
-public InterceptCallbackResponse handle(InterceptContext ctx) {
+public static InterceptCallbackResponse handle(InterceptContext ctx) {
     Object value = ctx.getReturnValue();  // throws InterceptTypeNotSupportedException
     return new InterceptCallbackResponse();
 }
@@ -982,7 +979,7 @@ public InterceptCallbackResponse handle(InterceptContext ctx) {
 
 ```java
 // ERROR: Can't modify arguments after proceed
-public InterceptCallbackResponse handle(InterceptContext ctx) {
+public static InterceptCallbackResponse handle(InterceptContext ctx) {
     ctx.proceed();
     ctx.setArg(0, "too late");  // throws InterceptPhaseViolationException
     return new InterceptCallbackResponse();
@@ -1070,6 +1067,8 @@ intercepts:
 
 Each entry under `intercepts` uses the `target` field in `ClassName.memberName` format. The `defaults` section sets values inherited by all intercepts unless individually overridden.
 
+The optional `params` field restricts matching to a specific method overload. When `params` is omitted, the intercept matches all overloads of the target method. Parameter types must be fully qualified (e.g., `com.acme.payment.Order`, not `Order`).
+
 ### Bundle Commands
 
 | Command | Description |
@@ -1127,7 +1126,7 @@ Bundles can also be built and managed entirely from Java code using the builder 
 ```java
 // Define bundle-level defaults (peer name, priority, TTL, etc.)
 InterceptBundleDefaults defaults =
-    new InterceptBundleDefaults("fraud-checker", null, null, null, null, null);
+    new InterceptBundleDefaults("fraud-checker", null, null, null, null, null, null);
 
 // Build the bundle with the fluent builder API
 InterceptBundleSpec bundle = InterceptBundleSpec.builder("fraud-check-v1")
@@ -1138,6 +1137,7 @@ InterceptBundleSpec bundle = InterceptBundleSpec.builder("fraud-check-v1")
         .type(InterceptType.BEFORE)
         .callbackClass("com.acme.FraudChecker")
         .callbackMethod("verify")
+        .parameterTypes(List.of("com.acme.payment.Order"))  // specific overload
         .build())
     .addIntercept(InterceptSpec.builder()
         .targetClass("com.acme.OrderService")
@@ -1182,6 +1182,31 @@ RemoveResult removed = manager.removeByBundle("fraud-check-v1");
 ```
 
 The programmatic API uses the same `InterceptManager` as the CLI commands. Applying a bundle is idempotent regardless of whether it was applied via YAML or the builder API.
+
+## Callback Timeouts
+
+By default, the intercepted peer waits 3000ms for a callback peer to respond to synchronous BEFORE/AFTER callbacks. This can be configured at two levels:
+
+**Global default** via `pal run --callback-timeout-ms <ms>` (or env var `CALLBACK_TIMEOUT_MS`):
+- `--callback-timeout-ms 3000` — wait up to 3 seconds (default)
+- `--callback-timeout-ms 0` — no timeout (infinite wait)
+
+**Per-intercept override** via the `callbackTimeout` field in intercept bundles:
+```yaml
+defaults:
+  callbackTimeout: "5s"
+
+intercepts:
+  - target: "com.example.Calculator#add"
+    type: BEFORE
+    callbackTimeout: "500ms"  # overrides default for this intercept
+```
+
+Supported duration units: `ms`, `s`, `m`, `h`, `d`.
+
+Timeout resolution order: per-intercept override → bundle defaults → global peer setting.
+
+When a callback times out, the intercepted peer logs a warning and proceeds as if the callback returned `shouldProceed=true` with no mutations.
 
 ## Limitations
 

@@ -84,7 +84,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     dispatcher =
         new InterceptCallbackDispatcher(
-            peerUuid, context, messageBuilder, directoryProvider, exceptionPolicyResolver);
+            peerUuid, context, messageBuilder, directoryProvider, exceptionPolicyResolver, 3000L);
   }
 
   @After
@@ -565,7 +565,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     // Create dispatcher with SWALLOW_ALL policy and proper directory provider
     InterceptCallbackDispatcher swallowDispatcher =
         new InterceptCallbackDispatcher(
-            peerUuid, context, messageBuilder, swallowDirectoryProvider, swallowAllResolver);
+            peerUuid, context, messageBuilder, swallowDirectoryProvider, swallowAllResolver, 3000L);
 
     // Create intercept (set exceptionPropagationPolicy to 255 to defer to global policy)
     InterceptMessage interceptMsg = new InterceptMessage();
@@ -652,7 +652,12 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
     // Create dispatcher with PROPAGATE_ALL policy
     InterceptCallbackDispatcher propagateDispatcher =
         new InterceptCallbackDispatcher(
-            peerUuid, context, messageBuilder, propagateDirectoryProvider, propagateAllResolver);
+            peerUuid,
+            context,
+            messageBuilder,
+            propagateDirectoryProvider,
+            propagateAllResolver,
+            3000L);
 
     // Create intercept (set exceptionPropagationPolicy to 255 to defer to global policy)
     InterceptMessage interceptMsg = new InterceptMessage();
@@ -681,6 +686,29 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     propagateDispatcher.cleanup();
     server.requestStop();
+  }
+
+  // ===== zmqTimeoutValue Static Helper Tests =====
+
+  /**
+   * Tests that a PAL timeout of zero (infinite) maps to ZMQ's infinite timeout value (-1).
+   *
+   * <p>In PAL, 0 means "wait forever". In ZeroMQ, -1 means "block indefinitely".
+   */
+  @Test
+  public void zmqTimeoutValue_zero_returnsMinusOne() {
+    assertThat(InterceptCallbackDispatcher.zmqTimeoutValue(0), is(-1));
+  }
+
+  /**
+   * Tests that a positive PAL timeout maps directly to the same ZMQ timeout value.
+   *
+   * <p>Positive values are passed through unchanged since both PAL and ZMQ interpret them as
+   * millisecond timeouts.
+   */
+  @Test
+  public void zmqTimeoutValue_positive_returnsSame() {
+    assertThat(InterceptCallbackDispatcher.zmqTimeoutValue(5000), is(5000));
   }
 
   /**

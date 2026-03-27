@@ -668,6 +668,11 @@ public class DispatchBenchmark {
     props.setProperty(
         "intercept.drain.timeout.ms",
         System.getProperty("intercept.drain.timeout.ms", String.valueOf(DEF_DRAIN_TIMEOUT_MS)));
+
+    // Intercept callback timeout (required by InterceptCallbackDispatcher via PeerWiring)
+    props.setProperty(
+        "intercept.callback.timeout.ms",
+        System.getProperty("intercept.callback.timeout.ms", "3000"));
   }
 
   /** Initializes a dummy subscriber to listen from the MessagePublisher's PUB socket. */

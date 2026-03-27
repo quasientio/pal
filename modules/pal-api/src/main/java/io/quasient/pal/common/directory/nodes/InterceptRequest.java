@@ -115,7 +115,69 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
   private final long ttlSeconds;
 
   /**
-   * Constructs a new {@code InterceptRequest} with all parameters including priority and TTL.
+   * Callback timeout in milliseconds for this intercept. Controls how long the intercepted peer
+   * waits for the callback peer to respond to a synchronous BEFORE/AFTER callback.
+   *
+   * <p>When {@code null}, the timeout defers to the global peer configuration (set via {@code
+   * --callback-timeout-ms} on the intercepted peer). When {@code 0}, no timeout is applied
+   * (infinite wait). When positive, overrides the global timeout for this specific intercept.
+   */
+  @Nullable private final Long callbackTimeoutMs;
+
+  /**
+   * Constructs a new {@code InterceptRequest} with all parameters including callback timeout.
+   *
+   * @param uuid the unique identifier for this request; must not be {@code null}
+   * @param peer the identifier of the peer initiating the request; must not be {@code null}
+   * @param type the type of interception; must not be {@code null}
+   * @param clazz the target class name for interception; must not be {@code null}
+   * @param callbackClass the callback class name; must not be {@code null}
+   * @param callbackMethod the callback method name; must not be {@code null}
+   * @param interceptable the interceptable action; must not be {@code null}
+   * @param forceImmediate whether to force immediate application without waiting for in-flight
+   *     calls
+   * @param exceptionPropagationPolicy exception propagation policy for this intercept, or {@code
+   *     null} to defer to global configuration
+   * @param checkedExceptionPolicy checked exception policy for this intercept, or {@code null} to
+   *     defer to global configuration
+   * @param priority execution priority within local/remote group; lower values execute first
+   * @param ttlSeconds TTL in seconds for this intercept; 0 means no dedicated TTL
+   * @param callbackTimeoutMs callback timeout in milliseconds, or {@code null} to defer to global
+   * @throws NullPointerException if any of the required object parameters are {@code null}
+   */
+  public InterceptRequest(
+      @Nonnull UUID uuid,
+      @Nonnull UUID peer,
+      @Nonnull InterceptType type,
+      @Nonnull String clazz,
+      @Nonnull String callbackClass,
+      @Nonnull String callbackMethod,
+      @Nonnull T interceptable,
+      boolean forceImmediate,
+      @Nullable ExceptionPropagationPolicy exceptionPropagationPolicy,
+      @Nullable CheckedExceptionPolicy checkedExceptionPolicy,
+      int priority,
+      long ttlSeconds,
+      @Nullable Long callbackTimeoutMs) {
+    this.uuid = Objects.requireNonNull(uuid, "uuid must not be null");
+    this.peer = Objects.requireNonNull(peer, "peer must not be null");
+    this.type = Objects.requireNonNull(type, "type must not be null");
+    this.clazz = Objects.requireNonNull(clazz, "clazz must not be null");
+    this.callbackClass = Objects.requireNonNull(callbackClass, "callbackClass must not be null");
+    this.callbackMethod = Objects.requireNonNull(callbackMethod, "callbackMethod must not be null");
+    this.interceptable = Objects.requireNonNull(interceptable, "interceptable must not be null");
+    this.forceImmediate = forceImmediate;
+    this.exceptionPropagationPolicy = exceptionPropagationPolicy;
+    this.checkedExceptionPolicy = checkedExceptionPolicy;
+    this.priority = priority;
+    this.ttlSeconds = ttlSeconds;
+    this.callbackTimeoutMs = callbackTimeoutMs;
+  }
+
+  /**
+   * Constructs a new {@code InterceptRequest} with all parameters except callback timeout.
+   *
+   * <p>This constructor defaults {@code callbackTimeoutMs} to {@code null} (defer to global).
    *
    * @param uuid the unique identifier for this request; must not be {@code null}
    * @param peer the identifier of the peer initiating the request; must not be {@code null}
@@ -147,18 +209,20 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
       @Nullable CheckedExceptionPolicy checkedExceptionPolicy,
       int priority,
       long ttlSeconds) {
-    this.uuid = Objects.requireNonNull(uuid, "uuid must not be null");
-    this.peer = Objects.requireNonNull(peer, "peer must not be null");
-    this.type = Objects.requireNonNull(type, "type must not be null");
-    this.clazz = Objects.requireNonNull(clazz, "clazz must not be null");
-    this.callbackClass = Objects.requireNonNull(callbackClass, "callbackClass must not be null");
-    this.callbackMethod = Objects.requireNonNull(callbackMethod, "callbackMethod must not be null");
-    this.interceptable = Objects.requireNonNull(interceptable, "interceptable must not be null");
-    this.forceImmediate = forceImmediate;
-    this.exceptionPropagationPolicy = exceptionPropagationPolicy;
-    this.checkedExceptionPolicy = checkedExceptionPolicy;
-    this.priority = priority;
-    this.ttlSeconds = ttlSeconds;
+    this(
+        uuid,
+        peer,
+        type,
+        clazz,
+        callbackClass,
+        callbackMethod,
+        interceptable,
+        forceImmediate,
+        exceptionPropagationPolicy,
+        checkedExceptionPolicy,
+        priority,
+        ttlSeconds,
+        null);
   }
 
   /**
@@ -205,7 +269,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         exceptionPropagationPolicy,
         checkedExceptionPolicy,
         priority,
-        0);
+        0,
+        null);
   }
 
   /**
@@ -443,6 +508,19 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
   }
 
   /**
+   * Retrieves the callback timeout in milliseconds for this intercept.
+   *
+   * <p>When {@code null}, defers to the global peer configuration. When {@code 0}, no timeout is
+   * applied (infinite wait). When positive, overrides the global timeout.
+   *
+   * @return the callback timeout in milliseconds, or {@code null} to defer to global configuration
+   */
+  @Nullable
+  public Long getCallbackTimeoutMs() {
+    return callbackTimeoutMs;
+  }
+
+  /**
    * Compares this {@code InterceptRequest} to the specified object.
    *
    * @param o the object to compare this {@code InterceptRequest} against
@@ -470,7 +548,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         && callbackMethod.equals(that.callbackMethod)
         && interceptable.equals(that.interceptable)
         && exceptionPropagationPolicy == that.exceptionPropagationPolicy
-        && checkedExceptionPolicy == that.checkedExceptionPolicy;
+        && checkedExceptionPolicy == that.checkedExceptionPolicy
+        && Objects.equals(callbackTimeoutMs, that.callbackTimeoutMs);
   }
 
   /**
@@ -493,7 +572,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         exceptionPropagationPolicy,
         checkedExceptionPolicy,
         priority,
-        ttlSeconds);
+        ttlSeconds,
+        callbackTimeoutMs);
   }
 
   /**
@@ -535,7 +615,9 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
                 + LINE_SEP // 12. mtime (epoch millis)
                 + "%d"
                 + LINE_SEP // 13. priority
-                + "%d", // 14. ttlSeconds
+                + "%d"
+                + LINE_SEP // 14. ttlSeconds
+                + "%s", // 15. callbackTimeoutMs
             uuid,
             peer,
             type.toByte(),
@@ -550,7 +632,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
             getCtimeMillis() != null ? getCtimeMillis() : "null",
             getMtimeMillis() != null ? getMtimeMillis() : "null",
             priority,
-            ttlSeconds);
+            ttlSeconds,
+            callbackTimeoutMs != null ? callbackTimeoutMs : "null");
     return s.getBytes(charset);
   }
 
@@ -592,15 +675,9 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
     final CheckedExceptionPolicy checkedExceptionPolicy =
         parts[10].equals("null") ? null : CheckedExceptionPolicy.valueOf(parts[10]);
 
-    int priority = 0;
-    if (parts.length > 13) {
-      priority = Integer.parseInt(parts[13]);
-    }
-
-    long ttlSeconds = 0;
-    if (parts.length > 14) {
-      ttlSeconds = Long.parseLong(parts[14]);
-    }
+    int priority = Integer.parseInt(parts[13]);
+    long ttlSeconds = Long.parseLong(parts[14]);
+    Long callbackTimeoutMs = parts[15].equals("null") ? null : Long.parseLong(parts[15]);
 
     InterceptRequest<?> request =
         new InterceptRequest<>(
@@ -615,7 +692,8 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
             exceptionPropagationPolicy,
             checkedExceptionPolicy,
             priority,
-            ttlSeconds);
+            ttlSeconds,
+            callbackTimeoutMs);
 
     // ctime/mtime fields added after the original 11 fields
     if (parts.length > 11 && !parts[11].equals("null")) {
@@ -659,10 +737,264 @@ public final class InterceptRequest<T extends Interceptable> extends InfoNode {
         + priority
         + ", ttlSeconds="
         + ttlSeconds
+        + ", callbackTimeoutMs="
+        + callbackTimeoutMs
         + ", ctime="
         + getCTime()
         + ", mtime="
         + getMTime()
         + '}';
+  }
+
+  /**
+   * Creates a new {@link Builder} for constructing {@code InterceptRequest} instances.
+   *
+   * @param <T> the type of {@link Interceptable} for the request
+   * @return a new builder instance
+   */
+  public static <T extends Interceptable> Builder<T> builder() {
+    return new Builder<>();
+  }
+
+  /**
+   * A builder for constructing {@link InterceptRequest} instances.
+   *
+   * <p>Required fields must be set before calling {@link #build()}:
+   *
+   * <ul>
+   *   <li>{@link #uuid(UUID)}
+   *   <li>{@link #peer(UUID)}
+   *   <li>{@link #type(InterceptType)}
+   *   <li>{@link #clazz(String)}
+   *   <li>{@link #callbackClass(String)}
+   *   <li>{@link #callbackMethod(String)}
+   *   <li>{@link #interceptable(Interceptable)}
+   * </ul>
+   *
+   * <p>Optional fields have sensible defaults:
+   *
+   * <ul>
+   *   <li>{@code forceImmediate} = {@code false}
+   *   <li>{@code priority} = {@code 0}
+   *   <li>{@code ttlSeconds} = {@code 0}
+   *   <li>{@code callbackTimeoutMs} = {@code null} (defer to global)
+   *   <li>{@code exceptionPropagationPolicy} = {@code null} (defer to global)
+   *   <li>{@code checkedExceptionPolicy} = {@code null} (defer to global)
+   * </ul>
+   *
+   * @param <T> the type of {@link Interceptable} for the request
+   */
+  public static final class Builder<T extends Interceptable> {
+
+    /** Unique identifier for this intercept request. */
+    private UUID uuid;
+
+    /** Identifier of the peer that initiated this intercept request. */
+    private UUID peer;
+
+    /** The type of interception being requested. */
+    private InterceptType type;
+
+    /** The fully qualified name of the class where the interception is to occur. */
+    private String clazz;
+
+    /** The fully qualified name of the callback class. */
+    private String callbackClass;
+
+    /** The callback method name. */
+    private String callbackMethod;
+
+    /** The interceptable action that this request targets. */
+    private T interceptable;
+
+    /** Whether to force immediate application. Default: {@code false}. */
+    private boolean forceImmediate;
+
+    /** Exception propagation policy. Default: {@code null} (defer to global). */
+    @Nullable private ExceptionPropagationPolicy exceptionPropagationPolicy;
+
+    /** Checked exception policy. Default: {@code null} (defer to global). */
+    @Nullable private CheckedExceptionPolicy checkedExceptionPolicy;
+
+    /** Execution priority. Default: {@code 0}. */
+    private int priority;
+
+    /** TTL in seconds. Default: {@code 0} (no dedicated TTL). */
+    private long ttlSeconds;
+
+    /** Callback timeout in milliseconds. Default: {@code null} (defer to global). */
+    @Nullable private Long callbackTimeoutMs;
+
+    /** Creates an empty builder. Use {@link InterceptRequest#builder()} instead. */
+    private Builder() {}
+
+    /**
+     * Sets the unique identifier for this intercept request.
+     *
+     * @param uuid the UUID; must not be {@code null}
+     * @return this builder
+     */
+    public Builder<T> uuid(@Nonnull UUID uuid) {
+      this.uuid = uuid;
+      return this;
+    }
+
+    /**
+     * Sets the peer identifier.
+     *
+     * @param peer the peer UUID; must not be {@code null}
+     * @return this builder
+     */
+    public Builder<T> peer(@Nonnull UUID peer) {
+      this.peer = peer;
+      return this;
+    }
+
+    /**
+     * Sets the intercept type.
+     *
+     * @param type the intercept type; must not be {@code null}
+     * @return this builder
+     */
+    public Builder<T> type(@Nonnull InterceptType type) {
+      this.type = type;
+      return this;
+    }
+
+    /**
+     * Sets the target class name.
+     *
+     * @param clazz the fully qualified class name; must not be {@code null}
+     * @return this builder
+     */
+    public Builder<T> clazz(@Nonnull String clazz) {
+      this.clazz = clazz;
+      return this;
+    }
+
+    /**
+     * Sets the callback class name.
+     *
+     * @param callbackClass the fully qualified callback class name; must not be {@code null}
+     * @return this builder
+     */
+    public Builder<T> callbackClass(@Nonnull String callbackClass) {
+      this.callbackClass = callbackClass;
+      return this;
+    }
+
+    /**
+     * Sets the callback method name.
+     *
+     * @param callbackMethod the callback method name; must not be {@code null}
+     * @return this builder
+     */
+    public Builder<T> callbackMethod(@Nonnull String callbackMethod) {
+      this.callbackMethod = callbackMethod;
+      return this;
+    }
+
+    /**
+     * Sets the interceptable action.
+     *
+     * @param interceptable the interceptable action; must not be {@code null}
+     * @return this builder
+     */
+    public Builder<T> interceptable(@Nonnull T interceptable) {
+      this.interceptable = interceptable;
+      return this;
+    }
+
+    /**
+     * Sets whether to force immediate application without waiting for in-flight calls.
+     *
+     * @param forceImmediate {@code true} to apply immediately
+     * @return this builder
+     */
+    public Builder<T> forceImmediate(boolean forceImmediate) {
+      this.forceImmediate = forceImmediate;
+      return this;
+    }
+
+    /**
+     * Sets the exception propagation policy for this intercept.
+     *
+     * @param policy the policy, or {@code null} to defer to global configuration
+     * @return this builder
+     */
+    public Builder<T> exceptionPropagationPolicy(@Nullable ExceptionPropagationPolicy policy) {
+      this.exceptionPropagationPolicy = policy;
+      return this;
+    }
+
+    /**
+     * Sets the checked exception policy for this intercept.
+     *
+     * @param policy the policy, or {@code null} to defer to global configuration
+     * @return this builder
+     */
+    public Builder<T> checkedExceptionPolicy(@Nullable CheckedExceptionPolicy policy) {
+      this.checkedExceptionPolicy = policy;
+      return this;
+    }
+
+    /**
+     * Sets the execution priority. Lower values execute first.
+     *
+     * @param priority the priority value
+     * @return this builder
+     */
+    public Builder<T> priority(int priority) {
+      this.priority = priority;
+      return this;
+    }
+
+    /**
+     * Sets the TTL in seconds. {@code 0} means no dedicated TTL.
+     *
+     * @param ttlSeconds the TTL in seconds
+     * @return this builder
+     */
+    public Builder<T> ttlSeconds(long ttlSeconds) {
+      this.ttlSeconds = ttlSeconds;
+      return this;
+    }
+
+    /**
+     * Sets the callback timeout in milliseconds.
+     *
+     * <p>{@code null} defers to the global peer configuration. {@code 0} means no timeout (infinite
+     * wait). Positive values override the global timeout.
+     *
+     * @param callbackTimeoutMs the timeout in milliseconds, or {@code null} to defer to global
+     * @return this builder
+     */
+    public Builder<T> callbackTimeoutMs(@Nullable Long callbackTimeoutMs) {
+      this.callbackTimeoutMs = callbackTimeoutMs;
+      return this;
+    }
+
+    /**
+     * Builds the {@code InterceptRequest} from this builder's state.
+     *
+     * @return a new {@code InterceptRequest} instance
+     * @throws NullPointerException if any required field is {@code null}
+     */
+    public InterceptRequest<T> build() {
+      return new InterceptRequest<>(
+          uuid,
+          peer,
+          type,
+          clazz,
+          callbackClass,
+          callbackMethod,
+          interceptable,
+          forceImmediate,
+          exceptionPropagationPolicy,
+          checkedExceptionPolicy,
+          priority,
+          ttlSeconds,
+          callbackTimeoutMs);
+    }
   }
 }

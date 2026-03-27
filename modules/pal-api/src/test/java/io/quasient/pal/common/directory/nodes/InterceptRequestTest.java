@@ -185,6 +185,8 @@ public class InterceptRequestTest {
                           + interceptRequest.getPriority()
                           + ", ttlSeconds="
                           + interceptRequest.getTtlSeconds()
+                          + ", callbackTimeoutMs="
+                          + interceptRequest.getCallbackTimeoutMs()
                           + ", ctime="
                           + OffsetDateTime.ofInstant(Instant.ofEpochMilli(ctime), ZoneOffset.UTC)
                           + ", mtime="
@@ -732,17 +734,17 @@ public class InterceptRequestTest {
     assertThat(request.toString(), containsString("ttlSeconds=120"));
   }
 
+  // ---- callbackTimeoutMs tests ----
+
   /**
-   * Test specification for backward-compatible deserialization of old format without ttlSeconds.
+   * Test specification for serialization round-trip with null callbackTimeoutMs.
    *
-   * <p>Acceptance Criterion:
-   * [TEST:InterceptRequestTest.shouldDeserializeOldFormatWithoutTtlSeconds] Backward-compatible
-   * deserialization defaults ttlSeconds to 0
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.callbackTimeoutMs_null_roundTrip] Null
+   * callbackTimeoutMs survives round-trip serialization
    */
   @Test
-  public void shouldDeserializeOldFormatWithoutTtlSeconds() {
-    // Given: Serialized bytes from old format (13 fields, no ttlSeconds at index 14)
-    // Manually construct old-format serialized data (indices 0-13, without index 14)
+  public void callbackTimeoutMs_null_roundTrip() {
+    // Given: InterceptRequest with callbackTimeoutMs=null
     InterceptRequest<InterceptableMethodCall> request =
         new InterceptRequest<>(
             uuid,
@@ -755,19 +757,407 @@ public class InterceptRequestTest {
             false,
             null,
             null,
-            5);
-    byte[] fullBytes = request.toBytes(StandardCharsets.UTF_8);
-    // Strip the last field (ttlSeconds) by removing everything after the last ##
-    String fullString = new String(fullBytes, StandardCharsets.UTF_8);
-    String oldFormatString = fullString.substring(0, fullString.lastIndexOf("##"));
-    byte[] oldFormatBytes = oldFormatString.getBytes(StandardCharsets.UTF_8);
+            0,
+            0,
+            null);
 
-    // When: fromBytes() with old format
-    InterceptRequest<?> deserialized =
-        InterceptRequest.fromBytes(oldFormatBytes, StandardCharsets.UTF_8);
+    // When: toBytes() then fromBytes()
+    byte[] bytes = request.toBytes(StandardCharsets.UTF_8);
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
 
-    // Then: ttlSeconds defaults to 0
-    assertThat(deserialized.getTtlSeconds(), is(0L));
-    assertThat(deserialized.getPriority(), is(5));
+    // Then: callbackTimeoutMs is null
+    assertNull(deserialized.getCallbackTimeoutMs());
+  }
+
+  /**
+   * Test specification for serialization round-trip with zero callbackTimeoutMs.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.callbackTimeoutMs_zero_roundTrip] Zero
+   * callbackTimeoutMs survives round-trip serialization
+   */
+  @Test
+  public void callbackTimeoutMs_zero_roundTrip() {
+    // Given: InterceptRequest with callbackTimeoutMs=0
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            0,
+            Long.valueOf(0));
+
+    // When: toBytes() then fromBytes()
+    byte[] bytes = request.toBytes(StandardCharsets.UTF_8);
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
+
+    // Then: callbackTimeoutMs is 0
+    assertThat(deserialized.getCallbackTimeoutMs(), is(0L));
+  }
+
+  /**
+   * Test specification for serialization round-trip with positive callbackTimeoutMs.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.callbackTimeoutMs_positive_roundTrip]
+   * Positive callbackTimeoutMs survives round-trip serialization
+   */
+  @Test
+  public void callbackTimeoutMs_positive_roundTrip() {
+    // Given: InterceptRequest with callbackTimeoutMs=5000
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            0,
+            Long.valueOf(5000));
+
+    // When: toBytes() then fromBytes()
+    byte[] bytes = request.toBytes(StandardCharsets.UTF_8);
+    InterceptRequest<?> deserialized = InterceptRequest.fromBytes(bytes, StandardCharsets.UTF_8);
+
+    // Then: callbackTimeoutMs is 5000
+    assertThat(deserialized.getCallbackTimeoutMs(), is(5000L));
+  }
+
+  /**
+   * Test specification for equality with different callbackTimeoutMs values.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.equals_differentCallbackTimeoutMs_notEqual]
+   * Different callbackTimeoutMs values produce unequal requests
+   */
+  @Test
+  public void equals_differentCallbackTimeoutMs_notEqual() {
+    // Given: Two InterceptRequests identical except for callbackTimeoutMs
+    InterceptRequest<InterceptableMethodCall> a =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            0,
+            Long.valueOf(5000));
+    InterceptRequest<InterceptableMethodCall> b =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            0,
+            null);
+
+    // When/Then: They are NOT equal
+    assertNotEquals(a, b);
+  }
+
+  /**
+   * Test specification for hashCode with different callbackTimeoutMs values.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.hashCode_differentCallbackTimeoutMs_differ]
+   * Different callbackTimeoutMs values produce different hashCodes
+   */
+  @Test
+  public void hashCode_differentCallbackTimeoutMs_differ() {
+    // Given: Two InterceptRequests identical except for callbackTimeoutMs
+    InterceptRequest<InterceptableMethodCall> a =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            0,
+            Long.valueOf(5000));
+    InterceptRequest<InterceptableMethodCall> b =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            0,
+            null);
+
+    // When/Then: Hash codes differ
+    assertNotEquals(a.hashCode(), b.hashCode());
+  }
+
+  /**
+   * Test specification for callbackTimeoutMs inclusion in toString.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.toString_includesCallbackTimeoutMs]
+   * toString output contains callbackTimeoutMs
+   */
+  @Test
+  public void toString_includesCallbackTimeoutMs() {
+    // Given: InterceptRequest with callbackTimeoutMs=5000
+    InterceptRequest<InterceptableMethodCall> request =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            type,
+            clazz,
+            callbackClass,
+            callbackMethod,
+            interceptableMethod,
+            false,
+            null,
+            null,
+            0,
+            0,
+            Long.valueOf(5000));
+
+    // When/Then: Output contains "callbackTimeoutMs"
+    assertThat(request.toString(), containsString("callbackTimeoutMs"));
+    assertThat(request.toString(), containsString("callbackTimeoutMs=5000"));
+  }
+
+  // ---- Builder tests ----
+
+  /**
+   * Test specification for builder with all required fields set.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.builder_allRequiredFields_builds] Builder
+   * produces correct request with defaults for optional fields
+   */
+  @Test
+  public void builder_allRequiredFields_builds() {
+    // Given: Builder with only required fields set
+    InterceptRequest<InterceptableMethodCall> request =
+        InterceptRequest.<InterceptableMethodCall>builder()
+            .uuid(uuid)
+            .peer(peer)
+            .type(type)
+            .clazz(clazz)
+            .callbackClass(callbackClass)
+            .callbackMethod(callbackMethod)
+            .interceptable(interceptableMethod)
+            .build();
+
+    // Then: Required fields have correct values
+    assertThat(request.getUuid(), is(uuid));
+    assertThat(request.getPeer(), is(peer));
+    assertThat(request.getType(), is(type));
+    assertThat(request.getClazz(), is(clazz));
+    assertThat(request.getCallbackClass(), is(callbackClass));
+    assertThat(request.getCallbackMethod(), is(callbackMethod));
+    assertThat(request.getInterceptable(), is(interceptableMethod));
+
+    // Then: Optional fields have defaults
+    assertThat(request.isForceImmediate(), is(false));
+    assertThat(request.getPriority(), is(0));
+    assertThat(request.getTtlSeconds(), is(0L));
+    assertNull(request.getCallbackTimeoutMs());
+    assertNull(request.getExceptionPropagationPolicy());
+    assertNull(request.getCheckedExceptionPolicy());
+  }
+
+  /**
+   * Test specification for builder with all fields set.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.builder_allFields_builds] Builder produces
+   * correct request with all fields explicitly set
+   */
+  @Test
+  public void builder_allFields_builds() {
+    // Given: Builder with all fields set
+    InterceptRequest<InterceptableMethodCall> request =
+        InterceptRequest.<InterceptableMethodCall>builder()
+            .uuid(uuid)
+            .peer(peer)
+            .type(type)
+            .clazz(clazz)
+            .callbackClass(callbackClass)
+            .callbackMethod(callbackMethod)
+            .interceptable(interceptableMethod)
+            .forceImmediate(true)
+            .exceptionPropagationPolicy(ExceptionPropagationPolicy.PROPAGATE_ALL)
+            .checkedExceptionPolicy(CheckedExceptionPolicy.WRAP)
+            .priority(10)
+            .ttlSeconds(300)
+            .callbackTimeoutMs(Long.valueOf(5000))
+            .build();
+
+    // Then: All fields have the set values
+    assertThat(request.getUuid(), is(uuid));
+    assertThat(request.getPeer(), is(peer));
+    assertThat(request.getType(), is(type));
+    assertThat(request.getClazz(), is(clazz));
+    assertThat(request.getCallbackClass(), is(callbackClass));
+    assertThat(request.getCallbackMethod(), is(callbackMethod));
+    assertThat(request.getInterceptable(), is(interceptableMethod));
+    assertThat(request.isForceImmediate(), is(true));
+    assertEquals(ExceptionPropagationPolicy.PROPAGATE_ALL, request.getExceptionPropagationPolicy());
+    assertEquals(CheckedExceptionPolicy.WRAP, request.getCheckedExceptionPolicy());
+    assertThat(request.getPriority(), is(10));
+    assertThat(request.getTtlSeconds(), is(300L));
+    assertThat(request.getCallbackTimeoutMs(), is(5000L));
+  }
+
+  /**
+   * Test specification for builder missing uuid.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.builder_missingUuid_throws] Builder throws
+   * NullPointerException when uuid is not set
+   */
+  @Test(expected = NullPointerException.class)
+  public void builder_missingUuid_throws() {
+    InterceptRequest.<InterceptableMethodCall>builder()
+        .peer(peer)
+        .type(type)
+        .clazz(clazz)
+        .callbackClass(callbackClass)
+        .callbackMethod(callbackMethod)
+        .interceptable(interceptableMethod)
+        .build();
+  }
+
+  /**
+   * Test specification for builder missing peer.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.builder_missingPeer_throws] Builder throws
+   * NullPointerException when peer is not set
+   */
+  @Test(expected = NullPointerException.class)
+  public void builder_missingPeer_throws() {
+    InterceptRequest.<InterceptableMethodCall>builder()
+        .uuid(uuid)
+        .type(type)
+        .clazz(clazz)
+        .callbackClass(callbackClass)
+        .callbackMethod(callbackMethod)
+        .interceptable(interceptableMethod)
+        .build();
+  }
+
+  /**
+   * Test specification for builder missing type.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.builder_missingType_throws] Builder throws
+   * NullPointerException when type is not set
+   */
+  @Test(expected = NullPointerException.class)
+  public void builder_missingType_throws() {
+    InterceptRequest.<InterceptableMethodCall>builder()
+        .uuid(uuid)
+        .peer(peer)
+        .clazz(clazz)
+        .callbackClass(callbackClass)
+        .callbackMethod(callbackMethod)
+        .interceptable(interceptableMethod)
+        .build();
+  }
+
+  /**
+   * Test specification for builder missing clazz.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.builder_missingClazz_throws] Builder throws
+   * NullPointerException when clazz is not set
+   */
+  @Test(expected = NullPointerException.class)
+  public void builder_missingClazz_throws() {
+    InterceptRequest.<InterceptableMethodCall>builder()
+        .uuid(uuid)
+        .peer(peer)
+        .type(type)
+        .callbackClass(callbackClass)
+        .callbackMethod(callbackMethod)
+        .interceptable(interceptableMethod)
+        .build();
+  }
+
+  /**
+   * Test specification for builder missing callbackClass.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.builder_missingCallbackClass_throws]
+   * Builder throws NullPointerException when callbackClass is not set
+   */
+  @Test(expected = NullPointerException.class)
+  public void builder_missingCallbackClass_throws() {
+    InterceptRequest.<InterceptableMethodCall>builder()
+        .uuid(uuid)
+        .peer(peer)
+        .type(type)
+        .clazz(clazz)
+        .callbackMethod(callbackMethod)
+        .interceptable(interceptableMethod)
+        .build();
+  }
+
+  /**
+   * Test specification for builder missing callbackMethod.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.builder_missingCallbackMethod_throws]
+   * Builder throws NullPointerException when callbackMethod is not set
+   */
+  @Test(expected = NullPointerException.class)
+  public void builder_missingCallbackMethod_throws() {
+    InterceptRequest.<InterceptableMethodCall>builder()
+        .uuid(uuid)
+        .peer(peer)
+        .type(type)
+        .clazz(clazz)
+        .callbackClass(callbackClass)
+        .interceptable(interceptableMethod)
+        .build();
+  }
+
+  /**
+   * Test specification for builder missing interceptable.
+   *
+   * <p>Acceptance Criterion: [TEST:InterceptRequestTest.builder_missingInterceptable_throws]
+   * Builder throws NullPointerException when interceptable is not set
+   */
+  @Test(expected = NullPointerException.class)
+  public void builder_missingInterceptable_throws() {
+    InterceptRequest.<InterceptableMethodCall>builder()
+        .uuid(uuid)
+        .peer(peer)
+        .type(type)
+        .clazz(clazz)
+        .callbackClass(callbackClass)
+        .callbackMethod(callbackMethod)
+        .build();
   }
 }

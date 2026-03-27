@@ -654,6 +654,22 @@ public class Main implements Callable<Integer> {
   private Integer drainTimeoutMs; // corresponding ENV var: DRAIN_TIMEOUT_MS
 
   /**
+   * Default timeout in milliseconds for receiving responses from synchronous intercept callback
+   * requests. Controls how long the intercepted peer waits for a callback peer to respond. Can be
+   * overridden per-intercept via the intercept registration.
+   *
+   * <p>A value of 0 means no timeout (infinite wait).
+   */
+  @Option(
+      names = {"--callback-timeout-ms"},
+      paramLabel = "milliseconds",
+      description =
+          "default timeout for intercept callback responses, 0 = no timeout (default: ${DEFAULT-VALUE})",
+      defaultValue = "3000",
+      showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
+  private Integer callbackTimeoutMs; // corresponding ENV var: CALLBACK_TIMEOUT_MS
+
+  /**
    * Global default exception propagation policy for intercept callbacks. Determines how exceptions
    * thrown by callbacks propagate to callers. Does not apply to ASYNC intercepts (which always use
    * SWALLOW_ALL).
@@ -1091,6 +1107,18 @@ public class Main implements Callable<Integer> {
       if (dt != null && !dt.isBlank()) {
         try {
           drainTimeoutMs = Integer.parseInt(dt.trim());
+        } catch (NumberFormatException ignored) {
+          // keep CLI/default
+        }
+      }
+    }
+
+    // callback timeout via env override if CLI not provided
+    if (callbackTimeoutMs == null) {
+      String ct = System.getenv("CALLBACK_TIMEOUT_MS");
+      if (ct != null && !ct.isBlank()) {
+        try {
+          callbackTimeoutMs = Integer.parseInt(ct.trim());
         } catch (NumberFormatException ignored) {
           // keep CLI/default
         }
@@ -1594,6 +1622,9 @@ public class Main implements Callable<Integer> {
     // in-flight tracking options
     if (drainTimeoutMs != null) {
       properties.setProperty("intercept.drain.timeout.ms", String.valueOf(drainTimeoutMs));
+    }
+    if (callbackTimeoutMs != null) {
+      properties.setProperty("intercept.callback.timeout.ms", String.valueOf(callbackTimeoutMs));
     }
 
     // fx thread execution

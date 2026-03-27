@@ -205,7 +205,8 @@ public class AroundProceedIT extends AbstractInterceptIT {
         "Intercept type should be AROUND",
         beforeReq.getInterceptType(),
         is(InterceptType.AROUND.toByte()));
-    assertThat("timeoutMs should be > 0", beforeReq.getTimeoutMs(), is(greaterThan(0)));
+    assertThat(
+        "proceedTimeoutMs should be > 0", beforeReq.getProceedTimeoutMs(), is(greaterThan(0)));
     String callbackId = beforeReq.getCallbackId();
     assertThat("callbackId should be non-empty", callbackId, is(not(emptyOrNullString())));
 

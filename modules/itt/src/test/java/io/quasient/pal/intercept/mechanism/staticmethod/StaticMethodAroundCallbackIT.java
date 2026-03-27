@@ -48,7 +48,7 @@ import org.junit.runners.Parameterized;
  *   <li>Message type is INTERCEPT_CALLBACK_REQUEST
  *   <li>Intercept type is AROUND
  *   <li>Phase is BEFORE (first phase of AROUND)
- *   <li>timeoutMs field is set (> 0)
+ *   <li>proceedTimeoutMs field is set (> 0)
  *   <li>callbackId field is set (non-empty, for correlating BEFORE/AFTER phases)
  *   <li>Method parameters are present
  * </ul>
@@ -98,7 +98,7 @@ public class StaticMethodAroundCallbackIT extends AbstractInterceptIT {
    *   <li>Second callback is AFTER phase with return value
    *   <li>Both have same callbackId (correlating the phases)
    *   <li>Intercept type is AROUND
-   *   <li>timeoutMs is set (> 0) on BEFORE phase
+   *   <li>proceedTimeoutMs is set (> 0) on BEFORE phase
    * </ul>
    */
   @Test
@@ -208,8 +208,8 @@ public class StaticMethodAroundCallbackIT extends AbstractInterceptIT {
         is(InterceptPhase.BEFORE.toByte()));
 
     assertThat(
-        "timeoutMs should be set (> 0) for AROUND BEFORE phase",
-        beforeReq.getTimeoutMs(),
+        "proceedTimeoutMs should be set (> 0) for AROUND BEFORE phase",
+        beforeReq.getProceedTimeoutMs(),
         is(greaterThan(0)));
 
     String beforeCallbackId = beforeReq.getCallbackId();

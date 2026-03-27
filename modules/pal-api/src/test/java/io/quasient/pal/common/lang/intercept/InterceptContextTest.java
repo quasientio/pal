@@ -389,7 +389,7 @@ public class InterceptContextTest {
 
     // Set up a mock accessor that returns valid data
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData("result", null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData("result", null, false);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     // First call should succeed
@@ -427,7 +427,7 @@ public class InterceptContextTest {
             execMessage, InterceptType.AROUND, peerUuid, new Object[] {"arg1"});
 
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData("computed result", null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData("computed result", null, false);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     ProceedResult result = ctx.proceed();
@@ -445,7 +445,7 @@ public class InterceptContextTest {
 
     RuntimeException thrownEx = new RuntimeException("method failed");
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData(null, thrownEx, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData(null, thrownEx, false);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     ProceedResult result = ctx.proceed();
@@ -464,7 +464,7 @@ public class InterceptContextTest {
     assertEquals(InterceptPhase.BEFORE, ctx.getPhase());
 
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData("result", null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData("result", null, false);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     ctx.proceed();
@@ -490,7 +490,7 @@ public class InterceptContextTest {
     }
 
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData(42, null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData(42, null, false);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     ctx.proceed();
@@ -518,7 +518,7 @@ public class InterceptContextTest {
 
     RuntimeException exception = new RuntimeException("error");
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData(null, exception, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData(null, exception, false);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     ctx.proceed();
@@ -536,7 +536,7 @@ public class InterceptContextTest {
     assertFalse(ctx.isProceedCalled());
 
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData("result", null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData("result", null, false);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     ctx.proceed();
@@ -565,7 +565,7 @@ public class InterceptContextTest {
         InterceptContext.forBeforePhase(execMessage, InterceptType.AROUND, peerUuid, new Object[0]);
 
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData("result", null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData("result", null, false);
 
     try {
       ctx.setAroundAccessor(mockAccessor, null, 30000);
@@ -582,7 +582,7 @@ public class InterceptContextTest {
         InterceptContext.forBeforePhase(execMessage, InterceptType.AROUND, peerUuid, new Object[0]);
 
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData(100, null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData(100, null, false);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     ctx.proceed();
@@ -621,7 +621,7 @@ public class InterceptContextTest {
         InterceptContext.forBeforePhase(execMessage, InterceptType.AROUND, peerUuid, new Object[0]);
 
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData(null, null, true);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData(null, null, true);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     ProceedResult result = ctx.proceed();
@@ -753,7 +753,7 @@ public class InterceptContextTest {
         InterceptContext.forBeforePhase(execMessage, InterceptType.AROUND, peerUuid, args);
 
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData("result", null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData("result", null, false);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     // proceed() transitions to AFTER phase
@@ -1294,7 +1294,7 @@ public class InterceptContextTest {
 
     // Set both accessors
     AroundSocketAccessor remoteAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData("remote", null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData("remote", null, false);
     ctx.setAroundAccessor(remoteAccessor, "callback-123", 30000);
 
     LocalAroundAccessor localAccessor = (args) -> new AfterPhaseData("local", null, false);
@@ -1431,7 +1431,7 @@ public class InterceptContextTest {
         InterceptContext.forBeforePhase(execMessage, InterceptType.AROUND, peerUuid, args);
 
     AroundSocketAccessor mockAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData("result", null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData("result", null, false);
     ctx.setAroundAccessor(mockAccessor, "callback-123", 30000);
 
     // proceed() transitions to AFTER phase

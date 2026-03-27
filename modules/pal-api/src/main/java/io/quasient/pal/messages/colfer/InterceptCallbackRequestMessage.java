@@ -74,10 +74,11 @@ public class InterceptCallbackRequestMessage
   public RaisedThrowable thrownException;
 
   /**
-   * AROUND intercepts only: timeout for proceed() in milliseconds Set by interceptable peer;
-   * interceptor should complete within this time
+   * AROUND intercepts only: timeout for proceed() in milliseconds. Controls how long the callback
+   * peer waits in proceed() for the intercepted peer to execute the original method and return the
+   * result.
    */
-  public int timeoutMs;
+  public int proceedTimeoutMs;
 
   /** Default constructor */
   public InterceptCallbackRequestMessage() {
@@ -537,8 +538,8 @@ public class InterceptCallbackRequestMessage
         i = this.thrownException.marshal(buf, i);
       }
 
-      if (this.timeoutMs != 0) {
-        int x = this.timeoutMs;
+      if (this.proceedTimeoutMs != 0) {
+        int x = this.proceedTimeoutMs;
         if ((x & ~((1 << 21) - 1)) != 0) {
           buf[i++] = (byte) (12 | 0x80);
           buf[i++] = (byte) (x >>> 24);
@@ -752,10 +753,10 @@ public class InterceptCallbackRequestMessage
           x |= (b & 0x7f) << shift;
           if (shift == 28 || b >= 0) break;
         }
-        this.timeoutMs = x;
+        this.proceedTimeoutMs = x;
         header = buf[i++];
       } else if (header == (byte) (12 | 0x80)) {
-        this.timeoutMs =
+        this.proceedTimeoutMs =
             (buf[i++] & 0xff) << 24
                 | (buf[i++] & 0xff) << 16
                 | (buf[i++] & 0xff) << 8
@@ -1154,31 +1155,31 @@ public class InterceptCallbackRequestMessage
   }
 
   /**
-   * Gets io.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.timeoutMs.
+   * Gets io.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.proceedTimeoutMs.
    *
    * @return the value.
    */
-  public int getTimeoutMs() {
-    return this.timeoutMs;
+  public int getProceedTimeoutMs() {
+    return this.proceedTimeoutMs;
   }
 
   /**
-   * Sets io.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.timeoutMs.
+   * Sets io.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.proceedTimeoutMs.
    *
    * @param value the replacement.
    */
-  public void setTimeoutMs(int value) {
-    this.timeoutMs = value;
+  public void setProceedTimeoutMs(int value) {
+    this.proceedTimeoutMs = value;
   }
 
   /**
-   * Sets io.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.timeoutMs.
+   * Sets io.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.proceedTimeoutMs.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public InterceptCallbackRequestMessage withTimeoutMs(int value) {
-    this.timeoutMs = value;
+  public InterceptCallbackRequestMessage withProceedTimeoutMs(int value) {
+    this.proceedTimeoutMs = value;
     return this;
   }
 
@@ -1197,7 +1198,7 @@ public class InterceptCallbackRequestMessage
     h = 31 * h + this.returnValueRef;
     h = 31 * h + (this.isVoid ? 1231 : 1237);
     if (this.thrownException != null) h = 31 * h + this.thrownException.hashCode();
-    h = 31 * h + this.timeoutMs;
+    h = 31 * h + this.proceedTimeoutMs;
     return h;
   }
 
@@ -1235,7 +1236,7 @@ public class InterceptCallbackRequestMessage
         && (this.thrownException == null
             ? o.thrownException == null
             : this.thrownException.equals(o.thrownException))
-        && this.timeoutMs == o.timeoutMs;
+        && this.proceedTimeoutMs == o.proceedTimeoutMs;
   }
 
   @Override
@@ -1292,8 +1293,8 @@ public class InterceptCallbackRequestMessage
         this.thrownException = new RaisedThrowable().fromJson(jsonObj);
       }
 
-      if (json.has("timeoutMs")) {
-        this.timeoutMs = json.get("timeoutMs").getAsInt();
+      if (json.has("proceedTimeoutMs")) {
+        this.proceedTimeoutMs = json.get("proceedTimeoutMs").getAsInt();
       }
 
     } catch (Exception e) {
@@ -1315,6 +1316,6 @@ public class InterceptCallbackRequestMessage
     this.returnValueRef = 0;
     this.isVoid = false;
     this.thrownException = null;
-    this.timeoutMs = 0;
+    this.proceedTimeoutMs = 0;
   }
 }

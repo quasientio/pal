@@ -646,6 +646,30 @@ public class MethodHandlers {
   }
 
   // </editor-fold>
+  // <editor-fold desc="Timeout Callbacks">
+
+  /**
+   * Callback with a brief artificial delay for timeout integration tests.
+   *
+   * <p>Sleeps for 100ms then returns normally. Used to verify that callbacks with short delays
+   * still succeed when timeout is disabled (0) or sufficiently large.
+   *
+   * @param ctx the intercept context
+   * @return callback response allowing proceed with no changes
+   */
+  public static InterceptCallbackResponse delayedNoOp(InterceptContext ctx) {
+    logger.info("delayedNoOp: sleeping 100ms");
+    try {
+      Thread.sleep(100);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.warn("delayedNoOp: interrupted during sleep", e);
+    }
+    logger.info("delayedNoOp: completed after delay");
+    return new InterceptCallbackResponse();
+  }
+
+  // </editor-fold>
   // <editor-fold desc="ASYNC Callbacks">
 
   /**

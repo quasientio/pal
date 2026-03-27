@@ -27,7 +27,7 @@ public final class InterceptBundleDefaults {
 
   /** An empty defaults instance with all fields set to {@code null}. */
   public static final InterceptBundleDefaults EMPTY =
-      new InterceptBundleDefaults(null, null, null, null, null, null);
+      new InterceptBundleDefaults(null, null, null, null, null, null, null);
 
   /** The default callback peer name or UUID. */
   @Nullable private final String peer;
@@ -47,6 +47,9 @@ public final class InterceptBundleDefaults {
   /** The default checked exception policy. */
   @Nullable private final CheckedExceptionPolicy checkedExceptionPolicy;
 
+  /** The default callback timeout duration. */
+  @Nullable private final Duration callbackTimeout;
+
   /**
    * Constructs a new {@code InterceptBundleDefaults} with all fields explicitly set.
    *
@@ -56,6 +59,7 @@ public final class InterceptBundleDefaults {
    * @param forceImmediate the default force-immediate flag, or {@code null}
    * @param exceptionPolicy the default exception propagation policy, or {@code null}
    * @param checkedExceptionPolicy the default checked exception policy, or {@code null}
+   * @param callbackTimeout the default callback timeout duration, or {@code null}
    */
   public InterceptBundleDefaults(
       @Nullable String peer,
@@ -63,13 +67,15 @@ public final class InterceptBundleDefaults {
       @Nullable Duration ttl,
       @Nullable Boolean forceImmediate,
       @Nullable ExceptionPropagationPolicy exceptionPolicy,
-      @Nullable CheckedExceptionPolicy checkedExceptionPolicy) {
+      @Nullable CheckedExceptionPolicy checkedExceptionPolicy,
+      @Nullable Duration callbackTimeout) {
     this.peer = peer;
     this.priority = priority;
     this.ttl = ttl;
     this.forceImmediate = forceImmediate;
     this.exceptionPolicy = exceptionPolicy;
     this.checkedExceptionPolicy = checkedExceptionPolicy;
+    this.callbackTimeout = callbackTimeout;
   }
 
   /**
@@ -130,5 +136,15 @@ public final class InterceptBundleDefaults {
   @Nullable
   public CheckedExceptionPolicy getCheckedExceptionPolicy() {
     return checkedExceptionPolicy;
+  }
+
+  /**
+   * Returns the default callback timeout duration.
+   *
+   * @return the default callback timeout, or {@code null} if not specified
+   */
+  @Nullable
+  public Duration getCallbackTimeout() {
+    return callbackTimeout;
   }
 }

@@ -307,7 +307,7 @@ public final class InterceptContext {
   @Nullable private String callbackId;
 
   /** Timeout in milliseconds for remote AROUND proceed(). */
-  private int timeoutMs;
+  private int proceedTimeoutMs;
 
   /** Flag indicating whether proceed() has been called (AROUND only). */
   private boolean proceedCalled = false;
@@ -476,7 +476,7 @@ public final class InterceptContext {
     this.aroundSocketAccessor = null;
     this.localAroundAccessor = null;
     this.callbackId = null;
-    this.timeoutMs = 0;
+    this.proceedTimeoutMs = 0;
     this.pooled = false;
   }
 
@@ -514,7 +514,7 @@ public final class InterceptContext {
     this.aroundSocketAccessor = null;
     this.localAroundAccessor = null;
     this.callbackId = null;
-    this.timeoutMs = 0;
+    this.proceedTimeoutMs = 0;
     this.pooled = true;
   }
 
@@ -1244,7 +1244,7 @@ public final class InterceptContext {
     } else {
       // Remote AROUND: send BEFORE response, receive AFTER via socket
       InterceptCallbackResponseMessage beforeResponse = buildBeforeResponse();
-      afterData = aroundSocketAccessor.sendBeforeAndReceiveAfter(beforeResponse, timeoutMs);
+      afterData = aroundSocketAccessor.sendBeforeAndReceiveAfter(beforeResponse, proceedTimeoutMs);
     }
 
     // Update context with AFTER data
@@ -1275,13 +1275,13 @@ public final class InterceptContext {
    *
    * @param accessor the socket accessor for send/receive operations
    * @param callbackId the callback ID for correlating BEFORE/AFTER phases
-   * @param timeoutMs timeout in milliseconds for proceed() (0 = infinite)
+   * @param proceedTimeoutMs timeout in milliseconds for proceed() (0 = infinite)
    */
   public void setAroundAccessor(
-      @Nonnull AroundSocketAccessor accessor, @Nonnull String callbackId, int timeoutMs) {
+      @Nonnull AroundSocketAccessor accessor, @Nonnull String callbackId, int proceedTimeoutMs) {
     this.aroundSocketAccessor = Objects.requireNonNull(accessor, "accessor must not be null");
     this.callbackId = Objects.requireNonNull(callbackId, "callbackId must not be null");
-    this.timeoutMs = timeoutMs;
+    this.proceedTimeoutMs = proceedTimeoutMs;
   }
 
   /**

@@ -92,6 +92,9 @@ public final class InterceptSpec {
   /** Checked exception policy override; {@code null} to use bundle defaults. */
   @Nullable private final CheckedExceptionPolicy checkedExceptionPolicyOverride;
 
+  /** Callback timeout override; {@code null} to use bundle defaults. */
+  @Nullable private final Duration callbackTimeoutOverride;
+
   /**
    * Constructs an InterceptSpec from a builder.
    *
@@ -112,6 +115,7 @@ public final class InterceptSpec {
     this.forceImmediateOverride = builder.forceImmediateOverride;
     this.exceptionPolicyOverride = builder.exceptionPolicyOverride;
     this.checkedExceptionPolicyOverride = builder.checkedExceptionPolicyOverride;
+    this.callbackTimeoutOverride = builder.callbackTimeoutOverride;
   }
 
   /**
@@ -257,6 +261,16 @@ public final class InterceptSpec {
   }
 
   /**
+   * Returns the callback timeout override.
+   *
+   * @return the callback timeout override duration, or {@code null} to use bundle defaults
+   */
+  @Nullable
+  public Duration getCallbackTimeoutOverride() {
+    return callbackTimeoutOverride;
+  }
+
+  /**
    * Converts this spec into an {@link InterceptRequest} by resolving overrides against bundle
    * defaults.
    *
@@ -285,10 +299,12 @@ public final class InterceptSpec {
         resolveNullable(exceptionPolicyOverride, defaults.getExceptionPolicy());
     CheckedExceptionPolicy resolvedCheckedExceptionPolicy =
         resolveNullable(checkedExceptionPolicyOverride, defaults.getCheckedExceptionPolicy());
+    Long resolvedCallbackTimeoutMs =
+        resolveCallbackTimeoutMs(callbackTimeoutOverride, defaults.getCallbackTimeout());
 
     if (kind == InterceptableKind.FIELD) {
       InterceptableFieldOp fieldOp = new InterceptableFieldOp(targetName, fieldOpType);
-      return new InterceptRequest<>(
+      return new InterceptRequest<InterceptableFieldOp>(
           interceptUuid,
           peerUuid,
           type,
@@ -300,11 +316,12 @@ public final class InterceptSpec {
           resolvedExceptionPolicy,
           resolvedCheckedExceptionPolicy,
           resolvedPriority,
-          resolvedTtlSeconds);
+          resolvedTtlSeconds,
+          resolvedCallbackTimeoutMs);
     }
 
     InterceptableMethodCall methodCall = new InterceptableMethodCall(targetName, parameterTypes);
-    return new InterceptRequest<>(
+    return new InterceptRequest<InterceptableMethodCall>(
         interceptUuid,
         peerUuid,
         type,
@@ -316,7 +333,8 @@ public final class InterceptSpec {
         resolvedExceptionPolicy,
         resolvedCheckedExceptionPolicy,
         resolvedPriority,
-        resolvedTtlSeconds);
+        resolvedTtlSeconds,
+        resolvedCallbackTimeoutMs);
   }
 
   /**
@@ -389,6 +407,25 @@ public final class InterceptSpec {
   }
 
   /**
+   * Resolves callback timeout in milliseconds from Duration overrides.
+   *
+   * @param override the override callback timeout, or {@code null}
+   * @param defaultTimeout the default callback timeout, or {@code null}
+   * @return the resolved timeout in milliseconds; {@code null} if neither is set
+   */
+  @Nullable
+  private static Long resolveCallbackTimeoutMs(
+      @Nullable Duration override, @Nullable Duration defaultTimeout) {
+    if (override != null) {
+      return override.toMillis();
+    }
+    if (defaultTimeout != null) {
+      return defaultTimeout.toMillis();
+    }
+    return null;
+  }
+
+  /**
    * Builder for constructing {@link InterceptSpec} instances.
    *
    * <p>Required fields: {@code targetClass}, {@code targetName}, {@code type}, {@code
@@ -438,6 +475,9 @@ public final class InterceptSpec {
 
     /** Checked exception policy override; {@code null} to use bundle defaults. */
     @Nullable private CheckedExceptionPolicy checkedExceptionPolicyOverride;
+
+    /** Callback timeout override; {@code null} to use bundle defaults. */
+    @Nullable private Duration callbackTimeoutOverride;
 
     /** Constructs a new empty builder. */
     private Builder() {}
@@ -594,6 +634,17 @@ public final class InterceptSpec {
     public Builder checkedExceptionPolicyOverride(
         CheckedExceptionPolicy checkedExceptionPolicyOverride) {
       this.checkedExceptionPolicyOverride = checkedExceptionPolicyOverride;
+      return this;
+    }
+
+    /**
+     * Sets the callback timeout override.
+     *
+     * @param callbackTimeoutOverride the override duration, or {@code null} to use defaults
+     * @return this builder
+     */
+    public Builder callbackTimeoutOverride(@Nullable Duration callbackTimeoutOverride) {
+      this.callbackTimeoutOverride = callbackTimeoutOverride;
       return this;
     }
 

@@ -594,6 +594,97 @@ public class InterceptBundleParserTest {
     parser.parse(yaml);
   }
 
+  @Test
+  public void parse_callbackTimeoutInDefaults_parsedCorrectly() {
+    // Given: A YAML bundle with callbackTimeout in defaults
+    String yaml =
+        """
+        bundle: test
+        defaults:
+          callbackTimeout: "5s"
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
+
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getDefaults().getCallbackTimeout(), is(Duration.ofSeconds(5)));
+  }
+
+  @Test
+  public void parse_callbackTimeoutMs_parsedCorrectly() {
+    // Given: A YAML bundle with callbackTimeout in milliseconds in defaults
+    String yaml =
+        """
+        bundle: test
+        defaults:
+          callbackTimeout: "500ms"
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
+
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getDefaults().getCallbackTimeout(), is(Duration.ofMillis(500)));
+  }
+
+  @Test
+  public void parse_callbackTimeoutPerIntercept_parsedCorrectly() {
+    // Given: A YAML bundle with callbackTimeout on a specific intercept entry
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+            callbackTimeout: "2s"
+        """;
+
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    InterceptSpec spec = bundle.getIntercepts().get(0);
+    assertThat(spec.getCallbackTimeoutOverride(), is(Duration.ofSeconds(2)));
+  }
+
+  @Test
+  public void parse_callbackTimeoutAbsent_isNull() {
+    // Given: A YAML bundle without callbackTimeout anywhere
+    String yaml =
+        """
+        bundle: test
+        intercepts:
+          - target: com.acme.Service.method
+            type: BEFORE
+            callback:
+              class: com.acme.Handler
+              method: handle
+        """;
+
+    // When
+    InterceptBundleSpec bundle = parser.parse(yaml);
+
+    // Then
+    assertThat(bundle.getDefaults().getCallbackTimeout(), is(nullValue()));
+    assertThat(bundle.getIntercepts().get(0).getCallbackTimeoutOverride(), is(nullValue()));
+  }
+
   @Test(expected = Exception.class)
   public void parse_useSafeConstructor() {
     // A malicious YAML containing a Java type tag that SafeConstructor rejects

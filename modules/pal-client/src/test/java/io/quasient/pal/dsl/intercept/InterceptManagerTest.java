@@ -117,7 +117,7 @@ public class InterceptManagerTest {
   private static InterceptBundleSpec bundle(
       String bundleName, String peerName, InterceptSpec... specs) {
     InterceptBundleDefaults defaults =
-        new InterceptBundleDefaults(peerName, null, null, null, null, null);
+        new InterceptBundleDefaults(peerName, null, null, null, null, null, null);
     InterceptBundleSpec.Builder builder =
         InterceptBundleSpec.builder(bundleName).defaults(defaults);
     for (InterceptSpec spec : specs) {

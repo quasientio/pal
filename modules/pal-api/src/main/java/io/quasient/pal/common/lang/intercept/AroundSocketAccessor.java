@@ -41,10 +41,11 @@ public interface AroundSocketAccessor {
    * </ol>
    *
    * @param beforeResponse the BEFORE phase response to send
-   * @param timeoutMs timeout for receiving AFTER request in milliseconds (0 = infinite)
+   * @param proceedTimeoutMs timeout for receiving AFTER request in milliseconds (0 = infinite)
    * @return the AFTER phase data from interceptable peer
    * @throws AroundTimeoutException if timeout exceeded waiting for AFTER request
    */
   AfterPhaseData sendBeforeAndReceiveAfter(
-      InterceptCallbackResponseMessage beforeResponse, int timeoutMs) throws AroundTimeoutException;
+      InterceptCallbackResponseMessage beforeResponse, int proceedTimeoutMs)
+      throws AroundTimeoutException;
 }

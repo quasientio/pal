@@ -266,6 +266,23 @@ public class PeerWiring extends AbstractModule {
   }
 
   /**
+   * Provides the default callback timeout for intercept callback dispatch.
+   *
+   * <p>This timeout controls how long the intercepted peer waits for a callback peer to respond to
+   * synchronous BEFORE/AFTER callbacks. Can be overridden per-intercept. A value of 0 means no
+   * timeout (infinite wait). Configured via the "intercept.callback.timeout.ms" property (default:
+   * 3000ms).
+   *
+   * @return the callback timeout in milliseconds
+   */
+  @SuppressWarnings("unused")
+  @Provides
+  @Named("intercept.callback.timeout.ms")
+  public long provideInterceptCallbackTimeout() {
+    return Long.parseLong(properties.getProperty("intercept.callback.timeout.ms"));
+  }
+
+  /**
    * Provides the MPSC queue for pending intercept activations.
    *
    * <p>This queue is shared between the {@link InterceptActivationCoordinator} and the {@link

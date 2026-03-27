@@ -434,9 +434,10 @@ class SocketRpcInvoker extends AbstractMessageInvokerThread {
    * @return the socket accessor
    */
   private AroundSocketAccessor createAroundSocketAccessor() {
-    return (beforeResponse, timeoutMs) -> {
+    return (beforeResponse, proceedTimeoutMs) -> {
       // Calculate effective timeout
-      int effectiveTimeout = timeoutMs > 0 ? timeoutMs : DEFAULT_CALLBACK_RECEIVE_TIMEOUT_MS;
+      int effectiveTimeout =
+          proceedTimeoutMs > 0 ? proceedTimeoutMs : DEFAULT_CALLBACK_RECEIVE_TIMEOUT_MS;
 
       // Save current timeout and set new one
       int originalTimeout = zmqRpcSocket.getReceiveTimeOut();

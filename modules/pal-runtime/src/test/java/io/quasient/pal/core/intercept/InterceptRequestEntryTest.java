@@ -192,4 +192,22 @@ public class InterceptRequestEntryTest {
     InterceptRequestEntry entry = new InterceptRequestEntry(interceptMessage);
     assertThat(entry.getPriority(), is(0));
   }
+
+  @Test
+  public void getCallbackTimeoutMs_delegatesToMessage() {
+    InterceptMessage interceptMessage =
+        msgBuilder
+            .buildInterceptMessage(
+                UUID.randomUUID(),
+                InterceptType.BEFORE,
+                "com.example.Foo",
+                "bar",
+                List.of(),
+                "com.example.Callback",
+                "onIntercept")
+            .withCallbackTimeoutMs(5000L);
+
+    InterceptRequestEntry entry = new InterceptRequestEntry(interceptMessage);
+    assertThat(entry.getCallbackTimeoutMs(), is(5000L));
+  }
 }

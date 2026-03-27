@@ -29,6 +29,7 @@ import io.quasient.pal.serdes.colfer.ColferUtils;
 import io.quasient.pal.serdes.colfer.ExceptionSerdes;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -122,9 +123,6 @@ public class InterceptCallbackDispatcher {
   /** Logger instance for debugging callback dispatch operations. */
   private static final Logger logger = LoggerFactory.getLogger(InterceptCallbackDispatcher.class);
 
-  /** Timeout in milliseconds for receiving responses from synchronous callback requests. */
-  private static final int CALLBACK_RECEIVE_TIMEOUT_MS = 3000;
-
   /** The unique identifier of this peer. */
   private final UUID peerUuid;
 
@@ -139,6 +137,13 @@ public class InterceptCallbackDispatcher {
 
   /** Resolver for exception policies applied to callback exceptions. */
   private final ExceptionPolicyResolver exceptionPolicyResolver;
+
+  /**
+   * Global default timeout in milliseconds for receiving responses from synchronous callback
+   * requests. A value of 0 means no timeout (infinite wait). Can be overridden per-intercept via
+   * {@link InterceptMessage#getCallbackTimeoutMs()}.
+   */
+  private final long globalCallbackTimeoutMs;
 
   /**
    * Per-thread socket cache for synchronous callback communication. Each thread maintains its own
@@ -162,6 +167,8 @@ public class InterceptCallbackDispatcher {
    * @param messageBuilder the message builder for constructing callback messages
    * @param directoryConnectionProvider provider for accessing peer directory information
    * @param exceptionPolicyResolver resolver for exception policies applied to callback exceptions
+   * @param globalCallbackTimeoutMs the global default callback timeout in milliseconds (0 = no
+   *     timeout)
    */
   @Inject
   public InterceptCallbackDispatcher(
@@ -169,12 +176,14 @@ public class InterceptCallbackDispatcher {
       ZContext zmqContext,
       MessageBuilder messageBuilder,
       DirectoryConnectionProvider directoryConnectionProvider,
-      ExceptionPolicyResolver exceptionPolicyResolver) {
+      ExceptionPolicyResolver exceptionPolicyResolver,
+      @Named("intercept.callback.timeout.ms") long globalCallbackTimeoutMs) {
     this.peerUuid = peerUuid;
     this.zmqContext = zmqContext;
     this.messageBuilder = messageBuilder;
     this.directoryConnectionProvider = directoryConnectionProvider;
     this.exceptionPolicyResolver = exceptionPolicyResolver;
+    this.globalCallbackTimeoutMs = globalCallbackTimeoutMs;
   }
 
   /**
@@ -237,8 +246,8 @@ public class InterceptCallbackDispatcher {
     }
 
     final Socket reqSocket = zmqContext.createSocket(SocketType.REQ);
-    // set receive timeout
-    reqSocket.setReceiveTimeOut(CALLBACK_RECEIVE_TIMEOUT_MS);
+    // set initial receive timeout from global default
+    reqSocket.setReceiveTimeOut(zmqTimeoutValue(globalCallbackTimeoutMs));
 
     // get peer's address
     final PalDirectory palDirectory =
@@ -370,7 +379,9 @@ public class InterceptCallbackDispatcher {
                 peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
 
         // Send and await response
-        InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
+        long effectiveTimeout = resolveCallbackTimeout(interceptMessage);
+        InterceptCallbackResponseMessage response =
+            sendCallbackRequest(callbackPeerUuid, request, effectiveTimeout);
 
         // Process exception with policy
         Throwable callbackException =
@@ -537,7 +548,9 @@ public class InterceptCallbackDispatcher {
                 thrownException);
 
         // Send and await response
-        InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
+        long effectiveTimeout = resolveCallbackTimeout(interceptMessage);
+        InterceptCallbackResponseMessage response =
+            sendCallbackRequest(callbackPeerUuid, request, effectiveTimeout);
 
         // Process exception with policy
         Throwable callbackException =
@@ -700,21 +713,28 @@ public class InterceptCallbackDispatcher {
    *
    * @param callbackPeerUuid the UUID of the callback peer
    * @param request the callback request to send
+   * @param effectiveTimeoutMs the effective timeout in milliseconds for this request (0 = no
+   *     timeout, &gt;0 = specific timeout)
    * @return the callback response
    * @throws Exception if sending or receiving fails
    */
   private InterceptCallbackResponseMessage sendCallbackRequest(
-      UUID callbackPeerUuid, InterceptCallbackRequestMessage request) throws Exception {
+      UUID callbackPeerUuid, InterceptCallbackRequestMessage request, long effectiveTimeoutMs)
+      throws Exception {
 
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "Sending InterceptCallbackRequestMessage to peer {}: callbackId={}",
+          "Sending InterceptCallbackRequestMessage to peer {}: callbackId={}, timeoutMs={}",
           callbackPeerUuid,
-          request.getCallbackId());
+          request.getCallbackId(),
+          effectiveTimeoutMs);
     }
 
     // Get REQ socket for the callback peer
     Socket reqSocket = getConnectedReqSocketFor(callbackPeerUuid);
+
+    // Apply per-request timeout (overrides the initial socket timeout)
+    reqSocket.setReceiveTimeOut(zmqTimeoutValue(effectiveTimeoutMs));
 
     // Wrap the request in a Message and send
     Message requestMessage = messageBuilder.wrap(request);
@@ -760,6 +780,39 @@ public class InterceptCallbackDispatcher {
     }
 
     return response;
+  }
+
+  /**
+   * Maps a PAL timeout value to the corresponding ZeroMQ {@code setReceiveTimeOut} value.
+   *
+   * <p>PAL uses 0 to mean "no timeout" (infinite wait), but ZeroMQ uses -1 for infinite. PAL
+   * positive values map directly to ZeroMQ.
+   *
+   * @param palTimeoutMs PAL timeout value (0 = no timeout, &gt;0 = specific timeout in ms)
+   * @return the ZeroMQ timeout value (-1 = infinite, &gt;0 = specific timeout in ms)
+   */
+  static int zmqTimeoutValue(long palTimeoutMs) {
+    return palTimeoutMs == 0 ? -1 : (int) palTimeoutMs;
+  }
+
+  /**
+   * Resolves the effective callback timeout for a given intercept message.
+   *
+   * <p>Wire encoding: {@code 0} = defer to global (Colfer default, not marshaled), {@code -1} = no
+   * timeout, {@code >0} = specific timeout in ms.
+   *
+   * @param interceptMessage the intercept message to resolve timeout for
+   * @return the effective timeout in milliseconds (0 = no timeout, &gt;0 = specific timeout)
+   */
+  private long resolveCallbackTimeout(InterceptMessage interceptMessage) {
+    long wireValue = interceptMessage.getCallbackTimeoutMs();
+    if (wireValue == 0) {
+      return globalCallbackTimeoutMs; // 0 = defer to global (Colfer default)
+    }
+    if (wireValue == -1) {
+      return 0; // -1 on wire = no timeout (0 in PAL semantics)
+    }
+    return wireValue; // >0 = specific timeout ms
   }
 
   /**
@@ -959,7 +1012,9 @@ public class InterceptCallbackDispatcher {
           buildAroundBeforeRequest(intercept, execMessage, callbackId, DEFAULT_AROUND_TIMEOUT_MS);
 
       // Send and await response
-      InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
+      long effectiveTimeout = resolveCallbackTimeout(intercept);
+      InterceptCallbackResponseMessage response =
+          sendCallbackRequest(callbackPeerUuid, request, effectiveTimeout);
 
       // Check for exception
       if (response.getThrowException()) {
@@ -1033,7 +1088,9 @@ public class InterceptCallbackDispatcher {
               intercept, execMessage, callbackId, returnValue, isVoid, thrownException);
 
       // Send and await response
-      InterceptCallbackResponseMessage response = sendCallbackRequest(callbackPeerUuid, request);
+      long effectiveTimeout = resolveCallbackTimeout(intercept);
+      InterceptCallbackResponseMessage response =
+          sendCallbackRequest(callbackPeerUuid, request, effectiveTimeout);
 
       // Check for exception
       if (response.getThrowException()) {
@@ -1061,19 +1118,19 @@ public class InterceptCallbackDispatcher {
    * @param interceptMessage the intercept message
    * @param execMessage the execution message
    * @param callbackId the unique callback ID
-   * @param timeoutMs the timeout in milliseconds
+   * @param proceedTimeoutMs the proceed timeout in milliseconds
    * @return the callback request
    */
   private InterceptCallbackRequestMessage buildAroundBeforeRequest(
       InterceptMessage interceptMessage,
       ExecMessage execMessage,
       String callbackId,
-      int timeoutMs) {
+      int proceedTimeoutMs) {
     InterceptCallbackRequestMessage request =
         messageBuilder.buildInterceptCallbackRequest(
             peerUuid, interceptMessage, execMessage, InterceptPhase.BEFORE, null, false, null);
     request.setCallbackId(callbackId);
-    request.setTimeoutMs(timeoutMs);
+    request.setProceedTimeoutMs(proceedTimeoutMs);
     return request;
   }
 

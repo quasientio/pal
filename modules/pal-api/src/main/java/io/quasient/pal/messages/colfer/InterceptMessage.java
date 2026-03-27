@@ -67,6 +67,8 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
 
   public long ttlSeconds;
 
+  public long callbackTimeoutMs;
+
   /** Default constructor */
   public InterceptMessage() {
     init();
@@ -79,6 +81,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     clazz = "";
     callbackClass = "";
     callbackMethod = "";
+    callbackTimeoutMs = 0L;
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
@@ -191,6 +194,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
             + 2
             + 2
             + 6
+            + 10
             + 10;
     if (this.field != null) n += 1 + (long) this.field.marshalFit();
     if (this.method != null) n += 1 + (long) this.method.marshalFit();
@@ -531,6 +535,19 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         buf[i++] = (byte) x;
       }
 
+      if (this.callbackTimeoutMs != 0) {
+        long x = this.callbackTimeoutMs;
+        if (x < 0) {
+          x = -x;
+          buf[i++] = (byte) (13 | 0x80);
+        } else buf[i++] = (byte) 13;
+        for (int n = 0; n < 8 && (x & ~0x7fL) != 0; n++) {
+          buf[i++] = (byte) (x | 0x80);
+          x >>>= 7;
+        }
+        buf[i++] = (byte) x;
+      }
+
       buf[i++] = (byte) 0x7f;
       return i;
     } catch (ArrayIndexOutOfBoundsException e) {
@@ -749,6 +766,32 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         header = buf[i++];
       }
 
+      if (header == (byte) 13) {
+        long x = 0;
+        for (int shift = 0; true; shift += 7) {
+          byte b = buf[i++];
+          if (shift == 56 || b >= 0) {
+            x |= (b & 0xffL) << shift;
+            break;
+          }
+          x |= (b & 0x7fL) << shift;
+        }
+        this.callbackTimeoutMs = x;
+        header = buf[i++];
+      } else if (header == (byte) (13 | 0x80)) {
+        long x = 0;
+        for (int shift = 0; true; shift += 7) {
+          byte b = buf[i++];
+          if (shift == 56 || b >= 0) {
+            x |= (b & 0xffL) << shift;
+            break;
+          }
+          x |= (b & 0x7fL) << shift;
+        }
+        this.callbackTimeoutMs = -x;
+        header = buf[i++];
+      }
+
       if (header != (byte) 0x7f)
         throw new InputMismatchException(format("colfer: unknown header at byte %d", i - 1));
     } finally {
@@ -766,7 +809,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 13L;
+  private static final long serialVersionUID = 14L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -1168,6 +1211,35 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     return this;
   }
 
+  /**
+   * Gets io.quasient.pal.messages/colfer.InterceptMessage.callbackTimeoutMs.
+   *
+   * @return the value.
+   */
+  public long getCallbackTimeoutMs() {
+    return this.callbackTimeoutMs;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.InterceptMessage.callbackTimeoutMs.
+   *
+   * @param value the replacement.
+   */
+  public void setCallbackTimeoutMs(long value) {
+    this.callbackTimeoutMs = value;
+  }
+
+  /**
+   * Sets io.quasient.pal.messages/colfer.InterceptMessage.callbackTimeoutMs.
+   *
+   * @param value the replacement.
+   * @return {@code this}.
+   */
+  public InterceptMessage withCallbackTimeoutMs(long value) {
+    this.callbackTimeoutMs = value;
+    return this;
+  }
+
   @Override
   public final int hashCode() {
     int h = 1;
@@ -1184,6 +1256,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     h = 31 * h + (this.checkedExceptionPolicy & 0xff);
     h = 31 * h + this.priority;
     h = 31 * h + (int) (this.ttlSeconds ^ this.ttlSeconds >>> 32);
+    h = 31 * h + (int) (this.callbackTimeoutMs ^ this.callbackTimeoutMs >>> 32);
     return h;
   }
 
@@ -1212,7 +1285,8 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         && this.exceptionPropagationPolicy == o.exceptionPropagationPolicy
         && this.checkedExceptionPolicy == o.checkedExceptionPolicy
         && this.priority == o.priority
-        && this.ttlSeconds == o.ttlSeconds;
+        && this.ttlSeconds == o.ttlSeconds
+        && this.callbackTimeoutMs == o.callbackTimeoutMs;
   }
 
   @Override
@@ -1272,6 +1346,10 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         this.ttlSeconds = json.get("ttlSeconds").getAsLong();
       }
 
+      if (json.has("callbackTimeoutMs")) {
+        this.callbackTimeoutMs = json.get("callbackTimeoutMs").getAsLong();
+      }
+
     } catch (Exception e) {
       throw new JsonParseException("Error deserializing json object: " + e.getMessage(), e);
     }
@@ -1292,5 +1370,6 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     this.checkedExceptionPolicy = (byte) 0;
     this.priority = 0;
     this.ttlSeconds = 0L;
+    this.callbackTimeoutMs = 0L;
   }
 }

@@ -46,6 +46,7 @@ type InterceptMessage struct {
 	checkedExceptionPolicy     uint8 // 255 = null (defer to global), 0-2 = enum ordinal
 	priority                   int32
 	ttlSeconds                 int64
+	callbackTimeoutMs          int64 // -1 = defer to global, 0 = no timeout, >0 = ms
 }
 
 type InterceptKeyMessage struct {
@@ -101,9 +102,10 @@ type InterceptCallbackRequestMessage struct {
 	isVoid          bool            // Whether operation returns void
 	thrownException RaisedThrowable // If operation threw exception
 
-	// AROUND intercepts only: timeout for proceed() in milliseconds
-	// Set by interceptable peer; interceptor should complete within this time
-	timeoutMs uint32
+	// AROUND intercepts only: timeout for proceed() in milliseconds.
+	// Controls how long the callback peer waits in proceed() for the intercepted
+	// peer to execute the original method and return the result.
+	proceedTimeoutMs uint32
 }
 
 /**

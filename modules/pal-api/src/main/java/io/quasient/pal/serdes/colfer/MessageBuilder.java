@@ -2525,7 +2525,13 @@ public final class MessageBuilder {
           .withExceptionPropagationPolicy(exceptionPropagationPolicyByte)
           .withCheckedExceptionPolicy(checkedExceptionPolicyByte)
           .withPriority(intercept.getPriority())
-          .withTtlSeconds(intercept.getTtlSeconds());
+          .withTtlSeconds(intercept.getTtlSeconds())
+          .withCallbackTimeoutMs(
+              intercept.getCallbackTimeoutMs() == null
+                  ? 0L
+                  : intercept.getCallbackTimeoutMs() == 0L
+                      ? -1L
+                      : intercept.getCallbackTimeoutMs());
     }
 
     return new InterceptMessage()
@@ -2547,7 +2553,9 @@ public final class MessageBuilder {
         .withExceptionPropagationPolicy(exceptionPropagationPolicyByte)
         .withCheckedExceptionPolicy(checkedExceptionPolicyByte)
         .withPriority(intercept.getPriority())
-        .withTtlSeconds(intercept.getTtlSeconds());
+        .withTtlSeconds(intercept.getTtlSeconds())
+        .withCallbackTimeoutMs(
+            intercept.getCallbackTimeoutMs() != null ? intercept.getCallbackTimeoutMs() : -1L);
   }
 
   /**

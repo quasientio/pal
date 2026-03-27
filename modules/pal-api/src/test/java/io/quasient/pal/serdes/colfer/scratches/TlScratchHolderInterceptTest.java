@@ -68,7 +68,7 @@ public class TlScratchHolderInterceptTest {
     assertThat(icbr.getReturnValueRef(), is(0));
     assertThat(icbr.getIsVoid(), is(false));
     assertThat(icbr.getThrownException(), is(nullValue()));
-    assertThat(icbr.getTimeoutMs(), is(0));
+    assertThat(icbr.getProceedTimeoutMs(), is(0));
   }
 
   /**
@@ -112,7 +112,7 @@ public class TlScratchHolderInterceptTest {
     icbr.setReturnValueRef(42);
     icbr.setIsVoid(true);
     icbr.setThrownException(new RaisedThrowable());
-    icbr.setTimeoutMs(5000);
+    icbr.setProceedTimeoutMs(5000);
 
     // When: TlScratchHolder.icbr() called again
     InterceptCallbackRequestMessage resetIcbr = TlScratchHolder.icbr();
@@ -131,7 +131,7 @@ public class TlScratchHolderInterceptTest {
     assertThat(resetIcbr.getReturnValueRef(), is(0));
     assertThat(resetIcbr.getIsVoid(), is(false));
     assertThat(resetIcbr.getThrownException(), is(nullValue()));
-    assertThat(resetIcbr.getTimeoutMs(), is(0));
+    assertThat(resetIcbr.getProceedTimeoutMs(), is(0));
   }
 
   /**
@@ -181,7 +181,7 @@ public class TlScratchHolderInterceptTest {
     outer.setInterceptedPeer("outer-peer-uuid");
     outer.setCallbackClass("com.example.OuterHandler");
     outer.setCallbackMethod("onAfter");
-    outer.setTimeoutMs(3000);
+    outer.setProceedTimeoutMs(3000);
 
     // When: Another TlScratchHolder.icbr() call occurs on the same thread
     //       (simulating a nested dispatch that needs its own
@@ -196,6 +196,6 @@ public class TlScratchHolderInterceptTest {
     assertThat(outer.getInterceptedPeer(), is(""));
     assertThat(outer.getCallbackClass(), is(""));
     assertThat(outer.getCallbackMethod(), is(""));
-    assertThat(outer.getTimeoutMs(), is(0));
+    assertThat(outer.getProceedTimeoutMs(), is(0));
   }
 }

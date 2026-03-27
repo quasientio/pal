@@ -445,6 +445,7 @@ public class DispatchBenchmarkInterceptVariantTest {
     props.setProperty("sync.ready", syncReadyAddress);
     props.setProperty("intercepts.reg", interceptRegAddress);
     props.setProperty("intercept.drain.timeout.ms", "5000");
+    props.setProperty("intercept.callback.timeout.ms", "3000");
     props.setProperty("paldir_url", PalDirectory.NO_URL);
     props.setProperty("messages.with_src_context", "false");
 

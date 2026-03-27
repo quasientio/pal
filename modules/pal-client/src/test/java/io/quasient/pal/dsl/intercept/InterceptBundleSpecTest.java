@@ -29,7 +29,7 @@ public class InterceptBundleSpecTest {
   public void builder_setsAllFields() {
     // Given: An InterceptBundleSpec builder with name, defaults, and 2 intercept specs
     InterceptBundleDefaults defaults =
-        new InterceptBundleDefaults("peer-1", 5, Duration.ofMinutes(1), true, null, null);
+        new InterceptBundleDefaults("peer-1", 5, Duration.ofMinutes(1), true, null, null, null);
 
     InterceptSpec spec1 =
         InterceptSpec.builder()

@@ -48,7 +48,7 @@ import org.junit.runners.Parameterized;
  *   <li>Intercept type is AROUND
  *   <li>Two callbacks sent: BEFORE phase + AFTER phase
  *   <li>Both phases have same callbackId for correlation
- *   <li>timeoutMs field is set (> 0) on BEFORE phase
+ *   <li>proceedTimeoutMs field is set (> 0) on BEFORE phase
  * </ul>
  *
  * <p>Tests are parameterized to run through both invocation paths:
@@ -96,7 +96,7 @@ public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
    *   <li>Second callback is AFTER phase with field value
    *   <li>Both have same callbackId (correlating the phases)
    *   <li>Intercept type is AROUND
-   *   <li>timeoutMs is set (> 0) on BEFORE phase
+   *   <li>proceedTimeoutMs is set (> 0) on BEFORE phase
    * </ul>
    */
   @Test
@@ -187,8 +187,8 @@ public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
         is(InterceptPhase.BEFORE.toByte()));
 
     assertThat(
-        "timeoutMs should be set (> 0) for AROUND BEFORE phase",
-        beforeReq.getTimeoutMs(),
+        "proceedTimeoutMs should be set (> 0) for AROUND BEFORE phase",
+        beforeReq.getProceedTimeoutMs(),
         is(greaterThan(0)));
 
     String beforeCallbackId = beforeReq.getCallbackId();
@@ -264,7 +264,7 @@ public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
    *   <li>Second callback is AFTER phase with PUT_DONE info
    *   <li>Both have same callbackId (correlating the phases)
    *   <li>Intercept type is AROUND
-   *   <li>timeoutMs is set (> 0) on BEFORE phase
+   *   <li>proceedTimeoutMs is set (> 0) on BEFORE phase
    * </ul>
    */
   @Test
@@ -356,8 +356,8 @@ public class StaticFieldAroundCallbackIT extends AbstractInterceptIT {
         is(InterceptPhase.BEFORE.toByte()));
 
     assertThat(
-        "timeoutMs should be set (> 0) for AROUND BEFORE phase",
-        beforeReq.getTimeoutMs(),
+        "proceedTimeoutMs should be set (> 0) for AROUND BEFORE phase",
+        beforeReq.getProceedTimeoutMs(),
         is(greaterThan(0)));
 
     String beforeCallbackId = beforeReq.getCallbackId();

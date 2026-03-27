@@ -30,6 +30,7 @@ import io.quasient.pal.intercept.endtoend.method.AfterMethodCallbackIT;
 import io.quasient.pal.intercept.endtoend.method.AroundMethodCallbackIT;
 import io.quasient.pal.intercept.endtoend.method.BeforeMethodAsyncCallbackIT;
 import io.quasient.pal.intercept.endtoend.method.BeforeMethodCallbackIT;
+import io.quasient.pal.intercept.endtoend.timeout.CallbackTimeoutIT;
 import io.quasient.pal.intercept.exception.ExceptionHandlingIT;
 import io.quasient.pal.intercept.local.combined.LocalAndRemoteCombinedIT;
 import io.quasient.pal.intercept.order.InterceptExecutionOrderIT;
@@ -131,7 +132,10 @@ import org.slf4j.LoggerFactory;
   ImmediateActivationIT.class,
 
   // Exception handling tests (API misuse, business exceptions, policies)
-  ExceptionHandlingIT.class
+  ExceptionHandlingIT.class,
+
+  // Callback timeout tests (global vs per-intercept timeout overrides)
+  CallbackTimeoutIT.class
 })
 public class InterceptEndToEndTestSuite extends AbstractIntegrationTest {
 

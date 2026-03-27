@@ -10,6 +10,7 @@
 package io.quasient.pal.dsl.intercept;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -250,7 +251,7 @@ public class InterceptSpecTest {
             .build();
 
     InterceptBundleDefaults defaults =
-        new InterceptBundleDefaults(null, 5, Duration.ofSeconds(60), null, null, null);
+        new InterceptBundleDefaults(null, 5, Duration.ofSeconds(60), null, null, null, null);
 
     UUID interceptUuid = UUID.randomUUID();
     UUID peerUuid = UUID.randomUUID();
@@ -278,7 +279,8 @@ public class InterceptSpecTest {
             .priorityOverride(10)
             .build();
 
-    InterceptBundleDefaults defaults = new InterceptBundleDefaults(null, 5, null, null, null, null);
+    InterceptBundleDefaults defaults =
+        new InterceptBundleDefaults(null, 5, null, null, null, null, null);
 
     UUID interceptUuid = UUID.randomUUID();
     UUID peerUuid = UUID.randomUUID();
@@ -289,5 +291,104 @@ public class InterceptSpecTest {
 
     // Then: The returned InterceptRequest has priority=10 (override wins)
     assertThat(request.getPriority(), is(10));
+  }
+
+  @Test
+  public void builder_callbackTimeoutOverride_setsCorrectly() {
+    // Given: An InterceptSpec builder with callbackTimeoutOverride set to 5 seconds
+    InterceptSpec spec =
+        InterceptSpec.builder()
+            .targetClass("com.acme.Foo")
+            .targetName("bar")
+            .type(InterceptType.BEFORE)
+            .callbackClass("com.acme.Cb")
+            .callbackMethod("onBar")
+            .callbackTimeoutOverride(Duration.ofSeconds(5))
+            .build();
+
+    // Then: getCallbackTimeoutOverride() returns the correct Duration
+    assertThat(spec.getCallbackTimeoutOverride(), is(Duration.ofSeconds(5)));
+  }
+
+  @Test
+  public void toInterceptRequest_callbackTimeoutFromOverride_resolvesCorrectly() {
+    // Given: An InterceptSpec with callbackTimeoutOverride = 5000ms
+    //        and defaults with no callbackTimeout
+    InterceptSpec spec =
+        InterceptSpec.builder()
+            .targetClass("com.acme.Foo")
+            .targetName("bar")
+            .type(InterceptType.BEFORE)
+            .callbackClass("com.acme.Cb")
+            .callbackMethod("onBar")
+            .callbackTimeoutOverride(Duration.ofSeconds(5))
+            .build();
+
+    InterceptBundleDefaults defaults =
+        new InterceptBundleDefaults(null, null, null, null, null, null, null);
+
+    UUID interceptUuid = UUID.randomUUID();
+    UUID peerUuid = UUID.randomUUID();
+
+    // When: toInterceptRequest is called
+    InterceptRequest<? extends Interceptable> request =
+        spec.toInterceptRequest(interceptUuid, peerUuid, defaults);
+
+    // Then: The returned InterceptRequest has callbackTimeoutMs = 5000
+    assertThat(request.getCallbackTimeoutMs(), is(5000L));
+  }
+
+  @Test
+  public void toInterceptRequest_callbackTimeoutFromDefaults_resolvesCorrectly() {
+    // Given: An InterceptSpec with no callbackTimeoutOverride
+    //        and defaults with callbackTimeout = 3 seconds
+    InterceptSpec spec =
+        InterceptSpec.builder()
+            .targetClass("com.acme.Foo")
+            .targetName("bar")
+            .type(InterceptType.BEFORE)
+            .callbackClass("com.acme.Cb")
+            .callbackMethod("onBar")
+            .build();
+
+    InterceptBundleDefaults defaults =
+        new InterceptBundleDefaults(null, null, null, null, null, null, Duration.ofSeconds(3));
+
+    UUID interceptUuid = UUID.randomUUID();
+    UUID peerUuid = UUID.randomUUID();
+
+    // When: toInterceptRequest is called
+    InterceptRequest<? extends Interceptable> request =
+        spec.toInterceptRequest(interceptUuid, peerUuid, defaults);
+
+    // Then: The returned InterceptRequest has callbackTimeoutMs = 3000
+    assertThat(request.getCallbackTimeoutMs(), is(3000L));
+  }
+
+  @Test
+  public void toInterceptRequest_callbackTimeoutAbsent_isNull() {
+    // Given: An InterceptSpec with no callbackTimeoutOverride
+    //        and defaults with no callbackTimeout
+    InterceptSpec spec =
+        InterceptSpec.builder()
+            .targetClass("com.acme.Foo")
+            .targetName("bar")
+            .type(InterceptType.BEFORE)
+            .callbackClass("com.acme.Cb")
+            .callbackMethod("onBar")
+            .build();
+
+    InterceptBundleDefaults defaults =
+        new InterceptBundleDefaults(null, null, null, null, null, null, null);
+
+    UUID interceptUuid = UUID.randomUUID();
+    UUID peerUuid = UUID.randomUUID();
+
+    // When: toInterceptRequest is called
+    InterceptRequest<? extends Interceptable> request =
+        spec.toInterceptRequest(interceptUuid, peerUuid, defaults);
+
+    // Then: The returned InterceptRequest has callbackTimeoutMs = null
+    assertThat(request.getCallbackTimeoutMs(), is(nullValue()));
   }
 }

@@ -1114,7 +1114,7 @@ public class IncomingInterceptCallbackDispatcherTest {
 
     // Create mock socket accessor that simulates successful proceed
     AroundSocketAccessor socketAccessor =
-        (beforeResponse, timeoutMs) ->
+        (beforeResponse, proceedTimeoutMs) ->
             new AfterPhaseData("proceed-result", null, false); // successful return
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
@@ -1124,7 +1124,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setInterceptedPeer("peer-uuid");
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
-    request.setTimeoutMs(5000);
+    request.setProceedTimeoutMs(5000);
 
     InterceptCallbackResponseMessage response =
         dispatcher.handleAroundCallback(request, socketAccessor);
@@ -1158,7 +1158,7 @@ public class IncomingInterceptCallbackDispatcherTest {
 
     // Socket accessor should not be called since we skip
     AroundSocketAccessor socketAccessor =
-        (beforeResponse, timeoutMs) -> {
+        (beforeResponse, proceedTimeoutMs) -> {
           fail("Socket accessor should not be called when skipping");
           return null;
         };
@@ -1170,7 +1170,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setInterceptedPeer("peer-uuid");
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
-    request.setTimeoutMs(5000);
+    request.setProceedTimeoutMs(5000);
 
     InterceptCallbackResponseMessage response =
         dispatcher.handleAroundCallback(request, socketAccessor);
@@ -1204,7 +1204,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     dispatcher.registerCallback("around-callback", callback);
 
     AroundSocketAccessor socketAccessor =
-        (beforeResponse, timeoutMs) -> {
+        (beforeResponse, proceedTimeoutMs) -> {
           fail("Socket accessor should not be called when skipping");
           return null;
         };
@@ -1216,7 +1216,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setInterceptedPeer("peer-uuid");
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
-    request.setTimeoutMs(5000);
+    request.setProceedTimeoutMs(5000);
 
     InterceptCallbackResponseMessage response =
         dispatcher.handleAroundCallback(request, socketAccessor);
@@ -1249,7 +1249,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     dispatcher.registerCallback("around-callback", callback);
 
     AroundSocketAccessor socketAccessor =
-        (beforeResponse, timeoutMs) -> {
+        (beforeResponse, proceedTimeoutMs) -> {
           fail("Socket accessor should not be called when skipping");
           return null;
         };
@@ -1261,7 +1261,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setInterceptedPeer("peer-uuid");
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
-    request.setTimeoutMs(5000);
+    request.setProceedTimeoutMs(5000);
 
     InterceptCallbackResponseMessage response =
         dispatcher.handleAroundCallback(request, socketAccessor);
@@ -1289,7 +1289,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     dispatcher.registerCallback("around-callback", callback);
 
     AroundSocketAccessor socketAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData("original-result", null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData("original-result", null, false);
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-around");
@@ -1298,7 +1298,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setInterceptedPeer("peer-uuid");
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
-    request.setTimeoutMs(5000);
+    request.setProceedTimeoutMs(5000);
 
     InterceptCallbackResponseMessage response =
         dispatcher.handleAroundCallback(request, socketAccessor);
@@ -1324,7 +1324,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     dispatcher.registerCallback("around-callback", callback);
 
     AroundSocketAccessor socketAccessor =
-        (beforeResponse, timeoutMs) -> new AfterPhaseData("result", null, false);
+        (beforeResponse, proceedTimeoutMs) -> new AfterPhaseData("result", null, false);
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
     request.setCallbackId("req-around");
@@ -1333,7 +1333,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setInterceptedPeer("peer-uuid");
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
-    request.setTimeoutMs(5000);
+    request.setProceedTimeoutMs(5000);
 
     InterceptCallbackResponseMessage response =
         dispatcher.handleAroundCallback(request, socketAccessor);

@@ -1622,4 +1622,221 @@ public class MessageBuilderTest {
   }
 
   // </editor-fold>
+
+  // <editor-fold desc="InterceptMessage with callbackTimeoutMs">
+
+  /**
+   * Tests that a null callbackTimeoutMs on InterceptRequest maps to 0L on InterceptMessage.
+   *
+   * <p>The value 0L is the Colfer default (skipped during marshal), meaning "defer to global
+   * timeout" — on unmarshal, init() sets 0L, which resolveCallbackTimeout() interprets as "use
+   * global".
+   */
+  @Test
+  public void buildInterceptMessage_callbackTimeoutNull_mapsToZero() {
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptableMethodCall interceptable =
+        new InterceptableMethodCall("testMethod", List.of("java.lang.String"));
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            InterceptType.BEFORE,
+            "com.example.TestClass",
+            "com.example.CallbackClass",
+            "callbackMethod",
+            interceptable,
+            false,
+            null,
+            null,
+            0,
+            0L,
+            null);
+
+    InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
+
+    assertEquals(0L, interceptMessage.getCallbackTimeoutMs());
+  }
+
+  /**
+   * Tests that a zero callbackTimeoutMs on InterceptRequest maps to -1L on InterceptMessage.
+   *
+   * <p>A value of 0L at PAL level means "no timeout" (infinite wait), which maps to -1L on the wire
+   * to avoid Colfer's zero-value optimization that would skip serializing the field.
+   */
+  @Test
+  public void buildInterceptMessage_callbackTimeoutZero_mapsToMinusOne() {
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptableMethodCall interceptable =
+        new InterceptableMethodCall("testMethod", List.of("java.lang.String"));
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            InterceptType.BEFORE,
+            "com.example.TestClass",
+            "com.example.CallbackClass",
+            "callbackMethod",
+            interceptable,
+            false,
+            null,
+            null,
+            0,
+            0L,
+            0L);
+
+    InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
+
+    assertEquals(-1L, interceptMessage.getCallbackTimeoutMs());
+  }
+
+  /**
+   * Tests that a positive callbackTimeoutMs on InterceptRequest maps directly on InterceptMessage.
+   */
+  @Test
+  public void buildInterceptMessage_callbackTimeoutPositive_mapsDirectly() {
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptableMethodCall interceptable =
+        new InterceptableMethodCall("testMethod", List.of("java.lang.String"));
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            InterceptType.BEFORE,
+            "com.example.TestClass",
+            "com.example.CallbackClass",
+            "callbackMethod",
+            interceptable,
+            false,
+            null,
+            null,
+            0,
+            0L,
+            5000L);
+
+    InterceptMessage interceptMessage = messageBuilder.buildInterceptMessage(interceptRequest);
+
+    assertEquals(5000L, interceptMessage.getCallbackTimeoutMs());
+  }
+
+  // </editor-fold>
+
+  // <editor-fold desc="InterceptMessage callbackTimeoutMs round-trip (marshal/unmarshal)">
+
+  /**
+   * Tests that a null callbackTimeoutMs survives the full round-trip: InterceptRequest →
+   * MessageBuilder → Colfer marshal → Colfer unmarshal. The unmarshaled value should resolve to
+   * "defer to global" (wire value 0, the Colfer default for int64).
+   */
+  @Test
+  public void callbackTimeoutNull_roundTrip_survivesColferMarshal() {
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptableMethodCall interceptable =
+        new InterceptableMethodCall("testMethod", List.of("java.lang.String"));
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            InterceptType.BEFORE,
+            "com.example.TestClass",
+            "com.example.CallbackClass",
+            "callbackMethod",
+            interceptable,
+            false,
+            null,
+            null,
+            0,
+            0L,
+            null);
+
+    InterceptMessage original = messageBuilder.buildInterceptMessage(interceptRequest);
+    byte[] buf = new byte[original.marshalFit()];
+    int len = original.marshal(buf, 0);
+
+    InterceptMessage deserialized = new InterceptMessage();
+    deserialized.unmarshal(buf, 0, len);
+
+    // 0 on wire = defer to global (Colfer skips 0, init() sets 0)
+    assertEquals(0L, deserialized.getCallbackTimeoutMs());
+  }
+
+  /**
+   * Tests that callbackTimeoutMs=0 (no timeout / infinite wait) survives the full round-trip. This
+   * is the critical case: Colfer's zero-value optimization skips int64 fields equal to 0, so "no
+   * timeout" must be encoded as -1 on the wire to survive marshal/unmarshal.
+   */
+  @Test
+  public void callbackTimeoutZero_roundTrip_survivesColferMarshal() {
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptableMethodCall interceptable =
+        new InterceptableMethodCall("testMethod", List.of("java.lang.String"));
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            InterceptType.BEFORE,
+            "com.example.TestClass",
+            "com.example.CallbackClass",
+            "callbackMethod",
+            interceptable,
+            false,
+            null,
+            null,
+            0,
+            0L,
+            0L);
+
+    InterceptMessage original = messageBuilder.buildInterceptMessage(interceptRequest);
+    byte[] buf = new byte[original.marshalFit()];
+    int len = original.marshal(buf, 0);
+
+    InterceptMessage deserialized = new InterceptMessage();
+    deserialized.unmarshal(buf, 0, len);
+
+    // -1 on wire = no timeout; must NOT be 0 (which Colfer would silently drop)
+    assertEquals(-1L, deserialized.getCallbackTimeoutMs());
+  }
+
+  /**
+   * Tests that a positive callbackTimeoutMs survives the full round-trip through Colfer
+   * marshal/unmarshal without loss.
+   */
+  @Test
+  public void callbackTimeoutPositive_roundTrip_survivesColferMarshal() {
+    UUID uuid = UUID.randomUUID();
+    UUID peer = UUID.randomUUID();
+    InterceptableMethodCall interceptable =
+        new InterceptableMethodCall("testMethod", List.of("java.lang.String"));
+    InterceptRequest<InterceptableMethodCall> interceptRequest =
+        new InterceptRequest<>(
+            uuid,
+            peer,
+            InterceptType.BEFORE,
+            "com.example.TestClass",
+            "com.example.CallbackClass",
+            "callbackMethod",
+            interceptable,
+            false,
+            null,
+            null,
+            0,
+            0L,
+            5000L);
+
+    InterceptMessage original = messageBuilder.buildInterceptMessage(interceptRequest);
+    byte[] buf = new byte[original.marshalFit()];
+    int len = original.marshal(buf, 0);
+
+    InterceptMessage deserialized = new InterceptMessage();
+    deserialized.unmarshal(buf, 0, len);
+
+    assertEquals(5000L, deserialized.getCallbackTimeoutMs());
+  }
+
+  // </editor-fold>
 }

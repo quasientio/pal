@@ -60,8 +60,8 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
  */
 public class InterceptBundleParser {
 
-  /** Pattern for duration strings: digits followed by s, m, h, or d. */
-  private static final Pattern DURATION_PATTERN = Pattern.compile("(\\d+)([smhd])");
+  /** Pattern for duration strings: digits followed by ms, s, m, h, or d. */
+  private static final Pattern DURATION_PATTERN = Pattern.compile("(\\d+)(ms|[smhd])");
 
   /**
    * Parses the given YAML content into an {@link InterceptBundleSpec}.
@@ -134,9 +134,19 @@ public class InterceptBundleParser {
             ? CheckedExceptionPolicy.valueOf(
                 String.valueOf(map.get("checkedExceptionPolicy")).toUpperCase(Locale.ROOT))
             : null;
+    Duration callbackTimeout =
+        map.containsKey("callbackTimeout")
+            ? parseDuration(String.valueOf(map.get("callbackTimeout")))
+            : null;
 
     return new InterceptBundleDefaults(
-        peer, priority, ttl, forceImmediate, exceptionPolicy, checkedExceptionPolicy);
+        peer,
+        priority,
+        ttl,
+        forceImmediate,
+        exceptionPolicy,
+        checkedExceptionPolicy,
+        callbackTimeout);
   }
 
   /**
@@ -260,15 +270,19 @@ public class InterceptBundleParser {
           CheckedExceptionPolicy.valueOf(
               String.valueOf(map.get("checkedExceptionPolicy")).toUpperCase(Locale.ROOT)));
     }
+    if (map.containsKey("callbackTimeout")) {
+      builder.callbackTimeoutOverride(parseDuration(String.valueOf(map.get("callbackTimeout"))));
+    }
 
     return builder.build();
   }
 
   /**
-   * Parses a duration string in the format {@code (\d+)([smhd])}.
+   * Parses a duration string in the format {@code (\d+)(ms|[smhd])}.
    *
-   * <p>Supported suffixes: {@code s} (seconds), {@code m} (minutes), {@code h} (hours), {@code d}
-   * (days). The special value {@code 0} or {@code 0s} yields {@link Duration#ZERO}.
+   * <p>Supported suffixes: {@code ms} (milliseconds), {@code s} (seconds), {@code m} (minutes),
+   * {@code h} (hours), {@code d} (days). The special value {@code 0} or {@code 0s} yields {@link
+   * Duration#ZERO}.
    *
    * @param value the duration string
    * @return the parsed duration
@@ -284,11 +298,12 @@ public class InterceptBundleParser {
           "Invalid duration format: '"
               + value
               + "'"
-              + " (expected format: <digits><s|m|h|d>, e.g. '30s', '5m', '1h', '1d')");
+              + " (expected format: <digits><ms|s|m|h|d>, e.g. '500ms', '30s', '5m', '1h', '1d')");
     }
     long amount = Long.parseLong(matcher.group(1));
     String unit = matcher.group(2);
     return switch (unit) {
+      case "ms" -> Duration.ofMillis(amount);
       case "s" -> Duration.ofSeconds(amount);
       case "m" -> Duration.ofMinutes(amount);
       case "h" -> Duration.ofHours(amount);

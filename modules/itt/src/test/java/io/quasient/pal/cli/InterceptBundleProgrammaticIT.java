@@ -83,7 +83,7 @@ public class InterceptBundleProgrammaticIT extends AbstractCliIT {
 
     // Build a bundle programmatically using the builder API
     InterceptBundleDefaults defaults =
-        new InterceptBundleDefaults(peerName, null, null, null, null, null);
+        new InterceptBundleDefaults(peerName, null, null, null, null, null, null);
 
     InterceptBundleSpec bundle =
         InterceptBundleSpec.builder(bundleName)
@@ -161,7 +161,7 @@ public class InterceptBundleProgrammaticIT extends AbstractCliIT {
 
     InterceptBundleSpec bundle =
         InterceptBundleSpec.builder(bundleName)
-            .defaults(new InterceptBundleDefaults(peerName, null, null, null, null, null))
+            .defaults(new InterceptBundleDefaults(peerName, null, null, null, null, null, null))
             .addIntercept(
                 InterceptSpec.builder()
                     .targetClass("com.acme.OrderService")
@@ -204,7 +204,7 @@ public class InterceptBundleProgrammaticIT extends AbstractCliIT {
 
     InterceptBundleSpec bundle =
         InterceptBundleSpec.builder(bundleName)
-            .defaults(new InterceptBundleDefaults(peerName, null, null, null, null, null))
+            .defaults(new InterceptBundleDefaults(peerName, null, null, null, null, null, null))
             .addIntercept(
                 InterceptSpec.builder()
                     .targetClass("com.acme.OrderService")
@@ -264,7 +264,7 @@ public class InterceptBundleProgrammaticIT extends AbstractCliIT {
 
     InterceptBundleSpec bundle =
         InterceptBundleSpec.builder(bundleName)
-            .defaults(new InterceptBundleDefaults(peerName, null, null, null, null, null))
+            .defaults(new InterceptBundleDefaults(peerName, null, null, null, null, null, null))
             .addIntercept(
                 InterceptSpec.builder()
                     .targetClass("com.acme.OrderService")

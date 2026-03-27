@@ -1844,6 +1844,7 @@ pal log print -d localhost:2379 bench-wal --compact | grep -E "method=process"
 - `PAL_CLI_LOGGING_CONFIG` - Custom CLI logging configuration file
 - `IN_FLIGHT_TRACKING` - Enable in-flight dispatch tracking for safe intercept activation (default: `true`)
 - `DRAIN_TIMEOUT_MS` - Timeout in milliseconds for drain operations during intercept activation (default: `5000`)
+- `CALLBACK_TIMEOUT_MS` - Default timeout for intercept callback responses in milliseconds (default: `3000`). A value of `0` means no timeout (infinite wait). Can be overridden per-intercept via intercept bundles
 
 ---
 

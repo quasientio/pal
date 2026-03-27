@@ -210,6 +210,18 @@ public class InterceptRequestEntry {
   }
 
   /**
+   * Returns the callback timeout in milliseconds from the underlying intercept message.
+   *
+   * <p>A value of {@code -1} means defer to the global peer configuration. {@code 0} means no
+   * timeout (infinite wait). Positive values specify a per-intercept timeout in milliseconds.
+   *
+   * @return the callback timeout in milliseconds
+   */
+  public long getCallbackTimeoutMs() {
+    return interceptMessage.getCallbackTimeoutMs();
+  }
+
+  /**
    * Retrieves the intercept message associated with this interception entry.
    *
    * @return the intercept message detailing the intercepted class member
