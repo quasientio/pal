@@ -25,10 +25,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Class loader that notifies ClassLoaderListeners when a class is loaded. The notification is done
  * asynchronously using CompletableFuture and a thread pool. It synchronizes the completion of class
- * loading with the start of the annotation processing (or whatever else task listeners may do)
- * while still leveraging the benefits of asynchronous execution for the listener processing step.
- * The use of join() here is crucial for maintaining the correct order of operations in a concurrent
- * and asynchronous environment.
+ * loading with the start of listener processing while still leveraging the benefits of asynchronous
+ * execution for the listener processing step. The use of join() here is crucial for maintaining the
+ * correct order of operations in a concurrent and asynchronous environment.
  */
 public class CustomClassloader extends URLClassLoader {
   /** List of registered listeners to be notified after a class is loaded. */
@@ -127,8 +126,7 @@ public class CustomClassloader extends URLClassLoader {
    * Registers a {@code ClassLoaderListener} to receive notifications after successful class
    * loading.
    *
-   * <p>Registered listeners can perform additional processing (such as annotation handling) once
-   * the class has been loaded.
+   * <p>Registered listeners can perform additional processing once the class has been loaded.
    *
    * @param listener the listener instance to register; must not be null
    */

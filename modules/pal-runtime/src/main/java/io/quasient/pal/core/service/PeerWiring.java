@@ -13,7 +13,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -26,8 +25,6 @@ import io.quasient.pal.common.replay.WalReader;
 import io.quasient.pal.common.runtime.DispatchForwarder;
 import io.quasient.pal.common.runtime.ProxyDispatcher;
 import io.quasient.pal.common.runtime.ThreadAffinity;
-import io.quasient.pal.core.annotations.AnnotationProcessor;
-import io.quasient.pal.core.annotations.AnnotationsProcessor;
 import io.quasient.pal.core.dispatcher.InterceptAsyncThreadFactory;
 import io.quasient.pal.core.execution.JavaFxInvocationExecutor;
 import io.quasient.pal.core.execution.ThreadAffinityDispatcher;
@@ -218,16 +215,6 @@ public class PeerWiring extends AbstractModule {
 
     // Chronicle path may be chosen in the @Provides method; make sure its interface is bound.
     bind(ChronicleQueueFactory.class).to(DefaultChronicleQueueFactory.class);
-
-    // Ensure AnnotationsProcessor is a singleton (in addition to any annotation used).
-    bind(AnnotationsProcessor.class).asEagerSingleton();
-
-    // Contribute implementations to the AnnotationProcessor set. Example:
-    @SuppressWarnings("unused")
-    Multibinder<AnnotationProcessor> unused =
-        Multibinder.newSetBinder(binder(), AnnotationProcessor.class);
-    // Register an existing processor:
-    // setBinder.addBinding().to(InterceptAnnotationProcessor.class);
 
     // common and cxn library classes are not annotated with @Singleton
     bind(ObjectLookupStore.class)

@@ -30,7 +30,6 @@ import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.common.replay.WalIndex;
 import io.quasient.pal.common.util.Strings;
-import io.quasient.pal.core.annotations.AnnotationsProcessor;
 import io.quasient.pal.core.dispatcher.IncomingMessageDispatcher;
 import io.quasient.pal.core.dispatcher.LogRpcExecutor;
 import io.quasient.pal.core.dispatcher.SocketRpcExecutor;
@@ -618,12 +617,6 @@ public class Main implements Callable<Integer> {
       names = {"--with-source-context"},
       description = "include source context in messages")
   private boolean includeSourceContext = false;
-
-  /** Flag to disable annotation processing during class loading. */
-  @Option(
-      names = {"--disable-annotation-processing"},
-      description = "disable annotation processing during class loading")
-  private boolean disableAnnotationProcessing = false;
 
   /**
    * Flag to enable in-flight dispatch tracking for intercept coordination. When enabled, intercept
@@ -2102,11 +2095,6 @@ public class Main implements Callable<Integer> {
     // inject dependencies
     final Injector injector =
         Guice.createInjector(new PeerWiring(properties, runOptions, zmqContext, customClassloader));
-
-    // add the annotations processor as classloader listener
-    if (!disableAnnotationProcessing) {
-      customClassloader.addClassLoadListener(injector.getInstance(AnnotationsProcessor.class));
-    }
 
     // preflight PAL directory connectivity (if configured) BEFORE Kafka/log initialization
     if (runOptions.contains(RunOptions.WITH_PALDIR)) {

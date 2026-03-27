@@ -61,7 +61,6 @@ The following classes have 0% coverage and need attention:
 | Class | Missed Instructions |
 |-------|---------------------|
 | `Main.new ServiceManager.Listener() {...}` (anonymous) | 35 |
-| `AnnotationProcessor` | 4 |
 | `Main.new TypeLiteral() {...}` (anonymous, 2 instances) | 12 |
 | `AspectProxyDispatcher` | 49 (5.8%) |
 | `BaseExecMessageDispatcher.IncomingInterceptMetadata` | 12 |
