@@ -235,6 +235,23 @@ public class DivergenceDetectorTest {
   }
 
   /**
+   * Verifies that no divergence is recorded when the WAL contains an identity-hash-code fallback
+   * {@code int[]} for a non-serializable array type (e.g. {@code Thread[]}) and the actual value is
+   * the original array type. The detector should recognise these as reference-only objects.
+   */
+  @SuppressWarnings("InstantiatingAThreadWithDefaultRunMethod")
+  @Test
+  public void noDivergenceForIdentityHashFallbackArray() {
+    DivergenceDetector detector = new DivergenceDetector(DivergencePolicy.WARN);
+    WalEntry entry = createObjectRefArrayEntry("[Ljava.lang.Thread;", "[1,2]");
+
+    Thread[] actualValue = {new Thread(), new Thread()};
+    detector.compareReturnValue(entry, actualValue, "self-caller");
+
+    assertThat(detector.hasDivergences(), is(false));
+  }
+
+  /**
    * Creates a WalEntry for an EXEC_RETURN_VALUE with a non-null integer return value.
    *
    * @param value the integer return value to embed in the WAL entry
@@ -296,6 +313,32 @@ public class DivergenceDetectorTest {
     clazz.setName(className);
     imc.setClazz(clazz);
     msg.setInstanceMethodCall(imc);
+    return WalEntry.fromExecMessage(0L, msg);
+  }
+
+  /**
+   * Creates a WalEntry whose return value represents a non-serializable object array stored via the
+   * Wrapper identity-hash-code fallback: the Obj carries a ref, a class name for the original array
+   * type, and a JSON {@code int[]} as the serialized value.
+   *
+   * @param arrayClassName the array class name (e.g. {@code [Ljava.lang.Thread;})
+   * @param intArrayJson the JSON-encoded {@code int[]} of per-element identity hashes
+   * @return a WalEntry wrapping the fallback return value
+   */
+  private static WalEntry createObjectRefArrayEntry(String arrayClassName, String intArrayJson) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName("self-caller");
+    msg.setBuilderSeq(1);
+
+    ReturnValue rv = new ReturnValue();
+    Obj obj = new Obj();
+    obj.setValue(intArrayJson);
+    obj.setRef(42);
+    Class clazz = new Class();
+    clazz.setName(arrayClassName);
+    obj.setClazz(clazz);
+    rv.setObject(obj);
+    msg.setReturnValue(rv);
     return WalEntry.fromExecMessage(0L, msg);
   }
 }

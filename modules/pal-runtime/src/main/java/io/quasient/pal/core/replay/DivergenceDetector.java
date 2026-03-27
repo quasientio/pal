@@ -114,6 +114,16 @@ public class DivergenceDetector {
       }
     }
 
+    // When the Wrapper falls back to identity hash codes for non-serializable arrays
+    // (e.g. Thread[]), the unwrapped WAL value is int[] while the live value is the original
+    // array type.  These cannot be meaningfully compared — skip like reference-only objects.
+    if (expectedValue instanceof int[]
+        && actualValue != null
+        && actualValue.getClass().isArray()
+        && !actualValue.getClass().getComponentType().isPrimitive()) {
+      return;
+    }
+
     if (!deepEquals(expectedValue, actualValue)) {
       recordDivergence(
           new Divergence(
