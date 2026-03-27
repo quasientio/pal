@@ -1,20 +1,21 @@
 # Writing Callback Handlers
 
-Callback handlers are where you implement the logic that runs when an intercept fires. This guide shows practical examples of callback handlers using the `InterceptCallback` interface and `InterceptContext`.
+Callback handlers are where you implement the logic that runs when an intercept fires. This guide shows practical examples of callback handlers using `InterceptContext`.
 
 ## Callback Handler Basics
 
-All callback handlers implement the `InterceptCallback` functional interface:
+Callback methods must be `public static` and accept a single `InterceptContext` parameter, returning an `InterceptCallbackResponse`:
 
 ```java
-public class MyHandler implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) throws Exception {
+public class MyHandler {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) throws Exception {
         // Your logic here
         return new InterceptCallbackResponse();
     }
 }
 ```
+
+PAL resolves callback methods via reflection and requires them to be static. Non-static methods will be rejected at runtime with an `IllegalArgumentException`.
 
 The `InterceptContext` provides access to:
 
@@ -28,9 +29,8 @@ The `InterceptContext` provides access to:
 This example converts string arguments to uppercase before method execution:
 
 ```java
-public class UpperCaseCurrencyCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class PaymentCallbacks {
+    public static InterceptCallbackResponse uppercaseCurrency(InterceptContext ctx) {
         Object[] args = ctx.getArgs();
         if (args.length > 0 && args[0] instanceof String) {
             ctx.setArg(0, ((String) args[0]).toUpperCase());
@@ -49,8 +49,8 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
     callbackPeerUuid,
     InterceptType.BEFORE,
     "com.example.PaymentService",
-    UpperCaseCurrencyCallback.class.getName(),
-    "handle",
+    PaymentCallbacks.class.getName(),
+    "uppercaseCurrency",
     new InterceptableMethodCall("processCurrency", Collections.emptyList()));
 ```
 
@@ -59,9 +59,8 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
 This example redacts sensitive data in return values:
 
 ```java
-public class RedactSsnCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class CustomerCallbacks {
+    public static InterceptCallbackResponse redactSsn(InterceptContext ctx) {
         CustomerDto dto = (CustomerDto) ctx.getReturnValue();
         if (dto != null) {
             dto.setSsn("***-**-****");
@@ -81,8 +80,8 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
     callbackPeerUuid,
     InterceptType.AFTER,
     "com.example.CustomerService",
-    RedactSsnCallback.class.getName(),
-    "handle",
+    CustomerCallbacks.class.getName(),
+    "redactSsn",
     new InterceptableMethodCall("getCustomer", Collections.emptyList()));
 ```
 
@@ -91,11 +90,10 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
 This example implements a caching layer that can skip method execution. AROUND intercepts use `ctx.proceed()` to call the original method, giving you full control over execution flow:
 
 ```java
-public class CachingCallback implements InterceptCallback {
-    private final ConcurrentHashMap<String, Object> cache = new ConcurrentHashMap<>();
+public class CachingCallbacks {
+    private static final ConcurrentHashMap<String, Object> cache = new ConcurrentHashMap<>();
 
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+    public static InterceptCallbackResponse cacheResult(InterceptContext ctx) {
         Object[] args = ctx.getArgs();
         String cacheKey = args.length > 0 ? String.valueOf(args[0]) : "";
 
@@ -142,14 +140,14 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
     callbackPeerUuid,
     InterceptType.AROUND,
     "com.example.ReportService",
-    CachingCallback.class.getName(),
-    "handle",
+    CachingCallbacks.class.getName(),
+    "cacheResult",
     new InterceptableMethodCall("generateExpensiveReport", Collections.emptyList()));
 ```
 
-## Static Callback Methods
+## Multiple Callbacks in One Class
 
-If you don't need instance state, use static methods:
+Group related callbacks as static methods in a single class:
 
 ```java
 public class ValidationHandlers {
@@ -161,10 +159,18 @@ public class ValidationHandlers {
         }
         return new InterceptCallbackResponse();
     }
+
+    public static InterceptCallbackResponse validatePositive(InterceptContext ctx) {
+        Object[] args = ctx.getArgs();
+        if (args.length > 0 && args[0] instanceof Number n && n.doubleValue() <= 0) {
+            throw new IllegalArgumentException("Value must be positive");
+        }
+        return new InterceptCallbackResponse();
+    }
 }
 ```
 
-Register with callbackClass and callbackMethod in the InterceptRequest constructor:
+Register each method separately, targeting different intercepts:
 ```java
 new InterceptRequest<>(
     UUID.randomUUID(),
@@ -178,9 +184,9 @@ new InterceptRequest<>(
 
 ## Thread Safety
 
-**Important**: Callback handlers must be thread-safe. The same handler instance may be invoked concurrently for different operations.
+**Important**: Callback methods must be thread-safe. The same static method may be invoked concurrently for different operations.
 
-Use thread-safe data structures (`ConcurrentHashMap`, `CopyOnWriteArrayList`) or synchronization when sharing state across invocations.
+Use thread-safe data structures (`ConcurrentHashMap`, `CopyOnWriteArrayList`) or synchronization when sharing state via static fields.
 
 ## Exception Handling
 
@@ -197,9 +203,8 @@ These are programming errors that indicate incorrect usage of the intercept API.
 **InterceptTypeNotSupportedException** - Thrown when you call an operation not supported for the current intercept type:
 
 ```java
-public class BadCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class BadCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         // ERROR: BEFORE intercepts can't access return values
         Object value = ctx.getReturnValue();  // throws InterceptTypeNotSupportedException
         return new InterceptCallbackResponse();
@@ -216,9 +221,8 @@ public class BadCallback implements InterceptCallback {
 **InterceptPhaseViolationException** - Thrown when you call an operation during the wrong phase of an AROUND intercept:
 
 ```java
-public class AroundCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class AroundCallbacks {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         ctx.setArg(0, "modified");  // OK: before proceed
 
         ProceedResult result = ctx.proceed();
@@ -248,9 +252,8 @@ Exception propagation policies control whether exceptions from callback handlers
 **PROPAGATE_CONTROLLED_ONLY** (default) - Only propagate exceptions that are both successfully executed AND explicitly set:
 
 ```java
-public class ValidatedCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class ValidatedCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         if (!isValid(ctx.getArgs()[0])) {
             // This will propagate (explicitly set via setExceptionToThrow)
             ctx.setExceptionToThrow(new IllegalArgumentException("Invalid input"));
@@ -265,9 +268,8 @@ If your callback throws an exception (crashes), it's logged but swallowed - the 
 **PROPAGATE_EXPLICIT_ONLY** - Only propagate exceptions set via `setExceptionToThrow()`:
 
 ```java
-public class ExplicitOnlyCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class ExplicitOnlyCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         // This will NOT propagate (callback crashed)
         throw new RuntimeException("Callback bug");
     }
@@ -279,9 +281,8 @@ Use this when you want fine-grained control - only exceptions you explicitly set
 **PROPAGATE_ALL** - Propagate all exceptions, including callback crashes:
 
 ```java
-public class StrictCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class StrictCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         // This WILL propagate (callback crashed)
         throw new RuntimeException("Callback crashed");
     }
@@ -293,13 +294,11 @@ Use this in testing or development to catch callback bugs early. **Warning**: In
 **SWALLOW_ALL** - Never propagate exceptions:
 
 ```java
-public class MonitoringCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class MonitoringCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         // Exceptions are logged but never propagate
         metrics.record(ctx.getMethod(), ctx.getArgs());
         throw new RuntimeException("Metrics system down");  // swallowed
-        return new InterceptCallbackResponse();
     }
 }
 ```
@@ -317,9 +316,8 @@ public String readFile(String path) throws IOException {
 }
 
 // Callback tries to throw SQLException (not declared)
-public class BadCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) throws Exception {
+public class BadCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) throws Exception {
         ctx.setExceptionToThrow(new SQLException("Database error"));
         return new InterceptCallbackResponse();
     }
@@ -364,9 +362,8 @@ There are three ways to set exceptions in callbacks:
 **1. Throw directly** (simple but limited control):
 
 ```java
-public class AuthorizationCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class AuthorizationCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         if (!isAuthorized(ctx)) {
             throw new SecurityException("Unauthorized access");
         }
@@ -380,9 +377,8 @@ public class AuthorizationCallback implements InterceptCallback {
 **2. Set via context** (recommended):
 
 ```java
-public class ValidationCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class ValidationCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         if (!isValid(ctx.getArgs()[0])) {
             ctx.setExceptionToThrow(new IllegalArgumentException("Invalid input"));
         }
@@ -396,9 +392,8 @@ public class ValidationCallback implements InterceptCallback {
 **3. Set via response** (alternative syntax):
 
 ```java
-public class ValidationCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class ValidationCallbacks {
+    public static InterceptCallbackResponse validate(InterceptContext ctx) {
         if (!isValid(ctx.getArgs()[0])) {
             return InterceptCallbackResponse.throwException(
                 new IllegalArgumentException("Invalid input")
@@ -509,9 +504,8 @@ new InterceptRequest<>(
 
 ```java
 // Use PROPAGATE_CONTROLLED_ONLY - explicit denials propagate, bugs don't
-public class AuthCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class AuthCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         if (!isAuthorized(ctx)) {
             // This will propagate
             ctx.setExceptionToThrow(new SecurityException("Access denied"));
@@ -527,9 +521,8 @@ public class AuthCallback implements InterceptCallback {
 AROUND intercepts can handle exceptions from the original method:
 
 ```java
-public class ExceptionHandlingCallback implements InterceptCallback {
-    @Override
-    public InterceptCallbackResponse handle(InterceptContext ctx) {
+public class ExceptionHandlingCallbacks {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
         ProceedResult result = ctx.proceed();
 
         if (result.hasException()) {
