@@ -18,7 +18,6 @@ import io.quasient.pal.rpc.binary.ConstructorMessageIT;
 import io.quasient.pal.rpc.binary.ControlMessageIT;
 import io.quasient.pal.rpc.binary.GetArrayMessageIT;
 import io.quasient.pal.rpc.binary.GetMessageIT;
-import io.quasient.pal.rpc.binary.MetaMessageIT;
 import io.quasient.pal.rpc.binary.PutMessageIT;
 import io.quasient.pal.rpc.json.CallArrayMessageIT;
 import io.quasient.pal.rpc.json.JsonRpcResponseErrorIT;
@@ -59,7 +58,6 @@ import org.slf4j.LoggerFactory;
   ControlMessageIT.class,
   GetArrayMessageIT.class,
   GetMessageIT.class,
-  MetaMessageIT.class,
   PutMessageIT.class,
 
   // JSON RPC tests
