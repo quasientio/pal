@@ -9,10 +9,12 @@
  */
 package io.quasient.pal.tools.cli;
 
+import static io.quasient.pal.serdes.colfer.ExecMessageUtils.getMessageTypeOf;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 
 import com.google.common.base.Splitter;
 import io.quasient.pal.common.objects.ObjectRef;
@@ -623,6 +625,483 @@ public class AbstractPrintCommandTest {
     } finally {
       System.setOut(originalOut);
     }
+  }
+
+  // ==================== field= filter Tests ====================
+
+  /**
+   * Tests that the {@code field=} filter matches a GET_STATIC message by field name.
+   *
+   * <p>Verifies that when {@code --filter field=count} is set, a static field get message for a
+   * field named "count" passes the filter.
+   */
+  @Test
+  public void shouldPrint_matchesFieldFilter_forGetStatic() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildGetStatic(peer, "com.example.Counter", "count");
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("field=count");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(true));
+  }
+
+  /**
+   * Tests that the {@code field=} filter matches a GET_FIELD message by field name.
+   *
+   * <p>Verifies that when {@code --filter field=total} is set, an instance field get message for a
+   * field named "total" passes the filter.
+   */
+  @Test
+  public void shouldPrint_matchesFieldFilter_forGetField() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildGetObject(peer, "com.example.Order", "total", ObjectRef.randomRef());
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("field=total");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(true));
+  }
+
+  /**
+   * Tests that the {@code field=} filter matches a PUT_STATIC message by field name.
+   *
+   * <p>Verifies that when {@code --filter field=count} is set, a static field put message for a
+   * field named "count" passes the filter.
+   */
+  @Test
+  public void shouldPrint_matchesFieldFilter_forPutStatic() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildPutStatic(peer, "com.example.Counter", "count", "int", 42);
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("field=count");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(true));
+  }
+
+  /**
+   * Tests that the {@code field=} filter matches a PUT_FIELD message by field name.
+   *
+   * <p>Verifies that when {@code --filter field=total} is set, an instance field put message for a
+   * field named "total" passes the filter.
+   */
+  @Test
+  public void shouldPrint_matchesFieldFilter_forPutField() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em =
+        b.buildPutObject(
+            peer, "com.example.Order", "total", ObjectRef.randomRef(), "double", 99.95);
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("field=total");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(true));
+  }
+
+  /**
+   * Tests that the {@code field=} filter rejects a method call message.
+   *
+   * <p>Verifies that when {@code --filter field=add} is set, an INSTANCE_METHOD message named "add"
+   * is rejected because it is not a field operation.
+   */
+  @Test
+  public void shouldPrint_fieldFilterRejectsMethodCall() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em =
+        b.buildInstanceMethod(
+            peer,
+            "com.example.Calculator",
+            "add",
+            ObjectRef.randomRef(),
+            new String[] {"int"},
+            new Object[] {1});
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("field=add");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(false));
+  }
+
+  /**
+   * Tests that the {@code field=} filter rejects a constructor message.
+   *
+   * <p>Verifies that when {@code --filter field=new} is set, a CONSTRUCTOR message is rejected
+   * because constructors are not field operations.
+   */
+  @Test
+  public void shouldPrint_fieldFilterRejectsConstructor() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildEmptyConstructor(peer, "com.example.MyClass");
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("field=new");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(false));
+  }
+
+  /**
+   * Tests that the {@code field=} filter rejects a field op when the field name doesn't match.
+   *
+   * <p>Verifies that when {@code --filter field=total} is set, a GET_STATIC for field "count" is
+   * rejected.
+   */
+  @Test
+  public void shouldPrint_fieldFilterRejectsMismatchedFieldName() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildGetStatic(peer, "com.example.Counter", "count");
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("field=total");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(false));
+  }
+
+  /**
+   * Tests that the {@code field=} filter matches PUT_STATIC_DONE messages.
+   *
+   * <p>Verifies that field done messages are also matched by the field filter, allowing users to
+   * see both the put and the corresponding done when filtering by field name.
+   */
+  @Test
+  public void shouldPrint_matchesFieldFilter_forPutStaticDone() {
+    LogMessage<?> lm = logOf(buildStaticFieldPutDoneMessage("com.example.Counter", "count"));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("field=count");
+
+    assertThat(cmd.shouldPrint(0L, null, lm), is(true));
+  }
+
+  /**
+   * Tests that the {@code field=} filter matches PUT_FIELD_DONE messages.
+   *
+   * <p>Verifies that instance field done messages are also matched by the field filter.
+   */
+  @Test
+  public void shouldPrint_matchesFieldFilter_forPutFieldDone() {
+    LogMessage<?> lm = logOf(buildInstanceFieldPutDoneMessage("com.example.Order", "total"));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("field=total");
+
+    assertThat(cmd.shouldPrint(0L, null, lm), is(true));
+  }
+
+  // ==================== class= filter with field ops Tests ====================
+
+  /**
+   * Tests that the {@code class=} filter matches a GET_STATIC message by class name.
+   *
+   * <p>Verifies that field operations are correctly filtered by class name.
+   */
+  @Test
+  public void shouldPrint_classFilterMatchesGetStatic() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildGetStatic(peer, "com.example.Counter", "count");
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("class=Counter");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(true));
+  }
+
+  /**
+   * Tests that the {@code class=} filter matches a PUT_FIELD message by class name.
+   *
+   * <p>Verifies that instance field put operations are correctly filtered by class name.
+   */
+  @Test
+  public void shouldPrint_classFilterMatchesPutField() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em =
+        b.buildPutObject(
+            peer, "com.example.Order", "total", ObjectRef.randomRef(), "double", 99.95);
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("class=Order");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(true));
+  }
+
+  /**
+   * Tests that the {@code class=} filter rejects a field operation with a non-matching class name.
+   */
+  @Test
+  public void shouldPrint_classFilterRejectsMismatchedClassOnFieldOp() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildGetStatic(peer, "com.example.Counter", "count");
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("class=Order");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(false));
+  }
+
+  // ==================== method= filter with field ops Tests ====================
+
+  /**
+   * Tests that the {@code method=} filter matches field operations by field name (backward
+   * compatibility).
+   *
+   * <p>The {@code method=} filter matches both method and field names. This verifies the
+   * pre-existing behavior where field names are returned by {@code getExecMethodName} for field
+   * operations.
+   */
+  @Test
+  public void shouldPrint_methodFilterMatchesFieldName() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildGetStatic(peer, "com.example.Counter", "count");
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("method=count");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(true));
+  }
+
+  // ==================== Combined field + class filter Tests ====================
+
+  /**
+   * Tests that combining {@code class=} and {@code field=} filters works correctly.
+   *
+   * <p>Verifies AND logic: both filters must match for the message to pass.
+   */
+  @Test
+  public void shouldPrint_combinedClassAndFieldFilter() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em =
+        b.buildPutObject(
+            peer, "com.example.Order", "total", ObjectRef.randomRef(), "double", 99.95);
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("class=Order", "field=total");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(true));
+  }
+
+  /**
+   * Tests that combined {@code class=} and {@code field=} filters reject when field doesn't match.
+   */
+  @Test
+  public void shouldPrint_combinedClassAndFieldFilter_rejectsWhenFieldMismatches() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em =
+        b.buildPutObject(
+            peer, "com.example.Order", "total", ObjectRef.randomRef(), "double", 99.95);
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    LogPrint cmd = createTestInstance();
+    cmd.filters = List.of("class=Order", "field=count");
+
+    assertThat(cmd.shouldPrint(0L, peer.toString(), lm), is(false));
+  }
+
+  // ==================== isReturnType() for field done messages Tests ====================
+
+  /**
+   * Tests that {@code isReturnType} returns true for PUT_STATIC_DONE messages.
+   *
+   * <p>This is essential for the {@code --with-return} option to work with static field put
+   * operations, where the "return" is signaled by a PUT_STATIC_DONE message.
+   */
+  @Test
+  public void isReturnType_returnsTrueForPutStaticDone() {
+    LogMessage<?> lm = logOf(buildStaticFieldPutDoneMessage("com.example.Counter", "count"));
+
+    assertThat(AbstractPrintCommand.isReturnType(lm), is(true));
+  }
+
+  /**
+   * Tests that {@code isReturnType} returns true for PUT_FIELD_DONE messages.
+   *
+   * <p>This is essential for the {@code --with-return} option to work with instance field put
+   * operations, where the "return" is signaled by a PUT_FIELD_DONE message.
+   */
+  @Test
+  public void isReturnType_returnsTrueForPutFieldDone() {
+    LogMessage<?> lm = logOf(buildInstanceFieldPutDoneMessage("com.example.Order", "total"));
+
+    assertThat(AbstractPrintCommand.isReturnType(lm), is(true));
+  }
+
+  /**
+   * Tests that {@code isReturnType} returns false for GET_FIELD messages.
+   *
+   * <p>Field get operations are not "return" types. Their corresponding return is a RETURN_VALUE
+   * message.
+   */
+  @Test
+  public void isReturnType_returnsFalseForGetField() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildGetObject(peer, "com.example.Order", "total", ObjectRef.randomRef());
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    assertThat(AbstractPrintCommand.isReturnType(lm), is(false));
+  }
+
+  /**
+   * Tests that {@code isReturnType} returns false for PUT_FIELD messages.
+   *
+   * <p>PUT_FIELD is the operation, not the completion. The completion is PUT_FIELD_DONE.
+   */
+  @Test
+  public void isReturnType_returnsFalseForPutField() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em =
+        b.buildPutObject(
+            peer, "com.example.Order", "total", ObjectRef.randomRef(), "double", 99.95);
+    LogMessage<?> lm = logOf(b.wrap(em));
+
+    assertThat(AbstractPrintCommand.isReturnType(lm), is(false));
+  }
+
+  // ==================== getExecFieldName() Tests ====================
+
+  /** Tests that {@code getExecFieldName} returns the field name for GET_STATIC messages. */
+  @Test
+  public void getExecFieldName_returnsFieldName_forGetStatic() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildGetStatic(peer, "com.example.Counter", "count");
+    MessageType msgType = getMessageTypeOf(em);
+
+    assertThat(AbstractPrintCommand.getExecFieldName(em, msgType), is("count"));
+  }
+
+  /** Tests that {@code getExecFieldName} returns the field name for GET_FIELD messages. */
+  @Test
+  public void getExecFieldName_returnsFieldName_forGetField() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildGetObject(peer, "com.example.Order", "total", ObjectRef.randomRef());
+    MessageType msgType = getMessageTypeOf(em);
+
+    assertThat(AbstractPrintCommand.getExecFieldName(em, msgType), is("total"));
+  }
+
+  /** Tests that {@code getExecFieldName} returns the field name for PUT_STATIC messages. */
+  @Test
+  public void getExecFieldName_returnsFieldName_forPutStatic() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildPutStatic(peer, "com.example.Counter", "count", "int", 42);
+    MessageType msgType = getMessageTypeOf(em);
+
+    assertThat(AbstractPrintCommand.getExecFieldName(em, msgType), is("count"));
+  }
+
+  /** Tests that {@code getExecFieldName} returns the field name for PUT_FIELD messages. */
+  @Test
+  public void getExecFieldName_returnsFieldName_forPutField() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em =
+        b.buildPutObject(
+            peer, "com.example.Order", "total", ObjectRef.randomRef(), "double", 99.95);
+    MessageType msgType = getMessageTypeOf(em);
+
+    assertThat(AbstractPrintCommand.getExecFieldName(em, msgType), is("total"));
+  }
+
+  /**
+   * Tests that {@code getExecFieldName} returns null for INSTANCE_METHOD messages.
+   *
+   * <p>Method calls are not field operations, so the field name extractor should return null.
+   */
+  @Test
+  public void getExecFieldName_returnsNull_forInstanceMethod() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em =
+        b.buildInstanceMethod(
+            peer,
+            "com.example.Calculator",
+            "add",
+            ObjectRef.randomRef(),
+            new String[] {"int"},
+            new Object[] {1});
+    MessageType msgType = getMessageTypeOf(em);
+
+    assertThat(AbstractPrintCommand.getExecFieldName(em, msgType), is(nullValue()));
+  }
+
+  /** Tests that {@code getExecFieldName} returns null for CONSTRUCTOR messages. */
+  @Test
+  public void getExecFieldName_returnsNull_forConstructor() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildEmptyConstructor(peer, "com.example.MyClass");
+    MessageType msgType = getMessageTypeOf(em);
+
+    assertThat(AbstractPrintCommand.getExecFieldName(em, msgType), is(nullValue()));
+  }
+
+  /** Tests that {@code getExecFieldName} returns null for RETURN_VALUE messages. */
+  @Test
+  public void getExecFieldName_returnsNull_forReturnValue() {
+    ExecMessage em = new ExecMessage();
+    em.setReturnValue(new ReturnValue().withIsVoid(true));
+    MessageType msgType = getMessageTypeOf(em);
+
+    assertThat(AbstractPrintCommand.getExecFieldName(em, msgType), is(nullValue()));
+  }
+
+  // ==================== getExecMethodName() with field ops Tests ====================
+
+  /**
+   * Tests that {@code getExecMethodName} returns the field name for GET_STATIC messages.
+   *
+   * <p>This verifies backward compatibility: the method= filter uses getExecMethodName, which
+   * returns field names for field operations.
+   */
+  @Test
+  public void getExecMethodName_returnsFieldName_forGetStatic() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em = b.buildGetStatic(peer, "com.example.Counter", "count");
+    MessageType msgType = getMessageTypeOf(em);
+
+    assertThat(AbstractPrintCommand.getExecMethodName(em, msgType), is("count"));
+  }
+
+  /** Tests that {@code getExecMethodName} returns the field name for PUT_FIELD messages. */
+  @Test
+  public void getExecMethodName_returnsFieldName_forPutField() {
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ExecMessage em =
+        b.buildPutObject(
+            peer, "com.example.Order", "total", ObjectRef.randomRef(), "double", 99.95);
+    MessageType msgType = getMessageTypeOf(em);
+
+    assertThat(AbstractPrintCommand.getExecMethodName(em, msgType), is("total"));
   }
 
   // ==================== Helper Methods ====================

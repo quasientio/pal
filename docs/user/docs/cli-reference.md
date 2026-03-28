@@ -836,7 +836,7 @@ pal log print [OPTIONS] LOG
 | `--json` | JSON output format |
 | `--full` | Full output format with all details |
 | `--tree` | Tree output format showing operation nesting |
-| `--filter <key=value>` | Filter messages by pattern (repeatable; `class=` and `method=` supported) |
+| `--filter <key=value>` | Filter messages by pattern (repeatable; `class=`, `method=`, and `field=` supported) |
 | `--formats <list>` | Filter by message format: `BINARY`, `JSON` (comma-separated) |
 | `-t, --types <list>` | Filter by message type (comma-separated, see below) |
 | `--from-peer <uuid>` | Filter by peer UUID |
@@ -941,8 +941,14 @@ pal log print -d localhost:2379 my-log --filter "class=OrderService"
 # Filter messages by method name
 pal log print -d localhost:2379 my-log --filter "method=processOrder"
 
+# Filter messages by field name (field operations only)
+pal log print -d localhost:2379 my-log --filter "field=count"
+
 # Combine multiple filters (AND logic)
 pal log print -d localhost:2379 my-log --filter "class=OrderService" --filter "method=process"
+
+# Combine class and field filters to find field access on a specific class
+pal log print -d localhost:2379 my-log --filter "class=OrderService" --filter "field=total"
 ```
 
 #### Direct Mode
@@ -1031,8 +1037,8 @@ pal peer print -d localhost:2379 550e8400-e29b... -t CLASS_METHOD
   - For Kafka logs: offset refers to Kafka partition offset
   - For Chronicle logs: offset refers to queue index
   - When `-o` is specified without `--with-return`, all other filters are ignored
-- **`--with-return`**: Must be used with `--offset`. After printing the message at the given offset, scans forward for a matching `RETURN_VALUE` or `THROWABLE` message (matched by message ID) and prints it too
-- **`--filter`**: Supports `class=<substring>` and `method=<substring>` patterns. Multiple `--filter` options apply AND logic (all must match). Uses substring matching, so `class=Order` matches `com.example.OrderService`
+- **`--with-return`**: Must be used with `--offset`. After printing the message at the given offset, scans forward for the matching completion message and prints it. Works with method calls (`RETURN_VALUE`/`THROWABLE`), field gets (`RETURN_VALUE`), and field puts (`PUT_STATIC_DONE`/`PUT_FIELD_DONE`)
+- **`--filter`**: Supports `class=<substring>`, `method=<substring>`, and `field=<substring>` patterns. The `field=` key matches only field operations (get/put static and instance fields). The `method=` key matches method names and field names. Multiple `--filter` options apply AND logic (all must match). Uses substring matching, so `class=Order` matches `com.example.OrderService`
 - **`--tree`**: Shows operation nesting with indentation. Method calls and constructors increase depth; return values and exceptions decrease it. Incompatible with `--json` and `--full`
 - **Follow mode** (`-f`): Waits for new messages indefinitely (use Ctrl-C to exit)
 - **Log resolution**: Can specify log by name or UUID

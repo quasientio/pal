@@ -184,7 +184,9 @@ abstract class AbstractPrintCommand extends AbstractPalSubcommand {
    *
    * <ul>
    *   <li>{@code class=com.example.OrderService} - filter by fully-qualified class name
-   *   <li>{@code method=add} - filter by method or field name
+   *   <li>{@code method=add} - filter by method name (constructors, instance methods, class
+   *       methods)
+   *   <li>{@code field=count} - filter by field name (get/put field operations)
    * </ul>
    *
    * <p>Multiple filters can be specified and all must match (AND logic).
@@ -195,7 +197,7 @@ abstract class AbstractPrintCommand extends AbstractPalSubcommand {
       split = ",",
       paramLabel = "key=value",
       description =
-          "Filter by pattern (e.g., class=com.example.OrderService, method=add). "
+          "Filter by pattern (e.g., class=com.example.OrderService, method=add, field=count). "
               + "Multiple comma-separated filters use AND logic.")
   List<String> filters;
 
@@ -310,6 +312,7 @@ abstract class AbstractPrintCommand extends AbstractPalSubcommand {
    * <ul>
    *   <li>{@code class} - matches against the fully-qualified class name
    *   <li>{@code method} - matches against the method or field name
+   *   <li>{@code field} - matches against the field name (field operations only)
    * </ul>
    *
    * @param msg the log message to check
@@ -345,6 +348,11 @@ abstract class AbstractPrintCommand extends AbstractPalSubcommand {
         if (methodName == null || !methodName.contains(value)) {
           return false;
         }
+      } else if ("field".equals(key)) {
+        String fieldName = getExecFieldName(execMsg, msgType);
+        if (fieldName == null || !fieldName.contains(value)) {
+          return false;
+        }
       }
     }
     return true;
@@ -354,15 +362,32 @@ abstract class AbstractPrintCommand extends AbstractPalSubcommand {
    * Extracts the method or field name from an execution message, returning {@code null} for message
    * types that do not have a method/field name (e.g., RETURN_VALUE, THROWABLE).
    *
+   * <p>For field operations, delegates to {@link #getExecFieldName(ExecMessage, MessageType)}.
+   *
    * @param execMsg the execution message
    * @param msgType the message type
    * @return the method or field name, or {@code null} if not applicable
    */
-  private static String getExecMethodName(ExecMessage execMsg, MessageType msgType) {
+  static String getExecMethodName(ExecMessage execMsg, MessageType msgType) {
     return switch (msgType) {
       case EXEC_CONSTRUCTOR -> "new";
       case EXEC_INSTANCE_METHOD -> execMsg.getInstanceMethodCall().getName();
       case EXEC_CLASS_METHOD -> execMsg.getClassMethodCall().getName();
+      default -> getExecFieldName(execMsg, msgType);
+    };
+  }
+
+  /**
+   * Extracts the field name from an execution message, returning {@code null} for message types
+   * that are not field operations (e.g., CONSTRUCTOR, INSTANCE_METHOD, CLASS_METHOD, RETURN_VALUE,
+   * THROWABLE).
+   *
+   * @param execMsg the execution message
+   * @param msgType the message type
+   * @return the field name, or {@code null} if not a field operation
+   */
+  static String getExecFieldName(ExecMessage execMsg, MessageType msgType) {
+    return switch (msgType) {
       case EXEC_GET_STATIC -> execMsg.getStaticFieldGet().getField().getName();
       case EXEC_GET_FIELD -> execMsg.getInstanceFieldGet().getField().getName();
       case EXEC_PUT_STATIC -> execMsg.getStaticFieldPut().getField().getName();

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Enhancement] Add `field=` filter key to `pal print --filter` for filtering by field name on field operations (get/put), and ensure `--with-return` correctly handles field ops via `PUT_STATIC_DONE`/`PUT_FIELD_DONE` completion messages
 - [Fix] Fix improper nesting of put_done messages in `pal print --tree` output — put_done messages are now printed at the same indentation level as their corresponding put messages instead of being nested underneath them
 - [Enhancement] `pal replay` resolves relative Chronicle WAL paths against the current working directory, so `pal replay --wal file:app.wal` works when the WAL is in the CWD
 - [Doc] Update user-facing documentation for `pal init`: add `pal init` as primary onboarding path in getting-started guide (interactive wizard, non-interactive, existing project, dry-run), document full `init` command with all options and examples in CLI reference, add quick setup with `pal init --mode local` to local development guide with Maven and Gradle coverage
