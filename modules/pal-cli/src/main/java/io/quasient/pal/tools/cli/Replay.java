@@ -18,6 +18,8 @@ import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.core.service.Main;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -355,6 +357,16 @@ public class Replay extends AbstractPalSubcommand {
       throw new RuntimeException(
           "Kafka WAL topics require --kafka-servers (-k) or a PAL directory (-d). "
               + "For Chronicle Queue WALs, use the 'file:' prefix (e.g., file:/tmp/my-wal).");
+    }
+
+    // Resolve relative Chronicle WAL paths against the current working directory so that
+    // "pal replay file:app.wal" works when the WAL is in the CWD.
+    if (walPath.startsWith("file:")) {
+      String pathPart = walPath.substring("file:".length());
+      Path path = Paths.get(pathPart);
+      if (!path.isAbsolute()) {
+        walPath = "file:" + path.toAbsolutePath().normalize();
+      }
     }
 
     // Parse positional arguments into mainClass and appArgs based on -jar usage

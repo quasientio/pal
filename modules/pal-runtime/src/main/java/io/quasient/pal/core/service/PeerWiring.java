@@ -1007,6 +1007,8 @@ public class PeerWiring extends AbstractModule {
       String baseDir = properties.getProperty("wal.chronicle.base_dir");
       if (baseDir != null && !baseDir.isBlank()) {
         path = Paths.get(baseDir).resolve(path);
+      } else {
+        path = path.toAbsolutePath();
       }
     }
     return path;

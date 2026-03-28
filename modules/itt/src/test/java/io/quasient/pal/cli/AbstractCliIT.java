@@ -172,6 +172,20 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
+   * Executes a `pal replay` command with the given working directory and arguments.
+   *
+   * <p>The working directory controls where relative {@code file:} WAL paths are resolved against.
+   *
+   * @param workingDir the working directory for the replay process
+   * @param args command-line arguments to pass to `pal replay`
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runReplayFromDir(File workingDir, String... args) throws Exception {
+    return runCliSubcommand(new String[] {"replay"}, null, workingDir, args);
+  }
+
+  /**
    * Executes a `pal wal-index` command with the given arguments.
    *
    * <p>Retained for wal-index tests outside the CLI package.
@@ -513,6 +527,24 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
    */
   protected CliProcessResult runCliSubcommand(
       String[] subcommandParts, String stdinData, String... args) throws Exception {
+    return runCliSubcommand(subcommandParts, stdinData, null, args);
+  }
+
+  /**
+   * Executes a PAL CLI subcommand with multi-part subcommand path, optional stdin data, and an
+   * optional working directory override.
+   *
+   * @param subcommandParts the subcommand path parts (e.g., {"peer", "ls"}, {"log", "print"})
+   * @param stdinData optional data to send to stdin, or null for no stdin input
+   * @param workingDir optional working directory for the subprocess, or null to use PAL_HOME
+   * @param args command-line arguments; if first arg is "-d", it and the next arg are moved before
+   *     subcommand
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runCliSubcommand(
+      String[] subcommandParts, String stdinData, File workingDir, String... args)
+      throws Exception {
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null || palHome.isEmpty()) {
       throw new IllegalStateException("PAL_HOME environment variable not set");
@@ -542,7 +574,7 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     logger.info("Executing CLI command: {}", String.join(" ", command));
 
     ProcessBuilder pb = new ProcessBuilder(command);
-    pb.directory(new File(palHome));
+    pb.directory(workingDir != null ? workingDir : new File(palHome));
 
     // Configure logging
     pb.environment()

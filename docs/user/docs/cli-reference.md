@@ -1409,7 +1409,7 @@ pal replay [OPTIONS] class [args...]
 
 | Option | Description |
 |--------|-------------|
-| `-w, --wal <name\|file:/path>` | **(Required)** WAL to replay from. Use `file:/path` for Chronicle Queue or a topic name for Kafka |
+| `-w, --wal <name\|file:/path>` | **(Required)** WAL to replay from. Use `file:/path` for Chronicle Queue or a topic name for Kafka. Relative Chronicle paths (e.g., `file:app.wal`) are resolved against the current working directory |
 | `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka WAL topics without `-d`) |
 | `--divergence-policy <WARN\|HALT\|IGNORE>` | Action on divergence (default: `WARN`) |
 | `--threading <ordered\|unordered>` | Thread ordering for multi-threaded replay (default: `ordered`). See [Multi-Threaded Replay](#multi-threaded-replay) |
@@ -1475,6 +1475,16 @@ pal run --wal file:/tmp/my-wal -cp target/classes com.example.App arg1 arg2
 
 # Step 2: Replay from the recorded WAL
 pal replay --wal file:/tmp/my-wal -cp target/classes com.example.App arg1 arg2
+```
+
+#### Replay with a relative WAL path
+
+```bash
+# Record a WAL in the current directory
+pal run --wal file:./app.wal -cp target/classes com.example.App arg1 arg2
+
+# Replay using a relative path — resolved against the current working directory
+pal replay --wal file:app.wal -cp target/classes com.example.App arg1 arg2
 ```
 
 #### Replay from Kafka

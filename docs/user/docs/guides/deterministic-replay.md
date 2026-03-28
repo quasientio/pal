@@ -114,6 +114,13 @@ pal replay --wal file:/tmp/my-wal \
   -cp target/classes com.example.App arg1 arg2
 ```
 
+Relative Chronicle WAL paths are resolved against the current working directory, so if the WAL is in the current directory you can simply use:
+
+```bash
+pal replay --wal file:my-wal \
+  -cp target/classes com.example.App arg1 arg2
+```
+
 If the application produces the same operations with the same return values, the exit code is `0` and no divergences are reported.
 
 ### Slow-Motion Replay

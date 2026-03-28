@@ -1101,4 +1101,74 @@ public class ReplayTest {
     assertThat(args, hasItemInArray("--replay-stub-all-else"));
     assertThat(args, hasItemInArray("--replay-force-stub"));
   }
+
+  // ===========================================================================
+  // Relative WAL path resolution tests
+  // ===========================================================================
+
+  /** Verifies that a relative Chronicle WAL path is resolved to an absolute path. */
+  @Test
+  public void testValidateInputResolvesRelativeChronicleWalPath() throws Exception {
+    Replay replay = parseReplay("--wal", "file:app.wal", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    String resolvedWalPath = (String) getField(replay, "walPath");
+    assertThat(
+        "Relative path should be resolved to absolute", resolvedWalPath, containsString("file:/"));
+    assertThat(
+        "Resolved path should end with app.wal", resolvedWalPath, containsString("/app.wal"));
+    assertThat(
+        "Resolved path should not contain relative segments",
+        resolvedWalPath,
+        not(containsString("/./")));
+  }
+
+  /** Verifies that an absolute Chronicle WAL path remains unchanged after validation. */
+  @Test
+  public void testValidateInputPreservesAbsoluteChronicleWalPath() throws Exception {
+    Replay replay = parseReplay("--wal", "file:/tmp/my-wal", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    assertThat(getField(replay, "walPath"), is("file:/tmp/my-wal"));
+  }
+
+  /** Verifies that a Kafka WAL topic name is not modified by path resolution. */
+  @Test
+  public void testValidateInputDoesNotModifyKafkaWalPath() throws Exception {
+    Replay replay =
+        parseReplay("-k", "localhost:29092", "--wal", "my-topic", "-cp", "app.jar", "MyMain");
+    replay.validateInput();
+
+    assertThat(getField(replay, "walPath"), is("my-topic"));
+  }
+
+  /** Verifies that buildMainArgs uses the resolved absolute path for relative Chronicle WALs. */
+  @Test
+  public void testBuildMainArgsWithRelativeChronicleWal() throws Exception {
+    Replay replay = parseReplay("--wal", "file:my-wal", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    String[] args = replay.buildMainArgs();
+    String walArg = args[1]; // second element is the WAL path
+    assertThat(
+        "WAL arg should be absolute after resolution", walArg.startsWith("file:/"), is(true));
+    assertThat("WAL arg should end with my-wal", walArg, containsString("/my-wal"));
+  }
+
+  /** Verifies that a relative path with subdirectory is resolved correctly. */
+  @Test
+  public void testValidateInputResolvesRelativeSubdirectoryChronicleWalPath() throws Exception {
+    Replay replay = parseReplay("--wal", "file:data/app.wal", "-cp", "app.jar", "com.example.Main");
+    replay.validateInput();
+
+    String resolvedWalPath = (String) getField(replay, "walPath");
+    assertThat(
+        "Relative subdirectory path should be resolved to absolute",
+        resolvedWalPath,
+        containsString("file:/"));
+    assertThat(
+        "Resolved path should contain data/app.wal",
+        resolvedWalPath,
+        containsString("/data/app.wal"));
+  }
 }
