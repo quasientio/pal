@@ -11,11 +11,17 @@ package io.quasient.pal.cli;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 
+import com.google.common.base.Splitter;
 import io.quasient.pal.PeerProcess;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.cxn.directory.PalDirectory;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
@@ -1246,4 +1252,187 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
     assertEquals(-1, result.exitCode());
   }
+
+  // ==========================================================================
+  // Tree format indentation tests: put/put_done nesting
+  // ==========================================================================
+
+  /** Fully qualified name of the MinimalReceiptCalculator test application. */
+  private static final String RECEIPT_CALC_CLASS =
+      "io.quasient.foobar.apps.quantized.replay.MinimalReceiptCalculator";
+
+  /**
+   * Creates a WAL spec appropriate for the given backend and registers Chronicle paths for cleanup.
+   *
+   * @param prefix a descriptive prefix for the WAL name
+   * @param backend the WAL backend type ("chronicle" or "kafka")
+   * @return the WAL spec string
+   */
+  private String createWalSpec(String prefix, String backend) {
+    String id = generateId();
+    if ("chronicle".equals(backend)) {
+      String path = "/tmp/pal-" + prefix + "-" + id;
+      trackChronicleLog(path);
+      return "file:" + path;
+    } else {
+      return "test-" + prefix + "-" + id;
+    }
+  }
+
+  /**
+   * Records a WAL by running the peer with MinimalReceiptCalculator.
+   *
+   * @param walSpec the WAL spec (Chronicle file path or Kafka topic name)
+   * @param backend the WAL backend type
+   * @param appArgs application arguments passed to the main class
+   * @return the process result containing exit code, stdout, and stderr
+   * @throws Exception if recording fails
+   */
+  private ProcessResult recordReceiptCalcWal(String walSpec, String backend, String... appArgs)
+      throws Exception {
+    List<String> args = new ArrayList<>();
+    args.add("-d");
+    args.add(getPalDirectoryUrl());
+    if ("kafka".equals(backend)) {
+      args.add("-k");
+      args.add(getKafkaServers());
+    }
+    args.add("--wal");
+    args.add(walSpec);
+    args.add("-cp");
+    args.add(getIttAppsClasspath());
+    args.add(RECEIPT_CALC_CLASS);
+    Collections.addAll(args, appArgs);
+    return runPeer(args.toArray(new String[0]));
+  }
+
+  /**
+   * Runs {@code pal log print --tree} against the given WAL spec.
+   *
+   * @param walSpec the WAL spec
+   * @param backend the WAL backend type
+   * @return the CLI process result
+   * @throws Exception if the command fails
+   */
+  private CliProcessResult doLogPrintTree(String walSpec, String backend) throws Exception {
+    List<String> args = new ArrayList<>();
+    args.add("-d");
+    args.add(getPalDirectoryUrl());
+    if ("kafka".equals(backend)) {
+      args.add("-k");
+      args.add(getKafkaServers());
+    }
+    args.add(walSpec);
+    args.add("--tree");
+    return runLogPrint(args.toArray(new String[0]));
+  }
+
+  /**
+   * Tests that put_done messages in tree output are indented at the same level as their
+   * corresponding put messages when using a Kafka log.
+   *
+   * <p>Records a WAL using MinimalReceiptCalculator (which has instance field assignments in its
+   * constructor) and verifies the tree output nesting. Before the fix, put_done messages were
+   * incorrectly nested one level deeper than put messages.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testLogPrint_kafkaLog_treeFormat_putDoneIndentation() throws Exception {
+    verifyPutDoneTreeIndentation("kafka");
+  }
+
+  /**
+   * Tests that put_done messages in tree output are indented at the same level as their
+   * corresponding put messages when using a Chronicle log.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testLogPrint_chronicleLog_treeFormat_putDoneIndentation() throws Exception {
+    verifyPutDoneTreeIndentation("chronicle");
+  }
+
+  /**
+   * Verifies that put_done messages have the same indentation as their corresponding put messages
+   * in tree output, for the given backend type.
+   *
+   * <p>The MinimalReceiptCalculator constructor assigns instance fields ({@code this.taxRate} and
+   * {@code this.loyalCustomer}), generating put/put_done message pairs. This test verifies that
+   * put_done messages are printed at the same tree depth as their corresponding put messages.
+   *
+   * @param backend the WAL backend type ("chronicle" or "kafka")
+   * @throws Exception if test execution fails
+   */
+  private void verifyPutDoneTreeIndentation(String backend) throws Exception {
+    String walSpec = createWalSpec("tree-putdone", backend);
+
+    // Record WAL with MinimalReceiptCalculator (has field puts in constructor)
+    ProcessResult recordResult = recordReceiptCalcWal(walSpec, backend, "milk:1");
+    assertEquals("Recording should succeed", 0, recordResult.exitCode());
+
+    // Print tree output
+    CliProcessResult printResult = doLogPrintTree(walSpec, backend);
+    assertEquals("Tree print should succeed", 0, printResult.exitCode());
+
+    String treeOutput = printResult.stdout();
+    assertThat("Tree output should not be empty", treeOutput.length(), greaterThan(0));
+
+    // Parse lines and verify put/put_done indentation
+    List<String> lines = Splitter.on('\n').omitEmptyStrings().splitToList(treeOutput);
+
+    // Find all put and put_done lines
+    List<TreeLine> putLines = new ArrayList<>();
+    List<TreeLine> putDoneLines = new ArrayList<>();
+    for (String line : lines) {
+      int indent = countLeadingSpaces(line);
+      String trimmed = line.trim();
+      if (trimmed.contains(" put_done ")) {
+        putDoneLines.add(new TreeLine(indent, trimmed));
+      } else if (trimmed.contains(" put ")) {
+        putLines.add(new TreeLine(indent, trimmed));
+      }
+    }
+
+    // MinimalReceiptCalculator has field puts (taxRate, loyalCustomer)
+    assertThat("Should have put operations", putLines.size(), greaterThanOrEqualTo(1));
+    assertThat("Should have put_done operations", putDoneLines.size(), greaterThanOrEqualTo(1));
+    assertThat("put and put_done counts should match", putDoneLines.size(), is(putLines.size()));
+
+    // Each put_done must be at the same depth as its corresponding put
+    for (int i = 0; i < putLines.size(); i++) {
+      assertThat(
+          String.format(
+              "put_done #%d indent should match put #%d indent. put='%s', put_done='%s'",
+              i, i, putLines.get(i).content(), putDoneLines.get(i).content()),
+          putDoneLines.get(i).indent(),
+          is(putLines.get(i).indent()));
+    }
+  }
+
+  /**
+   * Counts the number of leading space characters in a string.
+   *
+   * @param line the line to measure
+   * @return the number of leading spaces
+   */
+  private static int countLeadingSpaces(String line) {
+    int count = 0;
+    for (int i = 0; i < line.length(); i++) {
+      if (line.charAt(i) == ' ') {
+        count++;
+      } else {
+        break;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Record representing a line of tree output with its indentation level and content.
+   *
+   * @param indent the number of leading spaces
+   * @param content the trimmed line content
+   */
+  private record TreeLine(int indent, String content) {}
 }

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Fix] Fix improper nesting of put_done messages in `pal print --tree` output — put_done messages are now printed at the same indentation level as their corresponding put messages instead of being nested underneath them
 - [Doc] Update user-facing documentation for `pal init`: add `pal init` as primary onboarding path in getting-started guide (interactive wizard, non-interactive, existing project, dry-run), document full `init` command with all options and examples in CLI reference, add quick setup with `pal init --mode local` to local development guide with Maven and Gradle coverage
 - [Feature] Add PalWeaveResolver for checking local Maven repository for pal-weave and fetching from Maven Central when missing, with dry-run support and graceful failure handling
 - [Enhancement] Validate Kafka/Chronicle flag consistency in Main: fatal exit when --kafka-servers is given with all-Chronicle logs or --chronicle-base-dir with all-Kafka logs, and warn when source-log and WAL use different backends

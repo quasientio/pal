@@ -14,9 +14,17 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
+import com.google.common.base.Splitter;
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.messages.LogMessage;
+import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.Field;
+import io.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.colfer.ReturnValue;
+import io.quasient.pal.messages.colfer.StaticFieldPutDone;
+import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -386,5 +394,301 @@ public class AbstractPrintCommandTest {
     } finally {
       System.setOut(originalOut);
     }
+  }
+
+  /**
+   * Tests that static field put_done messages are printed at the same indentation level as their
+   * corresponding put messages, not nested underneath them.
+   *
+   * <p>Verifies the sequence: new → put_static → put_static_done → return produces correct nesting
+   * where put and put_done are siblings (same depth), not parent-child.
+   */
+  @Test
+  public void printTreeRecord_putStaticDoneAtSameDepthAsPut() throws Exception {
+    // Given: a sequence of messages: new, put_static, put_static_done, return
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+
+    LogMessage<?> newMsg = logOf(b.wrap(b.buildEmptyConstructor(peer, "com.example.MyClass")));
+    LogMessage<?> putStaticMsg =
+        logOf(b.wrap(b.buildPutStatic(peer, "com.example.MyClass", "count", "int", 42)));
+    LogMessage<?> putStaticDoneMsg =
+        logOf(buildStaticFieldPutDoneMessage("com.example.MyClass", "count"));
+    LogMessage<?> returnMsg = logOf(buildVoidReturnMessage());
+
+    LogPrint cmd = createTestInstance();
+
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      // When: printTreeRecord() called for each message in sequence
+      cmd.printTreeRecord(newMsg, 0L);
+      cmd.printTreeRecord(putStaticMsg, 1L);
+      cmd.printTreeRecord(putStaticDoneMsg, 2L);
+      cmd.printTreeRecord(returnMsg, 3L);
+
+      // Then: put and put_done are at the same indentation (depth 1),
+      //       not put_done nested under put (depth 2)
+      String output = bout.toString(UTF_8);
+      List<String> lines = Splitter.on('\n').omitEmptyStrings().splitToList(output);
+      assertThat("expected 4 output lines", lines.size(), is(4));
+
+      String newLine = lines.get(0);
+      String putLine = lines.get(1);
+      String putDoneLine = lines.get(2);
+      String returnLine = lines.get(3);
+
+      // new at depth 0 (no indent)
+      assertThat(newLine, containsString("[0]"));
+      assertThat("new should have no indent", indentOf(newLine), is(0));
+
+      // put at depth 1 (2 spaces)
+      assertThat(putLine, containsString("[1]"));
+      assertThat("put should be indented under new", indentOf(putLine), is(2));
+
+      // put_done at depth 1 (same as put, not nested under it)
+      assertThat(putDoneLine, containsString("[2]"));
+      assertThat(putDoneLine, containsString("put_done"));
+      assertThat("put_done should be at same depth as put", indentOf(putDoneLine), is(2));
+
+      // return at depth 0 (closing the constructor)
+      assertThat(returnLine, containsString("[3]"));
+      assertThat("return should be at depth 0", indentOf(returnLine), is(0));
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  /**
+   * Tests that instance field put_done messages are printed at the same indentation level as their
+   * corresponding put messages.
+   *
+   * <p>Verifies that instance field put/put_done pairs are treated the same as static field
+   * put/put_done pairs for tree indentation purposes.
+   */
+  @Test
+  public void printTreeRecord_putInstanceFieldDoneAtSameDepthAsPut() throws Exception {
+    // Given: a sequence of messages: new, put_field, put_field_done, return
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ObjectRef targetRef = ObjectRef.randomRef();
+
+    LogMessage<?> newMsg = logOf(b.wrap(b.buildEmptyConstructor(peer, "com.example.Order")));
+    LogMessage<?> putFieldMsg =
+        logOf(
+            b.wrap(
+                b.buildPutObject(peer, "com.example.Order", "total", targetRef, "double", 99.95)));
+    LogMessage<?> putFieldDoneMsg =
+        logOf(buildInstanceFieldPutDoneMessage("com.example.Order", "total"));
+    LogMessage<?> returnMsg = logOf(buildVoidReturnMessage());
+
+    LogPrint cmd = createTestInstance();
+
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      // When: printTreeRecord() called for each message in sequence
+      cmd.printTreeRecord(newMsg, 0L);
+      cmd.printTreeRecord(putFieldMsg, 1L);
+      cmd.printTreeRecord(putFieldDoneMsg, 2L);
+      cmd.printTreeRecord(returnMsg, 3L);
+
+      // Then: put_field and put_field_done are at the same depth
+      String output = bout.toString(UTF_8);
+      List<String> lines = Splitter.on('\n').omitEmptyStrings().splitToList(output);
+      assertThat("expected 4 output lines", lines.size(), is(4));
+
+      assertThat("put should be indented", indentOf(lines.get(1)), is(2));
+      assertThat("put_done should be at same depth as put", indentOf(lines.get(2)), is(2));
+      assertThat(lines.get(2), containsString("put_done"));
+      assertThat("return at depth 0", indentOf(lines.get(3)), is(0));
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  /**
+   * Tests that multiple put/put_done pairs within a constructor are all at the correct nesting
+   * level, and that subsequent operations after a put_done are not erroneously nested deeper.
+   *
+   * <p>Reproduces the scenario from the bug report where operations following a put_done were
+   * incorrectly nested under it.
+   */
+  @Test
+  public void printTreeRecord_multipleFieldPutsInConstructor() throws Exception {
+    // Given: new → put → put_done → put → put_done → return
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ObjectRef targetRef = ObjectRef.randomRef();
+
+    LogMessage<?> newMsg = logOf(b.wrap(b.buildEmptyConstructor(peer, "com.example.Service")));
+    LogMessage<?> put1 =
+        logOf(b.wrap(b.buildPutObject(peer, "com.example.Service", "fieldA", targetRef, "int", 1)));
+    LogMessage<?> putDone1 =
+        logOf(buildInstanceFieldPutDoneMessage("com.example.Service", "fieldA"));
+    LogMessage<?> put2 =
+        logOf(b.wrap(b.buildPutObject(peer, "com.example.Service", "fieldB", targetRef, "int", 2)));
+    LogMessage<?> putDone2 =
+        logOf(buildInstanceFieldPutDoneMessage("com.example.Service", "fieldB"));
+    LogMessage<?> returnMsg = logOf(buildVoidReturnMessage());
+
+    LogPrint cmd = createTestInstance();
+
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      // When: all messages printed in sequence
+      cmd.printTreeRecord(newMsg, 0L);
+      cmd.printTreeRecord(put1, 1L);
+      cmd.printTreeRecord(putDone1, 2L);
+      cmd.printTreeRecord(put2, 3L);
+      cmd.printTreeRecord(putDone2, 4L);
+      cmd.printTreeRecord(returnMsg, 5L);
+
+      // Then: both put/put_done pairs at depth 1, return at depth 0
+      String output = bout.toString(UTF_8);
+      List<String> lines = Splitter.on('\n').omitEmptyStrings().splitToList(output);
+      assertThat("expected 6 output lines", lines.size(), is(6));
+
+      // [0] new at depth 0
+      assertThat("new at depth 0", indentOf(lines.get(0)), is(0));
+      // [1] first put at depth 1
+      assertThat("first put at depth 1", indentOf(lines.get(1)), is(2));
+      // [2] first put_done at depth 1 (same as put)
+      assertThat("first put_done at depth 1", indentOf(lines.get(2)), is(2));
+      // [3] second put at depth 1 (not nested under first put_done)
+      assertThat("second put at depth 1", indentOf(lines.get(3)), is(2));
+      // [4] second put_done at depth 1
+      assertThat("second put_done at depth 1", indentOf(lines.get(4)), is(2));
+      // [5] return at depth 0
+      assertThat("return at depth 0", indentOf(lines.get(5)), is(0));
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  /**
+   * Tests that return and throwable messages still correctly decrease depth (regression check).
+   *
+   * <p>Ensures that the put_done fix did not break the existing behavior for EXEC_RETURN_VALUE and
+   * EXEC_THROWABLE message types.
+   */
+  @Test
+  public void printTreeRecord_returnAndThrowableStillDecreaseDepth() throws Exception {
+    // Given: new → call → return (inner) → return (outer)
+    UUID peer = UUID.randomUUID();
+    MessageBuilder b = new MessageBuilder(peer, Boolean.toString(false));
+    ObjectRef objRef = ObjectRef.randomRef();
+
+    LogMessage<?> newMsg = logOf(b.wrap(b.buildEmptyConstructor(peer, "com.example.Outer")));
+    LogMessage<?> callMsg =
+        logOf(
+            b.wrap(
+                b.buildInstanceMethod(
+                    peer,
+                    "com.example.Outer",
+                    "doWork",
+                    objRef,
+                    new String[] {},
+                    new Object[] {})));
+    LogMessage<?> innerReturn = logOf(buildVoidReturnMessage());
+    LogMessage<?> outerReturn = logOf(buildVoidReturnMessage());
+
+    LogPrint cmd = createTestInstance();
+
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bout, true, UTF_8));
+
+    try {
+      cmd.printTreeRecord(newMsg, 0L);
+      cmd.printTreeRecord(callMsg, 1L);
+      cmd.printTreeRecord(innerReturn, 2L);
+      cmd.printTreeRecord(outerReturn, 3L);
+
+      String output = bout.toString(UTF_8);
+      List<String> lines = Splitter.on('\n').omitEmptyStrings().splitToList(output);
+      assertThat("expected 4 output lines", lines.size(), is(4));
+
+      assertThat("new at depth 0", indentOf(lines.get(0)), is(0));
+      assertThat("call at depth 1", indentOf(lines.get(1)), is(2));
+      assertThat("inner return at depth 1", indentOf(lines.get(2)), is(2));
+      assertThat("outer return at depth 0", indentOf(lines.get(3)), is(0));
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  // ==================== Helper Methods ====================
+
+  /**
+   * Builds a Message containing a static field put done ExecMessage.
+   *
+   * @param className the class name for the field
+   * @param fieldName the field name
+   * @return a Message wrapping the put_done ExecMessage
+   */
+  private static Message buildStaticFieldPutDoneMessage(String className, String fieldName) {
+    ExecMessage em = new ExecMessage();
+    em.setStaticFieldPutDone(
+        new StaticFieldPutDone()
+            .withClazz(new Class().withName(className))
+            .withField(new Field().withName(fieldName)));
+    return new Message()
+        .withMessageType(MessageType.EXEC_PUT_STATIC_DONE.getId())
+        .withExecMessage(em);
+  }
+
+  /**
+   * Builds a Message containing an instance field put done ExecMessage.
+   *
+   * @param className the class name for the field
+   * @param fieldName the field name
+   * @return a Message wrapping the put_done ExecMessage
+   */
+  private static Message buildInstanceFieldPutDoneMessage(String className, String fieldName) {
+    ExecMessage em = new ExecMessage();
+    em.setInstanceFieldPutDone(
+        new InstanceFieldPutDone()
+            .withClazz(new Class().withName(className))
+            .withField(new Field().withName(fieldName)));
+    return new Message()
+        .withMessageType(MessageType.EXEC_PUT_FIELD_DONE.getId())
+        .withExecMessage(em);
+  }
+
+  /**
+   * Builds a Message containing a void return value ExecMessage.
+   *
+   * @return a Message wrapping the void return ExecMessage
+   */
+  private static Message buildVoidReturnMessage() {
+    ExecMessage em = new ExecMessage();
+    em.setReturnValue(new ReturnValue().withIsVoid(true));
+    return new Message().withMessageType(MessageType.EXEC_RETURN_VALUE.getId()).withExecMessage(em);
+  }
+
+  /**
+   * Counts the leading spaces in a string.
+   *
+   * @param line the line to measure
+   * @return the number of leading space characters
+   */
+  private static int indentOf(String line) {
+    int count = 0;
+    for (int i = 0; i < line.length(); i++) {
+      if (line.charAt(i) == ' ') {
+        count++;
+      } else {
+        break;
+      }
+    }
+    return count;
   }
 }

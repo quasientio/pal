@@ -429,17 +429,20 @@ abstract class AbstractPrintCommand extends AbstractPalSubcommand {
     }
 
     MessageType msgType = MessageType.fromId(m.getMessageType());
-    boolean isReturn =
-        msgType == MessageType.EXEC_RETURN_VALUE || msgType == MessageType.EXEC_THROWABLE;
+    boolean isCompletion =
+        msgType == MessageType.EXEC_RETURN_VALUE
+            || msgType == MessageType.EXEC_THROWABLE
+            || msgType == MessageType.EXEC_PUT_STATIC_DONE
+            || msgType == MessageType.EXEC_PUT_FIELD_DONE;
 
-    if (isReturn && treeDepth > 0) {
+    if (isCompletion && treeDepth > 0) {
       treeDepth--;
     }
 
     String summary = getMessageOneLiner(msg);
     System.out.printf("%s[%d] %s%n", indent(treeDepth), offset, summary);
 
-    if (!isReturn) {
+    if (!isCompletion) {
       treeDepth++;
     }
   }
