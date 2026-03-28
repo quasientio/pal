@@ -105,6 +105,9 @@ public class PalDirectory {
   /** Directory name for storing peer information. */
   private static final String PEERS_DIR = "peers";
 
+  /** Subdirectory name for storing the peer name-to-UUID reverse index. */
+  private static final String PEERS_BY_NAME_DIR = "by-name";
+
   /** Directory name for storing log information. */
   private static final String LOGS_DIR = "logs";
 
@@ -338,14 +341,21 @@ public class PalDirectory {
   }
 
   /**
-   * Creates a new peer in the directory. If the peer already exists (key = uuid), then creation is
-   * skipped. Information is kept in two separate sub-nodes: /info (static) and /state (updatable)
+   * Creates a new peer in the directory. If the peer already exists (same UUID), then creation is
+   * skipped. Peer names must be unique: if another peer with a different UUID already holds the
+   * given name, a {@link DuplicatePeerNameException} is thrown.
+   *
+   * <p>Information is kept in two separate sub-nodes: /info (static) and /state (updatable). When
+   * the peer has a name, a reverse-index entry is also written under {@code
+   * /<ns>/peers/by-name/<name>} to enforce and look up name uniqueness.
    *
    * @param peer the information of the peer to create. Must contain its uuid.
+   * @throws DuplicatePeerNameException if a different peer with the same name already exists
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
-  public void createPeer(PeerInfo peer) throws ExecutionException, InterruptedException {
+  public void createPeer(PeerInfo peer)
+      throws ExecutionException, InterruptedException, DuplicatePeerNameException {
     Objects.requireNonNull(peer, "peer cannot be null");
     Objects.requireNonNull(peer.getUuid(), "peer.uuid cannot be null");
 
@@ -359,20 +369,65 @@ public class PalDirectory {
     ByteSequence infoKey = peerInfoKey(peer.getUuid());
     ByteSequence stateKey = peerStateKey(peer.getUuid());
 
-    TxnResponse tx =
-        kvClient
-            .txn()
-            .If(new Cmp(infoKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
-            .Then(
-                Op.put(infoKey, ByteSequence.from(infoJson, UTF8), PutOption.DEFAULT),
-                Op.put(stateKey, ByteSequence.from(stateJson, UTF8), PutOption.DEFAULT))
-            .commit()
-            .get();
+    boolean hasName = peer.getName() != null;
 
-    if (tx.isSucceeded()) {
-      logger.info("Created peer {}", peer.getUuid());
+    if (hasName) {
+      ByteSequence byNameKey = peerByNameKey(peer.getName());
+      ByteSequence byNameValue = ByteSequence.from(peer.getUuid().toString(), UTF8);
+
+      // Atomic: info key must not exist AND by-name key must not exist
+      TxnResponse tx =
+          kvClient
+              .txn()
+              .If(
+                  new Cmp(infoKey, Cmp.Op.EQUAL, CmpTarget.version(0)),
+                  new Cmp(byNameKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
+              .Then(
+                  Op.put(infoKey, ByteSequence.from(infoJson, UTF8), PutOption.DEFAULT),
+                  Op.put(stateKey, ByteSequence.from(stateJson, UTF8), PutOption.DEFAULT),
+                  Op.put(byNameKey, byNameValue, PutOption.DEFAULT))
+              .commit()
+              .get();
+
+      if (tx.isSucceeded()) {
+        logger.info("Created peer {} (name: '{}')", peer.getUuid(), peer.getName());
+      } else {
+        // Transaction failed — determine the cause
+        if (kvClient.get(infoKey).get().getCount() != 0) {
+          // This peer's UUID already exists — idempotent skip
+          logger.warn("Peer {} already exists – skipping", peer.getUuid());
+        } else {
+          // The by-name key already exists — name collision
+          GetResponse byNameResp = kvClient.get(byNameKey).get();
+          if (byNameResp.getCount() != 0) {
+            String existingUuid = byNameResp.getKvs().get(0).getValue().toString(UTF8);
+            throw new DuplicatePeerNameException(
+                format(
+                    "Peer name \"%s\" is already registered by peer %s",
+                    peer.getName(), existingUuid));
+          }
+          // Rare race: both conditions changed between txn and reads — retry-safe callers
+          // can simply re-invoke.
+          logger.warn("Peer {} creation failed due to concurrent modification", peer.getUuid());
+        }
+      }
     } else {
-      logger.warn("Peer {} already exists – skipping", peer.getUuid());
+      // No name — skip by-name index; only guard on UUID uniqueness
+      TxnResponse tx =
+          kvClient
+              .txn()
+              .If(new Cmp(infoKey, Cmp.Op.EQUAL, CmpTarget.version(0)))
+              .Then(
+                  Op.put(infoKey, ByteSequence.from(infoJson, UTF8), PutOption.DEFAULT),
+                  Op.put(stateKey, ByteSequence.from(stateJson, UTF8), PutOption.DEFAULT))
+              .commit()
+              .get();
+
+      if (tx.isSucceeded()) {
+        logger.info("Created peer {}", peer.getUuid());
+      } else {
+        logger.warn("Peer {} already exists – skipping", peer.getUuid());
+      }
     }
   }
 
@@ -615,8 +670,16 @@ public class PalDirectory {
 
     Map<UUID, PeerInfo> map = new HashMap<>();
 
+    // Prefix for the by-name index: "…/peers/by-name/"
+    String byNamePrefix = peersPrefix + PEERS_BY_NAME_DIR + '/';
+
     for (KeyValue kv : resp.getKvs()) {
       String key = kv.getKey().toString(UTF8);
+
+      // Skip by-name index entries
+      if (key.startsWith(byNamePrefix)) {
+        continue;
+      }
 
       // Extract the uuid segment:  "/<ns>/peers/<uuid>/<suffix>"
       int start = peersPrefix.length();
@@ -663,43 +726,29 @@ public class PalDirectory {
   /**
    * Resolves a peer name to a {@link PeerInfo} instance.
    *
-   * <p>This method queries all peers via {@link #listPeers()} and filters by name. If the provided
-   * name is a valid UUID string, it also attempts to match by UUID as a fallback.
+   * <p>This method first consults the peer by-name reverse index for an O(1) lookup. If no entry is
+   * found and the provided name is a valid UUID string, it falls back to a direct UUID lookup.
    *
    * @param name the peer name or UUID string to resolve
    * @return the matching {@link PeerInfo}, or {@code null} if no peer matches
-   * @throws IllegalStateException if multiple peers share the same name, with a message listing all
-   *     matching UUIDs
    * @throws ExecutionException if an error occurs during etcd operation
    * @throws InterruptedException if the current thread is interrupted while waiting
    */
   public PeerInfo getPeerByName(String name) throws ExecutionException, InterruptedException {
     Objects.requireNonNull(name, "name must not be null");
 
-    Set<PeerInfo> allPeers = listPeers();
-
-    // Filter by name
-    List<PeerInfo> matches =
-        allPeers.stream().filter(p -> name.equals(p.getName())).collect(Collectors.toList());
-
-    if (matches.size() == 1) {
-      return matches.get(0);
-    }
-
-    if (matches.size() > 1) {
-      String uuids =
-          matches.stream().map(p -> p.getUuid().toString()).collect(Collectors.joining(", "));
-      throw new IllegalStateException(
-          format(
-              "Multiple peers found with name \"%s\": [%s]. "
-                  + "Peer names must be unique when used for resolution.",
-              name, uuids));
+    // Fast path: look up via by-name index
+    ByteSequence byNameKey = peerByNameKey(name);
+    GetResponse byNameResp = kvClient.get(byNameKey).get();
+    if (byNameResp.getCount() != 0) {
+      UUID uuid = UUID.fromString(byNameResp.getKvs().get(0).getValue().toString(UTF8));
+      return getPeer(uuid);
     }
 
     // No match by name — try matching by UUID if the name is a valid UUID string
     try {
       UUID uuid = UUID.fromString(name);
-      return allPeers.stream().filter(p -> uuid.equals(p.getUuid())).findFirst().orElse(null);
+      return getPeer(uuid);
     } catch (IllegalArgumentException e) {
       // Not a valid UUID string, return null
       return null;
@@ -708,11 +757,12 @@ public class PalDirectory {
 
   /**
    * Deletes all peer nodes except those specified in the exclusion set, and cleans up associated
-   * intercept requests.
+   * intercept requests and peer-name reverse-index entries.
    *
-   * <p>This method removes all peers not in the exclusion set and their associated intercept
-   * requests. When the exclusion set is null or empty, uses a fast-path that deletes the entire
-   * peers subtree and all intercept requests in a single batch operation.
+   * <p>This method removes all peers not in the exclusion set, their associated intercept requests,
+   * and their by-name index entries. When the exclusion set is null or empty, uses a fast-path that
+   * deletes the entire peers subtree (including the by-name index), all intercept requests in a
+   * single batch operation.
    *
    * @param excludePeers a {@link Set} of peer UUIDs to exclude from deletion; may be {@code null}
    * @return the number of peers deleted
@@ -732,7 +782,7 @@ public class PalDirectory {
         }
       }
     } else {
-      /* Fast-path: wipe the entire peers subtree */
+      /* Fast-path: wipe the entire peers subtree (includes by-name index) */
       final DeleteResponse deleteResponse =
           kvClient.delete(getPeersPathKey(), DeleteOption.builder().isPrefix(true).build()).get();
       deleted = deleteResponse.getDeleted();
@@ -773,12 +823,13 @@ public class PalDirectory {
   }
 
   /**
-   * Deletes a peer subtree atomically (root + logs + state) and cleans up associated intercept
-   * requests.
+   * Deletes a peer subtree atomically (root + logs + state + by-name index) and cleans up
+   * associated intercept requests.
    *
-   * <p>This method deletes the peer's entire subtree and then removes all intercept requests
-   * registered by this peer. Intercept requests are stored separately under {@code
-   * /pal/intercepts/<peer-uuid>} and are not automatically deleted with the peer subtree.
+   * <p>This method deletes the peer's entire subtree, removes the peer's name-to-UUID reverse index
+   * entry (if the peer has a name), and then removes all intercept requests registered by this
+   * peer. Intercept requests are stored separately under {@code /pal/intercepts/<peer-uuid>} and
+   * are not automatically deleted with the peer subtree.
    *
    * @param peerUuid the peer's UUID
    * @throws ExecutionException on etcd errors
@@ -797,12 +848,21 @@ public class PalDirectory {
     }
     long version = get.getKvs().get(0).getVersion(); // optimistic-lock token
 
-    // 2) Delete the entire subtree iff the /info node is unchanged
+    // Resolve the peer name for by-name index cleanup
+    PeerStatic ps = gson.fromJson(get.getKvs().get(0).getValue().toString(UTF8), PeerStatic.class);
+
+    // 2) Delete the entire subtree (+ by-name index if named) iff /info node is unchanged
+    List<Op> deleteOps = new ArrayList<>();
+    deleteOps.add(Op.delete(peerRoot, DeleteOption.builder().isPrefix(true).build()));
+    if (ps.name() != null) {
+      deleteOps.add(Op.delete(peerByNameKey(ps.name()), DeleteOption.DEFAULT));
+    }
+
     TxnResponse tx =
         kvClient
             .txn()
             .If(new Cmp(infoKey, Cmp.Op.EQUAL, CmpTarget.version(version)))
-            .Then(Op.delete(peerRoot, DeleteOption.builder().isPrefix(true).build()))
+            .Then(deleteOps.toArray(new Op[0]))
             .commit()
             .get();
 
@@ -2148,6 +2208,26 @@ public class PalDirectory {
    */
   private String getPeerPath(UUID peerUuid) {
     return format("%s/%s", getPeersPath(), peerUuid);
+  }
+
+  /**
+   * Retrieves the etcd path for the peer by-name reverse index entry.
+   *
+   * @param peerName the peer name
+   * @return the etcd path for the peer's name index entry
+   */
+  private String getPeerByNamePath(String peerName) {
+    return format("%s/%s/%s", getPeersPath(), PEERS_BY_NAME_DIR, peerName);
+  }
+
+  /**
+   * Creates a {@link ByteSequence} for the peer by-name index key.
+   *
+   * @param peerName the peer name
+   * @return a {@code ByteSequence} representing the by-name index key
+   */
+  private ByteSequence peerByNameKey(String peerName) {
+    return ByteSequence.from(getPeerByNamePath(peerName), UTF8);
   }
 
   /**

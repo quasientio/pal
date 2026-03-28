@@ -427,7 +427,7 @@ UUID                                 Name            ZMQ-RPC              JSON-R
 ```
 
 - UUID: Peer unique identifier
-- Name: Peer name (if set)
+- Name: Peer name (if set; must be unique within the directory)
 - ZMQ-RPC: Binary RPC endpoint (tcp://)
 - JSON-RPC: JSON-RPC endpoint (ws://)
 - PUB: Message publication endpoint (tcp://)

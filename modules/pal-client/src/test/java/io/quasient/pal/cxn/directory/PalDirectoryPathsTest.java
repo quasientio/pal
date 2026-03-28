@@ -84,4 +84,13 @@ public class PalDirectoryPathsTest {
     String peersKeyStr = new String(peersKey.getBytes(), StandardCharsets.UTF_8);
     assertThat(peersKeyStr, is(peers));
   }
+
+  @Test
+  public void peerByNamePath_includesNamespace() throws Exception {
+    Method m = PalDirectory.class.getDeclaredMethod("getPeerByNamePath", String.class);
+    m.setAccessible(true);
+    String path = (String) m.invoke(dir, "my-peer");
+
+    assertThat(path, is("/ns-test/peers/by-name/my-peer"));
+  }
 }

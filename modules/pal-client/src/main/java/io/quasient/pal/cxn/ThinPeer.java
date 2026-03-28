@@ -17,6 +17,7 @@ import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
+import io.quasient.pal.cxn.directory.DuplicatePeerNameException;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.cxn.directory.PeerLease;
 import io.quasient.pal.messages.LogMessage;
@@ -568,6 +569,8 @@ public class ThinPeer {
         }
         getPalDirectory().createPeer(self);
         peerLease = getPalDirectory().createPeerLease(self.getUuid(), PEER_KA_SECS);
+      } catch (DuplicatePeerNameException ex) {
+        throw new IllegalArgumentException(ex.getMessage(), ex);
       } catch (RuntimeException ex) {
         logger.error("Error registering peer", ex);
       }

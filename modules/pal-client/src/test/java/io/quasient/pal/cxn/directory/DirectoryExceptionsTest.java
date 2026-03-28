@@ -21,8 +21,8 @@ import org.junit.Test;
 /**
  * Unit tests for directory-related exception classes.
  *
- * <p>Tests the constructors and behavior of {@link NoPeerInfoNodeException} and {@link
- * EtcdUnavailableException}.
+ * <p>Tests the constructors and behavior of {@link NoPeerInfoNodeException}, {@link
+ * EtcdUnavailableException}, and {@link DuplicatePeerNameException}.
  */
 public class DirectoryExceptionsTest {
 
@@ -100,5 +100,34 @@ public class DirectoryExceptionsTest {
     assertTrue("Message should contain endpoint", ex.getMessage().contains(endpoint));
     assertTrue(
         "Message should contain timeout", ex.getMessage().contains(String.valueOf(timeoutMs)));
+  }
+
+  // ==================== DuplicatePeerNameException tests ====================
+
+  /** Tests DuplicatePeerNameException constructor with message. */
+  @Test
+  public void testDuplicatePeerNameException_withMessage() {
+    String message = "Peer name \"my-peer\" is already registered by peer abc-123";
+    DuplicatePeerNameException ex = new DuplicatePeerNameException(message);
+
+    assertThat("Message should be set", ex.getMessage(), is(message));
+    assertThat("Cause should be null", ex.getCause(), nullValue());
+  }
+
+  /** Tests that DuplicatePeerNameException hierarchy is correct. */
+  @Test
+  public void testDuplicatePeerNameException_hierarchy() {
+    assertTrue(
+        "Should extend Exception",
+        Exception.class.isAssignableFrom(DuplicatePeerNameException.class));
+    assertFalse(
+        "Should not extend RuntimeException",
+        RuntimeException.class.isAssignableFrom(DuplicatePeerNameException.class));
+  }
+
+  /** Tests that DuplicatePeerNameException can be thrown and caught. */
+  @Test(expected = DuplicatePeerNameException.class)
+  public void testDuplicatePeerNameException_canBeThrown() throws DuplicatePeerNameException {
+    throw new DuplicatePeerNameException("test throw");
   }
 }

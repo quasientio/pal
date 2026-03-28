@@ -11,7 +11,10 @@ package io.quasient.pal.cxn.directory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import io.quasient.pal.AbstractIntegrationTest;
 import io.quasient.pal.common.directory.nodes.InterceptRequest;
@@ -213,15 +216,57 @@ public class PalDirectoryPeerDeletionIT extends AbstractIntegrationTest {
     createdPeers.clear();
   }
 
-  // ==========================================================================
-  // Test Specifications for Issue #636
-  // Awaiting implementation in #638
-  // ==========================================================================
+  @Test
+  public void deletePeers_namedPeers_byNameIndexCleaned() throws Exception {
+    // Create named peers
+    PeerInfo peer1 = createTestPeer("byname-cleanup-peer1");
+    PeerInfo peer2 = createTestPeer("byname-cleanup-peer2");
+
+    // Verify peers exist and can be resolved by name
+    assertNotNull(palDirectory.getPeerByName("byname-cleanup-peer1"));
+    assertNotNull(palDirectory.getPeerByName("byname-cleanup-peer2"));
+
+    // Delete all peers (fast-path wipes entire subtree including by-name index)
+    palDirectory.deletePeers();
+    createdPeers.clear();
+
+    // Verify the names are now free — can create new peers with the same names
+    PeerInfo newPeer1 = createTestPeer("byname-cleanup-peer1");
+    PeerInfo newPeer2 = createTestPeer("byname-cleanup-peer2");
+
+    assertNotNull(palDirectory.getPeerByName("byname-cleanup-peer1"));
+    assertNotNull(palDirectory.getPeerByName("byname-cleanup-peer2"));
+    assertNotEquals(peer1.getUuid(), newPeer1.getUuid());
+    assertNotEquals(peer2.getUuid(), newPeer2.getUuid());
+  }
+
+  @Test
+  public void purgePeersExcept_namedPeers_byNameIndexCleanedForDeletedOnly() throws Exception {
+    PeerInfo peer1 = createTestPeer("purge-name-peer1");
+    PeerInfo peer2 = createTestPeer("purge-name-peer2");
+
+    // Purge all except peer2
+    Set<UUID> exclusions = new HashSet<>();
+    exclusions.add(peer2.getUuid());
+    palDirectory.purgePeersExcept(exclusions);
+    createdPeers.remove(peer1.getUuid());
+
+    // peer1's name should be free for reuse
+    PeerInfo newPeer1 = createTestPeer("purge-name-peer1");
+    assertNotNull(palDirectory.getPeerByName("purge-name-peer1"));
+    assertNotEquals(peer1.getUuid(), newPeer1.getUuid());
+
+    // peer2's name should still be held
+    try {
+      createTestPeer("purge-name-peer2");
+      fail("Expected DuplicatePeerNameException for name still held by peer2");
+    } catch (DuplicatePeerNameException e) {
+      assertTrue(e.getMessage().contains("purge-name-peer2"));
+    }
+  }
 
   /**
    * Tests that purgePeersExcept cleans up intercepts on deleted peers.
-   *
-   * <p>Specification #15 from Issue #636:
    *
    * <ul>
    *   <li>Given: Multiple peers with intercepts registered
@@ -271,8 +316,6 @@ public class PalDirectoryPeerDeletionIT extends AbstractIntegrationTest {
   /**
    * Tests that purgePeersExcept with a subset exclusion only deletes non-excluded peers.
    *
-   * <p>Specification #16 from Issue #636:
-   *
    * <ul>
    *   <li>Given: Multiple peers in the directory
    *   <li>When: purgePeersExcept(excludeSubset) is called with a subset of peer UUIDs
@@ -308,8 +351,6 @@ public class PalDirectoryPeerDeletionIT extends AbstractIntegrationTest {
   /**
    * Tests that purgeLogsExcept with exclusions preserves excluded logs.
    *
-   * <p>Specification #17 from Issue #636:
-   *
    * <ul>
    *   <li>Given: Multiple logs in the directory
    *   <li>When: purgeLogsExcept(excludeSet) is called with a subset of log UUIDs
@@ -340,8 +381,6 @@ public class PalDirectoryPeerDeletionIT extends AbstractIntegrationTest {
 
   /**
    * Tests that purgeLogsExcept returns zero when no logs exist.
-   *
-   * <p>Specification #18 from Issue #636:
    *
    * <ul>
    *   <li>Given: An empty directory with no logs

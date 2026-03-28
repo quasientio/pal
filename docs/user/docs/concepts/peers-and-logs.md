@@ -11,7 +11,7 @@ A **peer** is a PAL runtime instance that executes your Java application code. T
 Every peer has:
 
 - **Unique ID**: A UUID that identifies it globally
-- **Optional Name**: A human-readable name (e.g., "my-service")
+- **Optional Name**: A human-readable name (e.g., "my-service"). **Peer names must be unique** within a directory namespace — no two peers can share the same name.
 - **Endpoints**: Addresses for RPC communication (ZeroMQ, WebSocket)
 - **Logs**: Associated Kafka topics or Chronicle queues
 - **Directory Registration**: Listed in etcd for service discovery

@@ -187,6 +187,119 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
   }
 
   @Test
+  public void createPeer_duplicateName_throwsDuplicatePeerNameException() throws Exception {
+    final PeerInfo peer1 = new PeerInfo(UUID.randomUUID(), "shared-name");
+    peer1.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peer1);
+    createdPeers.add(peer1.getUuid());
+
+    // Another peer with different UUID but same name
+    final PeerInfo peer2 = new PeerInfo(UUID.randomUUID(), "shared-name");
+    peer2.setZmqRpcAddress("tcp://127.0.0.1:5672");
+
+    try {
+      palDirectory.createPeer(peer2);
+      createdPeers.add(peer2.getUuid());
+      fail("Expected DuplicatePeerNameException for duplicate peer name");
+    } catch (DuplicatePeerNameException e) {
+      assertTrue("Exception should mention the name", e.getMessage().contains("shared-name"));
+      assertTrue(
+          "Exception should mention the existing peer UUID",
+          e.getMessage().contains(peer1.getUuid().toString()));
+    }
+
+    // Verify only the first peer exists
+    assertTrue(palDirectory.peerExists(peer1.getUuid()));
+    assertFalse(palDirectory.peerExists(peer2.getUuid()));
+  }
+
+  @Test
+  public void createPeer_sameUuidSameName_idempotentSkip() throws Exception {
+    UUID peerUuid = UUID.randomUUID();
+    final PeerInfo peer1 = new PeerInfo(peerUuid, "idempotent-peer");
+    peer1.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peer1);
+    createdPeers.add(peer1.getUuid());
+
+    // Re-create with the same UUID and name — should skip without error
+    final PeerInfo peer2 = new PeerInfo(peerUuid, "idempotent-peer");
+    peer2.setZmqRpcAddress("tcp://127.0.0.1:5672");
+    palDirectory.createPeer(peer2);
+
+    // Verify the first version persists
+    PeerInfo retrieved = palDirectory.getPeer(peerUuid);
+    assertEquals(peer1.getZmqRpcAddress(), retrieved.getZmqRpcAddress());
+  }
+
+  @Test
+  public void createPeer_noName_noDuplicateCheck() throws Exception {
+    // Two unnamed peers should both succeed
+    final PeerInfo peer1 = new PeerInfo(UUID.randomUUID());
+    peer1.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peer1);
+    createdPeers.add(peer1.getUuid());
+
+    final PeerInfo peer2 = new PeerInfo(UUID.randomUUID());
+    peer2.setZmqRpcAddress("tcp://127.0.0.1:5672");
+    palDirectory.createPeer(peer2);
+    createdPeers.add(peer2.getUuid());
+
+    assertTrue(palDirectory.peerExists(peer1.getUuid()));
+    assertTrue(palDirectory.peerExists(peer2.getUuid()));
+  }
+
+  @Test
+  public void deletePeer_namedPeer_nameCanBeReused() throws Exception {
+    final PeerInfo peer1 = new PeerInfo(UUID.randomUUID(), "reuse-name");
+    peer1.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peer1);
+    createdPeers.add(peer1.getUuid());
+
+    // Delete peer1
+    palDirectory.deletePeer(peer1.getUuid());
+
+    // Now a new peer should be able to use the same name
+    final PeerInfo peer2 = new PeerInfo(UUID.randomUUID(), "reuse-name");
+    peer2.setZmqRpcAddress("tcp://127.0.0.1:5672");
+    palDirectory.createPeer(peer2);
+    createdPeers.add(peer2.getUuid());
+
+    assertFalse(palDirectory.peerExists(peer1.getUuid()));
+    assertTrue(palDirectory.peerExists(peer2.getUuid()));
+  }
+
+  @Test
+  public void getPeerByName_namedPeer_resolvedViaIndex() throws Exception {
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "index-lookup-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
+
+    PeerInfo resolved = palDirectory.getPeerByName("index-lookup-peer");
+    assertNotNull(resolved);
+    assertEquals(peerInfo.getUuid(), resolved.getUuid());
+    assertEquals("index-lookup-peer", resolved.getName());
+  }
+
+  @Test
+  public void getPeerByName_unknownName_null() throws Exception {
+    assertNull(palDirectory.getPeerByName("no-such-peer"));
+  }
+
+  @Test
+  public void getPeerByName_uuidString_resolvedDirectly() throws Exception {
+    final PeerInfo peerInfo = new PeerInfo(UUID.randomUUID(), "uuid-resolve-peer");
+    peerInfo.setZmqRpcAddress("tcp://127.0.0.1:5671");
+    palDirectory.createPeer(peerInfo);
+    createdPeers.add(peerInfo.getUuid());
+
+    // Resolve by UUID string
+    PeerInfo resolved = palDirectory.getPeerByName(peerInfo.getUuid().toString());
+    assertNotNull(resolved);
+    assertEquals(peerInfo.getUuid(), resolved.getUuid());
+  }
+
+  @Test
   public void getPeerInfo_noSuchPeer_null() throws Exception {
     UUID peerUuid = UUID.randomUUID();
     assertFalse(palDirectory.peerExists(peerUuid));
