@@ -1,11 +1,17 @@
 /*
  * Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
  *
- * Use of this software is governed by the Business Source License 1.1
- * included in the file LICENSE and at https://mariadb.com/bsl11
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Change Date: 2030-10-01
- * Change License: Apache 2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.quasient.pal.core.service;
 
@@ -22,7 +28,7 @@ import org.junit.Test;
  *
  * <p>These tests verify that RunOptions enum constants are properly defined and can be used
  * alongside other RunOptions in EnumSet collections. Includes specifications for
- * WITH_WAL_INCOMING_RPC and WITH_WAL_ALL_INCOMING_RPC options (awaiting implementation in #772).
+ * WITH_WAL_INCOMING_RPC and WITH_WAL_ALL_INCOMING_RPC options.
  */
 public class RunOptionsTest {
 

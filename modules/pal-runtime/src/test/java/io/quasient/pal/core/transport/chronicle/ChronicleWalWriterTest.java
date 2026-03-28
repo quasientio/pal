@@ -1,11 +1,17 @@
 /*
  * Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
  *
- * Use of this software is governed by the Business Source License 1.1
- * included in the file LICENSE and at https://mariadb.com/bsl11
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Change Date: 2030-10-01
- * Change License: Apache 2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.quasient.pal.core.transport.chronicle;
 
@@ -294,8 +300,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
     assertThat(tiny.offer(dummy()), is(false));
   }
 
-  // ==================== Test Specifications for Issue #545 ====================
-  // The following tests are specifications awaiting implementation in issue #546.
+  // ==================== Test Specifications ====================
+  // The following tests are specifications for ChronicleWalWriter.
 
   /**
    * Tests that writeMessage writes directly to the Chronicle log using thread-local appender.

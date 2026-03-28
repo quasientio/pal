@@ -306,4 +306,4 @@ pal run -d localhost:2379 --interceptable \
 
 ## License
 
-PAL is licensed under the Business Source License 1.1, which converts to Apache License 2.0 on 2029-10-01.
+PAL is licensed under the Apache License, Version 2.0.

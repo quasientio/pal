@@ -1,11 +1,17 @@
 /*
  * Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
  *
- * Use of this software is governed by the Business Source License 1.1
- * included in the file LICENSE and at https://mariadb.com/bsl11
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Change Date: 2030-10-01
- * Change License: Apache 2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.quasient.pal.core.dispatcher;
 
@@ -265,7 +271,7 @@ public class MetaMessageDispatcherTest {
     assertThat(response.getFromPeer(), is(peerUuid.toString()));
   }
 
-  // ===== Additional Test Specifications (Issue #468) =====
+  // ===== Additional Test Specifications =====
 
   /**
    * Tests that an unsupported service type returns UNSUPPORTED status.
@@ -536,8 +542,8 @@ public class MetaMessageDispatcherTest {
         .scannedClasspathToJson(eq(false), isNull(), isNull(), eq(false));
   }
 
-  // ===== Test Specifications (Issue #537) =====
-  // These test methods document the acceptance criteria for #537.
+  // ===== Test Specifications =====
+  // These test methods document the acceptance criteria for MetaMessageDispatcher.
   // They are implemented above with different names following existing patterns.
 
   /**

@@ -1,11 +1,17 @@
 /*
  * Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
  *
- * Use of this software is governed by the Business Source License 1.1
- * included in the file LICENSE and at https://mariadb.com/bsl11
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Change Date: 2030-10-01
- * Change License: Apache 2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.quasient.pal.common.lang.intercept;
 
@@ -22,7 +28,7 @@ import org.junit.Test;
  *
  * <p>These are test stubs that specify the expected behavior of the new custom exception hierarchy
  * that distinguishes API misuse from intentional callback exceptions. The actual implementation
- * will be provided in issue #269.
+ * will be provided in a future implementation.
  *
  * <p>This hierarchy includes:
  *

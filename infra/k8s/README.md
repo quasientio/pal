@@ -90,5 +90,4 @@ pal run \
 
 ## License
 
-Source files are governed by the **Business Source License 1.1** (see each file header).  
-After the _Change Date_ they switch to Apache 2.0.
+Source files are governed by the **Apache License, Version 2.0** (see each file header).

@@ -1,11 +1,17 @@
 /*
  * Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
  *
- * Use of this software is governed by the Business Source License 1.1
- * included in the file LICENSE and at https://mariadb.com/bsl11
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Change Date: 2030-10-01
- * Change License: Apache 2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.quasient.pal.intercept.chain;
 
@@ -199,9 +205,9 @@ public class AroundChainIT extends AbstractInterceptIT {
    * <p>Chain:
    *
    * <ul>
-   *   <li>Local #1 (outerDoubler): doubles return value after proceed
-   *   <li>Local #2 (middleLogger): logs but doesn't modify
-   *   <li>Remote #1 (innerAdder): adds 10 to return value after proceed
+   *   <li>Local (1) outerDoubler: doubles return value after proceed
+   *   <li>Local (2) middleLogger: logs but doesn't modify
+   *   <li>Remote (1) innerAdder: adds 10 to return value after proceed
    * </ul>
    *
    * <p>Method getCounter() returns 5.
@@ -226,7 +232,7 @@ public class AroundChainIT extends AbstractInterceptIT {
   public void testMixedLocalRemoteAroundChain() throws Exception {
     logger.info("===== testMixedLocalRemoteAroundChain [{}] =====", path);
 
-    // 1. Register AROUND intercepts in order: local #1, local #2, remote #1
+    // 1. Register AROUND intercepts in order: local-1, local-2, remote-1
     // Registration order determines execution order within each category
     InterceptRequest<?> outerDoubler = createLocalAroundIntercept("outerDoubler");
     InterceptRequest<?> middleLogger = createLocalAroundIntercept("middleLogger");
@@ -281,8 +287,8 @@ public class AroundChainIT extends AbstractInterceptIT {
    * <p>Chain:
    *
    * <ul>
-   *   <li>Local #1 (cachingCallback): caches results, skips proceed on cache hit
-   *   <li>Remote #1 (innerLogger): logs invocations
+   *   <li>Local (1) cachingCallback: caches results, skips proceed on cache hit
+   *   <li>Remote (1) innerLogger: logs invocations
    * </ul>
    *
    * <p>Test flow:

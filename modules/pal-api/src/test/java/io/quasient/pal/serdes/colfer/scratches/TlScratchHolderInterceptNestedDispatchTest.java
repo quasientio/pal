@@ -1,11 +1,17 @@
 /*
  * Copyright (C) 2026 Quasient Inc. <https://www.quasient.com>
  *
- * Use of this software is governed by the Business Source License 1.1
- * included in the file LICENSE and at https://mariadb.com/bsl11
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Change Date: 2030-10-01
- * Change License: Apache 2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package io.quasient.pal.serdes.colfer.scratches;
 
@@ -34,8 +40,8 @@ import org.junit.Test;
  * triggers another intercepted method, the nested dispatch reuses the same thread-local scratch
  * objects, corrupting the outer dispatch's state.
  *
- * <p>These tests serve as guardrails for the intercept scratch objects (task #690), ensuring new
- * ephemeral methods follow the clone-before-nested-dispatch pattern.
+ * <p>These tests serve as guardrails for the intercept scratch objects, ensuring new ephemeral
+ * methods follow the clone-before-nested-dispatch pattern.
  *
  * @see TlScratchHolder
  * @see TlMsgScratch

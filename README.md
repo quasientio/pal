@@ -157,7 +157,7 @@ PAL consists of:
 
 ## License
 
-Business Source License 1.1 (converts to Apache 2.0 on 2029-10-01).
+Apache License, Version 2.0.
 
 See [LICENSE](LICENSE) for details.
 
