@@ -197,7 +197,7 @@ public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
             .getInterceptCallbackRequestMessage()
             .getExec()
             .getInstanceMethodCall()
-            .getParameters()
+            .getArgs()
             .length,
         is(1));
 
@@ -326,7 +326,7 @@ public class InstanceMethodSyncCallbackIT extends AbstractInterceptIT {
               .getInterceptCallbackRequestMessage()
               .getExec()
               .getInstanceMethodCall()
-              .getParameters()
+              .getArgs()
               .length,
           is(1));
     }

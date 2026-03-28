@@ -223,7 +223,7 @@ public class ConstructorAroundCallbackIT extends AbstractInterceptIT {
         is(notNullValue()));
     assertThat(
         "BEFORE callback should have 1 parameter (the Integer argument)",
-        beforeReq.getExec().getConstructorCall().getParameters().length,
+        beforeReq.getExec().getConstructorCall().getArgs().length,
         is(1));
 
     // 5. Verify AFTER phase callback (second callback)

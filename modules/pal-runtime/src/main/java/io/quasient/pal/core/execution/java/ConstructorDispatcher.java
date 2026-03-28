@@ -26,7 +26,7 @@ import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import io.quasient.pal.messages.colfer.ExecMessage;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
@@ -268,15 +268,15 @@ public class ConstructorDispatcher extends BaseExecMessageDispatcher {
   }
 
   /**
-   * Retrieves the list of parameters from the constructor call encapsulated within the given
-   * execution message.
+   * Retrieves the list of args from the constructor call encapsulated within the given execution
+   * message.
    *
    * @param execMessage the execution message containing the constructor call details
-   * @return a list of {@link Parameter} objects representing the constructor parameters
+   * @return a list of {@link Obj} instances representing the constructor args
    */
   @Override
-  protected List<Parameter> getParameterList(ExecMessage execMessage) {
-    return Arrays.asList(execMessage.getConstructorCall().getParameters());
+  protected List<Obj> getArgsList(ExecMessage execMessage) {
+    return Arrays.asList(execMessage.getConstructorCall().getArgs());
   }
 
   /**

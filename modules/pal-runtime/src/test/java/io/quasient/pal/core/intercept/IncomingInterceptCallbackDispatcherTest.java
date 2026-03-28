@@ -41,7 +41,6 @@ import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.StaticFieldGet;
 import io.quasient.pal.messages.colfer.StaticFieldPut;
@@ -611,16 +610,11 @@ public class IncomingInterceptCallbackDispatcherTest {
     InstanceMethodCall methodCall = new InstanceMethodCall();
     methodCall.setName("testMethod");
 
-    // Create parameters with wrapped values
-    Parameter param1 = new Parameter();
-    param1.setName("arg0");
-    param1.setValue(wrapValue("hello", String.class.getName()));
+    // Create args with wrapped values
+    Obj arg0 = wrapValue("hello", String.class.getName());
+    Obj arg1 = wrapValue(42, Integer.class.getName());
 
-    Parameter param2 = new Parameter();
-    param2.setName("arg1");
-    param2.setValue(wrapValue(42, Integer.class.getName()));
-
-    methodCall.setParameters(new Parameter[] {param1, param2});
+    methodCall.setArgs(new Obj[] {arg0, arg1});
     exec.setInstanceMethodCall(methodCall);
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
@@ -664,14 +658,11 @@ public class IncomingInterceptCallbackDispatcherTest {
     InstanceMethodCall methodCall = new InstanceMethodCall();
     methodCall.setName("testMethod");
 
-    // Create parameter with null value
-    Parameter param = new Parameter();
-    param.setName("arg0");
+    // Create arg with null value
     Obj nullObj = new Obj();
     nullObj.setIsNull(true);
-    param.setValue(nullObj);
 
-    methodCall.setParameters(new Parameter[] {param});
+    methodCall.setArgs(new Obj[] {nullObj});
     exec.setInstanceMethodCall(methodCall);
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
@@ -713,12 +704,8 @@ public class IncomingInterceptCallbackDispatcherTest {
     InstanceMethodCall methodCall = new InstanceMethodCall();
     methodCall.setName("testMethod");
 
-    // Create parameter with malformed value that will fail deserialization
-    Parameter param = new Parameter();
-    param.setName("arg0");
-    param.setValue(createMalformedObj());
-
-    methodCall.setParameters(new Parameter[] {param});
+    // Create arg with malformed value that will fail deserialization
+    methodCall.setArgs(new Obj[] {createMalformedObj()});
     exec.setInstanceMethodCall(methodCall);
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
@@ -1476,10 +1463,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     exec.setMessageId("test-msg");
 
     ConstructorCall constructorCall = new ConstructorCall();
-    Parameter param = new Parameter();
-    param.setName("arg0");
-    param.setValue(wrapValue("constructor-arg", String.class.getName()));
-    constructorCall.setParameters(new Parameter[] {param});
+    constructorCall.setArgs(new Obj[] {wrapValue("constructor-arg", String.class.getName())});
     exec.setConstructorCall(constructorCall);
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
@@ -1517,10 +1501,7 @@ public class IncomingInterceptCallbackDispatcherTest {
 
     ClassMethodCall classMethodCall = new ClassMethodCall();
     classMethodCall.setName("staticMethod");
-    Parameter param = new Parameter();
-    param.setName("arg0");
-    param.setValue(wrapValue(999, Integer.class.getName()));
-    classMethodCall.setParameters(new Parameter[] {param});
+    classMethodCall.setArgs(new Obj[] {wrapValue(999, Integer.class.getName())});
     exec.setClassMethodCall(classMethodCall);
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
@@ -1558,7 +1539,7 @@ public class IncomingInterceptCallbackDispatcherTest {
 
     InstanceMethodCall methodCall = new InstanceMethodCall();
     methodCall.setName("noArgMethod");
-    methodCall.setParameters(new Parameter[0]); // empty array
+    methodCall.setArgs(new Obj[0]); // empty array
     exec.setInstanceMethodCall(methodCall);
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();
@@ -1595,7 +1576,7 @@ public class IncomingInterceptCallbackDispatcherTest {
 
     InstanceMethodCall methodCall = new InstanceMethodCall();
     methodCall.setName("noArgMethod");
-    methodCall.setParameters(null); // null array
+    methodCall.setArgs(null); // null array
     exec.setInstanceMethodCall(methodCall);
 
     InterceptCallbackRequestMessage request = new InterceptCallbackRequestMessage();

@@ -28,7 +28,6 @@ import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.Method;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.colfer.ReturnValue;
@@ -249,25 +248,12 @@ public final class TlScratchHolder {
   }
 
   /**
-   * Ensures the thread-local parameter/value pools can hold at least {@code n} items.
+   * Ensures the thread-local value pool can hold at least {@code n} items.
    *
    * @param n required capacity
    */
-  public static void ensureParamCapacity(int n) {
+  public static void ensureArgCapacity(int n) {
     s().ensureCapacity(n);
-  }
-
-  /**
-   * Returns the {@link Parameter} at index {@code i}, reset for fresh use.
-   *
-   * @param i zero-based index
-   * @return cleared {@code Parameter} at the given index
-   * @throws IndexOutOfBoundsException if {@code i} is out of range
-   */
-  public static Parameter paramAt(int i) {
-    final Parameter p = s().params.get(i);
-    p.reset();
-    return p;
   }
 
   /**
@@ -284,13 +270,13 @@ public final class TlScratchHolder {
   }
 
   /**
-   * Get an exact-length array of {@link Parameter} elements
+   * Returns a cached or new exact-length {@link Obj} array.
    *
    * @param n the desired length
-   * @return a new/cached array of {@code n} elements
+   * @return an array of {@code n} elements
    */
-  public static Parameter[] paramsOut(int n) {
-    return s().arrayForLen(n);
+  public static Obj[] argsOut(int n) {
+    return s().argArrayForLen(n);
   }
 
   /**

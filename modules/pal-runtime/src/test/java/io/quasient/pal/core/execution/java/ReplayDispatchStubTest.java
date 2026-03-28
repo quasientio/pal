@@ -38,7 +38,6 @@ import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import java.lang.reflect.AccessibleObject;
@@ -400,7 +399,7 @@ public class ReplayDispatchStubTest {
     clazz.setName(className);
     imc.setClazz(clazz);
     imc.setName(methodName);
-    imc.setParameters(new Parameter[0]);
+    imc.setArgs(new Obj[0]);
     msg.setInstanceMethodCall(imc);
 
     return WalEntry.fromExecMessage(offset, msg);
@@ -424,7 +423,7 @@ public class ReplayDispatchStubTest {
     imc.setClazz(clazz);
     imc.setName(methodName);
     imc.setObjectRef(objectRef);
-    imc.setParameters(new Parameter[0]);
+    imc.setArgs(new Obj[0]);
     msg.setInstanceMethodCall(imc);
 
     return WalEntry.fromExecMessage(offset, msg);
@@ -443,7 +442,7 @@ public class ReplayDispatchStubTest {
     clazz.setName(className);
     imc.setClazz(clazz);
     imc.setName(methodName);
-    imc.setParameters(new Parameter[0]);
+    imc.setArgs(new Obj[0]);
     msg.setInstanceMethodCall(imc);
 
     return WalEntry.fromExecMessage(offset, msg);
@@ -559,7 +558,7 @@ public class ReplayDispatchStubTest {
     }
 
     @Override
-    protected List<Parameter> getParameterList(ExecMessage execMessage) {
+    protected List<Obj> getArgsList(ExecMessage execMessage) {
       return Collections.emptyList();
     }
 

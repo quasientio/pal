@@ -39,7 +39,6 @@ import io.quasient.pal.messages.colfer.InstanceFieldPut;
 import io.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -255,7 +254,7 @@ public class ReplayDispatchStubWithSideEffectsTest {
     clazz.setName(className);
     imc.setClazz(clazz);
     imc.setName(methodName);
-    imc.setParameters(new Parameter[0]);
+    imc.setArgs(new Obj[0]);
     msg.setInstanceMethodCall(imc);
 
     return WalEntry.fromExecMessage(offset, msg);

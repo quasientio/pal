@@ -22,7 +22,7 @@ import static org.junit.Assert.assertNull;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.messages.colfer.ExecMessage;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.jsonrpc.Argument;
 import io.quasient.pal.messages.jsonrpc.JsonRpcRequest;
 import io.quasient.pal.messages.types.MessageType;
@@ -57,7 +57,7 @@ public class MessageBuilderJsonRpcRequestToExecTest {
     assertEquals("rid-1", em.getMessageId());
     assertEquals(peerId.toString(), em.getPeerUuid());
     assertEquals(type, em.getConstructorCall().getClazz().getName());
-    Parameter[] ps = em.getConstructorCall().getParameters();
+    Obj[] ps = em.getConstructorCall().getArgs();
     assertNotNull(ps);
     assertEquals(0, ps.length);
   }
@@ -81,15 +81,12 @@ public class MessageBuilderJsonRpcRequestToExecTest {
     assertEquals(type, em.getInstanceMethodCall().getClazz().getName());
     assertEquals(method, em.getInstanceMethodCall().getName());
     assertEquals(instance.getRef(), em.getInstanceMethodCall().getObjectRef());
-    Parameter[] ps = em.getInstanceMethodCall().getParameters();
+    Obj[] ps = em.getInstanceMethodCall().getArgs();
     assertEquals(2, ps.length);
-    // names preserved
-    assertEquals("e", ps[0].getName());
-    assertEquals("o", ps[1].getName());
     // first arg by value
-    assertEquals("int", ps[0].getValue().getClazz().getName());
+    assertEquals("int", ps[0].getClazz().getName());
     // second arg by ref
-    assertEquals(ref.getRef(), ps[1].getValue().getRef());
+    assertEquals(ref.getRef(), ps[1].getRef());
     // parameter types: by-value retains type, by-ref yields null in utils mapping
     var types = ExecMessageUtils.getParameterTypes(em);
     assertNotNull(types);
@@ -114,10 +111,10 @@ public class MessageBuilderJsonRpcRequestToExecTest {
     assertEquals(MessageType.EXEC_CLASS_METHOD, getMessageTypeOf(em));
     assertEquals(type, em.getClassMethodCall().getClazz().getName());
     assertEquals(method, em.getClassMethodCall().getName());
-    Parameter[] ps = em.getClassMethodCall().getParameters();
+    Obj[] ps = em.getClassMethodCall().getArgs();
     assertEquals(2, ps.length);
-    assertEquals("[F", ps[0].getValue().getClazz().getName());
-    assertEquals("float", ps[1].getValue().getClazz().getName());
+    assertEquals("[F", ps[0].getClazz().getName());
+    assertEquals("float", ps[1].getClazz().getName());
   }
 
   @Test

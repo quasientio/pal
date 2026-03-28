@@ -23,7 +23,6 @@ import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.Arrays;
 import org.junit.Test;
@@ -167,19 +166,15 @@ public class OperationSignatureTest {
     Class clazz = new Class();
     clazz.setName("com.example.Calculator");
     imc.setClazz(clazz);
-    Parameter p1 = new Parameter();
     Obj obj1 = new Obj();
     Class intClass1 = new Class();
     intClass1.setName("int");
     obj1.setClazz(intClass1);
-    p1.setValue(obj1);
-    Parameter p2 = new Parameter();
     Obj obj2 = new Obj();
     Class intClass2 = new Class();
     intClass2.setName("int");
     obj2.setClazz(intClass2);
-    p2.setValue(obj2);
-    imc.setParameters(new Parameter[] {p1, p2});
+    imc.setArgs(new Obj[] {obj1, obj2});
     msg.setInstanceMethodCall(imc);
 
     WalEntry entry = WalEntry.fromExecMessage(10L, msg);

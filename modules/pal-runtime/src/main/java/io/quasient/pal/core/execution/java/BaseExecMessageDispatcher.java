@@ -50,7 +50,6 @@ import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
@@ -1012,23 +1011,23 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       return;
     }
 
-    Parameter[] params = extractParameters(msg);
-    if (params.length == 0) {
+    Obj[] args = extractArgs(msg);
+    if (args.length == 0) {
       return;
     }
 
-    // Match WAL parameter refs with live arguments by index
-    int minLen = Math.min(params.length, liveArgs.length);
+    // Match WAL argument refs with live arguments by index
+    int minLen = Math.min(args.length, liveArgs.length);
     for (int i = 0; i < minLen; i++) {
       Object liveArg = liveArgs[i];
       if (liveArg == null) {
         continue;
       }
-      Parameter param = params[i];
-      if (param == null || param.getValue() == null) {
+      Obj arg = args[i];
+      if (arg == null) {
         continue;
       }
-      int walRef = param.getValue().getRef();
+      int walRef = arg.getRef();
       if (walRef != 0 && replayContext.getObjectStore().resolveOrNull(walRef) == null) {
         replayContext.getObjectStore().register(walRef, liveArg);
       }
@@ -1036,23 +1035,23 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   /**
-   * Extracts the parameter array from an ExecMessage based on its type.
+   * Extracts the args array from an ExecMessage based on its type.
    *
    * @param msg the execution message
-   * @return the parameter array, or an empty array if the message type has no parameters
+   * @return the args array, or an empty array if the message type has no args
    */
-  private static Parameter[] extractParameters(ExecMessage msg) {
+  private static Obj[] extractArgs(ExecMessage msg) {
     if (msg.getInstanceMethodCall() != null) {
-      return msg.getInstanceMethodCall().getParameters();
+      return msg.getInstanceMethodCall().getArgs();
     }
     if (msg.getClassMethodCall() != null) {
-      return msg.getClassMethodCall().getParameters();
+      return msg.getClassMethodCall().getArgs();
     }
     if (msg.getConstructorCall() != null) {
-      return msg.getConstructorCall().getParameters();
+      return msg.getConstructorCall().getArgs();
     }
-    // Field operations have no parameters (value is stored separately)
-    return new Parameter[0];
+    // Field operations have no args (value is stored separately)
+    return new Obj[0];
   }
 
   /**
@@ -2515,24 +2514,22 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       ExecMessage execMessage, MessageType messageType) throws ClassNotFoundException {
 
     final List<Class<?>> paramClasses = new ArrayList<>();
-    List<Parameter> parameterList = getParameterList(execMessage);
+    List<Obj> argsList = getArgsList(execMessage);
 
     if (messageType.equals(MessageType.EXEC_CONSTRUCTOR)
         || messageType.equals(MessageType.EXEC_CLASS_METHOD)
         || messageType.equals(MessageType.EXEC_INSTANCE_METHOD)) {
-      for (Parameter param : parameterList) {
-        if (param.getValue().getClazz() == null
-            || param.getValue().getClazz().getName().isEmpty()) {
+      for (Obj obj : argsList) {
+        if (obj.getClazz() == null || obj.getClazz().getName().isEmpty()) {
           paramClasses.add(null);
         } else {
-          Class<?> primitiveClass =
-              Classes.getClassForPrimitive(param.getValue().getClazz().getName());
+          Class<?> primitiveClass = Classes.getClassForPrimitive(obj.getClazz().getName());
           if (primitiveClass != null) { // param is primitive
             paramClasses.add(primitiveClass);
           } else { // i.e. not a primitive
             paramClasses.add(
                 Class.forName(
-                    param.getValue().getClazz().getName(),
+                    obj.getClazz().getName(),
                     true,
                     Thread.currentThread().getContextClassLoader()));
           }
@@ -2561,19 +2558,18 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       ExecMessage execMessage, List<Class<?>> parameterTypes) {
 
     final List<MessageArgument> args = new ArrayList<>();
-    final List<Parameter> parameterList = getParameterList(execMessage);
+    final List<Obj> argsList = getArgsList(execMessage);
 
     // Check if we're in replay mode and should use ReplayObjectStore
     final boolean useReplayObjectStore =
         replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY);
 
     int i = 0;
-    if (parameterList != null) {
-      for (Parameter parameter : parameterList) {
+    if (argsList != null) {
+      for (Obj obj : argsList) {
         if (logger.isTraceEnabled()) {
-          logger.trace("getting arg from param #{}: {}", i, ColferUtils.format(parameter));
+          logger.trace("getting arg from param #{}: {}", i, ColferUtils.format(obj));
         }
-        Obj obj = parameter.getValue();
         if (obj.getIsNull()) {
           args.add(new MessageArgument(null, true));
         } else {
@@ -2793,15 +2789,15 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   protected abstract MessageType getBeforeExecMessageType();
 
   /**
-   * Extracts the list of parameters from the given execution message.
+   * Extracts the list of args from the given execution message.
    *
-   * <p>This method should return the parameters that will be used to determine argument types and
-   * values during the loading phase.
+   * <p>This method should return the args that will be used to determine argument types and values
+   * during the loading phase.
    *
-   * @param execMessage the execution message containing the parameters
-   * @return a list of Parameter objects extracted from the execution message
+   * @param execMessage the execution message containing the args
+   * @return a list of Obj instances extracted from the execution message
    */
-  protected abstract List<Parameter> getParameterList(ExecMessage execMessage);
+  protected abstract List<Obj> getArgsList(ExecMessage execMessage);
 
   /**
    * Loads the accessible object (Constructor, Method, Field) from the message.

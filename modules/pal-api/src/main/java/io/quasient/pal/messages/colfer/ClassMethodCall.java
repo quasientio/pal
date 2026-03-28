@@ -58,7 +58,7 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
 
   public int modifiers;
 
-  public Parameter[] parameters;
+  public Obj[] args;
 
   public Context context;
 
@@ -67,12 +67,12 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
     init();
   }
 
-  private static final Parameter[] _zeroParameters = new Parameter[0];
+  private static final Obj[] _zeroArgs = new Obj[0];
 
   /** Colfer zero values. */
   private void init() {
     name = "";
-    parameters = _zeroParameters;
+    args = _zeroArgs;
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */
@@ -171,7 +171,7 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
   public int marshalFit() {
     long n = 1L + 6 + (long) this.name.length() * 3 + 5 + 6;
     if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
-    for (Parameter o : this.parameters) {
+    for (Obj o : this.args) {
       if (o == null) n++;
       else n += o.marshalFit();
     }
@@ -181,7 +181,7 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
   }
 
   /**
-   * Serializes the object. All {@code null} elements in {@link #parameters} will be replaced with a
+   * Serializes the object. All {@code null} elements in {@link #args} will be replaced with a
    * {@code new} value.
    *
    * @param out the data destination.
@@ -208,7 +208,7 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
   }
 
   /**
-   * Serializes the object. All {@code null} elements in {@link #parameters} will be replaced with a
+   * Serializes the object. All {@code null} elements in {@link #args} will be replaced with a
    * {@code new} value.
    *
    * @param buf the data destination.
@@ -292,15 +292,15 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
         buf[i++] = (byte) x;
       }
 
-      if (this.parameters.length != 0) {
+      if (this.args.length != 0) {
         buf[i++] = (byte) 3;
-        Parameter[] a = this.parameters;
+        Obj[] a = this.args;
 
         int x = a.length;
         if (x > ClassMethodCall.colferListMax)
           throw new IllegalStateException(
               format(
-                  "colfer: io.quasient.pal.messages/colfer.ClassMethodCall.parameters length %d exceeds %d elements",
+                  "colfer: io.quasient.pal.messages/colfer.ClassMethodCall.args length %d exceeds %d elements",
                   x, ClassMethodCall.colferListMax));
         while (x > 0x7f) {
           buf[i++] = (byte) (x | 0x80);
@@ -309,9 +309,9 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
         buf[i++] = (byte) x;
 
         for (int ai = 0; ai < a.length; ai++) {
-          Parameter o = a[ai];
+          Obj o = a[ai];
           if (o == null) {
-            o = new Parameter();
+            o = new Obj();
             a[ai] = o;
           }
           i = o.marshal(buf, i);
@@ -423,16 +423,16 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
         if (length < 0 || length > ClassMethodCall.colferListMax)
           throw new SecurityException(
               format(
-                  "colfer: io.quasient.pal.messages/colfer.ClassMethodCall.parameters length %d exceeds %d elements",
+                  "colfer: io.quasient.pal.messages/colfer.ClassMethodCall.args length %d exceeds %d elements",
                   length, ClassMethodCall.colferListMax));
 
-        Parameter[] a = new Parameter[length];
+        Obj[] a = new Obj[length];
         for (int ai = 0; ai < length; ai++) {
-          Parameter o = new Parameter();
+          Obj o = new Obj();
           i = o.unmarshal(buf, i, end);
           a[ai] = o;
         }
-        this.parameters = a;
+        this.args = a;
         header = buf[i++];
       }
 
@@ -572,31 +572,31 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
   }
 
   /**
-   * Gets io.quasient.pal.messages/colfer.ClassMethodCall.parameters.
+   * Gets io.quasient.pal.messages/colfer.ClassMethodCall.args.
    *
    * @return the value.
    */
-  public Parameter[] getParameters() {
-    return this.parameters;
+  public Obj[] getArgs() {
+    return this.args;
   }
 
   /**
-   * Sets io.quasient.pal.messages/colfer.ClassMethodCall.parameters.
+   * Sets io.quasient.pal.messages/colfer.ClassMethodCall.args.
    *
    * @param value the replacement.
    */
-  public void setParameters(Parameter[] value) {
-    this.parameters = value;
+  public void setArgs(Obj[] value) {
+    this.args = value;
   }
 
   /**
-   * Sets io.quasient.pal.messages/colfer.ClassMethodCall.parameters.
+   * Sets io.quasient.pal.messages/colfer.ClassMethodCall.args.
    *
    * @param value the replacement.
    * @return {@code this}.
    */
-  public ClassMethodCall withParameters(Parameter[] value) {
-    this.parameters = value;
+  public ClassMethodCall withArgs(Obj[] value) {
+    this.args = value;
     return this;
   }
 
@@ -635,7 +635,7 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     if (this.name != null) h = 31 * h + this.name.hashCode();
     h = 31 * h + this.modifiers;
-    for (Parameter o : this.parameters) h = 31 * h + (o == null ? 0 : o.hashCode());
+    for (Obj o : this.args) h = 31 * h + (o == null ? 0 : o.hashCode());
     if (this.context != null) h = 31 * h + this.context.hashCode();
     return h;
   }
@@ -652,7 +652,7 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
     return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
         && (this.name == null ? o.name == null : this.name.equals(o.name))
         && this.modifiers == o.modifiers
-        && java.util.Arrays.equals(this.parameters, o.parameters)
+        && java.util.Arrays.equals(this.args, o.args)
         && (this.context == null ? o.context == null : this.context.equals(o.context));
   }
 
@@ -672,12 +672,12 @@ public class ClassMethodCall implements Serializable, io.quasient.pal.messages.M
         this.modifiers = json.get("modifiers").getAsInt();
       }
 
-      if (json.has("parameters")) {
-        JsonArray jsonArray = json.getAsJsonArray("parameters");
-        this.parameters = new Parameter[jsonArray.size()];
+      if (json.has("args")) {
+        JsonArray jsonArray = json.getAsJsonArray("args");
+        this.args = new Obj[jsonArray.size()];
         for (int i = 0; i < jsonArray.size(); i++) {
           JsonObject jsonObj = jsonArray.get(i).getAsJsonObject();
-          this.parameters[i] = new Parameter().fromJson(jsonObj);
+          this.args[i] = new Obj().fromJson(jsonObj);
         }
       }
       if (json.has("context")) {

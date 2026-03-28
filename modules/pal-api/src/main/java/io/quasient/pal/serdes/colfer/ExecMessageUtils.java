@@ -17,7 +17,7 @@ package io.quasient.pal.serdes.colfer;
 
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Message;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.Arrays;
@@ -217,25 +217,24 @@ public class ExecMessageUtils {
    */
   public static List<String> getParameterTypes(ExecMessage execMessage) {
     final MessageType execMessageType = getMessageTypeOf(execMessage);
-    Parameter[] params;
+    Obj[] args;
     switch (execMessageType) {
-      case EXEC_CONSTRUCTOR -> params = execMessage.getConstructorCall().getParameters();
-      case EXEC_INSTANCE_METHOD -> params = execMessage.getInstanceMethodCall().getParameters();
-      case EXEC_CLASS_METHOD -> params = execMessage.getClassMethodCall().getParameters();
+      case EXEC_CONSTRUCTOR -> args = execMessage.getConstructorCall().getArgs();
+      case EXEC_INSTANCE_METHOD -> args = execMessage.getInstanceMethodCall().getArgs();
+      case EXEC_CLASS_METHOD -> args = execMessage.getClassMethodCall().getArgs();
       default -> {
         return null;
       }
     }
 
-    if (params != null && params.length > 0) {
-      return Arrays.stream(params)
+    if (args != null && args.length > 0) {
+      return Arrays.stream(args)
           .map(
-              param -> {
-                if (param.getValue().getClazz() == null
-                    || param.getValue().getClazz().getName().isEmpty()) {
+              obj -> {
+                if (obj.getClazz() == null || obj.getClazz().getName().isEmpty()) {
                   return null;
                 } else {
-                  return param.getValue().getClazz().getName();
+                  return obj.getClazz().getName();
                 }
               })
           .collect(Collectors.toList());

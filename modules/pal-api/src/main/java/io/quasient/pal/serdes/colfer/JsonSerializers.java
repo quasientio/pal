@@ -54,7 +54,6 @@ import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.colfer.Method;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.colfer.ReturnValue;
@@ -321,8 +320,8 @@ public class JsonSerializers {
       if (notEmpty(message.modifiers)) {
         jsonElement.addProperty("modifiers", message.modifiers);
       }
-      if (notEmpty(message.parameters)) {
-        jsonElement.add("parameters", jsonSerializationContext.serialize(message.parameters));
+      if (notEmpty(message.args)) {
+        jsonElement.add("args", jsonSerializationContext.serialize(message.args));
       }
       if (notEmpty(message.context)) {
         jsonElement.add("context", jsonSerializationContext.serialize(message.context));
@@ -358,8 +357,8 @@ public class JsonSerializers {
       if (notEmpty(message.modifiers)) {
         jsonElement.addProperty("modifiers", message.modifiers);
       }
-      if (notEmpty(message.parameters)) {
-        jsonElement.add("parameters", jsonSerializationContext.serialize(message.parameters));
+      if (notEmpty(message.args)) {
+        jsonElement.add("args", jsonSerializationContext.serialize(message.args));
       }
       if (notEmpty(message.context)) {
         jsonElement.add("context", jsonSerializationContext.serialize(message.context));
@@ -420,8 +419,8 @@ public class JsonSerializers {
       if (notEmpty(message.modifiers)) {
         jsonElement.addProperty("modifiers", message.modifiers);
       }
-      if (notEmpty(message.parameters)) {
-        jsonElement.add("parameters", jsonSerializationContext.serialize(message.parameters));
+      if (notEmpty(message.args)) {
+        jsonElement.add("args", jsonSerializationContext.serialize(message.args));
       }
       if (notEmpty(message.context)) {
         jsonElement.add("context", jsonSerializationContext.serialize(message.context));
@@ -1162,30 +1161,6 @@ public class JsonSerializers {
       }
       if (notEmpty(message.field)) {
         jsonElement.add("field", jsonSerializationContext.serialize(message.field));
-      }
-      return jsonElement;
-    }
-  }
-
-  /** Serializes {@link Parameter} objects to JSON. */
-  public static class ParameterSerializer implements JsonSerializer<Parameter> {
-    /**
-     * Serializes a {@link Parameter} into its corresponding JSON representation.
-     *
-     * @param message the {@link Parameter} to serialize
-     * @param type the type of the source object
-     * @param jsonSerializationContext the context of the serialization process
-     * @return the JSON representation of the {@link Parameter}
-     */
-    @Override
-    public JsonElement serialize(
-        Parameter message, Type type, JsonSerializationContext jsonSerializationContext) {
-      final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.name)) {
-        jsonElement.addProperty("name", message.name);
-      }
-      if (notEmpty(message.value)) {
-        jsonElement.add("value", jsonSerializationContext.serialize(message.value));
       }
       return jsonElement;
     }

@@ -27,7 +27,6 @@ import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.serdes.Unwrapper;
 import io.quasient.pal.serdes.colfer.ExceptionSerdes;
@@ -209,32 +208,31 @@ public class IncomingInterceptCallbackDispatcher {
       return new Object[0];
     }
 
-    // Extract parameters for method/constructor calls
-    Parameter[] parameters = null;
+    // Extract arguments for method/constructor calls
+    Obj[] arguments = null;
 
     if (exec.getConstructorCall() != null) {
-      parameters = exec.getConstructorCall().getParameters();
+      arguments = exec.getConstructorCall().getArgs();
     } else if (exec.getInstanceMethodCall() != null) {
-      parameters = exec.getInstanceMethodCall().getParameters();
+      arguments = exec.getInstanceMethodCall().getArgs();
     } else if (exec.getClassMethodCall() != null) {
-      parameters = exec.getClassMethodCall().getParameters();
+      arguments = exec.getClassMethodCall().getArgs();
     }
 
-    if (parameters == null || parameters.length == 0) {
+    if (arguments == null || arguments.length == 0) {
       return new Object[0];
     }
 
-    // Deserialize each parameter
+    // Deserialize each argument
     // Throws on deserialization failure rather than silently returning null,
     // because null is a valid argument value.
-    Object[] args = new Object[parameters.length];
-    for (int i = 0; i < parameters.length; i++) {
-      Obj paramValue = parameters[i].getValue();
-      if (paramValue.getIsNull()) {
+    Object[] args = new Object[arguments.length];
+    for (int i = 0; i < arguments.length; i++) {
+      if (arguments[i].getIsNull()) {
         args[i] = null;
       } else {
         try {
-          args[i] = Unwrapper.unwrapObject(paramValue);
+          args[i] = Unwrapper.unwrapObject(arguments[i]);
         } catch (Exception e) {
           throw new IllegalArgumentException(
               "Failed to deserialize argument " + i + ": " + e.getMessage(), e);

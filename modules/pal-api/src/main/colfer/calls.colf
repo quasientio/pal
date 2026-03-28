@@ -16,10 +16,10 @@
 package colfer
 
 type ConstructorCall struct {
-	clazz      Class
-	modifiers  uint32
-	parameters []Parameter
-	context    Context
+	clazz     Class
+	modifiers uint32
+	args      []Obj
+	context   Context
 }
 
 type InstanceMethodCall struct {
@@ -33,8 +33,8 @@ type InstanceMethodCall struct {
 
 	modifiers uint32
 
-	parameters []Parameter
-	context    Context
+	args    []Obj
+	context Context
 
 	//TODO:  annotations
 	//TODO:  exception types?
@@ -50,10 +50,10 @@ type ClassMethodCall struct {
 	clazz Class
 
 	//method name
-	name       text
-	modifiers  uint32
-	parameters []Parameter
-	context    Context
+	name      text
+	modifiers uint32
+	args      []Obj
+	context   Context
 
 	//TODO:  annotations
 	//TODO:  exception types?

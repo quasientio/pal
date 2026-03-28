@@ -63,7 +63,6 @@ import io.quasient.pal.messages.colfer.InternalHeader;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.colfer.ReturnValue;
@@ -104,7 +103,9 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -261,28 +262,55 @@ public final class MessageBuilder {
   // <editor-fold desc="Private Auxiliary methods">
 
   /**
-   * Converts a parameter map to an array of {@link Parameter} objects.
+   * Converts a meta-service parameter map to a positional {@link Obj} array.
+   *
+   * <p>Positional layout:
+   *
+   * <ol start="0">
+   *   <li>{@code compress_encode} (Boolean)
+   *   <li>{@code exclude_prefixes} (String[])
+   *   <li>{@code include_classes} (String[])
+   *   <li>{@code merge_ancestry} (Boolean)
+   * </ol>
    *
    * @param params the map of parameter names to their respective values
-   * @return an array of {@code Parameter} objects representing the key-value pairs, or an empty
-   *     array if the input map is {@code null}
+   * @return a positional {@code Obj} array, or an empty array if the input map is {@code null}
    */
-  private static Parameter[] paramMapToParameters(Map<String, Object> params) {
-    if (params == null) {
-      return new Parameter[0];
+  private static Obj[] metaParamMapToArgs(Map<String, Object> params) {
+    if (params == null || params.isEmpty()) {
+      return new Obj[0];
     }
 
-    Parameter[] keyValues = new Parameter[params.size()];
-    int index = 0;
-
+    Obj[] args = new Obj[4];
+    for (int i = 0; i < args.length; i++) {
+      args[i] = new Obj().withIsNull(true);
+    }
     for (Map.Entry<String, Object> entry : params.entrySet()) {
-      Parameter keyValueParam =
-          new Parameter()
-              .withName(entry.getKey())
-              .withValue(getWrappedObject(entry.getValue(), null, null, WrapPolicy.FORCE_BY_VALUE));
-      keyValues[index++] = keyValueParam;
+      int idx = metaParamIndex(entry.getKey());
+      if (idx >= 0) {
+        args[idx] = getWrappedObject(entry.getValue(), null, null, WrapPolicy.FORCE_BY_VALUE);
+      }
     }
-    return keyValues;
+    return args;
+  }
+
+  /**
+   * Maps a meta-service parameter name to its positional index.
+   *
+   * @param name the parameter name (case-insensitive)
+   * @return the positional index (0-3), or {@code -1} if unrecognized
+   */
+  private static int metaParamIndex(String name) {
+    if (name == null) {
+      return -1;
+    }
+    return switch (name.toLowerCase(Locale.ROOT)) {
+      case "compress_encode" -> 0;
+      case "exclude_prefixes" -> 1;
+      case "include_classes" -> 2;
+      case "merge_ancestry" -> 3;
+      default -> -1;
+    };
   }
 
   /**
@@ -324,100 +352,43 @@ public final class MessageBuilder {
   }
 
   /**
-   * Creates a {@link Parameter} object based on the provided argument and type.
-   *
-   * @param parameterType the type of the parameter
-   * @param arg the argument value, which may be {@code null} or an instance of {@link Obj}
-   * @param argObjRef the reference to an object if the argument is an object reference, otherwise
-   *     {@code null}
-   * @return a {@code Parameter} representing the argument
-   */
-  private Parameter createParameter(String parameterType, Object arg, ObjectRef argObjRef) {
-    if (arg instanceof Obj objArg) {
-      return new Parameter().withValue(objArg);
-    }
-    return new Parameter()
-        .withValue(getWrappedObject(arg, parameterType, argObjRef, WrapPolicy.PREFER_REFERENCE));
-  }
-
-  /**
-   * Creates a named {@link Parameter} for a method or constructor parameter.
-   *
-   * @param parameter the reflective parameter information
-   * @param paramName the name of the parameter, or {@code null} to use the reflective name
-   * @param paramType the type name of the parameter
-   * @param param the value of the parameter
-   * @param paramObjRef the object reference for the parameter if applicable, otherwise {@code null}
-   * @return a {@code Parameter} with the specified name and value
-   */
-  private Parameter createNamedParameter(
-      java.lang.reflect.Parameter parameter,
-      String paramName,
-      String paramType,
-      Object param,
-      ObjectRef paramObjRef) {
-
-    return new Parameter()
-        .withName(paramName == null ? parameter.getName() : paramName)
-        .withValue(getWrappedObject(param, paramType, paramObjRef, WrapPolicy.PREFER_REFERENCE));
-  }
-
-  /**
-   * Creates an array of named {@link Parameter} objects based on the provided context and
-   * arguments.
+   * Creates an {@link Obj} array from the provided execution context and arguments.
    *
    * @param context the execution context containing signature information
    * @param args the array of argument values
    * @param argObjRefs the array of object references corresponding to the arguments
-   * @return an array of {@code Parameter} objects representing the named parameters
+   * @return an {@code Obj} array representing the arguments
    */
-  private Parameter[] createNamedParameters(
-      Context context, Object[] args, ObjectRef[] argObjRefs) {
+  private Obj[] createArgs(Context context, Object[] args, ObjectRef[] argObjRefs) {
     final CodeSignature codeSignature = (CodeSignature) context.getSignature();
     final Class<?>[] paramTypes = codeSignature.getParameterTypes();
     final int paramCount = (paramTypes == null) ? 0 : paramTypes.length;
-    final Parameter[] params = new Parameter[paramCount];
-    final String[] paramNames = codeSignature.getParameterNames();
-    final java.lang.reflect.Parameter[] reflParams = codeSignature.getParameters();
+    final Obj[] objs = new Obj[paramCount];
 
     for (int i = 0; i < paramCount; i++) {
-      final String paramName = (paramNames != null && i < paramNames.length) ? paramNames[i] : null;
-      // null-safe local var to silence static analysis warnings
       final String paramTypeName =
           (paramTypes != null && i < paramTypes.length && paramTypes[i] != null)
               ? paramTypes[i].getName()
               : null;
       final Object a = (args != null && i < args.length) ? args[i] : null;
       final ObjectRef r = (argObjRefs != null && i < argObjRefs.length) ? argObjRefs[i] : null;
-      final java.lang.reflect.Parameter rp =
-          (reflParams != null && i < reflParams.length) ? reflParams[i] : null;
-
-      if (rp != null) {
-        params[i] = createNamedParameter(rp, paramName, paramTypeName, a, r);
-      } else {
-        // Fallback if reflective parameter metadata is unavailable
-        params[i] =
-            new Parameter()
-                .withName(paramName == null ? "" : paramName)
-                .withValue(getWrappedObject(a, paramTypeName, r, WrapPolicy.PREFER_REFERENCE));
-      }
+      objs[i] = getWrappedObject(a, paramTypeName, r, WrapPolicy.PREFER_REFERENCE);
     }
-    return params;
+    return objs;
   }
 
   /**
-   * Creates an array of named {@link Parameter} objects based on parameter types and arguments.
+   * Creates an {@link Obj} array from parameter types and arguments.
    *
    * <p>All arrays must be non-null and of equal length.
    *
    * @param parameterTypes the array of parameter type names
    * @param args the array of argument values, corresponding to {@code parameterTypes}
    * @param argObjRefs the array of object references corresponding to {@code parameterTypes}
-   * @return an array of {@code Parameter} objects representing the named parameters
+   * @return an {@code Obj} array representing the arguments
    * @throws IllegalArgumentException if any array is {@code null} or their lengths differ
    */
-  private Parameter[] createNamedParameters(
-      String[] parameterTypes, Object[] args, ObjectRef[] argObjRefs) {
+  private Obj[] createArgs(String[] parameterTypes, Object[] args, ObjectRef[] argObjRefs) {
     if (parameterTypes == null || args == null || argObjRefs == null) {
       throw new IllegalArgumentException(
           "parameterTypes, args and argObjRefs must be non-null and of equal length");
@@ -428,18 +399,12 @@ public final class MessageBuilder {
           "parameterTypes, args and argObjRefs must be non-null and of equal length");
     }
 
-    final Parameter[] params = new Parameter[n];
+    final Obj[] objs = new Obj[n];
     for (int i = 0; i < n; i++) {
-      if (argObjRefs[i] != null) { // parameter is an objectref
-        params[i] = createParameter(parameterTypes[i], null, argObjRefs[i]);
-      } else if (args[i] != null) { // parameter is string, primitive or wrapper
-        params[i] = createParameter(parameterTypes[i], args[i], null);
-      } else { // parameter is null
-        params[i] = createParameter(parameterTypes[i], null, null);
-      }
+      objs[i] =
+          getWrappedObject(args[i], parameterTypes[i], argObjRefs[i], WrapPolicy.PREFER_REFERENCE);
     }
-
-    return params;
+    return objs;
   }
 
   /**
@@ -519,23 +484,22 @@ public final class MessageBuilder {
   }
 
   /**
-   * Builds a {@link Parameter} array in-place using thread-local scratch holders.
+   * Builds an {@link Obj} array in-place using thread-local scratch holders.
    *
-   * <p>Reuses {@link TlScratchHolder} Parameter/Obj flyweights and avoids allocations.
+   * <p>Reuses {@link TlScratchHolder} Obj flyweights and avoids allocations.
    *
    * @param stat precomputed message statics containing parameter type names
    * @param args argument values for wrapping; may be {@code null}
    * @param argObjRefs argument object references corresponding to {@code args}; may be {@code null}
-   * @return the reused {@link Parameter} array for non-zero arity, or {@code null} if there are no
-   *     parameters
+   * @return the reused {@link Obj} array for non-zero arity, or {@code null} if there are no
+   *     arguments
    */
-  private static Parameter[] buildParamsFlyweight(
+  private static Obj[] buildArgsFlyweight(
       MessageStatics stat, Object[] args, ObjectRef[] argObjRefs) {
     final int n = (args == null) ? 0 : args.length;
-    TlScratchHolder.ensureParamCapacity(n);
-    final Parameter[] params = TlScratchHolder.paramsOut(n);
+    TlScratchHolder.ensureArgCapacity(n);
+    final Obj[] objs = TlScratchHolder.argsOut(n);
     for (int i = 0; i < n; i++) {
-      final Parameter p = TlScratchHolder.paramAt(i);
       final Obj v = TlScratchHolder.valueAt(i);
 
       final String ptype =
@@ -547,12 +511,9 @@ public final class MessageBuilder {
       final Object a = (args != null && i < args.length) ? args[i] : null;
       Wrapper.wrapInto(v, a, ptype, pref, WrapPolicy.PREFER_REFERENCE);
 
-      p.name = "";
-      p.value = v;
-
-      params[i] = p;
+      objs[i] = v;
     }
-    return n == 0 ? null : params;
+    return n == 0 ? null : objs;
   }
 
   /**
@@ -658,7 +619,7 @@ public final class MessageBuilder {
     final ConstructorCall constructorCall = new ConstructorCall();
     if (context != null) {
       final ConstructorSignature codeSignature = (ConstructorSignature) context.getSignature();
-      constructorCall.setParameters(createNamedParameters(context, args, argObjRefs));
+      constructorCall.setArgs(createArgs(context, args, argObjRefs));
       constructorCall.setModifiers(codeSignature.getModifiers());
       if (includeSourceContext) {
         constructorCall.setContext(getWrappedContext(context, sender, senderObjRef));
@@ -667,7 +628,7 @@ public final class MessageBuilder {
     } else {
       // Only set parameters when all arrays are provided (strict contract); otherwise, omit.
       if (parameterTypes != null && args != null && argObjRefs != null) {
-        constructorCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+        constructorCall.setArgs(createArgs(parameterTypes, args, argObjRefs));
       }
       constructorCall.setClazz(getWrappedClass(className));
     }
@@ -728,11 +689,11 @@ public final class MessageBuilder {
     cc.clazz = getWrappedClass(sig.getDeclaringTypeName());
     cc.modifiers = sig.getModifiers();
 
-    // parameters from context statics
+    // args from context statics
     final MessageStatics stat = MessageStaticsFactory.forConstructor(context);
-    final Parameter[] params = buildParamsFlyweight(stat, args, argObjRefs);
-    if (params != null) {
-      cc.parameters = params;
+    final Obj[] argObjs = buildArgsFlyweight(stat, args, argObjRefs);
+    if (argObjs != null) {
+      cc.args = argObjs;
     }
 
     // optional source context
@@ -805,10 +766,10 @@ public final class MessageBuilder {
     call.name = stat.name;
     call.modifiers = stat.modifiers;
 
-    // Parameters: reuse Parameter[] + Parameter + Obj elements
-    final Parameter[] params = buildParamsFlyweight(stat, args, argObjRefs);
-    if (params != null) {
-      call.parameters = params;
+    // Args: reuse Obj[] + Obj elements
+    final Obj[] argObjs = buildArgsFlyweight(stat, args, argObjRefs);
+    if (argObjs != null) {
+      call.args = argObjs;
     }
 
     {
@@ -892,10 +853,10 @@ public final class MessageBuilder {
     call.modifiers = stat.modifiers;
     call.objectRef = targetObjRef.getRef();
 
-    // Parameters: reuse Parameter[] + Parameter + Obj elements
-    final Parameter[] params = buildParamsFlyweight(stat, args, argObjRefs);
-    if (params != null) {
-      call.parameters = params;
+    // Args: reuse Obj[] + Obj elements
+    final Obj[] argObjs = buildArgsFlyweight(stat, args, argObjRefs);
+    if (argObjs != null) {
+      call.args = argObjs;
     }
 
     {
@@ -1484,7 +1445,7 @@ public final class MessageBuilder {
             .withName(methodName)
             .withObjectRef(targetObjRef.getRef());
     if (parameterTypes != null && args != null && argObjRefs != null) {
-      call.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+      call.setArgs(createArgs(parameterTypes, args, argObjRefs));
     }
     ExecMessage execMessage = newExecMessage(peerUuid).withInstanceMethodCall(call);
     return execMessage;
@@ -1520,7 +1481,7 @@ public final class MessageBuilder {
             .withName(methodName)
             .withObjectRef(targetObjRef.getRef());
     if (parameterTypes != null && args != null && argObjRefs != null) {
-      call.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+      call.setArgs(createArgs(parameterTypes, args, argObjRefs));
     }
 
     ExecMessage execMessage = newExecMessage(peerUuid).withInstanceMethodCall(call);
@@ -1725,7 +1686,7 @@ public final class MessageBuilder {
     final ClassMethodCall classMethodCall =
         new ClassMethodCall().withClazz(getWrappedClass(className)).withName(methodName);
     if (parameterTypes != null && args != null && argObjRefs != null) {
-      classMethodCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+      classMethodCall.setArgs(createArgs(parameterTypes, args, argObjRefs));
     }
 
     if (includeSourceContext) {
@@ -1765,7 +1726,7 @@ public final class MessageBuilder {
     final ClassMethodCall classMethodCall =
         new ClassMethodCall().withClazz(getWrappedClass(className)).withName(methodName);
     if (parameterTypes != null && args != null && argObjRefs != null) {
-      classMethodCall.setParameters(createNamedParameters(parameterTypes, args, argObjRefs));
+      classMethodCall.setArgs(createArgs(parameterTypes, args, argObjRefs));
     }
 
     if (includeSourceContext) {
@@ -2605,18 +2566,17 @@ public final class MessageBuilder {
   // <editor-fold desc="JSON-RPC messages">
 
   /**
-   * Converts a list of JSON-RPC {@link Argument} objects to an array of colfer {@link Parameter}
-   * objects.
+   * Converts a list of JSON-RPC {@link Argument} objects to an {@link Obj} array.
    *
    * @param jsonArgs the list of JSON-RPC arguments
-   * @return an array of {@code Parameter} objects representing the binary RPC parameters
+   * @return an {@code Obj} array representing the arguments
    */
-  private Parameter[] jsonRpcParamsToColferParams(List<Argument> jsonArgs) {
+  private Obj[] jsonRpcArgsToColferArgs(List<Argument> jsonArgs) {
     if (jsonArgs == null || jsonArgs.isEmpty()) {
-      return new Parameter[0];
+      return new Obj[0];
     }
 
-    Parameter[] colferParams = new Parameter[jsonArgs.size()];
+    Obj[] colferArgs = new Obj[jsonArgs.size()];
     for (int i = 0; i < jsonArgs.size(); i++) {
       Argument arg = jsonArgs.get(i);
       Obj valueObj;
@@ -2630,17 +2590,13 @@ public final class MessageBuilder {
       } else {
         valueObj = getWrappedObject(arg.getValue(), arg.getType(), null, WrapPolicy.FORCE_BY_VALUE);
       }
-      String paramName = arg.getName() != null ? arg.getName() : "";
-      Parameter param = new Parameter().withName(paramName).withValue(valueObj);
       if (logger.isDebugEnabled()) {
         logger.debug(
-            "Converted jsonrpc Argument: {} to binary Parameter: {}",
-            arg,
-            ColferUtils.toJson(param));
+            "Converted jsonrpc Argument: {} to binary Obj: {}", arg, ColferUtils.toJson(valueObj));
       }
-      colferParams[i] = param;
+      colferArgs[i] = valueObj;
     }
-    return colferParams;
+    return colferArgs;
   }
 
   /**
@@ -2661,7 +2617,7 @@ public final class MessageBuilder {
     if (inst != null) {
       instanceMethodCall.setObjectRef(inst);
     }
-    instanceMethodCall.setParameters(jsonRpcParamsToColferParams(callParams.getArgs()));
+    instanceMethodCall.setArgs(jsonRpcArgsToColferArgs(callParams.getArgs()));
     return instanceMethodCall;
   }
 
@@ -2678,7 +2634,7 @@ public final class MessageBuilder {
     ClassMethodCall classMethodCall = new ClassMethodCall();
     classMethodCall.setClazz(getWrappedClass(className));
     classMethodCall.setName(callParams.getMethod());
-    classMethodCall.setParameters(jsonRpcParamsToColferParams(callParams.getArgs()));
+    classMethodCall.setArgs(jsonRpcArgsToColferArgs(callParams.getArgs()));
     return classMethodCall;
   }
 
@@ -2802,7 +2758,7 @@ public final class MessageBuilder {
 
     ConstructorCall constructorCall = new ConstructorCall();
     constructorCall.setClazz(new io.quasient.pal.messages.colfer.Class().withName(className));
-    constructorCall.setParameters(jsonRpcParamsToColferParams(newParams.getArgs()));
+    constructorCall.setArgs(jsonRpcArgsToColferArgs(newParams.getArgs()));
     return constructorCall;
   }
 
@@ -2876,12 +2832,18 @@ public final class MessageBuilder {
       throw new IllegalArgumentException("Unknown meta service type: " + serviceName);
     }
 
-    // get params
+    // get args — convert named arguments to positional meta params
     List<Argument> args = jsonRpcRequest.getParams().getArgs();
-    Parameter[] params = jsonRpcParamsToColferParams(args);
+    Map<String, Object> argsMap = new LinkedHashMap<>();
+    if (args != null) {
+      for (Argument arg : args) {
+        argsMap.put(arg.getName(), arg.getValue());
+      }
+    }
+    Obj[] metaArgs = metaParamMapToArgs(argsMap);
 
     return wrap(
-        buildMetaMessageRequest(fromPeerUuid, jsonRpcRequest.getId(), metaServiceType, params));
+        buildMetaMessageRequest(fromPeerUuid, jsonRpcRequest.getId(), metaServiceType, metaArgs));
   }
 
   /**
@@ -2907,12 +2869,12 @@ public final class MessageBuilder {
       throw new IllegalArgumentException("Unknown control command type: " + commandName);
     }
 
-    // get params
+    // get args
     List<Argument> args = jsonRpcRequest.getParams().getArgs();
-    Parameter[] params = jsonRpcParamsToColferParams(args);
+    Obj[] ctrlArgs = jsonRpcArgsToColferArgs(args);
 
     // create control message
-    ControlMessage controlMessage = buildControlCommandMessage(fromPeerUuid, command, params);
+    ControlMessage controlMessage = buildControlCommandMessage(fromPeerUuid, command, ctrlArgs);
 
     // set original message id
     controlMessage.setMessageId(jsonRpcRequest.getId());
@@ -3217,19 +3179,19 @@ public final class MessageBuilder {
    *
    * @param fromPeerUuid the UUID of the peer sending the control command
    * @param command the type of control command to build
-   * @param params the array of parameters for the control command, or {@code null} if none
+   * @param args the argument array for the control command, or {@code null} if none
    * @return a {@code ControlMessage} representing the control command
    */
   public ControlMessage buildControlCommandMessage(
-      UUID fromPeerUuid, ControlCommandType command, @Nullable Parameter[] params) {
+      UUID fromPeerUuid, ControlCommandType command, @Nullable Obj[] args) {
     ControlMessage controlMessage =
         new ControlMessage()
             .withFromPeer(fromPeerUuid.toString())
             .withMessageId(nextId())
             .withCommand(command.getId());
 
-    if (params != null && params.length > 0) {
-      controlMessage.setParams(params);
+    if (args != null && args.length > 0) {
+      controlMessage.setParams(args);
     }
     return controlMessage;
   }
@@ -3254,9 +3216,8 @@ public final class MessageBuilder {
    * @return a {@code ControlMessage} representing the delete object command
    */
   public ControlMessage buildDeleteObjectCommandMessage(UUID fromPeer, ObjectRef objectRef) {
-    Parameter[] params =
-        new Parameter[] {new Parameter().withValue(new Obj().withRef(objectRef.getRef()))};
-    return buildControlCommandMessage(fromPeer, ControlCommandType.DELETE_OBJECT, params);
+    Obj[] args = new Obj[] {new Obj().withRef(objectRef.getRef())};
+    return buildControlCommandMessage(fromPeer, ControlCommandType.DELETE_OBJECT, args);
   }
 
   /**
@@ -3331,18 +3292,18 @@ public final class MessageBuilder {
    */
   public MetaMessage buildMetaMessageRequest(
       UUID fromPeerUuid, String requestId, MetaServiceType serviceType) {
-    return buildMetaMessageRequest(fromPeerUuid, requestId, serviceType, (Parameter[]) null);
+    return buildMetaMessageRequest(fromPeerUuid, requestId, serviceType, (Obj[]) null);
   }
 
   /**
-   * Builds a {@link MetaMessage} representing a meta service request with parameters.
+   * Builds a {@link MetaMessage} representing a meta service request with named parameters.
    *
-   * <p>Convenience method to pass parameters as a key-value map.
+   * <p>Convenience method that converts a name-value map to a positional {@link Obj} array.
    *
    * @param fromPeerUuid the UUID of the peer sending the meta message
    * @param requestId the unique ID of the meta message request
    * @param serviceType the type of meta service to request
-   * @param params the map of parameters to include in the meta message, or {@code null} if none
+   * @param params the map of parameter names to values, or {@code null} if none
    * @return a {@code MetaMessage} representing the meta service request with parameters
    */
   public MetaMessage buildMetaMessageRequest(
@@ -3351,31 +3312,28 @@ public final class MessageBuilder {
       MetaServiceType serviceType,
       @Nullable Map<String, Object> params) {
     return buildMetaMessageRequest(
-        fromPeerUuid, requestId, serviceType, paramMapToParameters(params));
+        fromPeerUuid, requestId, serviceType, metaParamMapToArgs(params));
   }
 
   /**
-   * Builds a {@link MetaMessage} representing a meta service request with parameters.
+   * Builds a {@link MetaMessage} representing a meta service request with arguments.
    *
    * @param fromPeerUuid the UUID of the peer sending the meta message
    * @param requestId the unique ID of the meta message request
    * @param serviceType the type of meta service to request
-   * @param params the array of parameters to include in the meta message, or {@code null} if none
-   * @return a {@code MetaMessage} representing the meta service request with parameters
+   * @param args the positional argument array, or {@code null} if none
+   * @return a {@code MetaMessage} representing the meta service request
    */
   public MetaMessage buildMetaMessageRequest(
-      UUID fromPeerUuid,
-      String requestId,
-      MetaServiceType serviceType,
-      @Nullable Parameter[] params) {
+      UUID fromPeerUuid, String requestId, MetaServiceType serviceType, @Nullable Obj[] args) {
     final MetaMessage metaMessage =
         new MetaMessage()
             .withFromPeer(fromPeerUuid.toString())
             .withMessageId(requestId)
             .withService(serviceType.getId());
 
-    if (params != null) {
-      metaMessage.setParams(params);
+    if (args != null) {
+      metaMessage.setParams(args);
     }
     return metaMessage;
   }

@@ -59,7 +59,7 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
 
   public byte service;
 
-  public Parameter[] params;
+  public Obj[] params;
 
   public byte status;
 
@@ -70,7 +70,7 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
     init();
   }
 
-  private static final Parameter[] _zeroParams = new Parameter[0];
+  private static final Obj[] _zeroParams = new Obj[0];
 
   /** Colfer zero values. */
   private void init() {
@@ -187,7 +187,7 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
             + 2
             + 6
             + (long) this.body.length() * 3;
-    for (Parameter o : this.params) {
+    for (Obj o : this.params) {
       if (o == null) n++;
       else n += o.marshalFit();
     }
@@ -388,7 +388,7 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
 
       if (this.params.length != 0) {
         buf[i++] = (byte) 4;
-        Parameter[] a = this.params;
+        Obj[] a = this.params;
 
         int x = a.length;
         if (x > MetaMessage.colferListMax)
@@ -403,9 +403,9 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
         buf[i++] = (byte) x;
 
         for (int ai = 0; ai < a.length; ai++) {
-          Parameter o = a[ai];
+          Obj o = a[ai];
           if (o == null) {
-            o = new Parameter();
+            o = new Obj();
             a[ai] = o;
           }
           i = o.marshal(buf, i);
@@ -587,9 +587,9 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
                   "colfer: io.quasient.pal.messages/colfer.MetaMessage.params length %d exceeds %d elements",
                   length, MetaMessage.colferListMax));
 
-        Parameter[] a = new Parameter[length];
+        Obj[] a = new Obj[length];
         for (int ai = 0; ai < length; ai++) {
-          Parameter o = new Parameter();
+          Obj o = new Obj();
           i = o.unmarshal(buf, i, end);
           a[ai] = o;
         }
@@ -783,7 +783,7 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
    *
    * @return the value.
    */
-  public Parameter[] getParams() {
+  public Obj[] getParams() {
     return this.params;
   }
 
@@ -792,7 +792,7 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
    *
    * @param value the replacement.
    */
-  public void setParams(Parameter[] value) {
+  public void setParams(Obj[] value) {
     this.params = value;
   }
 
@@ -802,7 +802,7 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
    * @param value the replacement.
    * @return {@code this}.
    */
-  public MetaMessage withParams(Parameter[] value) {
+  public MetaMessage withParams(Obj[] value) {
     this.params = value;
     return this;
   }
@@ -872,7 +872,7 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
     if (this.messageId != null) h = 31 * h + this.messageId.hashCode();
     if (this.responseToId != null) h = 31 * h + this.responseToId.hashCode();
     h = 31 * h + (this.service & 0xff);
-    for (Parameter o : this.params) h = 31 * h + (o == null ? 0 : o.hashCode());
+    for (Obj o : this.params) h = 31 * h + (o == null ? 0 : o.hashCode());
     h = 31 * h + (this.status & 0xff);
     if (this.body != null) h = 31 * h + this.body.hashCode();
     return h;
@@ -919,10 +919,10 @@ public class MetaMessage implements Serializable, io.quasient.pal.messages.Marsh
 
       if (json.has("params")) {
         JsonArray jsonArray = json.getAsJsonArray("params");
-        this.params = new Parameter[jsonArray.size()];
+        this.params = new Obj[jsonArray.size()];
         for (int i = 0; i < jsonArray.size(); i++) {
           JsonObject jsonObj = jsonArray.get(i).getAsJsonObject();
-          this.params[i] = new Parameter().fromJson(jsonObj);
+          this.params[i] = new Obj().fromJson(jsonObj);
         }
       }
       if (json.has("status")) {

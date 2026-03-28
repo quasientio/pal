@@ -36,7 +36,7 @@ import io.quasient.pal.common.lang.reflect.MethodSignature;
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.messages.colfer.ExecMessage;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import java.io.IOException;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.InvocationTargetException;
@@ -221,72 +221,20 @@ public class MessageBuilderBranchCoverageTest {
   // createNamedParameter / createNamedParameters branches
   // ========================================================================
 
-  /** Tests createNamedParameter with a non-null paramName uses the given name. */
+  /** Tests createArgs with a context and null args returns an array of correct length. */
   @Test
-  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  public void createNamedParameter_withParamName_usesGivenName() throws Exception {
-    // Use a real method parameter from DummyTarget.methodWithExceptions
-    java.lang.reflect.Parameter param =
-        DummyTarget.class.getDeclaredMethod("methodWithExceptions", String.class)
-            .getParameters()[0];
-    Method m =
-        MessageBuilder.class.getDeclaredMethod(
-            "createNamedParameter",
-            java.lang.reflect.Parameter.class,
-            String.class,
-            String.class,
-            Object.class,
-            ObjectRef.class);
-    m.setAccessible(true);
-
-    Parameter result =
-        (Parameter) m.invoke(builder, param, "customName", "java.lang.String", "hello", null);
-
-    assertThat(result.getName(), is("customName"));
-  }
-
-  /** Tests createNamedParameter with null paramName uses the reflective parameter name. */
-  @Test
-  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  public void createNamedParameter_withNullParamName_usesReflectiveName() throws Exception {
-    java.lang.reflect.Parameter param =
-        DummyTarget.class.getDeclaredMethod("methodWithExceptions", String.class)
-            .getParameters()[0];
-    Method m =
-        MessageBuilder.class.getDeclaredMethod(
-            "createNamedParameter",
-            java.lang.reflect.Parameter.class,
-            String.class,
-            String.class,
-            Object.class,
-            ObjectRef.class);
-    m.setAccessible(true);
-
-    Parameter result =
-        (Parameter) m.invoke(builder, param, null, "java.lang.String", "hello", null);
-
-    // With null paramName, parameter.getName() is used (e.g., "arg0" or the actual name)
-    assertNotNull(result.getName());
-    assertThat(result.getName(), is(param.getName()));
-  }
-
-  /** Tests createNamedParameters returns an empty array when paramTypes are null. */
-  @Test
-  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  public void createNamedParameters_withContext_nullParams_returnsEmpty() throws Exception {
-    // Build a context from a method with known params, then we'll invoke via the public
-    // buildClassMethodMessageEphemeral with null args to cover the null-params branch
-    // in createNamedParameters(Context, Object[], ObjectRef[]).
-    // This method is private, so invoke via reflection.
+  public void createArgs_withContext_nullParams_returnsCorrectLength() throws Exception {
+    // Build a context from a method with known params, then invoke the private createArgs
+    // with null args and null argObjRefs to exercise null-safety branches.
     Context ctx = ctxForMethod(DummyTarget.class, "methodWithExceptions", String.class);
 
     Method m =
         MessageBuilder.class.getDeclaredMethod(
-            "createNamedParameters", Context.class, Object[].class, ObjectRef[].class);
+            "createArgs", Context.class, Object[].class, ObjectRef[].class);
     m.setAccessible(true);
 
     // Pass null args and null argObjRefs to exercise null-safety branches
-    Parameter[] result = (Parameter[]) m.invoke(builder, ctx, (Object) null, (Object) null);
+    Obj[] result = (Obj[]) m.invoke(builder, ctx, (Object) null, (Object) null);
 
     // The method's CodeSignature has 1 paramType (String.class), so paramCount=1
     // but args=null and argObjRefs=null, so the null-safety branches are exercised

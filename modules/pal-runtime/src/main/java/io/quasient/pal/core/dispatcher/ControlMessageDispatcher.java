@@ -110,8 +110,7 @@ public class ControlMessageDispatcher {
       case DELETE_OBJECT -> {
         // delete object from peer's session
         // NOTE: the remotePeerUuid is the session id of the peer
-        final ObjectRef objectRef =
-            ObjectRef.from(controlMessage.getParams()[0].getValue().getRef());
+        final ObjectRef objectRef = ObjectRef.from(controlMessage.getParams()[0].getRef());
         sessionResponseMsg =
             outboundMessageGateway.sendMessageToSessionService(
                 new SessionCommandMsg(SessionCommandType.DELETE_OBJECT, remotePeerUuid, objectRef));

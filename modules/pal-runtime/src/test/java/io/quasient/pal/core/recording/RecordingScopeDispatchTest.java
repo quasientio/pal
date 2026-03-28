@@ -45,7 +45,6 @@ import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
@@ -434,7 +433,7 @@ public class RecordingScopeDispatchTest {
     clazz.setName(className);
     imc.setClazz(clazz);
     imc.setName(methodName);
-    imc.setParameters(new Parameter[0]);
+    imc.setArgs(new Obj[0]);
     msg.setInstanceMethodCall(imc);
 
     return WalEntry.fromExecMessage(offset, msg);

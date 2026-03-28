@@ -22,7 +22,6 @@ import static org.junit.Assert.*;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import io.quasient.pal.messages.colfer.MetaMessage;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.types.MetaServiceType;
 import io.quasient.pal.messages.types.MetaStatusType;
 import io.quasient.pal.serdes.Unwrapper;
@@ -39,8 +38,8 @@ public class MessageBuilderMetaMessagesTest {
     UUID from = UUID.randomUUID();
     String reqId = UUID.randomUUID().toString();
     Map<String, Object> params = new LinkedHashMap<>();
-    params.put("k1", 1);
-    params.put("k2", "v2");
+    params.put("compress_encode", true);
+    params.put("merge_ancestry", false);
 
     MetaMessage m =
         b.buildMetaMessageRequest(from, reqId, MetaServiceType.FETCH_CLASSES_INFO, params);
@@ -49,16 +48,17 @@ public class MessageBuilderMetaMessagesTest {
     assertEquals(reqId, m.getMessageId());
     assertEquals(MetaServiceType.FETCH_CLASSES_INFO.getId(), m.getService());
     assertNotNull(m.getParams());
-    assertEquals(2, m.getParams().length);
-    // ensure parameter names and values are present
-    Parameter p0 = m.getParams()[0];
-    Parameter p1 = m.getParams()[1];
-    assertNotNull(p0.name);
-    assertNotNull(p1.name);
-    Object v0 = Unwrapper.unwrapObject(p0.getValue());
-    Object v1 = Unwrapper.unwrapObject(p1.getValue());
-    assertTrue(v0 instanceof Number || v1 instanceof Number);
-    assertTrue(v0 instanceof String || v1 instanceof String);
+    assertEquals(4, m.getParams().length);
+    // positional: index 0 = compress_encode, index 3 = merge_ancestry
+    Object v0 = Unwrapper.unwrapObject(m.getParams()[0]);
+    Object v3 = Unwrapper.unwrapObject(m.getParams()[3]);
+    assertEquals(true, v0);
+    assertEquals(false, v3);
+    // indices 1 and 2 were not set — marked as isNull
+    assertNotNull(m.getParams()[1]);
+    assertTrue(m.getParams()[1].getIsNull());
+    assertNotNull(m.getParams()[2]);
+    assertTrue(m.getParams()[2].getIsNull());
   }
 
   @Test

@@ -15,13 +15,11 @@
  */
 package io.quasient.pal.serdes.colfer;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 /**
  * Immutable metadata for a message-related method or field.
  *
  * <p>Holds a reference to the declaring message class, its member name, modifiers, and (for
- * methods) parameter information. Instances are thread-safe and read-only.
+ * methods) parameter type information. Instances are thread-safe and read-only.
  */
 final class MessageStatics {
 
@@ -35,11 +33,6 @@ final class MessageStatics {
   /** Modifiers as defined in {@link java.lang.reflect.Modifier}. */
   final int modifiers;
 
-  /** Parameter names, or {@code null} if omitted. */
-  @SuppressWarnings("UnusedVariable")
-  @SuppressFBWarnings(value = "URF_UNREAD_FIELD", justification = "Kept for data completeness")
-  final String[] paramNames;
-
   /** Fully qualified parameter type names, in declaration order. */
   final String[] paramTypeNames;
 
@@ -49,7 +42,6 @@ final class MessageStatics {
    * @param clazz the declaring message class; not {@code null}
    * @param name the method or field name; not {@code null}
    * @param modifiers Java language modifiers bitmask
-   * @param paramNames parameter names, or {@code null} if omitted
    * @param paramTypeNames fully qualified parameter type names; not {@code null}
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
@@ -57,12 +49,10 @@ final class MessageStatics {
       io.quasient.pal.messages.colfer.Class clazz,
       String name,
       int modifiers,
-      String[] paramNames,
       String[] paramTypeNames) {
     this.clazz = clazz;
     this.name = name;
     this.modifiers = modifiers;
-    this.paramNames = paramNames;
     this.paramTypeNames = paramTypeNames;
   }
 }

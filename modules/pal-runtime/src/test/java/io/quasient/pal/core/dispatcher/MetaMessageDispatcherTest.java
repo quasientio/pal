@@ -27,14 +27,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import io.quasient.pal.core.execution.java.reflect.ClassMetadataSerializer;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.types.MetaServiceType;
 import io.quasient.pal.messages.types.MetaStatusType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
@@ -45,7 +40,6 @@ import java.util.UUID;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.slf4j.LoggerFactory;
 
 /**
  * Unit tests for {@link MetaMessageDispatcher}.
@@ -99,7 +93,7 @@ public class MetaMessageDispatcherTest {
     MetaMessage request = new MetaMessage();
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-empty-params");
-    request.setParams(new Parameter[0]);
+    request.setParams(new Obj[0]);
 
     Path resultPath = Path.of("/tmp/result.json");
     when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false)))
@@ -169,17 +163,14 @@ public class MetaMessageDispatcherTest {
     assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
   }
 
-  /** Tests that parameter with null name is skipped. */
+  /** Tests that a null Obj at a param position is skipped. */
   @Test
-  public void incomingMetaMessage_parameterWithNullName_skipped() throws Exception {
+  public void incomingMetaMessage_parameterWithNullObj_skipped() throws Exception {
     MetaMessage request = new MetaMessage();
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-null-name");
 
-    Parameter param = new Parameter();
-    param.setName(null);
-    param.setValue(mock(Obj.class));
-    request.setParams(new Parameter[] {param});
+    request.setParams(new Obj[] {null});
 
     Path resultPath = Path.of("/tmp/result.json");
     when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false)))
@@ -191,17 +182,16 @@ public class MetaMessageDispatcherTest {
     assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
   }
 
-  /** Tests that parameter with null value is skipped. */
+  /** Tests that an isNull Obj at a param position is skipped. */
   @Test
-  public void incomingMetaMessage_parameterWithNullValue_skipped() throws Exception {
+  public void incomingMetaMessage_parameterWithIsNullObj_skipped() throws Exception {
     MetaMessage request = new MetaMessage();
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-null-value");
 
-    Parameter param = new Parameter();
-    param.setName("compress_encode");
-    param.setValue(null);
-    request.setParams(new Parameter[] {param});
+    Obj nullObj = new Obj();
+    nullObj.setIsNull(true);
+    request.setParams(new Obj[] {nullObj});
 
     Path resultPath = Path.of("/tmp/result.json");
     when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false)))
@@ -213,18 +203,15 @@ public class MetaMessageDispatcherTest {
     assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
   }
 
-  /** Tests that unknown parameter name is logged as warning but processing continues. */
+  /** Tests that extra positional params beyond the known ones are ignored. */
   @Test
-  public void incomingMetaMessage_unknownParameterName_loggedAndContinues() throws Exception {
+  public void incomingMetaMessage_extraPositionalParam_ignored() throws Exception {
     MetaMessage request = new MetaMessage();
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
-    request.setMessageId("msg-unknown-param");
+    request.setMessageId("msg-extra-param");
 
-    Obj valueObj = mock(Obj.class);
-    Parameter param = new Parameter();
-    param.setName("unknown_parameter");
-    param.setValue(valueObj);
-    request.setParams(new Parameter[] {param});
+    Obj extraObj = Wrapper.wrapForceByValue("extra-value");
+    request.setParams(new Obj[] {null, null, null, null, extraObj});
 
     Path resultPath = Path.of("/tmp/result.json");
     when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false)))
@@ -232,7 +219,7 @@ public class MetaMessageDispatcherTest {
 
     MetaMessage response = dispatcher.incomingMetaMessage(request);
 
-    // Should complete successfully despite unknown parameter
+    // Should complete successfully despite extra positional param
     assertThat(response, notNullValue());
     assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
   }
@@ -300,55 +287,30 @@ public class MetaMessageDispatcherTest {
   }
 
   /**
-   * Tests that an unknown parameter name is logged as warning but processing continues.
+   * Tests that extra positional params beyond known indices do not cause errors.
    *
-   * <p>Given: MetaMessage with unrecognized parameter name When: incomingMetaMessage called Then:
-   * Warning logged; parameter ignored; processing continues successfully
-   *
-   * <p>Note: This test verifies the behavior documented at MetaMessageDispatcher.java:136 where
-   * unknown parameters are logged with logger.warn() and skipped.
+   * <p>Given: MetaMessage with more Obj entries than recognized positional params When:
+   * incomingMetaMessage called Then: Processing continues successfully; extra entries ignored
    */
   @Test
-  public void incomingMetaMessage_unknownParameter_logsWarning() throws Exception {
-    // Given: MetaMessage with unrecognized parameter name
-    Logger logger = (Logger) LoggerFactory.getLogger(MetaMessageDispatcher.class);
-    ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
-    listAppender.start();
-    logger.addAppender(listAppender);
+  public void incomingMetaMessage_extraPositionalParams_processedSuccessfully() throws Exception {
+    MetaMessage request = new MetaMessage();
+    request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
+    request.setMessageId("msg-extra-params-log");
 
-    try {
-      MetaMessage request = new MetaMessage();
-      request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
-      request.setMessageId("msg-unknown-param-log");
+    Obj extraObj = Wrapper.wrapForceByValue("some-value");
+    request.setParams(new Obj[] {null, null, null, null, extraObj});
 
-      Obj valueObj = Wrapper.wrapForceByValue("some-value");
-      Parameter param = new Parameter();
-      param.setName("totally_unknown_param");
-      param.setValue(valueObj);
-      request.setParams(new Parameter[] {param});
+    Path resultPath = Path.of("/tmp/result.json");
+    when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false)))
+        .thenReturn(resultPath);
 
-      Path resultPath = Path.of("/tmp/result.json");
-      when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false)))
-          .thenReturn(resultPath);
+    // When: incomingMetaMessage called
+    MetaMessage response = dispatcher.incomingMetaMessage(request);
 
-      // When: incomingMetaMessage called
-      MetaMessage response = dispatcher.incomingMetaMessage(request);
-
-      // Then: Warning logged; parameter ignored; processing continues
-      assertThat(response, notNullValue());
-      assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
-
-      // Verify warning was logged
-      boolean warningLogged =
-          listAppender.list.stream()
-              .anyMatch(
-                  event ->
-                      event.getLevel() == Level.WARN
-                          && event.getFormattedMessage().contains("totally_unknown_param"));
-      assertThat("Warning should be logged for unknown parameter", warningLogged, is(true));
-    } finally {
-      logger.detachAppender(listAppender);
-    }
+    // Then: Processing continues successfully; extra entries ignored
+    assertThat(response, notNullValue());
+    assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
   }
 
   /**
@@ -366,12 +328,9 @@ public class MetaMessageDispatcherTest {
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-unwrap-error");
 
-    // Create a parameter with a String value for compress_encode which expects Boolean
+    // Create an Obj with String value at index 0 (compress_encode expects Boolean)
     Obj wrongTypeValue = Wrapper.wrapForceByValue("not-a-boolean");
-    Parameter param = new Parameter();
-    param.setName("compress_encode");
-    param.setValue(wrongTypeValue);
-    request.setParams(new Parameter[] {param});
+    request.setParams(new Obj[] {wrongTypeValue});
 
     // When: incomingMetaMessage called
     // Then: RuntimeException thrown with message indicating the parameter name
@@ -393,13 +352,10 @@ public class MetaMessageDispatcherTest {
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-exclude-prefixes");
 
-    // Create a parameter with name "exclude_prefixes" and value as String[]
+    // Positional: index 1 = exclude_prefixes (index 0 = compress_encode, left null)
     String[] prefixesToExclude = new String[] {"java.lang.", "sun.misc."};
     Obj valueObj = Wrapper.wrapForceByValue(prefixesToExclude);
-    Parameter param = new Parameter();
-    param.setName("exclude_prefixes");
-    param.setValue(valueObj);
-    request.setParams(new Parameter[] {param});
+    request.setParams(new Obj[] {null, valueObj});
 
     Path resultPath = Path.of("/tmp/result.json");
     when(classMetadataSerializer.scannedClasspathToJson(
@@ -439,13 +395,10 @@ public class MetaMessageDispatcherTest {
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-include-classes");
 
-    // Create a parameter with name "include_classes" and value as String[]
+    // Positional: index 2 = include_classes (indices 0-1 left null)
     String[] classesToInclude = new String[] {"com.example.MyClass", "com.example.AnotherClass"};
     Obj valueObj = Wrapper.wrapForceByValue(classesToInclude);
-    Parameter param = new Parameter();
-    param.setName("include_classes");
-    param.setValue(valueObj);
-    request.setParams(new Parameter[] {param});
+    request.setParams(new Obj[] {null, null, valueObj});
 
     Path resultPath = Path.of("/tmp/result.json");
     when(classMetadataSerializer.scannedClasspathToJson(
@@ -483,12 +436,9 @@ public class MetaMessageDispatcherTest {
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-merge-ancestry");
 
-    // Create a parameter with name "merge_ancestry" and value as Boolean true
+    // Positional: index 3 = merge_ancestry (indices 0-2 left null)
     Obj valueObj = Wrapper.wrapForceByValue(Boolean.TRUE);
-    Parameter param = new Parameter();
-    param.setName("merge_ancestry");
-    param.setValue(valueObj);
-    request.setParams(new Parameter[] {param});
+    request.setParams(new Obj[] {null, null, null, valueObj});
 
     Path resultPath = Path.of("/tmp/result.json");
     when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(true)))
@@ -518,12 +468,9 @@ public class MetaMessageDispatcherTest {
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-compress-false");
 
-    // Create a parameter with name "compress_encode" and value as Boolean false
+    // Positional: index 0 = compress_encode
     Obj valueObj = Wrapper.wrapForceByValue(Boolean.FALSE);
-    Parameter param = new Parameter();
-    param.setName("compress_encode");
-    param.setValue(valueObj);
-    request.setParams(new Parameter[] {param});
+    request.setParams(new Obj[] {valueObj});
 
     Path resultPath = Path.of("/tmp/uncompressed-result.json");
     when(classMetadataSerializer.scannedClasspathToJson(eq(false), isNull(), isNull(), eq(false)))

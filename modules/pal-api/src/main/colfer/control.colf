@@ -20,7 +20,7 @@ type ControlMessage struct {
 	messageId    text
 	responseToId text
 	command      uint8
-	params       []Parameter
+	params       []Obj
 	status       uint8
 	body         text
 }

@@ -59,7 +59,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
 
   public byte command;
 
-  public Parameter[] params;
+  public Obj[] params;
 
   public byte status;
 
@@ -70,7 +70,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
     init();
   }
 
-  private static final Parameter[] _zeroParams = new Parameter[0];
+  private static final Obj[] _zeroParams = new Obj[0];
 
   /** Colfer zero values. */
   private void init() {
@@ -188,7 +188,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
             + 2
             + 6
             + (long) this.body.length() * 3;
-    for (Parameter o : this.params) {
+    for (Obj o : this.params) {
       if (o == null) n++;
       else n += o.marshalFit();
     }
@@ -389,7 +389,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
 
       if (this.params.length != 0) {
         buf[i++] = (byte) 4;
-        Parameter[] a = this.params;
+        Obj[] a = this.params;
 
         int x = a.length;
         if (x > ControlMessage.colferListMax)
@@ -404,9 +404,9 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
         buf[i++] = (byte) x;
 
         for (int ai = 0; ai < a.length; ai++) {
-          Parameter o = a[ai];
+          Obj o = a[ai];
           if (o == null) {
-            o = new Parameter();
+            o = new Obj();
             a[ai] = o;
           }
           i = o.marshal(buf, i);
@@ -588,9 +588,9 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
                   "colfer: io.quasient.pal.messages/colfer.ControlMessage.params length %d exceeds %d elements",
                   length, ControlMessage.colferListMax));
 
-        Parameter[] a = new Parameter[length];
+        Obj[] a = new Obj[length];
         for (int ai = 0; ai < length; ai++) {
-          Parameter o = new Parameter();
+          Obj o = new Obj();
           i = o.unmarshal(buf, i, end);
           a[ai] = o;
         }
@@ -785,7 +785,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
    *
    * @return the value.
    */
-  public Parameter[] getParams() {
+  public Obj[] getParams() {
     return this.params;
   }
 
@@ -794,7 +794,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
    *
    * @param value the replacement.
    */
-  public void setParams(Parameter[] value) {
+  public void setParams(Obj[] value) {
     this.params = value;
   }
 
@@ -804,7 +804,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
    * @param value the replacement.
    * @return {@code this}.
    */
-  public ControlMessage withParams(Parameter[] value) {
+  public ControlMessage withParams(Obj[] value) {
     this.params = value;
     return this;
   }
@@ -874,7 +874,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
     if (this.messageId != null) h = 31 * h + this.messageId.hashCode();
     if (this.responseToId != null) h = 31 * h + this.responseToId.hashCode();
     h = 31 * h + (this.command & 0xff);
-    for (Parameter o : this.params) h = 31 * h + (o == null ? 0 : o.hashCode());
+    for (Obj o : this.params) h = 31 * h + (o == null ? 0 : o.hashCode());
     h = 31 * h + (this.status & 0xff);
     if (this.body != null) h = 31 * h + this.body.hashCode();
     return h;
@@ -921,10 +921,10 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
 
       if (json.has("params")) {
         JsonArray jsonArray = json.getAsJsonArray("params");
-        this.params = new Parameter[jsonArray.size()];
+        this.params = new Obj[jsonArray.size()];
         for (int i = 0; i < jsonArray.size(); i++) {
           JsonObject jsonObj = jsonArray.get(i).getAsJsonObject();
-          this.params[i] = new Parameter().fromJson(jsonObj);
+          this.params[i] = new Obj().fromJson(jsonObj);
         }
       }
       if (json.has("status")) {

@@ -47,7 +47,6 @@ import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.colfer.Method;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.colfer.ReturnValue;
@@ -274,12 +273,9 @@ public class JsonSerializersTest {
     msg.messageId = "msg-123";
     msg.responseToId = "resp-456";
     msg.service = MetaServiceType.FETCH_CLASSES_INFO.getId();
-    Parameter param = new Parameter();
-    param.name = "className";
     Obj paramValue = new Obj();
     paramValue.value = "com.example.Foo";
-    param.value = paramValue;
-    msg.params = new Parameter[] {param};
+    msg.params = new Obj[] {paramValue};
     msg.status = MetaStatusType.OK.getId();
     msg.body = "response body";
 

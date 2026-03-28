@@ -235,7 +235,7 @@ public class StaticMethodAroundCallbackIT extends AbstractInterceptIT {
         is(notNullValue()));
     assertThat(
         "BEFORE callback should have 1 parameter (the Integer argument)",
-        beforeReq.getExec().getClassMethodCall().getParameters().length,
+        beforeReq.getExec().getClassMethodCall().getArgs().length,
         is(1));
 
     // 6. Verify AFTER phase callback (second callback)

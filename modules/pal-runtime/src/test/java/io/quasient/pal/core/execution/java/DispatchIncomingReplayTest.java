@@ -40,7 +40,7 @@ import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
@@ -377,7 +377,7 @@ public class DispatchIncomingReplayTest {
     io.quasient.pal.messages.colfer.Class clazz = new io.quasient.pal.messages.colfer.Class();
     clazz.setName(className);
     call.setClazz(clazz);
-    call.setParameters(new Parameter[0]);
+    call.setArgs(new Obj[0]);
     msg.setInstanceMethodCall(call);
     msg.setEntryPoint(entryPoint);
     return msg;
@@ -406,7 +406,7 @@ public class DispatchIncomingReplayTest {
     clazz.setName(className);
     imc.setClazz(clazz);
     imc.setName(methodName);
-    imc.setParameters(new Parameter[0]);
+    imc.setArgs(new Obj[0]);
     msg.setInstanceMethodCall(imc);
 
     return WalEntry.fromExecMessage(offset, msg);
@@ -434,7 +434,7 @@ public class DispatchIncomingReplayTest {
     clazz.setName(className);
     imc.setClazz(clazz);
     imc.setName(methodName);
-    imc.setParameters(new Parameter[0]);
+    imc.setArgs(new Obj[0]);
     msg.setInstanceMethodCall(imc);
 
     return WalEntry.fromExecMessage(offset, msg);
@@ -523,7 +523,7 @@ public class DispatchIncomingReplayTest {
     }
 
     @Override
-    protected List<Parameter> getParameterList(ExecMessage execMessage) {
+    protected List<Obj> getArgsList(ExecMessage execMessage) {
       return Collections.emptyList();
     }
 

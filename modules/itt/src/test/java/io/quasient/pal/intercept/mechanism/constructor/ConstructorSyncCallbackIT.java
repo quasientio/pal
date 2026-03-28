@@ -183,7 +183,7 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
             .getInterceptCallbackRequestMessage()
             .getExec()
             .getConstructorCall()
-            .getParameters()
+            .getArgs()
             .length,
         is(1));
 
@@ -302,7 +302,7 @@ public class ConstructorSyncCallbackIT extends AbstractInterceptIT {
               .getInterceptCallbackRequestMessage()
               .getExec()
               .getConstructorCall()
-              .getParameters()
+              .getArgs()
               .length,
           is(1));
     }

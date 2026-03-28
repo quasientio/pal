@@ -19,7 +19,7 @@ import io.quasient.pal.common.lang.reflect.FieldSignature;
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.messages.colfer.ExecMessage;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.types.MessageType;
 import java.lang.reflect.AccessibleObject;
 import java.util.List;
@@ -114,7 +114,7 @@ public abstract class FieldOpDispatcher extends BaseExecMessageDispatcher {
    * @return always null, indicating that no parameters are used for field operations.
    */
   @Override
-  protected List<Parameter> getParameterList(ExecMessage execMessage) {
+  protected List<Obj> getArgsList(ExecMessage execMessage) {
     return null;
   }
 

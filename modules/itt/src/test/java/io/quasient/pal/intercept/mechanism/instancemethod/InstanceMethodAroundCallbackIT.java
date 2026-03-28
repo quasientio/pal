@@ -240,7 +240,7 @@ public class InstanceMethodAroundCallbackIT extends AbstractInterceptIT {
         is(notNullValue()));
     assertThat(
         "BEFORE callback should have 1 parameter (the Integer argument)",
-        beforeReq.getExec().getInstanceMethodCall().getParameters().length,
+        beforeReq.getExec().getInstanceMethodCall().getArgs().length,
         is(1));
 
     // 7. Verify AFTER phase callback (second callback)

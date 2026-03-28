@@ -28,7 +28,6 @@ import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.Method;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.colfer.ReturnValue;
@@ -88,14 +87,11 @@ public final class TlMsgScratch {
   /** Reusable {@code InterceptCallbackRequestMessage} buffer. */
   final InterceptCallbackRequestMessage icbr = new InterceptCallbackRequestMessage();
 
-  /** Pool of reusable {@code Parameter} instances. */
-  final ArrayList<Parameter> params = new ArrayList<>(8);
-
   /** Pool of reusable {@link Obj} value holders. */
   final ArrayList<Obj> values = new ArrayList<>(8);
 
-  /** Cache of exact-length Parameter[] arrays per arity */
-  final HashMap<Integer, Parameter[]> paramArraysByLen = new HashMap<>();
+  /** Cache of exact-length {@link Obj} arrays per arity. */
+  final HashMap<Integer, Obj[]> argArraysByLen = new HashMap<>();
 
   // “from” payload pieces for ReturnValue/RaisedThrowable (reused)
 
@@ -121,23 +117,21 @@ public final class TlMsgScratch {
   final Obj valObj = new Obj();
 
   /**
-   * Ensures capacity for at least {@code n} parameters/values, growing pools as needed.
+   * Ensures capacity for at least {@code n} value holders, growing the pool as needed.
    *
    * @param n required capacity
    */
   void ensureCapacity(int n) {
-    // grow pools of reusable Parameter and Obj elements
-    while (params.size() < n) params.add(new Parameter());
     while (values.size() < n) values.add(new Obj());
   }
 
   /**
-   * Get an {@link Parameter} array of the given length
+   * Returns a cached or new {@link Obj} array of the given length.
    *
    * @param n the required length
-   * @return a new or cached {@link Parameter} array of {@code n} elements
+   * @return an {@link Obj} array of {@code n} elements
    */
-  Parameter[] arrayForLen(int n) {
-    return paramArraysByLen.computeIfAbsent(n, Parameter[]::new);
+  Obj[] argArrayForLen(int n) {
+    return argArraysByLen.computeIfAbsent(n, Obj[]::new);
   }
 }

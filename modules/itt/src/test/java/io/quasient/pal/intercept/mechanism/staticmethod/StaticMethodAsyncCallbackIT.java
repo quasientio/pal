@@ -258,7 +258,7 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
             .getInterceptCallbackRequestMessage()
             .getExec()
             .getClassMethodCall()
-            .getParameters()
+            .getArgs()
             .length,
         is(1));
 
@@ -384,7 +384,7 @@ public class StaticMethodAsyncCallbackIT extends AbstractInterceptIT {
               .getInterceptCallbackRequestMessage()
               .getExec()
               .getClassMethodCall()
-              .getParameters()
+              .getArgs()
               .length,
           is(0));
     }

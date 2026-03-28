@@ -64,13 +64,12 @@ public final class MessageStaticsFactory {
         key,
         k -> {
           var clazzMsg = Wrapper.getWrappedClass(ms.getDeclaringTypeName());
-          String[] pNames = ms.getParameterNames(); // nullable OK
           Class<?>[] pTypes = ms.getParameterTypes();
           String[] pTypeNames =
               (pTypes == null)
                   ? null
                   : Arrays.stream(pTypes).map(Class::getName).toArray(String[]::new);
-          return new MessageStatics(clazzMsg, ms.getName(), ms.getModifiers(), pNames, pTypeNames);
+          return new MessageStatics(clazzMsg, ms.getName(), ms.getModifiers(), pTypeNames);
         });
   }
 
@@ -90,14 +89,13 @@ public final class MessageStaticsFactory {
         key,
         k -> {
           var clazzMsg = Wrapper.getWrappedClass(cs.getDeclaringTypeName());
-          String[] pNames = cs.getParameterNames();
           Class<?>[] pTypes = cs.getParameterTypes();
           String[] pTypeNames =
               (pTypes == null)
                   ? null
                   : Arrays.stream(pTypes).map(Class::getName).toArray(String[]::new);
           return new MessageStatics(
-              clazzMsg, /*name not used for ctor*/ "<init>", cs.getModifiers(), pNames, pTypeNames);
+              clazzMsg, /*name not used for ctor*/ "<init>", cs.getModifiers(), pTypeNames);
         });
   }
 }

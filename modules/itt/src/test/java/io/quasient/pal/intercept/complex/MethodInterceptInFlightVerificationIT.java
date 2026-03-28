@@ -152,7 +152,7 @@ public class MethodInterceptInFlightVerificationIT extends AbstractInterceptIT {
                   .getInterceptCallbackRequestMessage()
                   .getExec()
                   .getInstanceMethodCall()
-                  .getParameters()
+                  .getArgs()
                   .length,
               is(1));
         });

@@ -44,7 +44,6 @@ import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.colfer.Method;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
 import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.colfer.ReturnValue;
@@ -77,7 +76,6 @@ import io.quasient.pal.serdes.colfer.JsonSerializers.MessageSerializer;
 import io.quasient.pal.serdes.colfer.JsonSerializers.MetaMessageSerializer;
 import io.quasient.pal.serdes.colfer.JsonSerializers.MethodSerializer;
 import io.quasient.pal.serdes.colfer.JsonSerializers.ObjSerializer;
-import io.quasient.pal.serdes.colfer.JsonSerializers.ParameterSerializer;
 import io.quasient.pal.serdes.colfer.JsonSerializers.RaisedThrowableSerializer;
 import io.quasient.pal.serdes.colfer.JsonSerializers.ReflectableSerializer;
 import io.quasient.pal.serdes.colfer.JsonSerializers.ReturnValueAdapter;
@@ -147,7 +145,6 @@ public class ColferUtils {
             .registerTypeAdapter(Method.class, new MethodSerializer())
             .registerTypeAdapter(Constructor.class, new ConstructorSerializer())
             .registerTypeAdapter(Reflectable.class, new ReflectableSerializer())
-            .registerTypeAdapter(Parameter.class, new ParameterSerializer())
             .registerTypeAdapter(ReturnValue.class, new ReturnValueAdapter())
             // Control Message
             .registerTypeAdapter(ControlMessage.class, new ControlMessageSerializer())

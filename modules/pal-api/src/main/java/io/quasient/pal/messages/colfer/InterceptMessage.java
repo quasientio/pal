@@ -87,7 +87,6 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     clazz = "";
     callbackClass = "";
     callbackMethod = "";
-    callbackTimeoutMs = 0L;
   }
 
   /** {@link #reset(InputStream) Reusable} deserialization of Colfer streams. */

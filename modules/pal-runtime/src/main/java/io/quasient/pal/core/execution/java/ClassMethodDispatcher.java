@@ -22,7 +22,7 @@ import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.core.service.RunOptions;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import io.quasient.pal.messages.colfer.ExecMessage;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
@@ -140,15 +140,14 @@ public class ClassMethodDispatcher extends MethodDispatcher {
   /**
    * {@inheritDoc}
    *
-   * <p>Extracts the list of parameters from the class method call portion of the given execution
-   * message.
+   * <p>Extracts the list of args from the class method call portion of the given execution message.
    *
    * @param execMessage the execution message containing class method call details.
-   * @return a list of parameters as defined in the message.
+   * @return a list of args as defined in the message.
    */
   @Override
-  protected List<Parameter> getParameterList(ExecMessage execMessage) {
-    return Arrays.asList(execMessage.getClassMethodCall().getParameters());
+  protected List<Obj> getArgsList(ExecMessage execMessage) {
+    return Arrays.asList(execMessage.getClassMethodCall().getArgs());
   }
 
   /**

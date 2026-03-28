@@ -502,7 +502,7 @@ public class AroundProceedIT extends AbstractInterceptIT {
         is(notNullValue()));
     assertThat(
         "BEFORE should have 1 parameter",
-        beforeReq.getExec().getInstanceMethodCall().getParameters().length,
+        beforeReq.getExec().getInstanceMethodCall().getArgs().length,
         is(1));
 
     // 6. Verify AFTER callback

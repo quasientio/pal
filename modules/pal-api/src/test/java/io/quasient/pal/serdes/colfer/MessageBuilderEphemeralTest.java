@@ -24,7 +24,7 @@ import io.quasient.pal.common.lang.reflect.MethodSignature;
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.messages.colfer.ExecMessage;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.UUID;
@@ -87,10 +87,10 @@ public class MessageBuilderEphemeralTest {
     assertNotNull(m.getClassMethodCall().getContext());
     assertEquals(TargetType.class.getName(), m.getClassMethodCall().getClazz().getName());
     assertEquals("sm", m.getClassMethodCall().getName());
-    Parameter[] ps = m.getClassMethodCall().getParameters();
+    Obj[] ps = m.getClassMethodCall().getArgs();
     assertEquals(2, ps.length);
-    assertEquals("java.lang.String", ps[0].getValue().getClazz().getName());
-    assertEquals("boolean", ps[1].getValue().getClazz().getName());
+    assertEquals("java.lang.String", ps[0].getClazz().getName());
+    assertEquals("boolean", ps[1].getClazz().getName());
   }
 
   @Test
@@ -100,8 +100,8 @@ public class MessageBuilderEphemeralTest {
         builder.buildClassMethodMessageEphemeral(ctx, this, ObjectRef.randomRef(), null, null);
     assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(m));
     assertNotNull(m.getClassMethodCall().getContext());
-    assertNotNull(m.getClassMethodCall().getParameters());
-    assertEquals(0, m.getClassMethodCall().getParameters().length);
+    assertNotNull(m.getClassMethodCall().getArgs());
+    assertEquals(0, m.getClassMethodCall().getArgs().length);
   }
 
   @Test
@@ -129,8 +129,8 @@ public class MessageBuilderEphemeralTest {
             ctx, this, ObjectRef.randomRef(), ObjectRef.randomRef(), null, null);
     assertEquals(EXEC_INSTANCE_METHOD, getMessageTypeOf(m));
     assertNotNull(m.getInstanceMethodCall().getContext());
-    assertNotNull(m.getInstanceMethodCall().getParameters());
-    assertEquals(0, m.getInstanceMethodCall().getParameters().length);
+    assertNotNull(m.getInstanceMethodCall().getArgs());
+    assertEquals(0, m.getInstanceMethodCall().getArgs().length);
   }
 
   @Test
@@ -238,7 +238,7 @@ public class MessageBuilderEphemeralTest {
         bNoCtx.buildClassMethodMessageEphemeral(
             cm, this, ObjectRef.randomRef(), new Object[0], new ObjectRef[0]);
     assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(m1));
-    assertEquals(0, m1.getClassMethodCall().getParameters().length);
+    assertEquals(0, m1.getClassMethodCall().getArgs().length);
 
     // instance method zero args
     Context im = ctxForMethod(TargetType.class, "add", int.class, int.class);
@@ -251,7 +251,7 @@ public class MessageBuilderEphemeralTest {
             new Object[0],
             new ObjectRef[0]);
     assertEquals(EXEC_INSTANCE_METHOD, getMessageTypeOf(m2));
-    assertEquals(0, m2.getInstanceMethodCall().getParameters().length);
+    assertEquals(0, m2.getInstanceMethodCall().getArgs().length);
   }
 
   @Test

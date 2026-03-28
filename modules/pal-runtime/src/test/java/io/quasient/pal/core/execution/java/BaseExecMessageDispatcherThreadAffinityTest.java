@@ -38,7 +38,7 @@ import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.InterceptMessage;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
@@ -140,7 +140,7 @@ public class BaseExecMessageDispatcherThreadAffinityTest {
     }
 
     @Override
-    protected List<Parameter> getParameterList(ExecMessage execMessage) {
+    protected List<Obj> getArgsList(ExecMessage execMessage) {
       return Collections.emptyList();
     }
 

@@ -20,7 +20,7 @@ type MetaMessage struct {
 	messageId    text
 	responseToId text
 	service      uint8
-	params       []Parameter
+	params       []Obj
 	status       uint8
 	body         text
 }

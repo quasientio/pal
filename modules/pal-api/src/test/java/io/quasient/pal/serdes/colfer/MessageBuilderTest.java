@@ -54,7 +54,7 @@ import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.InterceptResponse;
 import io.quasient.pal.messages.colfer.InternalHeader;
 import io.quasient.pal.messages.colfer.Message;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.types.ControlCommandType;
 import io.quasient.pal.messages.types.ControlStatusType;
 import io.quasient.pal.messages.types.InternalHeaderType;
@@ -198,12 +198,12 @@ public class MessageBuilderTest {
   private void assertClassMethodParameters(
       ExecMessage execMessage, String[] parameterTypes, Object[] args)
       throws ClassNotFoundException {
-    assertEquals(parameterTypes.length, execMessage.getClassMethodCall().getParameters().length);
-    for (int i = 0; i < execMessage.getClassMethodCall().getParameters().length; i++) {
-      Parameter parameter = execMessage.getClassMethodCall().getParameters()[i];
-      assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
+    assertEquals(parameterTypes.length, execMessage.getClassMethodCall().getArgs().length);
+    for (int i = 0; i < execMessage.getClassMethodCall().getArgs().length; i++) {
+      Obj arg = execMessage.getClassMethodCall().getArgs()[i];
+      assertEquals(parameterTypes[i], arg.getClazz().getName());
 
-      Object unwrapped = Unwrapper.unwrapObject(parameter.getValue());
+      Object unwrapped = Unwrapper.unwrapObject(arg);
       Object expected = args[i];
 
       if (expected instanceof float[] expectedArray
@@ -333,7 +333,7 @@ public class MessageBuilderTest {
     assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(className, execMessage.constructorCall.getClazz().getName());
     assertNull(execMessage.getConstructorCall().getContext());
-    assertEquals(parameterTypes.length, execMessage.getConstructorCall().getParameters().length);
+    assertEquals(parameterTypes.length, execMessage.getConstructorCall().getArgs().length);
   }
 
   @Test
@@ -365,7 +365,7 @@ public class MessageBuilderTest {
         constructorContext.getWithinType().getName(),
         execMessage.getConstructorCall().getContext().getSourceLocationType());
 
-    assertEquals(args.length, execMessage.getConstructorCall().getParameters().length);
+    assertEquals(args.length, execMessage.getConstructorCall().getArgs().length);
   }
 
   @Test
@@ -386,12 +386,12 @@ public class MessageBuilderTest {
     assertEquals(peerId.toString(), execMessage.getPeerUuid());
     assertEquals(clazz.getName(), execMessage.getConstructorCall().getClazz().getName());
     assertNull(execMessage.getConstructorCall().getContext());
-    assertEquals(args.length, execMessage.getConstructorCall().getParameters().length);
+    assertEquals(args.length, execMessage.getConstructorCall().getArgs().length);
     // compare parameter types and args
-    for (int i = 0; i < execMessage.getConstructorCall().getParameters().length; i++) {
-      Parameter parameter = execMessage.getConstructorCall().getParameters()[i];
-      assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
-      assertEquals(args[i], Unwrapper.unwrapObject(parameter.getValue()));
+    for (int i = 0; i < execMessage.getConstructorCall().getArgs().length; i++) {
+      Obj arg = execMessage.getConstructorCall().getArgs()[i];
+      assertEquals(parameterTypes[i], arg.getClazz().getName());
+      assertEquals(args[i], Unwrapper.unwrapObject(arg));
     }
   }
 
@@ -410,8 +410,8 @@ public class MessageBuilderTest {
     assertNotNull(em.getConstructorCall());
     assertEquals(clazz.getName(), em.getConstructorCall().getClazz().getName());
     assertNotNull(em.getConstructorCall().getContext());
-    assertNotNull(em.getConstructorCall().getParameters());
-    assertEquals(0, em.getConstructorCall().getParameters().length);
+    assertNotNull(em.getConstructorCall().getArgs());
+    assertEquals(0, em.getConstructorCall().getArgs().length);
   }
 
   // </editor-fold>
@@ -436,7 +436,7 @@ public class MessageBuilderTest {
     assertEquals(className, execMessage.getInstanceMethodCall().getClazz().getName());
     assertEquals(methodName, execMessage.getInstanceMethodCall().getName());
     assertNull(execMessage.getInstanceMethodCall().getContext());
-    assertEquals(parameterTypes.length, execMessage.getInstanceMethodCall().getParameters().length);
+    assertEquals(parameterTypes.length, execMessage.getInstanceMethodCall().getArgs().length);
   }
 
   @Test
@@ -469,7 +469,7 @@ public class MessageBuilderTest {
     assertEquals(instanceMethodContext.getSourceLine(), messageContext.getSourceLocationLine());
     assertEquals(
         instanceMethodContext.getWithinType().getName(), messageContext.getSourceLocationType());
-    assertEquals(args.length, execMessage.getInstanceMethodCall().getParameters().length);
+    assertEquals(args.length, execMessage.getInstanceMethodCall().getArgs().length);
   }
 
   @Test
@@ -496,12 +496,12 @@ public class MessageBuilderTest {
         execMessage.getInstanceMethodCall().getClazz().getName());
     assertEquals(methodToCall, execMessage.getInstanceMethodCall().getName());
     assertNull(execMessage.getInstanceMethodCall().getContext());
-    assertEquals(3, execMessage.getInstanceMethodCall().getParameters().length);
+    assertEquals(3, execMessage.getInstanceMethodCall().getArgs().length);
     // compare parameter types and args
-    for (int i = 0; i < execMessage.getInstanceMethodCall().getParameters().length; i++) {
-      Parameter parameter = execMessage.getInstanceMethodCall().getParameters()[i];
-      assertEquals(parameterTypes[i], parameter.getValue().getClazz().getName());
-      assertEquals(args[i], Unwrapper.unwrapObject(parameter.getValue()));
+    for (int i = 0; i < execMessage.getInstanceMethodCall().getArgs().length; i++) {
+      Obj arg = execMessage.getInstanceMethodCall().getArgs()[i];
+      assertEquals(parameterTypes[i], arg.getClazz().getName());
+      assertEquals(args[i], Unwrapper.unwrapObject(arg));
     }
   }
 
@@ -610,9 +610,9 @@ public class MessageBuilderTest {
             args,
             argObjRefs);
 
-    assertNotNull(em.getClassMethodCall().getParameters());
-    assertEquals(1, em.getClassMethodCall().getParameters().length);
-    assertTrue(em.getClassMethodCall().getParameters()[0].getValue().getIsNull());
+    assertNotNull(em.getClassMethodCall().getArgs());
+    assertEquals(1, em.getClassMethodCall().getArgs().length);
+    assertTrue(em.getClassMethodCall().getArgs()[0].getIsNull());
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -1120,16 +1120,16 @@ public class MessageBuilderTest {
     assertEquals(
         execMessage.getInstanceMethodCall().getName(), interceptKeyMessage.getExecutableName());
     assertEquals(
-        execMessage.getInstanceMethodCall().getParameters().length,
+        execMessage.getInstanceMethodCall().getArgs().length,
         interceptKeyMessage.getParameterTypes().length);
     assertEquals(
-        execMessage.getInstanceMethodCall().getParameters()[0].getValue().getClazz().getName(),
+        execMessage.getInstanceMethodCall().getArgs()[0].getClazz().getName(),
         interceptKeyMessage.getParameterTypes()[0]);
     assertEquals(
-        execMessage.getInstanceMethodCall().getParameters()[1].getValue().getClazz().getName(),
+        execMessage.getInstanceMethodCall().getArgs()[1].getClazz().getName(),
         interceptKeyMessage.getParameterTypes()[1]);
     assertEquals(
-        execMessage.getInstanceMethodCall().getParameters()[2].getValue().getClazz().getName(),
+        execMessage.getInstanceMethodCall().getArgs()[2].getClazz().getName(),
         interceptKeyMessage.getParameterTypes()[2]);
   }
 
@@ -1380,7 +1380,7 @@ public class MessageBuilderTest {
     assertNotNull(controlMessage);
     assertNotNull(controlMessage.getMessageId());
     assertEquals(fromPeer.toString(), controlMessage.getFromPeer());
-    assertEquals(objectRef.getRef(), controlMessage.getParams()[0].getValue().getRef());
+    assertEquals(objectRef.getRef(), controlMessage.getParams()[0].getRef());
     assertEquals(ControlCommandType.DELETE_OBJECT.getId(), controlMessage.getCommand());
   }
 

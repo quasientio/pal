@@ -18,7 +18,7 @@ package io.quasient.pal.core.dispatcher;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.core.execution.java.reflect.ClassMetadataSerializer;
 import io.quasient.pal.messages.colfer.MetaMessage;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.types.MetaServiceType;
 import io.quasient.pal.messages.types.MetaStatusType;
 import io.quasient.pal.serdes.Unwrapper;
@@ -104,48 +104,39 @@ public class MetaMessageDispatcher {
     Set<String> includeClasses = null;
     boolean mergeAncestry = false;
 
-    // parse given params
-    Parameter[] params = metaMessage.getParams();
+    // parse given params (positional: 0=compress_encode, 1=exclude_prefixes,
+    // 2=include_classes, 3=merge_ancestry)
+    Obj[] params = metaMessage.getParams();
     if (params != null) {
-      for (Parameter param : params) {
-        if (param.getName() == null || param.getValue() == null) {
-          continue;
+      if (params.length > 0 && params[0] != null && !params[0].getIsNull()) {
+        try {
+          compressAndEncode = (Boolean) Unwrapper.unwrapObject(params[0]);
+        } catch (Exception e) {
+          throw new RuntimeException("Error unwrapping meta param at index 0 (compress_encode)", e);
         }
-        if (param.getName().equalsIgnoreCase("compress_encode") && param.getValue() != null) {
-          // process "compress_encode"
-          try {
-            compressAndEncode = (Boolean) Unwrapper.unwrapObject(param.getValue());
-          } catch (Exception e) {
-            throw new RuntimeException("Error unwrapping parameter 'compress_encode'", e);
-          }
-        } else if (param.getName().equalsIgnoreCase("exclude_prefixes")
-            && param.getValue() != null) {
-          // process "exclude_prefixes"
-          excludePrefixes = new HashSet<>();
-          try {
-            Collections.addAll(
-                excludePrefixes, (String[]) Unwrapper.unwrapObject(param.getValue()));
-          } catch (Exception e) {
-            throw new RuntimeException("Error unwrapping parameter 'exclude_prefixes'", e);
-          }
-        } else if (param.getName().equalsIgnoreCase("include_classes")
-            && param.getValue() != null) {
-          // process "include_classes"
-          includeClasses = new HashSet<>();
-          try {
-            Collections.addAll(includeClasses, (String[]) Unwrapper.unwrapObject(param.getValue()));
-          } catch (Exception e) {
-            throw new RuntimeException("Error unwrapping parameter 'includeClasses'", e);
-          }
-        } else if (param.getName().equalsIgnoreCase("merge_ancestry") && param.getValue() != null) {
-          // process "merge_ancestry"
-          try {
-            mergeAncestry = (Boolean) Unwrapper.unwrapObject(param.getValue());
-          } catch (Exception e) {
-            throw new RuntimeException("Error unwrapping parameter 'merge_ancestry'", e);
-          }
-        } else {
-          logger.warn("Ignoring parameter name={}, value={}", param.getName(), param.getValue());
+      }
+      if (params.length > 1 && params[1] != null && !params[1].getIsNull()) {
+        excludePrefixes = new HashSet<>();
+        try {
+          Collections.addAll(excludePrefixes, (String[]) Unwrapper.unwrapObject(params[1]));
+        } catch (Exception e) {
+          throw new RuntimeException(
+              "Error unwrapping meta param at index 1 (exclude_prefixes)", e);
+        }
+      }
+      if (params.length > 2 && params[2] != null && !params[2].getIsNull()) {
+        includeClasses = new HashSet<>();
+        try {
+          Collections.addAll(includeClasses, (String[]) Unwrapper.unwrapObject(params[2]));
+        } catch (Exception e) {
+          throw new RuntimeException("Error unwrapping meta param at index 2 (include_classes)", e);
+        }
+      }
+      if (params.length > 3 && params[3] != null && !params[3].getIsNull()) {
+        try {
+          mergeAncestry = (Boolean) Unwrapper.unwrapObject(params[3]);
+        } catch (Exception e) {
+          throw new RuntimeException("Error unwrapping meta param at index 3 (merge_ancestry)", e);
         }
       }
     }

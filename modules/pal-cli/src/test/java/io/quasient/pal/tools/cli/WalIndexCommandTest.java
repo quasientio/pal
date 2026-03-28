@@ -29,7 +29,6 @@ import io.quasient.pal.messages.colfer.ClassMethodCall;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
 import io.quasient.pal.messages.colfer.Obj;
-import io.quasient.pal.messages.colfer.Parameter;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -160,16 +159,14 @@ public class WalIndexCommandTest {
     Class clazz = new Class();
     clazz.setName(className);
     cmc.setClazz(clazz);
-    Parameter[] params = new Parameter[paramTypes.length];
+    Obj[] args = new Obj[paramTypes.length];
     for (int i = 0; i < paramTypes.length; i++) {
-      params[i] = new Parameter();
-      Obj paramValue = new Obj();
+      args[i] = new Obj();
       Class paramClass = new Class();
       paramClass.setName(paramTypes[i]);
-      paramValue.setClazz(paramClass);
-      params[i].setValue(paramValue);
+      args[i].setClazz(paramClass);
     }
-    cmc.setParameters(params);
+    cmc.setArgs(args);
     msg.setClassMethodCall(cmc);
     return WalEntry.fromExecMessage(offset, msg);
   }

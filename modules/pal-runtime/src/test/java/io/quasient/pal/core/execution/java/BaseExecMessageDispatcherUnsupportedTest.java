@@ -21,7 +21,7 @@ import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.core.transport.MessageChannelType;
 import io.quasient.pal.messages.colfer.ExecMessage;
-import io.quasient.pal.messages.colfer.Parameter;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.lang.reflect.AccessibleObject;
@@ -91,7 +91,7 @@ public class BaseExecMessageDispatcherUnsupportedTest {
     }
 
     @Override
-    protected List<Parameter> getParameterList(ExecMessage execMessage) {
+    protected List<Obj> getArgsList(ExecMessage execMessage) {
       return Collections.emptyList();
     }
 
