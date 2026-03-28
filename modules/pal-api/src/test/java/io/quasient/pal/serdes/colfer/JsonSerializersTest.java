@@ -18,6 +18,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.messages.colfer.ClInitCall;
@@ -106,6 +108,7 @@ public class JsonSerializersTest {
     RaisedThrowable ex = new RaisedThrowable();
     ex.inInitializer = true;
     msg.exception = ex;
+    msg.isApiMisuseError = true;
 
     String json = ColferUtils.toJson(msg);
     JsonObject parsed = JsonParser.parseString(json).getAsJsonObject();
@@ -119,6 +122,7 @@ public class JsonSerializersTest {
     assertThat(parsed.get("new_return_ref").getAsInt(), is(42));
     assertThat(parsed.get("throw_exception").getAsBoolean(), is(true));
     assertThat(parsed.has("exception"), is(true));
+    assertThat(parsed.get("is_api_misuse_error").getAsBoolean(), is(true));
   }
 
   /**
@@ -142,6 +146,7 @@ public class JsonSerializersTest {
     assertThat(parsed.has("new_return_ref"), is(false));
     assertThat(parsed.has("throw_exception"), is(false));
     assertThat(parsed.has("exception"), is(false));
+    assertThat(parsed.has("is_api_misuse_error"), is(false));
   }
 
   /**
@@ -623,6 +628,142 @@ public class JsonSerializersTest {
     assertThat(deserialized.isVoid, is(true));
     assertThat(deserialized.object, is(nullValue()));
     assertThat(deserialized.from, is(nullValue()));
+  }
+
+  /** Tests {@link JsonSerializers.ExecMessageSerializer} serializes newly added fields. */
+  @Test
+  public void execMessageSerializer_serializesNewFields() throws Exception {
+    ExecMessage exec = new ExecMessage();
+    ConstructorCall ctorCall = new ConstructorCall();
+    Class clazz = new Class();
+    clazz.name = "com.example.Widget";
+    ctorCall.clazz = clazz;
+    exec.constructorCall = ctorCall;
+    exec.declaredExceptions = new String[] {"java.io.IOException", "java.sql.SQLException"};
+    exec.threadAffinity = "fx-thread";
+    exec.entryPoint = true;
+
+    String json = ColferUtils.toJson(exec);
+    JsonObject parsed = JsonParser.parseString(json).getAsJsonObject();
+
+    assertThat(parsed.has("declared_exceptions"), is(true));
+    assertThat(parsed.getAsJsonArray("declared_exceptions").size(), is(2));
+    assertThat(parsed.get("thread_affinity").getAsString(), is("fx-thread"));
+    assertThat(parsed.get("entry_point").getAsBoolean(), is(true));
+  }
+
+  /**
+   * Tests {@link JsonSerializers.ExecMessageSerializer} omits newly added fields when at defaults.
+   */
+  @Test
+  public void execMessageSerializer_newFields_omittedWhenDefault() throws Exception {
+    ExecMessage exec = new ExecMessage();
+    ConstructorCall ctorCall = new ConstructorCall();
+    Class clazz = new Class();
+    clazz.name = "com.example.Widget";
+    ctorCall.clazz = clazz;
+    exec.constructorCall = ctorCall;
+
+    String json = ColferUtils.toJson(exec);
+    JsonObject parsed = JsonParser.parseString(json).getAsJsonObject();
+
+    assertThat(parsed.has("declared_exceptions"), is(false));
+    assertThat(parsed.has("thread_affinity"), is(false));
+    assertThat(parsed.has("entry_point"), is(false));
+  }
+
+  /** Tests {@link JsonSerializers.InterceptMessageSerializer} serializes newly added fields. */
+  @Test
+  public void interceptMessageSerializer_serializesNewFields() throws Exception {
+    InterceptMessage msg = new InterceptMessage();
+    msg.interceptType = InterceptType.BEFORE.toByte();
+    msg.forceImmediate = true;
+    msg.exceptionPropagationPolicy = ExceptionPropagationPolicy.PROPAGATE_EXPLICIT_ONLY.toByte();
+    msg.checkedExceptionPolicy = CheckedExceptionPolicy.REJECT.toByte();
+    msg.priority = 10;
+    msg.ttlSeconds = 3600L;
+    msg.callbackTimeoutMs = 5000L;
+
+    String json = ColferUtils.toJson(msg);
+    JsonObject parsed = JsonParser.parseString(json).getAsJsonObject();
+
+    assertThat(parsed.get("force_immediate").getAsBoolean(), is(true));
+    assertThat(
+        parsed.get("exception_propagation_policy").getAsString(), is("PROPAGATE_EXPLICIT_ONLY"));
+    assertThat(parsed.get("checked_exception_policy").getAsString(), is("REJECT"));
+    assertThat(parsed.get("priority").getAsInt(), is(10));
+    assertThat(parsed.get("ttl_seconds").getAsLong(), is(3600L));
+    assertThat(parsed.get("callback_timeout_ms").getAsLong(), is(5000L));
+  }
+
+  /**
+   * Tests {@link JsonSerializers.InterceptMessageSerializer} omits newly added fields when at
+   * defaults.
+   */
+  @Test
+  public void interceptMessageSerializer_newFields_omittedWhenDefault() throws Exception {
+    InterceptMessage msg = new InterceptMessage();
+    msg.interceptType = InterceptType.AFTER.toByte();
+
+    String json = ColferUtils.toJson(msg);
+    JsonObject parsed = JsonParser.parseString(json).getAsJsonObject();
+
+    assertThat(parsed.has("force_immediate"), is(false));
+    assertThat(parsed.has("exception_propagation_policy"), is(false));
+    assertThat(parsed.has("checked_exception_policy"), is(false));
+    assertThat(parsed.has("priority"), is(false));
+    assertThat(parsed.has("ttl_seconds"), is(false));
+    assertThat(parsed.has("callback_timeout_ms"), is(false));
+  }
+
+  /**
+   * Tests {@link JsonSerializers.InterceptMessageSerializer} omits policy fields when set to the
+   * 0xFF null sentinel (255 = defer to global).
+   */
+  @Test
+  public void interceptMessageSerializer_policySentinel_omitted() throws Exception {
+    InterceptMessage msg = new InterceptMessage();
+    msg.interceptType = InterceptType.BEFORE.toByte();
+    msg.exceptionPropagationPolicy = (byte) 0xFF;
+    msg.checkedExceptionPolicy = (byte) 0xFF;
+
+    String json = ColferUtils.toJson(msg);
+    JsonObject parsed = JsonParser.parseString(json).getAsJsonObject();
+
+    assertThat(parsed.has("exception_propagation_policy"), is(false));
+    assertThat(parsed.has("checked_exception_policy"), is(false));
+  }
+
+  /**
+   * Tests {@link JsonSerializers.InterceptCallbackRequestSerializer} serializes the
+   * proceedTimeoutMs field.
+   */
+  @Test
+  public void interceptCallbackRequestSerializer_serializesProceedTimeoutMs() throws Exception {
+    InterceptCallbackRequestMessage msg = new InterceptCallbackRequestMessage();
+    msg.callbackId = "cb-timeout-1";
+    msg.proceedTimeoutMs = 10000;
+
+    String json = ColferUtils.toJson(msg);
+    JsonObject parsed = JsonParser.parseString(json).getAsJsonObject();
+
+    assertThat(parsed.get("proceed_timeout_ms").getAsInt(), is(10000));
+  }
+
+  /**
+   * Tests {@link JsonSerializers.InterceptCallbackRequestSerializer} omits proceedTimeoutMs when at
+   * default (zero).
+   */
+  @Test
+  public void interceptCallbackRequestSerializer_proceedTimeoutMs_omittedWhenDefault()
+      throws Exception {
+    InterceptCallbackRequestMessage msg = new InterceptCallbackRequestMessage();
+    msg.callbackId = "cb-timeout-2";
+
+    String json = ColferUtils.toJson(msg);
+    JsonObject parsed = JsonParser.parseString(json).getAsJsonObject();
+
+    assertThat(parsed.has("proceed_timeout_ms"), is(false));
   }
 
   /**

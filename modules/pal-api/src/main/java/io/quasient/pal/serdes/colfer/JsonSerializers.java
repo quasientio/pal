@@ -19,6 +19,8 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import io.quasient.pal.common.lang.FieldOpType;
+import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
+import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.messages.colfer.ClInitCall;
@@ -118,6 +120,16 @@ public class JsonSerializers {
   }
 
   /**
+   * Determines if the provided long value is not zero.
+   *
+   * @param value the long value to check
+   * @return {@code true} if the value is not zero, {@code false} otherwise
+   */
+  private static boolean notEmpty(long value) {
+    return value != 0;
+  }
+
+  /**
    * Determines if the provided object is not null.
    *
    * @param value the object to check
@@ -168,6 +180,17 @@ public class JsonSerializers {
    * @param value the integer value to add when non-zero
    */
   private static void addProp(JsonObject json, String key, int value) {
+    if (notEmpty(value)) json.addProperty(key, value);
+  }
+
+  /**
+   * Adds a long property to the provided JSON object if the value is non-zero.
+   *
+   * @param json the target {@link JsonObject}
+   * @param key the property name
+   * @param value the long value to add when non-zero
+   */
+  private static void addProp(JsonObject json, String key, long value) {
     if (notEmpty(value)) json.addProperty(key, value);
   }
 
@@ -262,6 +285,12 @@ public class JsonSerializers {
           jsonElement.addProperty("ERROR: Unsupported message of type", execMessageType.name());
         }
       }
+      if (notEmpty(message.declaredExceptions)) {
+        jsonElement.add(
+            "declared_exceptions", jsonSerializationContext.serialize(message.declaredExceptions));
+      }
+      addProp(jsonElement, "thread_affinity", message.threadAffinity);
+      addProp(jsonElement, "entry_point", message.entryPoint);
       return jsonElement;
     }
   }
@@ -825,6 +854,21 @@ public class JsonSerializers {
       if (notEmpty(message.callbackMethod)) {
         jsonElement.addProperty("callback_method", message.callbackMethod);
       }
+      addProp(jsonElement, "force_immediate", message.forceImmediate);
+      if (message.exceptionPropagationPolicy != 0
+          && message.exceptionPropagationPolicy != (byte) 0xFF) {
+        jsonElement.addProperty(
+            "exception_propagation_policy",
+            ExceptionPropagationPolicy.fromByte(message.exceptionPropagationPolicy).name());
+      }
+      if (message.checkedExceptionPolicy != 0 && message.checkedExceptionPolicy != (byte) 0xFF) {
+        jsonElement.addProperty(
+            "checked_exception_policy",
+            CheckedExceptionPolicy.fromByte(message.checkedExceptionPolicy).name());
+      }
+      addProp(jsonElement, "priority", message.priority);
+      addProp(jsonElement, "ttl_seconds", message.ttlSeconds);
+      addProp(jsonElement, "callback_timeout_ms", message.callbackTimeoutMs);
       return jsonElement;
     }
   }
@@ -922,6 +966,7 @@ public class JsonSerializers {
       addProp(jsonElement, "return_value_ref", message.returnValueRef);
       addProp(jsonElement, "is_void", message.isVoid);
       addSer(jsonElement, "thrown_exception", message.thrownException, jsonSerializationContext);
+      addProp(jsonElement, "proceed_timeout_ms", message.proceedTimeoutMs);
       return jsonElement;
     }
   }
@@ -958,6 +1003,7 @@ public class JsonSerializers {
       addProp(jsonElement, "new_return_ref", message.newReturnRef);
       addProp(jsonElement, "throw_exception", message.throwException);
       addSer(jsonElement, "exception", message.exception, jsonSerializationContext);
+      addProp(jsonElement, "is_api_misuse_error", message.isApiMisuseError);
       return jsonElement;
     }
   }
