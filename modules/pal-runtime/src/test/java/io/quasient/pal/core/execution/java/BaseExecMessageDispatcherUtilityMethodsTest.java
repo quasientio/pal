@@ -99,12 +99,19 @@ public class BaseExecMessageDispatcherUtilityMethodsTest {
   }
 
   @Test
-  public void generateObjectRef_identityHashCodeBased_returnsExpectedRef() {
-    Object obj = new Object();
-    int expectedHash = System.identityHashCode(obj);
-    ObjectRef ref = dispatcher.generateObjectRef(obj);
+  public void generateObjectRef_returnsMonotonicRef() {
+    Object obj1 = new Object();
+    Object obj2 = new Object();
+    ObjectRef ref1 = dispatcher.generateObjectRef(obj1);
+    ObjectRef ref2 = dispatcher.generateObjectRef(obj2);
 
-    assertThat(ref.getRef(), is(expectedHash));
+    assertThat("first ref should be positive", ref1.getRef() > 0, is(true));
+    assertThat("refs should be monotonically increasing", ref2.getRef() > ref1.getRef(), is(true));
+  }
+
+  @Test
+  public void generateObjectRef_nullObject_returnsNull() {
+    assertThat(dispatcher.generateObjectRef(null), is(nullValue()));
   }
 
   // ===== Tests for storeObject() =====
