@@ -110,9 +110,6 @@
                         <relocation>
                             <pattern>com.google</pattern>
                             <shadedPattern>${shading.prefix}.google</shadedPattern>
-                            <excludes>
-                                <exclude>com.google.gson.*</exclude>
-                            </excludes>
                         </relocation>
                         <relocation>
                             <pattern>org.json</pattern>
@@ -130,18 +127,8 @@
                             <pattern>org.apache</pattern>
                             <shadedPattern>${shading.prefix}.apache</shadedPattern>
                         </relocation>
-                        <relocation>
-                            <pattern>common</pattern>
-                            <shadedPattern>${shading.prefix}.common</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>net.jpountz</pattern>
-                            <shadedPattern>${shading.prefix}.jpountz</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.xerial.snappy</pattern>
-                            <shadedPattern>${shading.prefix}.snappy</shadedPattern>
-                        </relocation>
+                        <!-- JNI native libs: cannot relocate (native methods resolve by class name) -->
+                        <!-- Excluded: net.jpountz (lz4), org.xerial.snappy, com.github.luben (zstd) -->
                         <relocation>
                             <pattern>org.aopalliance</pattern>
                             <shadedPattern>${shading.prefix}.aopalliance</shadedPattern>
@@ -155,12 +142,8 @@
                             <shadedPattern>${shading.prefix}.zmq</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>com.neilalexander</pattern>
+                            <pattern>eu.neilalexander</pattern>
                             <shadedPattern>${shading.prefix}.neilalexander</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.jboss.netty</pattern>
-                            <shadedPattern>${shading.prefix}.netty</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.yaml</pattern>
@@ -169,6 +152,89 @@
                         <relocation>
                             <pattern>org.jline</pattern>
                             <shadedPattern>${shading.prefix}.org.jline</shadedPattern>
+                        </relocation>
+                        <!-- High risk: extremely common libraries -->
+                        <relocation>
+                            <pattern>io.netty</pattern>
+                            <shadedPattern>${shading.prefix}.io.netty</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>io.grpc</pattern>
+                            <shadedPattern>${shading.prefix}.io.grpc</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.fasterxml</pattern>
+                            <shadedPattern>${shading.prefix}.fasterxml</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>io.vertx</pattern>
+                            <shadedPattern>${shading.prefix}.io.vertx</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.objectweb.asm</pattern>
+                            <shadedPattern>${shading.prefix}.asm</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.springframework</pattern>
+                            <shadedPattern>${shading.prefix}.springframework</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>jakarta.inject</pattern>
+                            <shadedPattern>${shading.prefix}.jakarta.inject</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>javax.annotation</pattern>
+                            <shadedPattern>${shading.prefix}.javax.annotation</shadedPattern>
+                        </relocation>
+                        <!-- Medium risk -->
+                        <relocation>
+                            <pattern>io.etcd</pattern>
+                            <shadedPattern>${shading.prefix}.io.etcd</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.jctools</pattern>
+                            <shadedPattern>${shading.prefix}.jctools</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.lmax</pattern>
+                            <shadedPattern>${shading.prefix}.lmax</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>net.openhft</pattern>
+                            <shadedPattern>${shading.prefix}.openhft</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>picocli</pattern>
+                            <shadedPattern>${shading.prefix}.picocli</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>dev.failsafe</pattern>
+                            <shadedPattern>${shading.prefix}.failsafe</shadedPattern>
+                        </relocation>
+                        <!-- Lower risk -->
+                        <relocation>
+                            <pattern>io.github.classgraph</pattern>
+                            <shadedPattern>${shading.prefix}.classgraph</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>nonapi.io.github.classgraph</pattern>
+                            <shadedPattern>${shading.prefix}.nonapi.classgraph</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>io.github.azagniotov</pattern>
+                            <shadedPattern>${shading.prefix}.azagniotov</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.java_websocket</pattern>
+                            <shadedPattern>${shading.prefix}.java_websocket</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>io.perfmark</pattern>
+                            <shadedPattern>${shading.prefix}.io.perfmark</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.checkerframework</pattern>
+                            <shadedPattern>${shading.prefix}.checkerframework</shadedPattern>
                         </relocation>
                     </relocations>
                     <filters>
