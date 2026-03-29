@@ -81,13 +81,6 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
   private Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, @Nullable Object value)
       throws IllegalAccessException {
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "invokeIncoming:in w/ accessibleObject: {}, target: {}, value: {}",
-          accessibleObject,
-          target,
-          value);
-    }
     Field field = (Field) accessibleObject;
     field.set(target, value);
     return Void.getInstance();
@@ -178,15 +171,8 @@ public abstract class SetFieldDispatcher extends FieldOpDispatcher {
       } else { // type is not available in valueObject, use the field type to unwrap
         value = Unwrapper.unwrapObject(valueObject, field.getType());
       }
-      if (logger.isTraceEnabled()) {
-        String valueClassName = value != null ? value.getClass().getName() : "null";
-        logger.trace("Unwrapped value: {}, has class name: {}", value, valueClassName);
-      }
     } else {
       value = objectLookupStore.lookupObject(ObjectRef.from(objectRef));
-      if (logger.isTraceEnabled()) {
-        logger.trace("Loaded value: {}", value);
-      }
     }
     return value;
   }

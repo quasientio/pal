@@ -162,13 +162,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
   @Override
   protected Object getTargetFromMessage(ExecMessage execMessage) throws NullPointerException {
     int objRefValue = execMessage.getInstanceMethodCall().getObjectRef();
-    if (logger.isTraceEnabled() && objRefValue != 0) {
-      logger.trace("ObjectRef: {}", objRefValue);
-    }
     Object target = resolveObjectByRef(objRefValue);
-    if (logger.isTraceEnabled()) {
-      logger.trace("Loaded target: {}", target);
-    }
     return target;
   }
 

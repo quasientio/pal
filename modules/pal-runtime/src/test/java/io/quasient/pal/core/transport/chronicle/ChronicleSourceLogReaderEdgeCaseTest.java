@@ -33,8 +33,6 @@ import net.openhft.chronicle.queue.RollCycles;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 
 /**
@@ -51,7 +49,6 @@ import org.zeromq.ZContext;
  */
 public class ChronicleSourceLogReaderEdgeCaseTest extends ZmqEnabledTest {
 
-  private static final Logger logger = LoggerFactory.getLogger("tests");
   private static final String DEALER_ADDRESS = "inproc://chronicle_edge_test";
   private static final String OFFSET_PUB_ADDRESS = "inproc://chronicle_offsets_edge_test";
 
@@ -101,7 +98,6 @@ public class ChronicleSourceLogReaderEdgeCaseTest extends ZmqEnabledTest {
                 });
       }
     }
-    logger.trace("cleanup complete");
   }
 
   // ==================== readFromLog() Edge Cases ====================

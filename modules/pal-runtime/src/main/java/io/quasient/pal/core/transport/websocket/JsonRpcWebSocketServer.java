@@ -348,9 +348,6 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     if (logger.isDebugEnabled()) {
       logger.debug("New message from peer w/id: {}", peerId);
     }
-    if (logger.isTraceEnabled()) {
-      logger.trace("Message received: {}", message);
-    }
     InboundJsonRpcRequestMsg requestMsg = new InboundJsonRpcRequestMsg(peerId, message);
     // Add the message to the queue
     boolean offered = requestQueue.offer(requestMsg);

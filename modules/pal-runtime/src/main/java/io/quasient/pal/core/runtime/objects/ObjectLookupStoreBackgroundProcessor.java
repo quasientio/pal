@@ -122,9 +122,6 @@ class ObjectLookupStoreBackgroundProcessor implements ObjectLookupStoreCleaner {
 
                   if (cleared > 0) {
                     objectLookupStoreStats.getTotalObjectsCleared().addAndGet(cleared);
-                    if (logger.isTraceEnabled()) {
-                      logger.trace("Cleaned up {} refs", cleared);
-                    }
                   }
 
                 } catch (InterruptedException ie) {

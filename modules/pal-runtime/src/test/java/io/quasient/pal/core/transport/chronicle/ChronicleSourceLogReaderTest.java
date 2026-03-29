@@ -241,7 +241,6 @@ public class ChronicleSourceLogReaderTest extends ZmqEnabledTest {
                 });
       }
     }
-    logger.trace("cleanup complete");
   }
 
   @Before

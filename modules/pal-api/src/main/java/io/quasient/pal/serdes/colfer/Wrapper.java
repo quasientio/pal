@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility class for wrapping Java objects into Colfer {@code Obj} instances. Provides methods to
@@ -39,9 +37,6 @@ import org.slf4j.LoggerFactory;
  * constraints and wrapping policies to provide a flexible and consistent serialization.
  */
 public final class Wrapper {
-
-  /** Logger instance for logging. */
-  private static final Logger logger = LoggerFactory.getLogger(Wrapper.class);
 
   /** Maximum number of elements allowed in a collection to be considered wrappable. */
   private static final int MAX_WRAPPABLE_COLLECTION_SIZE = 1000;
@@ -123,14 +118,6 @@ public final class Wrapper {
       ObjectRef objectRef,
       WrapPolicy wrapPolicy) {
 
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "in getWrappedObjectAux with object: {}, class: {}, objectRef: {}, wrapPolicy: {}",
-          object,
-          givenClassName,
-          objectRef,
-          wrapPolicy);
-    }
     // set isNull
     boolean isNull = (object == null && objectRef == null);
     wrappedObject.setIsNull(isNull);
@@ -196,9 +183,6 @@ public final class Wrapper {
       wrappedObject.setValue(JsonUtil.toJson(refs));
     }
 
-    if (logger.isTraceEnabled()) {
-      logger.trace("out with wrappedValue: {}", ColferUtils.format(wrappedObject));
-    }
     return wrappedObject;
   }
 
@@ -355,14 +339,6 @@ public final class Wrapper {
       @Nullable String classname,
       @Nullable ObjectRef objectRef,
       @Nullable WrapPolicy wrapPolicy) {
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "in getWrappedObject with object: {}, class: {}, objectRef: {}",
-          object,
-          classname,
-          objectRef);
-    }
-
     WrapPolicy wrappingPolicy = wrapPolicy != null ? wrapPolicy : WrapPolicy.DETECT;
 
     if (object == null && classname == null && objectRef == null) {

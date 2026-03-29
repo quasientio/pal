@@ -78,13 +78,6 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
   private Object invokeIncoming(
       AccessibleObject accessibleObject, Object target, List<MessageArgument> deserializedArgs)
       throws ReflectiveOperationException {
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "invokeIncoming:in w/ accessibleObject: {}, target: {}, args: {}",
-          ((Method) accessibleObject).toGenericString(),
-          target,
-          deserializedArgs);
-    }
     Method method = (Method) accessibleObject;
     Object[] args =
         ParameterAdaptationUtils.adaptParametersForMethod(

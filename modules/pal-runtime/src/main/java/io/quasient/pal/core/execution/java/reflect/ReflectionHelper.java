@@ -107,9 +107,6 @@ public class ReflectionHelper {
     Objects.requireNonNull(knownParameterTypes, "the list of parameter types cannot be null");
     Objects.requireNonNull(methodName, "method name cannot be null");
 
-    if (logger.isTraceEnabled()) {
-      logger.trace("in lookupMethod w/ class:{} and method: {}", clazz.getName(), methodName);
-    }
     // replace null parameter types with actual parameter types
     final List<Class<?>> parameterTypes = resolveParameterTypes(parameters, knownParameterTypes);
 
@@ -214,10 +211,6 @@ public class ReflectionHelper {
     Objects.requireNonNull(clazz, "clazz cannot be null");
     Objects.requireNonNull(parameters, "the list of parameters cannot be null");
     Objects.requireNonNull(knownParameterTypes, "the list of parameter types cannot be null");
-
-    if (logger.isTraceEnabled()) {
-      logger.trace("in lookupConstructor w/ class: {}", clazz.getName());
-    }
 
     // replace null parameter types with actual parameter types
     final List<Class<?>> parameterTypes = resolveParameterTypes(parameters, knownParameterTypes);

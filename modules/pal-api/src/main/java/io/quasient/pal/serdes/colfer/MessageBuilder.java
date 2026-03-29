@@ -1557,12 +1557,6 @@ public final class MessageBuilder {
     // set 'object'
     if (!isVoid) {
       Class<?> objectClass = getClassOfAccessible(accessibleObject, declaringClass);
-      if (logger.isTraceEnabled()) {
-        if (object != null) {
-          logger.trace("object is of class: {}", object.getClass().getName());
-        }
-        logger.trace("objectClass.getName: {}", objectClass.getName());
-      }
       valueMessage.setObject(
           getWrappedObject(object, objectClass.getName(), objectRef, WrapPolicy.PREFER_REFERENCE));
     }

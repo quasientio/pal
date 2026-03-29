@@ -92,21 +92,12 @@ public class CustomClassloader extends URLClassLoader {
 
     synchronized (getClassLoadingLock(name)) {
       Class<?> clazz = findLoadedClass(name);
-      if (clazz != null && logger.isTraceEnabled()) {
-        logger.trace("Found cached class {}", name);
-      }
 
       if (clazz == null) {
         try {
           clazz = getParent().loadClass(name);
-          if (logger.isTraceEnabled()) {
-            logger.trace("Loaded class {} using parent class loader", name);
-          }
         } catch (ClassNotFoundException e) {
           clazz = findClass(name);
-          if (logger.isTraceEnabled()) {
-            logger.trace("Loaded class {} using custom class loader", name);
-          }
         }
       }
 

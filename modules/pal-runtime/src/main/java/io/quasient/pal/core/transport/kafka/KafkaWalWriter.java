@@ -633,9 +633,6 @@ public class KafkaWalWriter extends WalWriter {
           return;
         }
         messagesWritten.incrementAndGet();
-        if (logger.isTraceEnabled()) {
-          logger.trace("New message at offset {} (id={})", md.offset(), mid);
-        }
 
         if (publishOffsets && offsetsRing != null) {
           // Never drop: block here until a slot is available

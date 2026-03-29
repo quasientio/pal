@@ -23,17 +23,12 @@ import io.quasient.pal.serdes.colfer.JsonUtil;
 import io.quasient.pal.serdes.colfer.ObjUnwrappableAdapter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility class providing static methods for unwrapping serialized (i.e. wrapped) objects back into
  * their original Java types.
  */
 public class Unwrapper {
-
-  /** Logger instance for logging within the Unwrapper class. */
-  private static final Logger logger = LoggerFactory.getLogger(Unwrapper.class);
 
   /** Private constructor to prevent instantiation of the Unwrapper utility class. */
   private Unwrapper() {}
@@ -50,10 +45,6 @@ public class Unwrapper {
    * @throws RuntimeException if an error occurs during deserialization
    */
   public static Object unwrapObject(Unwrappable wrappedObject, Class<?> clazz) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("in with unwrappable:\n{}, clazz:\n{}", wrappedObject.asString(), clazz);
-    }
-
     if (wrappedObject.isNull()) {
       return null;
     }

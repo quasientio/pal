@@ -30,17 +30,12 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Deserializes JSON elements into {@link Params} instances according to JSON-RPC specifications.
  * Implements {@link JsonDeserializer} to provide custom deserialization logic for {@link Params}.
  */
 public class ParamsDeserializer implements JsonDeserializer<Params> {
-
-  /** Logger instance for logging deserialization. */
-  protected static final Logger logger = LoggerFactory.getLogger(ParamsDeserializer.class);
 
   /**
    * {@inheritDoc}
@@ -673,10 +668,6 @@ public class ParamsDeserializer implements JsonDeserializer<Params> {
    * @throws JsonParseException if the conversion fails or the type is unsupported
    */
   private Object convertJsonPrimitiveToType(JsonPrimitive p, Class<?> targetType) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("Converting JsonPrimitive p: {} to type: {}", p, targetType.getName());
-    }
-
     if (p.isBoolean()) {
       if (targetType == boolean.class || targetType == Boolean.class) {
         return p.getAsBoolean();

@@ -29,7 +29,6 @@ import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InternalHeader;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.types.MessageType;
-import io.quasient.pal.serdes.colfer.ColferUtils;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -243,13 +242,6 @@ public class OutboundMessageGateway {
       throw new IllegalArgumentException("ExecMessage is null");
     }
     final ExecMessage execMessage = message.getExecMessage();
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "sendExecMessage:in w/ execMessage: {}, execPhase: {}\n, headers: {}",
-          ColferUtils.format(execMessage),
-          execPhase,
-          headers);
-    }
 
     MessageType messageType = MessageType.fromId(message.getMessageType());
 
@@ -285,9 +277,6 @@ public class OutboundMessageGateway {
       }
     }
 
-    if (logger.isTraceEnabled()) {
-      logger.trace("sendExecMessage:out");
-    }
     return execMessage;
   }
 

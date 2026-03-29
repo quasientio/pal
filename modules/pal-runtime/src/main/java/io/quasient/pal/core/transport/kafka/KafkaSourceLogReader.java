@@ -398,9 +398,6 @@ public class KafkaSourceLogReader extends SourceLogReader {
       }
       totalPollingNanos.getAndAdd(System.nanoTime() - t0);
       totalPolls.getAndIncrement();
-      if (logger.isTraceEnabled()) {
-        logger.trace("{} messages read during poll of {}", records.count(), pollDuration);
-      }
       if (logger.isDebugEnabled() && records.count() > 0) {
         logger.debug("Records read: {}", records.count());
       }
@@ -617,10 +614,6 @@ public class KafkaSourceLogReader extends SourceLogReader {
    * @return The computed next Kafka offset to poll.
    */
   private Long nextOffset() {
-    if (logger.isTraceEnabled()) {
-      final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
-      logger.trace("in w/ lastOffsetRead = {}, and queue: {}", lastOffsetRead, queueStr);
-    }
     // initial candidate == last read + 1
     Long nextToRead = lastOffsetRead + 1;
     Long nextOffsetToSkip = skipOffsets.peek();
@@ -634,14 +627,6 @@ public class KafkaSourceLogReader extends SourceLogReader {
       skipOffsets.poll();
       nextToRead++;
       nextOffsetToSkip = skipOffsets.peek();
-    }
-    if (logger.isTraceEnabled()) {
-      final String queueStr = skipOffsets.peek() == null ? "empty" : skipOffsets.toString();
-      logger.trace(
-          "out w/ nextToRead = {} with lastOffsetRead = {}, and final queue: {}",
-          nextToRead,
-          lastOffsetRead,
-          queueStr);
     }
     return nextToRead;
   }

@@ -208,9 +208,6 @@ public class InterceptInformer implements InterceptNodeListener {
    * @param message the intercept event message to be sent
    */
   private void sendInterceptEventMsg(InterceptEventMsg message) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("Sending new intercept evt message: {}", message);
-    }
     // send
     Socket outSocket = threadSocket.get();
     message.send(outSocket);

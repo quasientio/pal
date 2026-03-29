@@ -73,10 +73,6 @@ public abstract class GetFieldDispatcher extends FieldOpDispatcher {
    */
   private Object invokeIncoming(AccessibleObject accessibleObject, Object target)
       throws IllegalAccessException {
-    if (logger.isTraceEnabled()) {
-      logger.trace(
-          "invokeIncoming:in w/ accessibleObject: {}, target: {}", accessibleObject, target);
-    }
     Field field = (Field) accessibleObject;
     return field.get(target);
   }

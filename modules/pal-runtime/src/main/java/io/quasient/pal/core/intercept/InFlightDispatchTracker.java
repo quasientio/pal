@@ -316,10 +316,6 @@ public class InFlightDispatchTracker {
 
     // Increment counter
     counter.increment();
-
-    if (logger.isTraceEnabled()) {
-      logger.trace("Entered dispatch for {}, count={}", key, counter.sum());
-    }
   }
 
   /**
@@ -353,10 +349,6 @@ public class InFlightDispatchTracker {
     }
 
     counter.decrement();
-
-    if (logger.isTraceEnabled()) {
-      logger.trace("Exited dispatch for {}, count={}", key, counter.sum());
-    }
   }
 
   /**

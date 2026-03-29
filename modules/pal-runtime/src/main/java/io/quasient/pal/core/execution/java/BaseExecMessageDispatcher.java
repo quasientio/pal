@@ -56,7 +56,6 @@ import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.messages.types.SessionCommandType;
 import io.quasient.pal.serdes.Unwrapper;
-import io.quasient.pal.serdes.colfer.ColferUtils;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -184,11 +183,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       final Object sender = pjp.getThis();
       final Object[] args = pjp.getArgs();
       final Object target = pjp.getTarget();
-
-      if (logger.isTraceEnabled()) {
-        logger.trace("JoinPoint: {}", pjp.toLongString());
-        logger.trace("dispatch:in w/sender: {}, target: {}, args: {}", sender, target, args);
-      }
 
       // Check intercepts BEFORE creating Context/ExecMessage
       final MessageType beforeExecMsgType = getBeforeExecMessageType();
@@ -544,9 +538,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
 
       // 9. Return object or re-raise exception
       if (throwableWrapper != null) {
-        if (logger.isTraceEnabled()) {
-          logger.trace("dispatch:out re-raising exception: {}", throwableWrapper);
-        }
         Throwable invocationThr = throwableWrapper.throwable();
         // we want to throw the cause exception
         if (invocationThr instanceof InvocationTargetException) {
@@ -556,9 +547,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
       }
 
-      if (logger.isTraceEnabled()) {
-        logger.trace("dispatch:out returning object: {}", returnValue);
-      }
       return returnValue;
     } finally {
       // Always exit dispatch tracking, even if an exception occurred
@@ -1580,14 +1568,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     }
 
     try {
-      if (logger.isTraceEnabled()) {
-        logger.trace(
-            "dispatchIncoming:in w/ message id: {}, from peer w/id:{}, channel: {}",
-            incomingCall.getMessageId(),
-            UuidUtils.toString(incomingCall.getPeerUuid()),
-            messageChannel);
-      }
-
       // get type
       final MessageType messageType = getMessageTypeOf(incomingCall);
 
@@ -2262,12 +2242,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                       }
                       return invokeResult;
                     });
-            if (logger.isTraceEnabled()) {
-              String returnedClass =
-                  returnValue == null ? "unavailable" : returnValue.getClass().toString();
-              logger.trace(
-                  "invokeIncoming returnValue: {} of class: {}", returnValue, returnedClass);
-            }
           } catch (InvocationTargetException e) {
             logger.error("Error during invocation phase - invoke", e);
             exceptionWhileInvoking = e.getCause();
@@ -2467,10 +2441,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
       }
 
       // 13. Return received message
-      if (logger.isTraceEnabled()) {
-        logger.trace(
-            "dispatchIncoming:out returning message: {}", ColferUtils.format(afterExecResponseMsg));
-      }
       return afterExecResponseMsg;
     } finally {
       // Always exit dispatch tracking, even if an exception occurred
@@ -2568,9 +2538,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     int i = 0;
     if (argsList != null) {
       for (Obj obj : argsList) {
-        if (logger.isTraceEnabled()) {
-          logger.trace("getting arg from param #{}: {}", i, ColferUtils.format(obj));
-        }
         if (obj.getIsNull()) {
           args.add(new MessageArgument(null, true));
         } else {

@@ -26,8 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Thread-safe implementation backed by a two-level map and a {@link java.lang.ref.ReferenceQueue}.
@@ -59,9 +57,6 @@ import org.slf4j.LoggerFactory;
  * </ul>
  */
 public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupStore {
-
-  /** Logger instance for logging events and debug information. */
-  private final Logger logger = LoggerFactory.getLogger(ConcurrentHashMapObjectLookupStore.class);
 
   /** The default initial capacity of the underlying {@link ConcurrentHashMap}. */
   static final int DEFAULT_INITIAL_CAPACITY = 10000;
@@ -311,9 +306,6 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
    */
   @Override
   public Object lookupObject(ObjectRef objectRef) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("in lookupObject w/ objectRef: {}", objectRef);
-    }
     if (objectRef == null) {
       throw new NullPointerException("objectRef cannot be null");
     }
@@ -322,9 +314,6 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
     if (storedObject != null) {
       objectLookupStoreStats.getSuccessfulStoreLookups().getAndIncrement();
       object = storedObject.get();
-    }
-    if (logger.isTraceEnabled()) {
-      logger.trace("out w/ object: {}", object);
     }
     return object;
   }
@@ -390,9 +379,6 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
 
     if (cleared > 0) {
       objectLookupStoreStats.getTotalObjectsCleared().addAndGet(cleared);
-      if (logger.isTraceEnabled()) {
-        logger.trace("Cleaned up {} refs", cleared);
-      }
     }
 
     return cleared;
@@ -423,16 +409,10 @@ public final class ConcurrentHashMapObjectLookupStore implements ObjectLookupSto
    */
   @Override
   public boolean containsObjectRef(ObjectRef objectRef) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("in containsObjectRef w/ objectRef: {}", objectRef);
-    }
     if (objectRef == null) {
       throw new NullPointerException("objectRef cannot be null");
     }
     final boolean containsObjectRef = byRef.containsKey(objectRef);
-    if (logger.isTraceEnabled()) {
-      logger.trace("out w/ containsObjectRef: {}", containsObjectRef);
-    }
     return containsObjectRef;
   }
 
