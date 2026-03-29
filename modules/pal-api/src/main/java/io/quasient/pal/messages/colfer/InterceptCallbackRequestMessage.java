@@ -22,6 +22,7 @@ package io.quasient.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import java.io.IOException;
@@ -58,7 +59,7 @@ public class InterceptCallbackRequestMessage
   public byte interceptType;
 
   /** UUID of peer being intercepted */
-  public String interceptedPeer;
+  public byte[] interceptedPeer;
 
   /** Callback routing - use callbackId OR (callbackClass + callbackMethod) */
   public String registeredCallbackId;
@@ -91,10 +92,12 @@ public class InterceptCallbackRequestMessage
     init();
   }
 
+  private static final byte[] _zeroBytes = new byte[0];
+
   /** Colfer zero values. */
   private void init() {
     callbackId = "";
-    interceptedPeer = "";
+    interceptedPeer = _zeroBytes;
     registeredCallbackId = "";
     callbackClass = "";
     callbackMethod = "";
@@ -202,7 +205,7 @@ public class InterceptCallbackRequestMessage
             + 2
             + 2
             + 6
-            + (long) this.interceptedPeer.length() * 3
+            + (long) this.interceptedPeer.length
             + 6
             + (long) this.registeredCallbackId.length() * 3
             + 6
@@ -316,52 +319,26 @@ public class InterceptCallbackRequestMessage
         buf[i++] = this.interceptType;
       }
 
-      if (!this.interceptedPeer.isEmpty()) {
+      if (this.interceptedPeer.length != 0) {
         buf[i++] = (byte) 3;
-        int start = ++i;
 
-        String s = this.interceptedPeer;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
-          }
-        }
-        int size = i - start;
+        int size = this.interceptedPeer.length;
         if (size > InterceptCallbackRequestMessage.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: io.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.interceptedPeer size %d exceeds %d UTF-8 bytes",
+                  "colfer: io.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.interceptedPeer size %d exceeds %d bytes",
                   size, InterceptCallbackRequestMessage.colferSizeMax));
 
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
+        int x = size;
+        while (x > 0x7f) {
+          buf[i++] = (byte) (x | 0x80);
+          x >>>= 7;
         }
-        buf[ii] = (byte) size;
+        buf[i++] = (byte) x;
+
+        int start = i;
+        i += size;
+        System.arraycopy(this.interceptedPeer, 0, buf, start, size);
       }
 
       if (!this.registeredCallbackId.isEmpty()) {
@@ -645,12 +622,14 @@ public class InterceptCallbackRequestMessage
         if (size < 0 || size > InterceptCallbackRequestMessage.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: io.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.interceptedPeer size %d exceeds %d UTF-8 bytes",
+                  "colfer: io.quasient.pal.messages/colfer.InterceptCallbackRequestMessage.interceptedPeer size %d exceeds %d bytes",
                   size, InterceptCallbackRequestMessage.colferSizeMax));
 
+        this.interceptedPeer = new byte[size];
         int start = i;
         i += size;
-        this.interceptedPeer = new String(buf, start, size, StandardCharsets.UTF_8);
+        System.arraycopy(buf, start, this.interceptedPeer, 0, size);
+
         header = buf[i++];
       }
 
@@ -904,7 +883,7 @@ public class InterceptCallbackRequestMessage
    *
    * @return the value.
    */
-  public String getInterceptedPeer() {
+  public byte[] getInterceptedPeer() {
     return this.interceptedPeer;
   }
 
@@ -913,7 +892,7 @@ public class InterceptCallbackRequestMessage
    *
    * @param value the replacement.
    */
-  public void setInterceptedPeer(String value) {
+  public void setInterceptedPeer(byte[] value) {
     this.interceptedPeer = value;
   }
 
@@ -923,7 +902,7 @@ public class InterceptCallbackRequestMessage
    * @param value the replacement.
    * @return {@code this}.
    */
-  public InterceptCallbackRequestMessage withInterceptedPeer(String value) {
+  public InterceptCallbackRequestMessage withInterceptedPeer(byte[] value) {
     this.interceptedPeer = value;
     return this;
   }
@@ -1195,7 +1174,7 @@ public class InterceptCallbackRequestMessage
     if (this.callbackId != null) h = 31 * h + this.callbackId.hashCode();
     h = 31 * h + (this.phase & 0xff);
     h = 31 * h + (this.interceptType & 0xff);
-    if (this.interceptedPeer != null) h = 31 * h + this.interceptedPeer.hashCode();
+    for (byte b : this.interceptedPeer) h = 31 * h + b;
     if (this.registeredCallbackId != null) h = 31 * h + this.registeredCallbackId.hashCode();
     if (this.callbackClass != null) h = 31 * h + this.callbackClass.hashCode();
     if (this.callbackMethod != null) h = 31 * h + this.callbackMethod.hashCode();
@@ -1221,9 +1200,7 @@ public class InterceptCallbackRequestMessage
     return (this.callbackId == null ? o.callbackId == null : this.callbackId.equals(o.callbackId))
         && this.phase == o.phase
         && this.interceptType == o.interceptType
-        && (this.interceptedPeer == null
-            ? o.interceptedPeer == null
-            : this.interceptedPeer.equals(o.interceptedPeer))
+        && java.util.Arrays.equals(this.interceptedPeer, o.interceptedPeer)
         && (this.registeredCallbackId == null
             ? o.registeredCallbackId == null
             : this.registeredCallbackId.equals(o.registeredCallbackId))
@@ -1261,9 +1238,13 @@ public class InterceptCallbackRequestMessage
       }
 
       if (json.has("interceptedPeer")) {
-        this.interceptedPeer = json.get("interceptedPeer").getAsString();
+        JsonArray jsonArray = json.getAsJsonArray("interceptedPeer");
+        this.interceptedPeer = new byte[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          byte jsonByte = jsonArray.get(i).getAsByte();
+          this.interceptedPeer[i] = jsonByte;
+        }
       }
-
       if (json.has("registeredCallbackId")) {
         this.registeredCallbackId = json.get("registeredCallbackId").getAsString();
       }

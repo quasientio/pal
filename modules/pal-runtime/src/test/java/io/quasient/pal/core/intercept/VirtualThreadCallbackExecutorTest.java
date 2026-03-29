@@ -26,11 +26,14 @@ import static org.junit.Assert.assertTrue;
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.InterceptMessage;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -349,7 +352,9 @@ public class VirtualThreadCallbackExecutorTest {
     im.setInterceptType(InterceptType.BEFORE_ASYNC.toByte());
     im.setCallbackClass(CALLBACK_CLASS);
     im.setCallbackMethod(callbackMethod);
-    im.peerUuid = "test-peer-uuid";
+    im.peerUuid =
+        UuidUtils.toBytes(
+            UUID.nameUUIDFromBytes("test-peer-uuid".getBytes(StandardCharsets.UTF_8)));
     im.messageId = "test-message-id";
     return im;
   }

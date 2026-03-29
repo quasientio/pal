@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.execution.java.reflect.ClassMetadataSerializer;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.colfer.Obj;
@@ -34,6 +35,7 @@ import io.quasient.pal.messages.types.MetaServiceType;
 import io.quasient.pal.messages.types.MetaStatusType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import io.quasient.pal.serdes.colfer.Wrapper;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Set;
 import java.util.UUID;
@@ -72,7 +74,8 @@ public class MetaMessageDispatcherTest {
     MetaMessage request = new MetaMessage();
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-1");
-    request.setFromPeer("peer-1");
+    request.setFromPeer(
+        UuidUtils.toBytes(UUID.nameUUIDFromBytes("peer-1".getBytes(StandardCharsets.UTF_8))));
 
     Path resultPath = Path.of("/tmp/result.json");
     when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false)))
@@ -114,7 +117,8 @@ public class MetaMessageDispatcherTest {
     MetaMessage request = new MetaMessage();
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-err");
-    request.setFromPeer("peer-err");
+    request.setFromPeer(
+        UuidUtils.toBytes(UUID.nameUUIDFromBytes("peer-err".getBytes(StandardCharsets.UTF_8))));
 
     when(classMetadataSerializer.scannedClasspathToJson(anyBoolean(), any(), any(), anyBoolean()))
         .thenThrow(new RuntimeException("Scan failed"));
@@ -255,7 +259,7 @@ public class MetaMessageDispatcherTest {
 
     MetaMessage response = dispatcher.incomingMetaMessage(request);
 
-    assertThat(response.getFromPeer(), is(peerUuid.toString()));
+    assertThat(UuidUtils.toString(response.getFromPeer()), is(peerUuid.toString()));
   }
 
   // ===== Additional Test Specifications =====
@@ -274,7 +278,9 @@ public class MetaMessageDispatcherTest {
     MetaMessage request = new MetaMessage();
     request.setService((byte) 127);
     request.setMessageId("msg-unsupported");
-    request.setFromPeer("peer-unsupported");
+    request.setFromPeer(
+        UuidUtils.toBytes(
+            UUID.nameUUIDFromBytes("peer-unsupported".getBytes(StandardCharsets.UTF_8))));
 
     // When: incomingMetaMessage called
     MetaMessage response = dispatcher.incomingMetaMessage(request);
@@ -519,7 +525,9 @@ public class MetaMessageDispatcherTest {
     MetaMessage request = new MetaMessage();
     request.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
     request.setMessageId("msg-dispatch-test");
-    request.setFromPeer("peer-dispatch-test");
+    request.setFromPeer(
+        UuidUtils.toBytes(
+            UUID.nameUUIDFromBytes("peer-dispatch-test".getBytes(StandardCharsets.UTF_8))));
 
     Path resultPath = Path.of("/tmp/dispatch-result.json");
     when(classMetadataSerializer.scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false)))
@@ -533,7 +541,7 @@ public class MetaMessageDispatcherTest {
     assertThat(response.getStatus(), is(MetaStatusType.OK.getId()));
     assertThat(response.getResponseToId(), is("msg-dispatch-test"));
     assertThat(response.getService(), is(MetaServiceType.FETCH_CLASSES_INFO.getId()));
-    assertThat(response.getFromPeer(), is(peerUuid.toString()));
+    assertThat(UuidUtils.toString(response.getFromPeer()), is(peerUuid.toString()));
     verify(classMetadataSerializer).scannedClasspathToJson(eq(true), isNull(), isNull(), eq(false));
   }
 
@@ -559,7 +567,9 @@ public class MetaMessageDispatcherTest {
     MetaMessage request = new MetaMessage();
     request.setService((byte) 127); // Not mapped to any MetaServiceType
     request.setMessageId("msg-unknown-test");
-    request.setFromPeer("peer-unknown-test");
+    request.setFromPeer(
+        UuidUtils.toBytes(
+            UUID.nameUUIDFromBytes("peer-unknown-test".getBytes(StandardCharsets.UTF_8))));
 
     // When: incomingMetaMessage called
     MetaMessage response = dispatcher.incomingMetaMessage(request);

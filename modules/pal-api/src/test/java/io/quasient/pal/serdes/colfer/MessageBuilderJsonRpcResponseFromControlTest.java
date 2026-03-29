@@ -21,6 +21,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ControlMessage;
 import io.quasient.pal.messages.jsonrpc.JsonRpcError;
 import io.quasient.pal.messages.jsonrpc.JsonRpcResponse;
@@ -35,7 +36,7 @@ public class MessageBuilderJsonRpcResponseFromControlTest {
   private static ControlMessage controlResponse(
       ControlStatusType status, String responseToId, String body) {
     return new ControlMessage()
-        .withFromPeer(UUID.randomUUID().toString())
+        .withFromPeer(UuidUtils.toBytes(UUID.randomUUID()))
         .withMessageId(UUID.randomUUID().toString())
         .withResponseToId(responseToId)
         .withStatus(status.toId())
@@ -124,7 +125,7 @@ public class MessageBuilderJsonRpcResponseFromControlTest {
     MessageBuilder b = new MessageBuilder(UUID.randomUUID(), Boolean.toString(false));
     ControlMessage requestLike =
         new ControlMessage()
-            .withFromPeer(UUID.randomUUID().toString())
+            .withFromPeer(UuidUtils.toBytes(UUID.randomUUID()))
             .withMessageId("req-1")
             .withStatus((byte) 0); // request type per ControlMessageUtils
 

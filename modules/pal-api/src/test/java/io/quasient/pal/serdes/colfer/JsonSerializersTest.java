@@ -28,6 +28,7 @@ import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
 import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ClInitCall;
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.Constructor;
@@ -57,6 +58,8 @@ import io.quasient.pal.messages.types.InternalHeaderType;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.messages.types.MetaServiceType;
 import io.quasient.pal.messages.types.MetaStatusType;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
@@ -202,14 +205,17 @@ public class JsonSerializersTest {
   @Test
   public void interceptResponseSerializer_serializesAllFields() throws Exception {
     InterceptResponse msg = new InterceptResponse();
-    msg.peerUuid = "peer-abc-123";
+    msg.peerUuid =
+        UuidUtils.toBytes(UUID.nameUUIDFromBytes("peer-abc-123".getBytes(StandardCharsets.UTF_8)));
     msg.responseToId = "req-789";
     msg.result = true;
 
     String json = ColferUtils.toJson(msg);
     JsonObject parsed = JsonParser.parseString(json).getAsJsonObject();
 
-    assertThat(parsed.get("peer_uuid").getAsString(), is("peer-abc-123"));
+    assertThat(
+        parsed.get("peer_uuid").getAsString(),
+        is(UUID.nameUUIDFromBytes("peer-abc-123".getBytes(StandardCharsets.UTF_8)).toString()));
     assertThat(parsed.get("response_to").getAsString(), is("req-789"));
     assertThat(parsed.get("result").getAsBoolean(), is(true));
   }
@@ -269,7 +275,8 @@ public class JsonSerializersTest {
   @Test
   public void metaMessageSerializer_serializesAllFields() throws Exception {
     MetaMessage msg = new MetaMessage();
-    msg.fromPeer = "peer-uuid";
+    msg.fromPeer =
+        UuidUtils.toBytes(UUID.nameUUIDFromBytes("peer-uuid".getBytes(StandardCharsets.UTF_8)));
     msg.messageId = "msg-123";
     msg.responseToId = "resp-456";
     msg.service = MetaServiceType.FETCH_CLASSES_INFO.getId();
@@ -282,7 +289,9 @@ public class JsonSerializersTest {
     String json = ColferUtils.toJson(msg);
     JsonObject parsed = JsonParser.parseString(json).getAsJsonObject();
 
-    assertThat(parsed.get("from_peer").getAsString(), is("peer-uuid"));
+    assertThat(
+        parsed.get("from_peer").getAsString(),
+        is(UUID.nameUUIDFromBytes("peer-uuid".getBytes(StandardCharsets.UTF_8)).toString()));
     assertThat(parsed.get("message_id").getAsString(), is("msg-123"));
     assertThat(parsed.get("response_to").getAsString(), is("resp-456"));
     assertThat(parsed.has("service"), is(true));
@@ -330,7 +339,8 @@ public class JsonSerializersTest {
   @Test
   public void messageSerializer_controlMessage_serializesCorrectly() throws Exception {
     ControlMessage ctrl = new ControlMessage();
-    ctrl.fromPeer = "peer-1";
+    ctrl.fromPeer =
+        UuidUtils.toBytes(UUID.nameUUIDFromBytes("peer-1".getBytes(StandardCharsets.UTF_8)));
     ctrl.messageId = "ctrl-msg-1";
     ctrl.command = ControlCommandType.PING.getId();
     ctrl.status = ControlStatusType.OK.toId();
@@ -345,7 +355,9 @@ public class JsonSerializersTest {
     assertThat(parsed.get("type").getAsString(), is("CONTROL_MESSAGE_REQUEST"));
     assertThat(parsed.has("control_message"), is(true));
     JsonObject ctrlJson = parsed.getAsJsonObject("control_message");
-    assertThat(ctrlJson.get("from_peer").getAsString(), is("peer-1"));
+    assertThat(
+        ctrlJson.get("from_peer").getAsString(),
+        is(UUID.nameUUIDFromBytes("peer-1".getBytes(StandardCharsets.UTF_8)).toString()));
     assertThat(ctrlJson.get("command").getAsString(), is("PING"));
     assertThat(ctrlJson.get("status").getAsString(), is("OK"));
   }
@@ -362,7 +374,8 @@ public class JsonSerializersTest {
     ctorCall.clazz = clazz;
 
     ExecMessage exec = new ExecMessage();
-    exec.peerUuid = "peer-exec-1";
+    exec.peerUuid =
+        UuidUtils.toBytes(UUID.nameUUIDFromBytes("peer-exec-1".getBytes(StandardCharsets.UTF_8)));
     exec.constructorCall = ctorCall;
 
     Message msg = new Message();
@@ -375,7 +388,9 @@ public class JsonSerializersTest {
     assertThat(parsed.get("type").getAsString(), is("EXEC_CONSTRUCTOR"));
     assertThat(parsed.has("exec_message"), is(true));
     JsonObject execJson = parsed.getAsJsonObject("exec_message");
-    assertThat(execJson.get("peer_uuid").getAsString(), is("peer-exec-1"));
+    assertThat(
+        execJson.get("peer_uuid").getAsString(),
+        is(UUID.nameUUIDFromBytes("peer-exec-1".getBytes(StandardCharsets.UTF_8)).toString()));
     assertThat(execJson.has("constructor_call"), is(true));
   }
 
@@ -386,7 +401,9 @@ public class JsonSerializersTest {
   @Test
   public void messageSerializer_interceptMessage_serializesCorrectly() throws Exception {
     InterceptMessage intercept = new InterceptMessage();
-    intercept.peerUuid = "peer-intercept-1";
+    intercept.peerUuid =
+        UuidUtils.toBytes(
+            UUID.nameUUIDFromBytes("peer-intercept-1".getBytes(StandardCharsets.UTF_8)));
     intercept.messageId = "int-msg-1";
     intercept.interceptType = InterceptType.BEFORE.toByte();
     intercept.clazz = "com.example.Target";
@@ -401,7 +418,9 @@ public class JsonSerializersTest {
     assertThat(parsed.get("type").getAsString(), is("INTERCEPT_MESSAGE"));
     assertThat(parsed.has("intercept_message"), is(true));
     JsonObject intJson = parsed.getAsJsonObject("intercept_message");
-    assertThat(intJson.get("peer_uuid").getAsString(), is("peer-intercept-1"));
+    assertThat(
+        intJson.get("peer_uuid").getAsString(),
+        is(UUID.nameUUIDFromBytes("peer-intercept-1".getBytes(StandardCharsets.UTF_8)).toString()));
     assertThat(intJson.get("intercept_type").getAsString(), is("BEFORE"));
   }
 
@@ -434,7 +453,8 @@ public class JsonSerializersTest {
   @Test
   public void messageSerializer_interceptResponse_serializesCorrectly() throws Exception {
     InterceptResponse resp = new InterceptResponse();
-    resp.peerUuid = "peer-resp-1";
+    resp.peerUuid =
+        UuidUtils.toBytes(UUID.nameUUIDFromBytes("peer-resp-1".getBytes(StandardCharsets.UTF_8)));
     resp.responseToId = "req-1";
     resp.result = true;
 
@@ -509,9 +529,6 @@ public class JsonSerializersTest {
   @Test
   public void instanceFieldPutDoneAdapter_deserialize_allFields() throws Exception {
     InstanceFieldPutDone original = new InstanceFieldPutDone();
-    Class clazz = new Class();
-    clazz.name = "com.example.MyClass";
-    original.clazz = clazz;
     Field field = new Field();
     field.name = "myField";
     original.field = field;
@@ -522,8 +539,6 @@ public class JsonSerializersTest {
     Gson gson = createGsonWithAdapters();
     InstanceFieldPutDone deserialized = gson.fromJson(json, InstanceFieldPutDone.class);
 
-    assertThat(deserialized.clazz, is(not(nullValue())));
-    assertThat(deserialized.clazz.name, is("com.example.MyClass"));
     assertThat(deserialized.field, is(not(nullValue())));
     assertThat(deserialized.field.name, is("myField"));
     assertThat(deserialized.instanceFieldPutId, is("ifp-123"));
@@ -540,7 +555,6 @@ public class JsonSerializersTest {
     Gson gson = createGsonWithAdapters();
     InstanceFieldPutDone deserialized = gson.fromJson(json, InstanceFieldPutDone.class);
 
-    assertThat(deserialized.clazz, is(nullValue()));
     assertThat(deserialized.field, is(nullValue()));
     assertThat(deserialized.instanceFieldPutId, is("ifp-456"));
   }
@@ -552,9 +566,6 @@ public class JsonSerializersTest {
   @Test
   public void staticFieldPutDoneAdapter_deserialize_allFields() throws Exception {
     StaticFieldPutDone original = new StaticFieldPutDone();
-    Class clazz = new Class();
-    clazz.name = "com.example.StaticHolder";
-    original.clazz = clazz;
     Field field = new Field();
     field.name = "CONSTANT";
     original.field = field;
@@ -565,8 +576,6 @@ public class JsonSerializersTest {
     Gson gson = createGsonWithAdapters();
     StaticFieldPutDone deserialized = gson.fromJson(json, StaticFieldPutDone.class);
 
-    assertThat(deserialized.clazz, is(not(nullValue())));
-    assertThat(deserialized.clazz.name, is("com.example.StaticHolder"));
     assertThat(deserialized.field, is(not(nullValue())));
     assertThat(deserialized.field.name, is("CONSTANT"));
     assertThat(deserialized.staticFieldPutId, is("sfp-789"));
@@ -583,7 +592,6 @@ public class JsonSerializersTest {
     Gson gson = createGsonWithAdapters();
     StaticFieldPutDone deserialized = gson.fromJson(json, StaticFieldPutDone.class);
 
-    assertThat(deserialized.clazz, is(nullValue()));
     assertThat(deserialized.field, is(nullValue()));
     assertThat(deserialized.staticFieldPutId, is("sfp-000"));
   }

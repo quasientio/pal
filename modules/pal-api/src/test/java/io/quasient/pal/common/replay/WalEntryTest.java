@@ -169,9 +169,9 @@ public class WalEntryTest {
     StaticFieldPutDone spd = new StaticFieldPutDone();
     Class clazz = new Class();
     clazz.setName("com.example.Config");
-    spd.setClazz(clazz);
     Field field = new Field();
     field.setName("MAX_SIZE");
+    field.setClazz(clazz);
     spd.setField(field);
     msg.setStaticFieldPutDone(spd);
 

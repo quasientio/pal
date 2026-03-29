@@ -16,6 +16,7 @@
 package io.quasient.pal.core.dispatcher;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.execution.java.reflect.ClassMetadataSerializer;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.colfer.Obj;
@@ -146,11 +147,13 @@ public class MetaMessageDispatcher {
       String errorMessage =
           String.format(
               "Incoming Meta message w/id=%s from peer=%s ignored - unknown service ID: %d",
-              metaMessage.getMessageId(), metaMessage.fromPeer, metaMessage.getService());
+              metaMessage.getMessageId(),
+              UuidUtils.toString(metaMessage.fromPeer),
+              metaMessage.getService());
       logger.error(errorMessage);
       // Build response manually since we don't have a valid MetaServiceType
       MetaMessage response = new MetaMessage();
-      response.setFromPeer(peerUuid.toString());
+      response.setFromPeer(UuidUtils.toBytes(peerUuid));
       response.setMessageId(UUID.randomUUID().toString());
       response.setResponseToId(metaMessage.getMessageId());
       response.setService(metaMessage.getService()); // Preserve original service ID
@@ -185,7 +188,9 @@ public class MetaMessageDispatcher {
         String errorMessage =
             String.format(
                 "Incoming Meta message w/id=%s from peer=%s ignored - no handler for service: %s",
-                metaMessage.getMessageId(), metaMessage.fromPeer, serviceType.name());
+                metaMessage.getMessageId(),
+                UuidUtils.toString(metaMessage.fromPeer),
+                serviceType.name());
         logger.error(errorMessage);
         return messageBuilder.buildMetaMessageResponse(
             peerUuid,

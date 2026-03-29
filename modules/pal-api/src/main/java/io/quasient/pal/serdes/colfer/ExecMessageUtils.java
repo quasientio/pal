@@ -51,8 +51,10 @@ public class ExecMessageUtils {
       case EXEC_GET_FIELD -> execMessage.getInstanceFieldGet().getClazz().getName();
       case EXEC_PUT_STATIC -> execMessage.getStaticFieldPut().getClazz().getName();
       case EXEC_PUT_FIELD -> execMessage.getInstanceFieldPut().getClazz().getName();
-      case EXEC_PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getClazz().getName();
-      case EXEC_PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getClazz().getName();
+      case EXEC_PUT_FIELD_DONE ->
+          execMessage.getInstanceFieldPutDone().getField().getClazz().getName();
+      case EXEC_PUT_STATIC_DONE ->
+          execMessage.getStaticFieldPutDone().getField().getClazz().getName();
       case EXEC_THROWABLE -> execMessage.getRaisedThrowable().getThrowable().getType();
       case EXEC_RETURN_VALUE ->
           execMessage.getReturnValue().getIsVoid()
@@ -154,8 +156,10 @@ public class ExecMessageUtils {
   public static String getFromExecutableClassName(ExecMessage execMessage) {
     final MessageType execMessageType = getMessageTypeOf(execMessage);
     return switch (execMessageType) {
-      case EXEC_PUT_FIELD_DONE -> execMessage.getInstanceFieldPutDone().getClazz().getName();
-      case EXEC_PUT_STATIC_DONE -> execMessage.getStaticFieldPutDone().getClass().getName();
+      case EXEC_PUT_FIELD_DONE ->
+          execMessage.getInstanceFieldPutDone().getField().getClazz().getName();
+      case EXEC_PUT_STATIC_DONE ->
+          execMessage.getStaticFieldPutDone().getField().getClazz().getName();
       case EXEC_RETURN_VALUE -> {
         if (execMessage.getReturnValue().getFrom() == null) {
           yield null;

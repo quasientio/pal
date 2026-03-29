@@ -47,9 +47,6 @@ public class StaticFieldPutDone implements Serializable, io.quasient.pal.message
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
 
-  /** */
-  public Class clazz;
-
   public Field field;
 
   public String staticFieldPutId;
@@ -158,7 +155,6 @@ public class StaticFieldPutDone implements Serializable, io.quasient.pal.message
    */
   public int marshalFit() {
     long n = 1L + 6 + (long) this.staticFieldPutId.length() * 3;
-    if (this.clazz != null) n += 1 + (long) this.clazz.marshalFit();
     if (this.field != null) n += 1 + (long) this.field.marshalFit();
     if (n < 0 || n > (long) StaticFieldPutDone.colferSizeMax)
       return StaticFieldPutDone.colferSizeMax;
@@ -203,18 +199,13 @@ public class StaticFieldPutDone implements Serializable, io.quasient.pal.message
     int i = offset;
 
     try {
-      if (this.clazz != null) {
-        buf[i++] = (byte) 0;
-        i = this.clazz.marshal(buf, i);
-      }
-
       if (this.field != null) {
-        buf[i++] = (byte) 1;
+        buf[i++] = (byte) 0;
         i = this.field.marshal(buf, i);
       }
 
       if (!this.staticFieldPutId.isEmpty()) {
-        buf[i++] = (byte) 2;
+        buf[i++] = (byte) 1;
         int start = ++i;
 
         String s = this.staticFieldPutId;
@@ -307,18 +298,12 @@ public class StaticFieldPutDone implements Serializable, io.quasient.pal.message
       byte header = buf[i++];
 
       if (header == (byte) 0) {
-        this.clazz = new Class();
-        i = this.clazz.unmarshal(buf, i, end);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 1) {
         this.field = new Field();
         i = this.field.unmarshal(buf, i, end);
         header = buf[i++];
       }
 
-      if (header == (byte) 2) {
+      if (header == (byte) 1) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -354,7 +339,7 @@ public class StaticFieldPutDone implements Serializable, io.quasient.pal.message
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 3L;
+  private static final long serialVersionUID = 2L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -377,35 +362,6 @@ public class StaticFieldPutDone implements Serializable, io.quasient.pal.message
   // {@link Serializable} Colfer extension.
   private void readObjectNoData() throws ObjectStreamException {
     init();
-  }
-
-  /**
-   * Gets io.quasient.pal.messages/colfer.StaticFieldPutDone.clazz.
-   *
-   * @return the value.
-   */
-  public Class getClazz() {
-    return this.clazz;
-  }
-
-  /**
-   * Sets io.quasient.pal.messages/colfer.StaticFieldPutDone.clazz.
-   *
-   * @param value the replacement.
-   */
-  public void setClazz(Class value) {
-    this.clazz = value;
-  }
-
-  /**
-   * Sets io.quasient.pal.messages/colfer.StaticFieldPutDone.clazz.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public StaticFieldPutDone withClazz(Class value) {
-    this.clazz = value;
-    return this;
   }
 
   /**
@@ -469,7 +425,6 @@ public class StaticFieldPutDone implements Serializable, io.quasient.pal.message
   @Override
   public final int hashCode() {
     int h = 1;
-    if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
     if (this.field != null) h = 31 * h + this.field.hashCode();
     if (this.staticFieldPutId != null) h = 31 * h + this.staticFieldPutId.hashCode();
     return h;
@@ -484,8 +439,7 @@ public class StaticFieldPutDone implements Serializable, io.quasient.pal.message
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
-        && (this.field == null ? o.field == null : this.field.equals(o.field))
+    return (this.field == null ? o.field == null : this.field.equals(o.field))
         && (this.staticFieldPutId == null
             ? o.staticFieldPutId == null
             : this.staticFieldPutId.equals(o.staticFieldPutId));
@@ -494,11 +448,6 @@ public class StaticFieldPutDone implements Serializable, io.quasient.pal.message
   @Override
   public StaticFieldPutDone fromJson(JsonObject json) throws JsonParseException {
     try {
-      if (json.has("clazz")) {
-        JsonObject jsonObj = json.getAsJsonObject("clazz");
-        this.clazz = new Class().fromJson(jsonObj);
-      }
-
       if (json.has("field")) {
         JsonObject jsonObj = json.getAsJsonObject("field");
         this.field = new Field().fromJson(jsonObj);
@@ -520,7 +469,6 @@ public class StaticFieldPutDone implements Serializable, io.quasient.pal.message
    */
   public void reset() {
     init();
-    this.clazz = null;
     this.field = null;
   }
 }

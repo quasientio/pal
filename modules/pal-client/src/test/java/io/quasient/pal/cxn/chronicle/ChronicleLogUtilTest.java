@@ -21,6 +21,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import io.quasient.pal.common.runtime.ExecPhase;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.cxn.chronicle.ChronicleLogUtil.QueueIndexInfo;
 import io.quasient.pal.messages.OutboundMsg;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -497,10 +498,10 @@ public class ChronicleLogUtilTest {
       for (int i = 0; i < count; i++) {
         // Create an ExecMessage as the Marshallable body
         ExecMessage execMessage = new ExecMessage();
-        execMessage.peerUuid = UUID.randomUUID().toString();
+        execMessage.peerUuid = UuidUtils.toBytes(UUID.randomUUID());
         execMessage.messageId = UUID.randomUUID().toString();
         execMessage.threadName = "test-thread-" + i;
-        execMessage.currentTime = String.valueOf(System.currentTimeMillis());
+        execMessage.currentTime = System.currentTimeMillis() * 1_000_000L;
         execMessage.dispatchSeq = i;
         execMessage.builderSeq = i;
 

@@ -17,6 +17,7 @@ package io.quasient.pal.core.intercept;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.runtime.ExecPhase;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.types.MessageType;
 import jakarta.inject.Inject;
@@ -62,8 +63,8 @@ public class InterceptChecker {
   /** Matcher responsible for finding registered intercepts that match execution criteria. */
   private final InterceptMatcher interceptMatcher;
 
-  /** Pre-computed string form of the peer UUID, avoiding repeated toString() calls. */
-  private final String peerUuidString;
+  /** Pre-computed byte array form of the peer UUID, avoiding repeated conversion calls. */
+  private final byte[] peerUuidBytes;
 
   /**
    * Constructs a new InterceptChecker with the specified intercept matcher and peer UUID.
@@ -77,7 +78,7 @@ public class InterceptChecker {
   @Inject
   public InterceptChecker(InterceptMatcher interceptMatcher, UUID peerUuid) {
     this.interceptMatcher = interceptMatcher;
-    this.peerUuidString = peerUuid.toString();
+    this.peerUuidBytes = UuidUtils.toBytes(peerUuid);
   }
 
   /**
@@ -147,7 +148,7 @@ public class InterceptChecker {
 
     // Separate local vs remote intercepts in a single pass
     LocalRemotePartition lrPartition = TL_LR_PARTITION.get();
-    lrPartition.partition(matches, peerUuidString);
+    lrPartition.partition(matches, peerUuidBytes);
 
     return new InterceptCheckResult(
         new ArrayList<>(lrPartition.remote()), new ArrayList<>(lrPartition.local()));

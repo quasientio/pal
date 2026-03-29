@@ -30,6 +30,7 @@ import static org.junit.Assert.assertTrue;
 
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.InterceptMessage;
@@ -69,13 +70,13 @@ public class MessageBuilderInterceptEphemeralTest {
 
     interceptMessage =
         new InterceptMessage()
-            .withPeerUuid(peerUuid.toString())
+            .withPeerUuid(UuidUtils.toBytes(peerUuid))
             .withInterceptType(InterceptType.BEFORE.toByte())
             .withCallbackClass("com.example.MyCallback")
             .withCallbackMethod("onBefore");
 
     execMessage = new ExecMessage();
-    execMessage.setPeerUuid(peerUuid.toString());
+    execMessage.setPeerUuid(UuidUtils.toBytes(peerUuid));
     execMessage.setMessageId("test-msg-001");
   }
 
@@ -94,7 +95,7 @@ public class MessageBuilderInterceptEphemeralTest {
 
     assertThat(result.getPhase(), is(InterceptPhase.BEFORE.toByte()));
     assertThat(result.getInterceptType(), is(interceptMessage.getInterceptType()));
-    assertThat(result.getInterceptedPeer(), is(peerUuid.toString()));
+    assertThat(UuidUtils.toString(result.getInterceptedPeer()), is(peerUuid.toString()));
     assertThat(result.getCallbackClass(), is("com.example.MyCallback"));
     assertThat(result.getCallbackMethod(), is("onBefore"));
     assertThat(result.getExec(), is(notNullValue()));
@@ -200,7 +201,7 @@ public class MessageBuilderInterceptEphemeralTest {
     assertThat(deserialized.getCallbackClass(), is(result.getCallbackClass()));
     assertThat(deserialized.getCallbackMethod(), is(result.getCallbackMethod()));
     assertThat(deserialized.getExec(), is(notNullValue()));
-    assertThat(deserialized.getExec().getPeerUuid(), is(peerUuid.toString()));
+    assertThat(UuidUtils.toString(deserialized.getExec().getPeerUuid()), is(peerUuid.toString()));
   }
 
   /**
@@ -219,7 +220,7 @@ public class MessageBuilderInterceptEphemeralTest {
   public void shouldHandleExecMessageCloneCorrectly() {
     // Use a scratch ExecMessage (simulating hot-path usage)
     ExecMessage scratchExec = TlScratchHolder.exec();
-    scratchExec.setPeerUuid(peerUuid.toString());
+    scratchExec.setPeerUuid(UuidUtils.toBytes(peerUuid));
     scratchExec.setMessageId("scratch-msg-001");
 
     InterceptCallbackRequestMessage result =
@@ -232,13 +233,13 @@ public class MessageBuilderInterceptEphemeralTest {
     assertNotSame(scratchExec, clonedExec);
 
     // Must have the same data
-    assertThat(clonedExec.getPeerUuid(), is(peerUuid.toString()));
+    assertThat(UuidUtils.toString(clonedExec.getPeerUuid()), is(peerUuid.toString()));
     assertThat(clonedExec.getMessageId(), is("scratch-msg-001"));
 
     // Mutating the original scratch should NOT affect the clone
-    scratchExec.setPeerUuid("mutated-peer");
+    scratchExec.setPeerUuid(UuidUtils.toBytes(UUID.randomUUID()));
     scratchExec.setMessageId("mutated-msg");
-    assertThat(clonedExec.getPeerUuid(), is(peerUuid.toString()));
+    assertThat(UuidUtils.toString(clonedExec.getPeerUuid()), is(peerUuid.toString()));
     assertThat(clonedExec.getMessageId(), is("scratch-msg-001"));
   }
 
@@ -257,14 +258,14 @@ public class MessageBuilderInterceptEphemeralTest {
     // Configure an AFTER-phase intercept message
     InterceptMessage afterIntercept =
         new InterceptMessage()
-            .withPeerUuid(peerUuid.toString())
+            .withPeerUuid(UuidUtils.toBytes(peerUuid))
             .withInterceptType(InterceptType.AFTER.toByte())
             .withCallbackClass("com.example.MyCallback")
             .withCallbackMethod("onAfter");
 
     // ExecMessage without a ReturnValue set (simulating AROUND AFTER where exec was from BEFORE)
     ExecMessage afterExec = new ExecMessage();
-    afterExec.setPeerUuid(peerUuid.toString());
+    afterExec.setPeerUuid(UuidUtils.toBytes(peerUuid));
     afterExec.setMessageId("after-msg-001");
     // Importantly: afterExec.getReturnValue() is null
 

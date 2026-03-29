@@ -311,9 +311,9 @@ public class SideEffectAnalyzerTest {
     InstanceFieldPutDone done = new InstanceFieldPutDone();
     Class clazz = new Class();
     clazz.setName("com.example.Done");
-    done.setClazz(clazz);
     Field field = new Field();
     field.setName("done");
+    field.setClazz(clazz);
     done.setField(field);
     msg.setInstanceFieldPutDone(done);
     return WalEntry.fromExecMessage(offset, msg);
@@ -358,9 +358,9 @@ public class SideEffectAnalyzerTest {
     StaticFieldPutDone done = new StaticFieldPutDone();
     Class clazz = new Class();
     clazz.setName("com.example.Done");
-    done.setClazz(clazz);
     Field field = new Field();
     field.setName("done");
+    field.setClazz(clazz);
     done.setField(field);
     msg.setStaticFieldPutDone(done);
     return WalEntry.fromExecMessage(offset, msg);

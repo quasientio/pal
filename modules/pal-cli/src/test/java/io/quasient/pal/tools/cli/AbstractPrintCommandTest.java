@@ -1123,8 +1123,7 @@ public class AbstractPrintCommandTest {
     ExecMessage em = new ExecMessage();
     em.setStaticFieldPutDone(
         new StaticFieldPutDone()
-            .withClazz(new Class().withName(className))
-            .withField(new Field().withName(fieldName)));
+            .withField(new Field().withName(fieldName).withClazz(new Class().withName(className))));
     return new Message()
         .withMessageType(MessageType.EXEC_PUT_STATIC_DONE.getId())
         .withExecMessage(em);
@@ -1141,8 +1140,7 @@ public class AbstractPrintCommandTest {
     ExecMessage em = new ExecMessage();
     em.setInstanceFieldPutDone(
         new InstanceFieldPutDone()
-            .withClazz(new Class().withName(className))
-            .withField(new Field().withName(fieldName)));
+            .withField(new Field().withName(fieldName).withClazz(new Class().withName(className))));
     return new Message()
         .withMessageType(MessageType.EXEC_PUT_FIELD_DONE.getId())
         .withExecMessage(em);

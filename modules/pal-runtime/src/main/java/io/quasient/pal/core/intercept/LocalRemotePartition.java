@@ -18,6 +18,7 @@ package io.quasient.pal.core.intercept;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -37,7 +38,7 @@ import java.util.List;
  *
  * // In checkIntercepts method:
  * LocalRemotePartition lrPartition = TL_LR_PARTITION.get();
- * lrPartition.partition(matches, peerUuidString);
+ * lrPartition.partition(matches, peerUuidBytes);
  * // Use lrPartition.local(), lrPartition.remote()
  * }</pre>
  */
@@ -55,7 +56,7 @@ public class LocalRemotePartition {
   /**
    * Clears both partition lists, preparing this instance for reuse.
    *
-   * <p>This method is called automatically by {@link #partition(List, String)}.
+   * <p>This method is called automatically by {@link #partition(List, byte[])}.
    */
   public void clear() {
     local.clear();
@@ -65,20 +66,20 @@ public class LocalRemotePartition {
   /**
    * Partitions the given list of intercept messages into local and remote lists in a single pass.
    *
-   * <p>An intercept is considered local when its callback peer UUID matches the provided peer UUID
-   * string. All other intercepts are considered remote.
+   * <p>An intercept is considered local when its callback peer UUID bytes match the provided peer
+   * UUID bytes. All other intercepts are considered remote.
    *
    * <p><strong>Thread safety:</strong> This method is not thread-safe. Each thread should use its
    * own instance (typically via ThreadLocal).
    *
    * @param matches the list of matched intercept messages to partition; must not be null
-   * @param thisPeerUuidString the UUID string of the local peer
+   * @param thisPeerUuidBytes the UUID bytes of the local peer
    */
-  public void partition(List<InterceptMessage> matches, String thisPeerUuidString) {
+  public void partition(List<InterceptMessage> matches, byte[] thisPeerUuidBytes) {
     clear();
     for (int i = 0; i < matches.size(); i++) {
       InterceptMessage im = matches.get(i);
-      if (thisPeerUuidString.equals(im.getPeerUuid())) {
+      if (Arrays.equals(thisPeerUuidBytes, im.getPeerUuid())) {
         local.add(im);
       } else {
         remote.add(im);
@@ -87,7 +88,7 @@ public class LocalRemotePartition {
   }
 
   /**
-   * Returns the list of local intercepts from the last {@link #partition(List, String)} call.
+   * Returns the list of local intercepts from the last {@link #partition(List, byte[])} call.
    *
    * @return mutable list of local intercepts; never null
    */
@@ -96,7 +97,7 @@ public class LocalRemotePartition {
   }
 
   /**
-   * Returns the list of remote intercepts from the last {@link #partition(List, String)} call.
+   * Returns the list of remote intercepts from the last {@link #partition(List, byte[])} call.
    *
    * @return mutable list of remote intercepts; never null
    */

@@ -23,6 +23,7 @@ import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackResponseMessage;
@@ -160,7 +161,7 @@ public class IncomingInterceptCallbackDispatcher {
 
     if (phase == InterceptPhase.BEFORE) {
       return InterceptContext.forBeforePhase(
-          request.getExec(), interceptType, request.getInterceptedPeer(), args);
+          request.getExec(), interceptType, UuidUtils.toString(request.getInterceptedPeer()), args);
     } else {
       // AFTER phase
       Object returnValue = extractReturnValue(request);
@@ -169,7 +170,7 @@ public class IncomingInterceptCallbackDispatcher {
       return InterceptContext.forAfterPhase(
           request.getExec(),
           interceptType,
-          request.getInterceptedPeer(),
+          UuidUtils.toString(request.getInterceptedPeer()),
           args,
           returnValue,
           request.getIsVoid(),
@@ -575,7 +576,10 @@ public class IncomingInterceptCallbackDispatcher {
     // Create context in BEFORE phase with AROUND type
     InterceptContext context =
         InterceptContext.forBeforePhase(
-            request.getExec(), InterceptType.AROUND, request.getInterceptedPeer(), args);
+            request.getExec(),
+            InterceptType.AROUND,
+            UuidUtils.toString(request.getInterceptedPeer()),
+            args);
 
     // Inject the socket accessor for proceed()
     int proceedTimeoutMs = request.getProceedTimeoutMs();

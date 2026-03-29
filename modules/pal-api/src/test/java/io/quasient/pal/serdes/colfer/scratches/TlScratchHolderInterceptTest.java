@@ -22,10 +22,13 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptCallbackRequestMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.RaisedThrowable;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 
@@ -65,7 +68,7 @@ public class TlScratchHolderInterceptTest {
     assertThat(icbr.getCallbackId(), is(""));
     assertThat(icbr.getPhase(), is((byte) 0));
     assertThat(icbr.getInterceptType(), is((byte) 0));
-    assertThat(icbr.getInterceptedPeer(), is(""));
+    assertThat(icbr.getInterceptedPeer().length, is(0));
     assertThat(icbr.getRegisteredCallbackId(), is(""));
     assertThat(icbr.getCallbackClass(), is(""));
     assertThat(icbr.getCallbackMethod(), is(""));
@@ -109,7 +112,9 @@ public class TlScratchHolderInterceptTest {
     icbr.setCallbackId("test-callback-123");
     icbr.setPhase((byte) 1);
     icbr.setInterceptType((byte) 3);
-    icbr.setInterceptedPeer("peer-uuid-abc");
+    icbr.setInterceptedPeer(
+        UuidUtils.toBytes(
+            UUID.nameUUIDFromBytes("peer-uuid-abc".getBytes(StandardCharsets.UTF_8))));
     icbr.setRegisteredCallbackId("reg-456");
     icbr.setCallbackClass("com.example.Handler");
     icbr.setCallbackMethod("onBefore");
@@ -128,7 +133,7 @@ public class TlScratchHolderInterceptTest {
     assertThat(resetIcbr.getCallbackId(), is(""));
     assertThat(resetIcbr.getPhase(), is((byte) 0));
     assertThat(resetIcbr.getInterceptType(), is((byte) 0));
-    assertThat(resetIcbr.getInterceptedPeer(), is(""));
+    assertThat(resetIcbr.getInterceptedPeer().length, is(0));
     assertThat(resetIcbr.getRegisteredCallbackId(), is(""));
     assertThat(resetIcbr.getCallbackClass(), is(""));
     assertThat(resetIcbr.getCallbackMethod(), is(""));
@@ -184,7 +189,9 @@ public class TlScratchHolderInterceptTest {
     outer.setCallbackId("outer-callback");
     outer.setPhase((byte) 2);
     outer.setInterceptType((byte) 1);
-    outer.setInterceptedPeer("outer-peer-uuid");
+    outer.setInterceptedPeer(
+        UuidUtils.toBytes(
+            UUID.nameUUIDFromBytes("outer-peer-uuid".getBytes(StandardCharsets.UTF_8))));
     outer.setCallbackClass("com.example.OuterHandler");
     outer.setCallbackMethod("onAfter");
     outer.setProceedTimeoutMs(3000);
@@ -199,7 +206,7 @@ public class TlScratchHolderInterceptTest {
     assertThat(outer.getCallbackId(), is(""));
     assertThat(outer.getPhase(), is((byte) 0));
     assertThat(outer.getInterceptType(), is((byte) 0));
-    assertThat(outer.getInterceptedPeer(), is(""));
+    assertThat(outer.getInterceptedPeer().length, is(0));
     assertThat(outer.getCallbackClass(), is(""));
     assertThat(outer.getCallbackMethod(), is(""));
     assertThat(outer.getProceedTimeoutMs(), is(0));

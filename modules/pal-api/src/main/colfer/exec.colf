@@ -16,10 +16,10 @@
 package colfer
 
 type ExecMessage struct {
-	peerUuid     text
+	peerUuid     binary
 	messageId    text
 	threadName   text
-	currentTime  text
+	currentTime  uint64
 	dispatchSeq  uint32
 	builderSeq   uint32
 	responseToId text

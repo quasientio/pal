@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
@@ -137,7 +138,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Create intercept result with sync BEFORE intercept
     InterceptMessage interceptMsg = new InterceptMessage();
-    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.peerUuid = UuidUtils.toBytes(remotePeerUuid);
     interceptMsg.interceptType = InterceptType.BEFORE.toByte();
     interceptMsg.callbackClass = "com.example.Test";
     interceptMsg.callbackMethod = "callback";
@@ -177,7 +178,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Create intercept result with async BEFORE intercept
     InterceptMessage interceptMsg = new InterceptMessage();
-    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.peerUuid = UuidUtils.toBytes(remotePeerUuid);
     interceptMsg.interceptType = InterceptType.BEFORE_ASYNC.toByte();
     interceptMsg.callbackClass = "com.example.Test";
     interceptMsg.callbackMethod = "callback";
@@ -220,13 +221,13 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Create two async BEFORE intercepts to the same peer
     InterceptMessage interceptMsg1 = new InterceptMessage();
-    interceptMsg1.peerUuid = remotePeerUuid.toString();
+    interceptMsg1.peerUuid = UuidUtils.toBytes(remotePeerUuid);
     interceptMsg1.interceptType = InterceptType.BEFORE_ASYNC.toByte();
     interceptMsg1.callbackClass = "com.example.Test";
     interceptMsg1.callbackMethod = "callback1";
 
     InterceptMessage interceptMsg2 = new InterceptMessage();
-    interceptMsg2.peerUuid = remotePeerUuid.toString();
+    interceptMsg2.peerUuid = UuidUtils.toBytes(remotePeerUuid);
     interceptMsg2.interceptType = InterceptType.BEFORE_ASYNC.toByte();
     interceptMsg2.callbackClass = "com.example.Test";
     interceptMsg2.callbackMethod = "callback2";
@@ -275,7 +276,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Create intercept for sync callback
     InterceptMessage interceptMsg = new InterceptMessage();
-    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.peerUuid = UuidUtils.toBytes(remotePeerUuid);
     interceptMsg.interceptType = InterceptType.BEFORE.toByte();
     interceptMsg.callbackClass = "com.example.Test";
     interceptMsg.callbackMethod = "callback";
@@ -336,11 +337,11 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Create intercepts for both peers
     InterceptMessage intercept1 = new InterceptMessage();
-    intercept1.peerUuid = remotePeer1.toString();
+    intercept1.peerUuid = UuidUtils.toBytes(remotePeer1);
     intercept1.interceptType = InterceptType.BEFORE.toByte();
 
     InterceptMessage intercept2 = new InterceptMessage();
-    intercept2.peerUuid = remotePeer2.toString();
+    intercept2.peerUuid = UuidUtils.toBytes(remotePeer2);
     intercept2.interceptType = InterceptType.BEFORE.toByte();
 
     InterceptCheckResult result =
@@ -381,7 +382,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Create AFTER intercept
     InterceptMessage interceptMsg = new InterceptMessage();
-    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.peerUuid = UuidUtils.toBytes(remotePeerUuid);
     interceptMsg.interceptType = InterceptType.AFTER.toByte();
     interceptMsg.callbackClass = "com.example.Test";
     interceptMsg.callbackMethod = "callback";
@@ -422,7 +423,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Send a callback to create a cached socket
     InterceptMessage interceptMsg = new InterceptMessage();
-    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.peerUuid = UuidUtils.toBytes(remotePeerUuid);
     interceptMsg.interceptType = InterceptType.BEFORE.toByte();
 
     InterceptCheckResult result =
@@ -488,7 +489,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Create intercept (exceptionPropagationPolicy defaults to 0/PROPAGATE_ALL, which is fine here)
     InterceptMessage interceptMsg = new InterceptMessage();
-    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.peerUuid = UuidUtils.toBytes(remotePeerUuid);
     interceptMsg.interceptType = InterceptType.BEFORE.toByte();
     interceptMsg.callbackClass = "com.example.Test";
     interceptMsg.callbackMethod = "callback";
@@ -575,7 +576,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Create intercept (set exceptionPropagationPolicy to 255 to defer to global policy)
     InterceptMessage interceptMsg = new InterceptMessage();
-    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.peerUuid = UuidUtils.toBytes(remotePeerUuid);
     interceptMsg.interceptType = InterceptType.BEFORE.toByte();
     interceptMsg.callbackClass = "com.example.Test";
     interceptMsg.callbackMethod = "callback";
@@ -667,7 +668,7 @@ public class InterceptCallbackDispatcherTest extends ZmqEnabledTest {
 
     // Create intercept (set exceptionPropagationPolicy to 255 to defer to global policy)
     InterceptMessage interceptMsg = new InterceptMessage();
-    interceptMsg.peerUuid = remotePeerUuid.toString();
+    interceptMsg.peerUuid = UuidUtils.toBytes(remotePeerUuid);
     interceptMsg.interceptType = InterceptType.BEFORE.toByte();
     interceptMsg.callbackClass = "com.example.Test";
     interceptMsg.callbackMethod = "callback";

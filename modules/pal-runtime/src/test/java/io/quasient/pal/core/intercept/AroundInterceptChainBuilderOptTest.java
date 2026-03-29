@@ -31,6 +31,7 @@ import io.quasient.pal.common.lang.intercept.AfterPhaseData;
 import io.quasient.pal.common.lang.intercept.InterceptCallback;
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
 import java.util.Collections;
@@ -242,7 +243,7 @@ public class AroundInterceptChainBuilderOptTest {
     // Create a mixed list (BEFORE + AROUND)
     InterceptMessage beforeMsg = new InterceptMessage();
     beforeMsg.setInterceptType(InterceptType.BEFORE.toByte());
-    beforeMsg.setPeerUuid(PEER_UUID.toString());
+    beforeMsg.setPeerUuid(UuidUtils.toBytes(PEER_UUID));
     beforeMsg.setCallbackClass("BeforeCallback");
     beforeMsg.setCallbackMethod("onBefore");
 

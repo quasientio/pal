@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.types.MetaServiceType;
 import io.quasient.pal.messages.types.MetaStatusType;
@@ -44,7 +45,7 @@ public class MessageBuilderMetaMessagesTest {
     MetaMessage m =
         b.buildMetaMessageRequest(from, reqId, MetaServiceType.FETCH_CLASSES_INFO, params);
 
-    assertEquals(from.toString(), m.getFromPeer());
+    assertEquals(from.toString(), UuidUtils.toString(m.getFromPeer()));
     assertEquals(reqId, m.getMessageId());
     assertEquals(MetaServiceType.FETCH_CLASSES_INFO.getId(), m.getService());
     assertNotNull(m.getParams());
@@ -72,7 +73,7 @@ public class MessageBuilderMetaMessagesTest {
         b.buildMetaMessageResponse(
             from, MetaServiceType.FETCH_CLASSES_INFO, MetaStatusType.OK, body, responseTo);
 
-    assertEquals(from.toString(), m.getFromPeer());
+    assertEquals(from.toString(), UuidUtils.toString(m.getFromPeer()));
     assertEquals(responseTo, m.getResponseToId());
     assertEquals(MetaServiceType.FETCH_CLASSES_INFO.getId(), m.getService());
     assertEquals(MetaStatusType.OK.getId(), m.getStatus());
@@ -94,7 +95,7 @@ public class MessageBuilderMetaMessagesTest {
         b.buildMetaMessageRequest(
             from, reqId, MetaServiceType.FETCH_CLASSES_INFO, (Map<String, Object>) null);
 
-    assertEquals(from.toString(), m.getFromPeer());
+    assertEquals(from.toString(), UuidUtils.toString(m.getFromPeer()));
     assertEquals(reqId, m.getMessageId());
     assertNotNull(m.getParams());
     assertEquals(0, m.getParams().length);

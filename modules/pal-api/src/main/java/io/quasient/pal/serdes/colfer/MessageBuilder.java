@@ -44,6 +44,7 @@ import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.common.util.FastIdGeneratorNonCrypto;
 import io.quasient.pal.common.util.IdGenerator;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ClassMethodCall;
 import io.quasient.pal.messages.colfer.ConstructorCall;
 import io.quasient.pal.messages.colfer.ControlMessage;
@@ -188,7 +189,7 @@ public final class MessageBuilder {
   private static final AtomicLong CALLBACK_ID_COUNTER = new AtomicLong();
 
   /** ID of this peer (required through constructor for methods in hot-path) */
-  private String peerId;
+  private byte[] peerIdBytes;
 
   /** Thread-local counter for dispatch sequencing of messages per thread. */
   private final ThreadLocal<int[]> threadDispatchSequence =
@@ -225,7 +226,7 @@ public final class MessageBuilder {
    * @param peerId ID of this peer, to avoid passing in every call.
    */
   public MessageBuilder(UUID peerId) {
-    this.peerId = peerId.toString();
+    this.peerIdBytes = UuidUtils.toBytes(peerId);
   }
 
   /**
@@ -238,7 +239,7 @@ public final class MessageBuilder {
   public MessageBuilder(
       @Nullable UUID peerId, @Named("messages.with_src_context") String includeSourceContextStr) {
     if (peerId != null) {
-      this.peerId = peerId.toString();
+      this.peerIdBytes = UuidUtils.toBytes(peerId);
     }
     this.includeSourceContext = Boolean.parseBoolean(includeSourceContextStr);
   }
@@ -410,12 +411,13 @@ public final class MessageBuilder {
   /**
    * Creates a new {@link ExecMessage} with the specified peer ID and response ID.
    *
-   * @param peerId the ID of the peer sending the message
+   * @param peerId the binary UUID of the peer sending the message
    * @param responseToId the message ID this {@code ExecMessage} is responding to, or {@code null}
    *     if not applicable
    * @return a new {@code ExecMessage} instance with initialized fields
    */
-  private ExecMessage newExecMessage(String peerId, String responseToId) {
+  private ExecMessage newExecMessage(byte[] peerId, String responseToId) {
+    Instant now = Instant.now();
     ExecMessage msgWrapper =
         new ExecMessage()
             .withPeerUuid(peerId)
@@ -423,7 +425,7 @@ public final class MessageBuilder {
             .withThreadName(tlThreadName.get())
             .withDispatchSeq(threadDispatchSequence.get()[0])
             .withBuilderSeq(threadBuilderSequence.get()[0]++)
-            .withCurrentTime(Instant.now().toString());
+            .withCurrentTime(now.getEpochSecond() * 1_000_000_000L + now.getNano());
 
     if (responseToId != null && !responseToId.isEmpty()) {
       msgWrapper.setResponseToId(responseToId);
@@ -441,7 +443,7 @@ public final class MessageBuilder {
    * @return a new {@code ExecMessage} instance with initialized fields
    */
   private ExecMessage newExecMessage(UUID peerUuid, String responseToId) {
-    return newExecMessage(peerUuid.toString(), responseToId);
+    return newExecMessage(UuidUtils.toBytes(peerUuid), responseToId);
   }
 
   /**
@@ -558,12 +560,13 @@ public final class MessageBuilder {
    * @param m the {@link ExecMessage} to fill
    */
   private void fillExecHeader(ExecMessage m) {
-    m.peerUuid = peerId;
+    m.peerUuid = peerIdBytes;
     m.messageId = idGenerator.nextId();
     m.threadName = tlThreadName.get();
     m.dispatchSeq = threadDispatchSequence.get()[0];
     m.builderSeq = threadBuilderSequence.get()[0]++;
-    m.currentTime = Instant.now(utcClock).toString();
+    Instant now = Instant.now(utcClock);
+    m.currentTime = now.getEpochSecond() * 1_000_000_000L + now.getNano();
   }
 
   // </editor-fold>
@@ -587,7 +590,9 @@ public final class MessageBuilder {
    * @return an {@code InternalHeader} representing a write-ahead message
    */
   public InternalHeader buildWriteAheadHeader(UUID peerUuid) {
-    logger.debug("Building write-ahead header message with peerUuid: {}", peerUuid.toString());
+    if (logger.isDebugEnabled()) {
+      logger.debug("Building write-ahead header message with peerUuid: {}", peerUuid.toString());
+    }
     return buildInternalHeaderMessage(InternalHeaderType.WRITE_AHEAD)
         .withValue(peerUuid.toString());
   }
@@ -1136,7 +1141,6 @@ public final class MessageBuilder {
     final ExecMessage m = TlScratchHolder.exec();
     fillExecHeader(m);
 
-    final FieldSignature fs = (FieldSignature) context.getSignature();
     if (!(accessibleObject instanceof Field field)) {
       throw new IllegalArgumentException(
           "Expected java.lang.reflect.Field, got: " + accessibleObject.getClass());
@@ -1144,13 +1148,11 @@ public final class MessageBuilder {
     switch (type) {
       case EXEC_PUT_FIELD_DONE -> {
         final InstanceFieldPutDone ifpd = TlScratchHolder.ifpd();
-        ifpd.clazz = getWrappedClass(fs.getDeclaringType());
         ifpd.field = getWrappedField(field);
         m.instanceFieldPutDone = ifpd;
       }
       case EXEC_PUT_STATIC_DONE -> {
         final StaticFieldPutDone sfpd = TlScratchHolder.sfpd();
-        sfpd.clazz = getWrappedClass(fs.getDeclaringType());
         sfpd.field = getWrappedField(field);
         m.staticFieldPutDone = sfpd;
       }
@@ -1593,7 +1595,8 @@ public final class MessageBuilder {
     }
 
     // set class and getIsVoid
-    return newExecMessage(peerId, responseToId).withReturnValue(valueMessage.withIsVoid(isVoid));
+    return newExecMessage(peerIdBytes, responseToId)
+        .withReturnValue(valueMessage.withIsVoid(isVoid));
   }
 
   // </editor-fold>
@@ -1908,19 +1911,14 @@ public final class MessageBuilder {
       throw new IllegalArgumentException(
           "Expected java.lang.reflect.Field, got: " + accessibleObject.getClass());
     }
-    final FieldSignature fieldSignature = (FieldSignature) context.getSignature();
     final ExecMessage execMessage = newExecMessage(peerUuid);
     switch (type) {
       case EXEC_PUT_FIELD_DONE ->
           execMessage.setInstanceFieldPutDone(
-              new InstanceFieldPutDone()
-                  .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
-                  .withField(getWrappedField(field)));
+              new InstanceFieldPutDone().withField(getWrappedField(field)));
       case EXEC_PUT_STATIC_DONE ->
           execMessage.setStaticFieldPutDone(
-              new StaticFieldPutDone()
-                  .withClazz(getWrappedClass(fieldSignature.getDeclaringType()))
-                  .withField(getWrappedField(field)));
+              new StaticFieldPutDone().withField(getWrappedField(field)));
       default -> throw new IllegalArgumentException("Unexpected field op done type: " + type);
     }
     return execMessage;
@@ -1948,7 +1946,6 @@ public final class MessageBuilder {
     return newExecMessage(peerUuid, responseToId)
         .withInstanceFieldPutDone(
             new InstanceFieldPutDone()
-                .withClazz(getWrappedClass(field.getDeclaringClass()))
                 .withField(getWrappedField(field))
                 .withInstanceFieldPutId(instanceFieldPutId));
   }
@@ -1975,7 +1972,6 @@ public final class MessageBuilder {
     return newExecMessage(peerUuid, responseToId)
         .withStaticFieldPutDone(
             new StaticFieldPutDone()
-                .withClazz(getWrappedClass(field.getDeclaringClass()))
                 .withField(getWrappedField(field))
                 .withStaticFieldPutId(staticFieldPutId));
   }
@@ -2286,7 +2282,7 @@ public final class MessageBuilder {
     request.setInterceptType(interceptMessage.getInterceptType());
 
     // Set peer info
-    request.setInterceptedPeer(peerUuid.toString());
+    request.setInterceptedPeer(UuidUtils.toBytes(peerUuid));
 
     // Set callback routing info from intercept message
     request.setCallbackClass(interceptMessage.getCallbackClass());
@@ -2334,14 +2330,12 @@ public final class MessageBuilder {
         InstanceFieldPut put = clonedExec.getInstanceFieldPut();
         if (ephemeral) {
           InstanceFieldPutDone done = TlScratchHolder.ifpd();
-          done.setClazz(put.getClazz());
           done.setField(put.getField());
           done.setInstanceFieldPutId(clonedExec.getMessageId());
           clonedExec.setInstanceFieldPutDone(done);
         } else {
           clonedExec.setInstanceFieldPutDone(
               new InstanceFieldPutDone()
-                  .withClazz(put.getClazz())
                   .withField(put.getField())
                   .withInstanceFieldPutId(clonedExec.getMessageId()));
         }
@@ -2351,14 +2345,12 @@ public final class MessageBuilder {
         StaticFieldPut put = clonedExec.getStaticFieldPut();
         if (ephemeral) {
           StaticFieldPutDone done = TlScratchHolder.sfpd();
-          done.setClazz(put.getClazz());
           done.setField(put.getField());
           done.setStaticFieldPutId(clonedExec.getMessageId());
           clonedExec.setStaticFieldPutDone(done);
         } else {
           clonedExec.setStaticFieldPutDone(
               new StaticFieldPutDone()
-                  .withClazz(put.getClazz())
                   .withField(put.getField())
                   .withStaticFieldPutId(clonedExec.getMessageId()));
         }
@@ -2407,7 +2399,7 @@ public final class MessageBuilder {
       String callbackMethodName) {
 
     return new InterceptMessage()
-        .withPeerUuid(peerUuid.toString())
+        .withPeerUuid(UuidUtils.toBytes(peerUuid))
         .withInterceptType(type.toByte())
         .withMessageId(nextId())
         .withClazz(className)
@@ -2441,7 +2433,7 @@ public final class MessageBuilder {
       String callbackMethodName) {
 
     return new InterceptMessage()
-        .withPeerUuid(peerUuid.toString())
+        .withPeerUuid(UuidUtils.toBytes(peerUuid))
         .withInterceptType(type.toByte())
         .withMessageId(nextId())
         .withClazz(className)
@@ -2474,7 +2466,7 @@ public final class MessageBuilder {
 
     if (isMethodInterceptable) {
       return new InterceptMessage()
-          .withPeerUuid(intercept.getPeer().toString())
+          .withPeerUuid(UuidUtils.toBytes(intercept.getPeer()))
           .withInterceptType(intercept.getType().toByte())
           .withMessageId(intercept.getUuid().toString())
           .withClazz(intercept.getClazz())
@@ -2502,7 +2494,7 @@ public final class MessageBuilder {
     }
 
     return new InterceptMessage()
-        .withPeerUuid(intercept.getPeer().toString())
+        .withPeerUuid(UuidUtils.toBytes(intercept.getPeer()))
         .withInterceptType(intercept.getType().toByte())
         .withMessageId(intercept.getUuid().toString())
         .withClazz(intercept.getClazz())
@@ -2536,7 +2528,7 @@ public final class MessageBuilder {
   public InterceptResponse buildInterceptResponse(
       UUID peerUuid, String responseToId, boolean result) {
     return new InterceptResponse()
-        .withPeerUuid(peerUuid.toString())
+        .withPeerUuid(UuidUtils.toBytes(peerUuid))
         .withResponseToId(responseToId)
         .withResult(result);
   }
@@ -2775,14 +2767,15 @@ public final class MessageBuilder {
     // Create an instance of ExecMessage and initialize required common fields
     ExecMessage execMessage = new ExecMessage();
     if (fromPeerUuid != null) {
-      execMessage.setPeerUuid(fromPeerUuid.toString());
+      execMessage.setPeerUuid(UuidUtils.toBytes(fromPeerUuid));
     }
     execMessage.setMessageId(jsonRpcRequest.getId());
     MessageType messageType = JsonRpcMessageUtils.getMessageType(jsonRpcRequest);
 
     // currentTime is meant for the client to indicate when then message is sent; as we don't have
     // it in a JSON-RPC request, we set it here to the time the message is received
-    execMessage.setCurrentTime(Instant.now().toString());
+    Instant now = Instant.now();
+    execMessage.setCurrentTime(now.getEpochSecond() * 1_000_000_000L + now.getNano());
 
     // Create the appropriate ExecMessage call object based on the ExecMessageType
     switch (messageType) {
@@ -3186,7 +3179,7 @@ public final class MessageBuilder {
       UUID fromPeerUuid, ControlCommandType command, @Nullable Obj[] args) {
     ControlMessage controlMessage =
         new ControlMessage()
-            .withFromPeer(fromPeerUuid.toString())
+            .withFromPeer(UuidUtils.toBytes(fromPeerUuid))
             .withMessageId(nextId())
             .withCommand(command.getId());
 
@@ -3253,7 +3246,7 @@ public final class MessageBuilder {
       UUID fromPeerUuid, ControlStatusType statusType, String responseToId, @Nullable String body) {
     final ControlMessage controlMessage =
         new ControlMessage()
-            .withFromPeer(fromPeerUuid.toString())
+            .withFromPeer(UuidUtils.toBytes(fromPeerUuid))
             .withMessageId(nextId())
             .withResponseToId(responseToId)
             .withStatus(statusType.toId());
@@ -3328,7 +3321,7 @@ public final class MessageBuilder {
       UUID fromPeerUuid, String requestId, MetaServiceType serviceType, @Nullable Obj[] args) {
     final MetaMessage metaMessage =
         new MetaMessage()
-            .withFromPeer(fromPeerUuid.toString())
+            .withFromPeer(UuidUtils.toBytes(fromPeerUuid))
             .withMessageId(requestId)
             .withService(serviceType.getId());
 
@@ -3355,7 +3348,7 @@ public final class MessageBuilder {
       String responseToId) {
     final MetaMessage metaMessage =
         new MetaMessage()
-            .withFromPeer(fromPeerUuid.toString())
+            .withFromPeer(UuidUtils.toBytes(fromPeerUuid))
             .withMessageId(nextId())
             .withResponseToId(responseToId)
             .withService(serviceType.getId())

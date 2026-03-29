@@ -17,13 +17,13 @@ package io.quasient.pal.core.intercept;
 
 import io.quasient.pal.common.lang.intercept.InterceptCallback;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  *   <li>Pools the {@link AroundInterceptChain.Builder} via {@code ThreadLocal} to avoid per-build
  *       allocation
  *   <li>Replaces {@code UUID.randomUUID()} with an {@link AtomicLong} counter for callback IDs
- *   <li>Caches parsed {@link UUID} objects to avoid repeated {@code UUID.fromString()} calls
+ *   <li>Uses {@link UuidUtils#fromBytes(byte[])} for direct UUID conversion from byte arrays
  *   <li>Reuses a single {@link AroundInterceptChain.RemoteAroundDispatcher} instance
  * </ul>
  */
@@ -58,9 +58,6 @@ public class AroundInterceptChainBuilder {
 
   /** Counter for generating unique callback IDs without UUID.randomUUID() overhead. */
   private static final AtomicLong CALLBACK_ID_COUNTER = new AtomicLong();
-
-  /** Cache for parsed UUID objects, keyed by UUID string representation. */
-  private final ConcurrentHashMap<String, UUID> uuidCache = new ConcurrentHashMap<>();
 
   /** Resolver for local callbacks. */
   private final CallbackResolver callbackResolver;
@@ -224,23 +221,10 @@ public class AroundInterceptChainBuilder {
       AroundInterceptChain.Builder builder, List<InterceptMessage> remoteArounds) {
     for (int i = 0; i < remoteArounds.size(); i++) {
       InterceptMessage im = remoteArounds.get(i);
-      UUID callbackPeerUuid = parsePeerUuid(im.getPeerUuid());
+      UUID callbackPeerUuid = UuidUtils.fromBytes(im.getPeerUuid());
       String callbackId = peerUuidString + "-" + CALLBACK_ID_COUNTER.getAndIncrement();
       builder.addRemote(im, callbackPeerUuid, callbackId);
     }
-  }
-
-  /**
-   * Parses a UUID string, caching the result for subsequent lookups.
-   *
-   * <p>This avoids repeated {@code UUID.fromString()} calls for the same peer UUID across multiple
-   * chain builds.
-   *
-   * @param uuidString the UUID string to parse
-   * @return the parsed UUID
-   */
-  private UUID parsePeerUuid(String uuidString) {
-    return uuidCache.computeIfAbsent(uuidString, UUID::fromString);
   }
 
   /**

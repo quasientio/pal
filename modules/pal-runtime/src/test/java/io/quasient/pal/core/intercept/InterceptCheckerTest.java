@@ -26,8 +26,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.quasient.pal.common.runtime.ExecPhase;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.types.MessageType;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -177,9 +179,11 @@ public class InterceptCheckerTest {
 
     // Create matching intercepts
     InterceptMessage intercept1 = new InterceptMessage();
-    intercept1.peerUuid = "peer-1";
+    intercept1.peerUuid =
+        UuidUtils.toBytes(UUID.nameUUIDFromBytes("peer-1".getBytes(StandardCharsets.UTF_8)));
     InterceptMessage intercept2 = new InterceptMessage();
-    intercept2.peerUuid = "peer-2";
+    intercept2.peerUuid =
+        UuidUtils.toBytes(UUID.nameUUIDFromBytes("peer-2".getBytes(StandardCharsets.UTF_8)));
     List<InterceptMessage> matchingIntercepts = List.of(intercept1, intercept2);
 
     when(interceptMatcher.getMatchingIntercepts(
@@ -245,7 +249,7 @@ public class InterceptCheckerTest {
 
     // Create intercept with a different peer UUID
     InterceptMessage intercept = new InterceptMessage();
-    intercept.setPeerUuid(UUID.randomUUID().toString()); // Different from TEST_PEER_UUID
+    intercept.setPeerUuid(UuidUtils.toBytes(UUID.randomUUID())); // Different from TEST_PEER_UUID
     when(interceptMatcher.getMatchingIntercepts(any(), any(), any(), any(), any()))
         .thenReturn(List.of(intercept));
 
@@ -281,7 +285,7 @@ public class InterceptCheckerTest {
 
     // Create intercept with same peer UUID as test instance
     InterceptMessage intercept = new InterceptMessage();
-    intercept.setPeerUuid(TEST_PEER_UUID.toString()); // Same as local peer
+    intercept.setPeerUuid(UuidUtils.toBytes(TEST_PEER_UUID)); // Same as local peer
     when(interceptMatcher.getMatchingIntercepts(any(), any(), any(), any(), any()))
         .thenReturn(List.of(intercept));
 
@@ -317,10 +321,10 @@ public class InterceptCheckerTest {
 
     // Create one local and one remote intercept
     InterceptMessage localIntercept = new InterceptMessage();
-    localIntercept.setPeerUuid(TEST_PEER_UUID.toString());
+    localIntercept.setPeerUuid(UuidUtils.toBytes(TEST_PEER_UUID));
 
     InterceptMessage remoteIntercept = new InterceptMessage();
-    remoteIntercept.setPeerUuid(UUID.randomUUID().toString());
+    remoteIntercept.setPeerUuid(UuidUtils.toBytes(UUID.randomUUID()));
 
     when(interceptMatcher.getMatchingIntercepts(any(), any(), any(), any(), any()))
         .thenReturn(List.of(localIntercept, remoteIntercept));
@@ -503,7 +507,7 @@ public class InterceptCheckerTest {
 
     // Create a remote intercept
     InterceptMessage intercept = new InterceptMessage();
-    intercept.setPeerUuid(UUID.randomUUID().toString());
+    intercept.setPeerUuid(UuidUtils.toBytes(UUID.randomUUID()));
 
     when(interceptMatcher.getMatchingIntercepts(any(), any(), any(), any(), any()))
         .thenReturn(List.of(intercept));

@@ -29,6 +29,7 @@ import io.quasient.pal.common.lang.intercept.CheckedExceptionPolicy;
 import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ClInitCall;
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ClassMethodCall;
@@ -68,6 +69,7 @@ import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.messages.types.MetaServiceType;
 import io.quasient.pal.messages.types.MetaStatusType;
 import java.lang.reflect.Type;
+import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,6 +158,16 @@ public class JsonSerializers {
   }
 
   /**
+   * Determines if the provided byte array is not null and not empty.
+   *
+   * @param value the byte array to check
+   * @return {@code true} if the byte array is not null and not empty, {@code false} otherwise
+   */
+  private static boolean notEmpty(byte[] value) {
+    return value != null && value.length != 0;
+  }
+
+  /**
    * Determines if the provided boolean is {@code true}.
    *
    * @param value the boolean to check
@@ -239,10 +251,18 @@ public class JsonSerializers {
         ExecMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
 
-      addProp(jsonElement, "peer_uuid", message.peerUuid);
+      if (notEmpty(message.peerUuid)) {
+        jsonElement.addProperty("peer_uuid", UuidUtils.toString(message.peerUuid));
+      }
       addProp(jsonElement, "message_id", message.messageId);
       addProp(jsonElement, "thread_name", message.threadName);
-      addProp(jsonElement, "current_time", message.currentTime);
+      if (message.currentTime != 0) {
+        jsonElement.addProperty(
+            "current_time",
+            Instant.ofEpochSecond(
+                    message.currentTime / 1_000_000_000L, message.currentTime % 1_000_000_000L)
+                .toString());
+      }
       addProp(jsonElement, "dispatch_seq", message.dispatchSeq);
       addProp(jsonElement, "builder_seq", message.builderSeq);
       addProp(jsonElement, "response_to", message.responseToId);
@@ -590,9 +610,6 @@ public class JsonSerializers {
     public JsonElement serialize(
         StaticFieldPutDone message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.clazz)) {
-        jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
-      }
       if (notEmpty(message.field)) {
         jsonElement.add("field", jsonSerializationContext.serialize(message.field));
       }
@@ -618,9 +635,6 @@ public class JsonSerializers {
         throws JsonParseException {
       final JsonObject jsonObject = json.getAsJsonObject();
       final StaticFieldPutDone staticFieldPutDone = new StaticFieldPutDone();
-      if (jsonObject.has("class")) {
-        staticFieldPutDone.clazz = context.deserialize(jsonObject.get("class"), Class.class);
-      }
       if (jsonObject.has("field")) {
         staticFieldPutDone.field = context.deserialize(jsonObject.get("field"), Field.class);
       }
@@ -706,9 +720,6 @@ public class JsonSerializers {
         Type type,
         JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.clazz)) {
-        jsonElement.add("class", jsonSerializationContext.serialize(message.clazz));
-      }
       if (notEmpty(message.field)) {
         jsonElement.add("field", jsonSerializationContext.serialize(message.field));
       }
@@ -734,9 +745,6 @@ public class JsonSerializers {
         throws JsonParseException {
       final JsonObject jsonObject = json.getAsJsonObject();
       final InstanceFieldPutDone instanceFieldPutDone = new InstanceFieldPutDone();
-      if (jsonObject.has("class")) {
-        instanceFieldPutDone.clazz = context.deserialize(jsonObject.get("class"), Class.class);
-      }
       if (jsonObject.has("field")) {
         instanceFieldPutDone.field = context.deserialize(jsonObject.get("field"), Field.class);
       }
@@ -836,7 +844,7 @@ public class JsonSerializers {
         InterceptMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
       if (notEmpty(message.peerUuid)) {
-        jsonElement.addProperty("peer_uuid", message.peerUuid);
+        jsonElement.addProperty("peer_uuid", UuidUtils.toString(message.peerUuid));
       }
       if (notEmpty(message.messageId)) {
         jsonElement.addProperty("message_id", message.messageId);
@@ -923,7 +931,7 @@ public class JsonSerializers {
         InterceptResponse message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
       if (notEmpty(message.peerUuid)) {
-        jsonElement.addProperty("peer_uuid", message.peerUuid);
+        jsonElement.addProperty("peer_uuid", UuidUtils.toString(message.peerUuid));
       }
       if (notEmpty(message.responseToId)) {
         jsonElement.addProperty("response_to", message.responseToId);
@@ -962,7 +970,9 @@ public class JsonSerializers {
         InterceptType interceptType = InterceptType.fromByte(message.interceptType);
         jsonElement.addProperty("intercept_type", interceptType.name());
       }
-      addProp(jsonElement, "intercepted_peer", message.interceptedPeer);
+      if (notEmpty(message.interceptedPeer)) {
+        jsonElement.addProperty("intercepted_peer", UuidUtils.toString(message.interceptedPeer));
+      }
       addProp(jsonElement, "registered_callback_id", message.registeredCallbackId);
       addProp(jsonElement, "callback_class", message.callbackClass);
       addProp(jsonElement, "callback_method", message.callbackMethod);
@@ -1236,7 +1246,7 @@ public class JsonSerializers {
         ControlMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
       if (notEmpty(message.fromPeer)) {
-        jsonElement.addProperty("from_peer", message.fromPeer);
+        jsonElement.addProperty("from_peer", UuidUtils.toString(message.fromPeer));
       }
       if (notEmpty(message.messageId)) {
         jsonElement.addProperty("message_id", message.messageId);
@@ -1277,7 +1287,7 @@ public class JsonSerializers {
         MetaMessage message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
       if (notEmpty(message.fromPeer)) {
-        jsonElement.addProperty("from_peer", message.fromPeer);
+        jsonElement.addProperty("from_peer", UuidUtils.toString(message.fromPeer));
       }
       if (notEmpty(message.messageId)) {
         jsonElement.addProperty("message_id", message.messageId);

@@ -51,7 +51,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
   /** The upper limit for the number of elements in a list. */
   public static int colferListMax = 64 * 1024;
 
-  public String fromPeer;
+  public byte[] fromPeer;
 
   public String messageId;
 
@@ -70,11 +70,12 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
     init();
   }
 
+  private static final byte[] _zeroBytes = new byte[0];
   private static final Obj[] _zeroParams = new Obj[0];
 
   /** Colfer zero values. */
   private void init() {
-    fromPeer = "";
+    fromPeer = _zeroBytes;
     messageId = "";
     responseToId = "";
     params = _zeroParams;
@@ -178,7 +179,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
     long n =
         1L
             + 6
-            + (long) this.fromPeer.length() * 3
+            + (long) this.fromPeer.length
             + 6
             + (long) this.messageId.length() * 3
             + 6
@@ -238,52 +239,26 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
     int i = offset;
 
     try {
-      if (!this.fromPeer.isEmpty()) {
+      if (this.fromPeer.length != 0) {
         buf[i++] = (byte) 0;
-        int start = ++i;
 
-        String s = this.fromPeer;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
-          }
-        }
-        int size = i - start;
+        int size = this.fromPeer.length;
         if (size > ControlMessage.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: io.quasient.pal.messages/colfer.ControlMessage.fromPeer size %d exceeds %d UTF-8 bytes",
+                  "colfer: io.quasient.pal.messages/colfer.ControlMessage.fromPeer size %d exceeds %d bytes",
                   size, ControlMessage.colferSizeMax));
 
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
+        int x = size;
+        while (x > 0x7f) {
+          buf[i++] = (byte) (x | 0x80);
+          x >>>= 7;
         }
-        buf[ii] = (byte) size;
+        buf[i++] = (byte) x;
+
+        int start = i;
+        i += size;
+        System.arraycopy(this.fromPeer, 0, buf, start, size);
       }
 
       if (!this.messageId.isEmpty()) {
@@ -523,12 +498,14 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
         if (size < 0 || size > ControlMessage.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: io.quasient.pal.messages/colfer.ControlMessage.fromPeer size %d exceeds %d UTF-8 bytes",
+                  "colfer: io.quasient.pal.messages/colfer.ControlMessage.fromPeer size %d exceeds %d bytes",
                   size, ControlMessage.colferSizeMax));
 
+        this.fromPeer = new byte[size];
         int start = i;
         i += size;
-        this.fromPeer = new String(buf, start, size, StandardCharsets.UTF_8);
+        System.arraycopy(buf, start, this.fromPeer, 0, size);
+
         header = buf[i++];
       }
 
@@ -669,7 +646,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
    *
    * @return the value.
    */
-  public String getFromPeer() {
+  public byte[] getFromPeer() {
     return this.fromPeer;
   }
 
@@ -678,7 +655,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
    *
    * @param value the replacement.
    */
-  public void setFromPeer(String value) {
+  public void setFromPeer(byte[] value) {
     this.fromPeer = value;
   }
 
@@ -688,7 +665,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
    * @param value the replacement.
    * @return {@code this}.
    */
-  public ControlMessage withFromPeer(String value) {
+  public ControlMessage withFromPeer(byte[] value) {
     this.fromPeer = value;
     return this;
   }
@@ -870,7 +847,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
   @Override
   public final int hashCode() {
     int h = 1;
-    if (this.fromPeer != null) h = 31 * h + this.fromPeer.hashCode();
+    for (byte b : this.fromPeer) h = 31 * h + b;
     if (this.messageId != null) h = 31 * h + this.messageId.hashCode();
     if (this.responseToId != null) h = 31 * h + this.responseToId.hashCode();
     h = 31 * h + (this.command & 0xff);
@@ -889,7 +866,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.fromPeer == null ? o.fromPeer == null : this.fromPeer.equals(o.fromPeer))
+    return java.util.Arrays.equals(this.fromPeer, o.fromPeer)
         && (this.messageId == null ? o.messageId == null : this.messageId.equals(o.messageId))
         && (this.responseToId == null
             ? o.responseToId == null
@@ -904,9 +881,13 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
   public ControlMessage fromJson(JsonObject json) throws JsonParseException {
     try {
       if (json.has("fromPeer")) {
-        this.fromPeer = json.get("fromPeer").getAsString();
+        JsonArray jsonArray = json.getAsJsonArray("fromPeer");
+        this.fromPeer = new byte[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          byte jsonByte = jsonArray.get(i).getAsByte();
+          this.fromPeer[i] = jsonByte;
+        }
       }
-
       if (json.has("messageId")) {
         this.messageId = json.get("messageId").getAsString();
       }

@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.gson.Gson;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.ZmqEnabledTest;
 import io.quasient.pal.core.internal.messages.InboundJsonRpcRequestMsg;
 import io.quasient.pal.core.internal.messages.OutboundJsonRpcResponseMsg;
@@ -366,7 +367,7 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
                   MetaMessage request = invocation.getArgument(0);
                   MetaMessage response = new MetaMessage();
                   response.setMessageId("meta-response-1");
-                  response.setFromPeer(peerUuid.toString());
+                  response.setFromPeer(UuidUtils.toBytes(peerUuid));
                   // responseToId must match the original request's messageId for JSON-RPC
                   response.setResponseToId(request.getMessageId());
                   response.setService(MetaServiceType.FETCH_CLASSES_INFO.getId());
@@ -426,7 +427,7 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
                   ControlMessage request = invocation.getArgument(0);
                   ControlMessage response = new ControlMessage();
                   response.setMessageId("control-response-1");
-                  response.setFromPeer(peerUuid.toString());
+                  response.setFromPeer(UuidUtils.toBytes(peerUuid));
                   // responseToId must match the original request's messageId for JSON-RPC
                   response.setResponseToId(request.getMessageId());
                   response.setCommand(ControlCommandType.DELETE_SESSION.getId());

@@ -30,6 +30,7 @@ import io.quasient.pal.common.lang.intercept.InterceptContext;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptTypeNotSupportedException;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ClassMethodCall;
 import io.quasient.pal.messages.colfer.ConstructorCall;
@@ -47,7 +48,9 @@ import io.quasient.pal.messages.colfer.StaticFieldPut;
 import io.quasient.pal.serdes.colfer.ExceptionSerdes;
 import io.quasient.pal.serdes.colfer.WrapPolicy;
 import io.quasient.pal.serdes.colfer.Wrapper;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.UUID;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -57,6 +60,10 @@ import org.junit.Test;
  * <p>Verifies callback registration, resolution, and invocation logic.
  */
 public class IncomingInterceptCallbackDispatcherTest {
+
+  /** Deterministic UUID bytes used for interceptedPeer in all test requests. */
+  private static final byte[] PEER_UUID_BYTES =
+      UuidUtils.toBytes(UUID.nameUUIDFromBytes("peer-uuid".getBytes(StandardCharsets.UTF_8)));
 
   private IncomingInterceptCallbackDispatcher dispatcher;
   private CallbackResolver callbackResolver;
@@ -200,7 +207,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1); // BEFORE intercept
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
@@ -223,7 +230,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("non-existent");
     request.setExec(execMessage);
 
@@ -252,7 +259,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
@@ -284,7 +291,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
@@ -315,7 +322,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 3); // AROUND
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
@@ -347,7 +354,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1); // BEFORE (not AROUND)
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
@@ -379,7 +386,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1); // BEFORE
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
@@ -409,7 +416,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 3); // AROUND
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
@@ -426,7 +433,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setExec(execMessage);
     // No registeredCallbackId and no callbackClass
 
@@ -455,7 +462,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 2); // AFTER
     request.setInterceptType((byte) 2); // AFTER intercept
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
     request.setIsVoid(false);
@@ -502,7 +509,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setCallbackClass(TestCallbackHandlers.class.getName());
     request.setCallbackMethod("testStaticCallback");
     request.setExec(execMessage);
@@ -525,7 +532,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setCallbackClass(TestCallbackHandlers.class.getName());
     request.setCallbackMethod("testInstanceCallback");
     request.setExec(execMessage);
@@ -547,7 +554,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setCallbackClass("com.nonexistent.Class");
     request.setCallbackMethod("callback");
     request.setExec(execMessage);
@@ -569,7 +576,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setCallbackClass(TestCallbackHandlers.class.getName());
     request.setCallbackMethod("nonExistentMethod");
     request.setExec(execMessage);
@@ -621,7 +628,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -669,7 +676,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -712,7 +719,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -760,7 +767,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -807,7 +814,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -850,7 +857,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -892,7 +899,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -966,7 +973,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
@@ -1007,7 +1014,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
 
@@ -1053,7 +1060,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -1114,7 +1121,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-around");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 3); // AROUND
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
     request.setProceedTimeoutMs(5000);
@@ -1160,7 +1167,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-around");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 3); // AROUND
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
     request.setProceedTimeoutMs(5000);
@@ -1206,7 +1213,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-around");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 3); // AROUND
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
     request.setProceedTimeoutMs(5000);
@@ -1251,7 +1258,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-around");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 3); // AROUND
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
     request.setProceedTimeoutMs(5000);
@@ -1288,7 +1295,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-around");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 3); // AROUND
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
     request.setProceedTimeoutMs(5000);
@@ -1323,7 +1330,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-around");
     request.setPhase((byte) 1); // BEFORE
     request.setInterceptType((byte) 3); // AROUND
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("around-callback");
     request.setExec(execMessage);
     request.setProceedTimeoutMs(5000);
@@ -1360,7 +1367,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(emptyExec); // ExecMessage with no call types set
 
@@ -1397,7 +1404,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -1434,7 +1441,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -1470,7 +1477,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -1508,7 +1515,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -1546,7 +1553,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -1583,7 +1590,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -1616,7 +1623,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 2); // AFTER
     request.setInterceptType((byte) 2);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
     request.setIsVoid(true);
@@ -1646,7 +1653,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 2); // AFTER
     request.setInterceptType((byte) 2);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
     request.setIsVoid(false);
@@ -1676,7 +1683,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 2); // AFTER
     request.setInterceptType((byte) 2);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
     request.setIsVoid(false);
@@ -1714,7 +1721,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 2); // AFTER
     request.setInterceptType((byte) 2);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
     request.setIsVoid(false);
@@ -1747,7 +1754,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 2); // AFTER
     request.setInterceptType((byte) 2);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
     request.setIsVoid(false);
@@ -1779,7 +1786,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 2); // AFTER
     request.setInterceptType((byte) 2);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(execMessage);
     request.setIsVoid(false);
@@ -1820,7 +1827,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 
@@ -1860,7 +1867,7 @@ public class IncomingInterceptCallbackDispatcherTest {
     request.setCallbackId("req-123");
     request.setPhase((byte) 1);
     request.setInterceptType((byte) 1);
-    request.setInterceptedPeer("peer-uuid");
+    request.setInterceptedPeer(PEER_UUID_BYTES);
     request.setRegisteredCallbackId("test-callback");
     request.setExec(exec);
 

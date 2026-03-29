@@ -21,6 +21,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.jsonrpc.Argument;
@@ -55,7 +56,7 @@ public class MessageBuilderJsonRpcRequestToExecTest {
     ExecMessage em = msg.getExecMessage();
     assertEquals(MessageType.EXEC_CONSTRUCTOR, getMessageTypeOf(em));
     assertEquals("rid-1", em.getMessageId());
-    assertEquals(peerId.toString(), em.getPeerUuid());
+    assertEquals(peerId.toString(), UuidUtils.toString(em.getPeerUuid()));
     assertEquals(type, em.getConstructorCall().getClazz().getName());
     Obj[] ps = em.getConstructorCall().getArgs();
     assertNotNull(ps);

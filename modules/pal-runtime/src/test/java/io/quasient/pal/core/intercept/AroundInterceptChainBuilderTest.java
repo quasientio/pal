@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import io.quasient.pal.common.lang.intercept.InterceptCallback;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import java.util.Collections;
 import java.util.List;
@@ -304,7 +305,7 @@ public class AroundInterceptChainBuilderTest {
     message.setInterceptType(type.toByte());
     message.setCallbackClass(callbackClass);
     message.setCallbackMethod("onAround");
-    message.setPeerUuid(PEER_UUID.toString());
+    message.setPeerUuid(UuidUtils.toBytes(PEER_UUID));
     return message;
   }
 
@@ -319,7 +320,7 @@ public class AroundInterceptChainBuilderTest {
     message.setInterceptType(type.toByte());
     message.setCallbackClass("RemoteCallback");
     message.setCallbackMethod("onAround");
-    message.setPeerUuid(CALLBACK_PEER_UUID.toString());
+    message.setPeerUuid(UuidUtils.toBytes(CALLBACK_PEER_UUID));
     return message;
   }
 }

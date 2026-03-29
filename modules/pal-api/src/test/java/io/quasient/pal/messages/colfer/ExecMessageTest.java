@@ -19,6 +19,9 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import io.quasient.pal.common.util.UuidUtils;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
@@ -43,7 +46,9 @@ public class ExecMessageTest {
   public void shouldSerializeDeclaredExceptions() throws Exception {
     // Given: ExecMessage with declaredExceptions
     ExecMessage message = new ExecMessage();
-    message.setPeerUuid("test-peer-uuid");
+    message.setPeerUuid(
+        UuidUtils.toBytes(
+            UUID.nameUUIDFromBytes("test-peer-uuid".getBytes(StandardCharsets.UTF_8))));
     message.setMessageId("test-message-id");
     String[] exceptions = new String[] {"java.io.IOException", "java.sql.SQLException"};
     message.setDeclaredExceptions(exceptions);
@@ -72,7 +77,9 @@ public class ExecMessageTest {
   public void shouldHandleNullDeclaredExceptions() {
     // Given: ExecMessage without declaredExceptions set
     ExecMessage message = new ExecMessage();
-    message.setPeerUuid("test-peer-uuid");
+    message.setPeerUuid(
+        UuidUtils.toBytes(
+            UUID.nameUUIDFromBytes("test-peer-uuid".getBytes(StandardCharsets.UTF_8))));
     message.setMessageId("test-message-id");
 
     // When: Getting declaredExceptions

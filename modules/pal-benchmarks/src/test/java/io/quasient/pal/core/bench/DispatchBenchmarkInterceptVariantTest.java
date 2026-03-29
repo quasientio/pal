@@ -27,6 +27,7 @@ import io.quasient.foobar.apps.quantized.bench.callbacks.BenchmarkAroundCallback
 import io.quasient.foobar.apps.quantized.bench.callbacks.BenchmarkBeforeCallback;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.runtime.ExecPhase;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.execution.java.CustomClassloader;
 import io.quasient.pal.core.intercept.InterceptMatcher;
 import io.quasient.pal.core.service.PeerWiring;
@@ -426,7 +427,7 @@ public class DispatchBenchmarkInterceptVariantTest {
             ExecPhase.BEFORE);
     assertThat(
         "toUpperCase should match registered BEFORE intercept", upperCaseMatches.size(), is(1));
-    assertThat(upperCaseMatches.get(0).getPeerUuid(), is(peerUuid));
+    assertThat(UuidUtils.toString(upperCaseMatches.get(0).getPeerUuid()), is(peerUuid));
 
     // Verify sort matches
     List<InterceptMessage> sortMatches =
@@ -437,7 +438,7 @@ public class DispatchBenchmarkInterceptVariantTest {
             MessageType.EXEC_INSTANCE_METHOD,
             ExecPhase.BEFORE);
     assertThat("sort should match registered BEFORE intercept", sortMatches.size(), is(1));
-    assertThat(sortMatches.get(0).getPeerUuid(), is(peerUuid));
+    assertThat(UuidUtils.toString(sortMatches.get(0).getPeerUuid()), is(peerUuid));
   }
 
   /**

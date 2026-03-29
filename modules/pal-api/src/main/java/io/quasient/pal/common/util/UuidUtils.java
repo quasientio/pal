@@ -75,6 +75,26 @@ public final class UuidUtils {
    * @param bytes the 16-byte array to convert into a UUID
    * @return the UUID represented by the byte array
    */
+  /**
+   * Converts a 16-byte UUID representation to its standard string form.
+   *
+   * <p>This is a convenience method equivalent to {@code fromBytes(bytes).toString()}, useful for
+   * logging and JSON serialization where the human-readable UUID string is needed.
+   *
+   * @param bytes the 16-byte array to convert
+   * @return the UUID string in standard format (e.g., {@code
+   *     "550e8400-e29b-41d4-a716-446655440000"})
+   */
+  public static String toString(byte[] bytes) {
+    return fromBytes(bytes).toString();
+  }
+
+  /**
+   * Converts a 16-byte array back into a {@link UUID}.
+   *
+   * @param bytes a 16-byte array in MSB/LSB order
+   * @return the reconstructed UUID
+   */
   public static UUID fromBytes(byte[] bytes) {
     byte[] lsbB = new byte[8];
     byte[] msbB = new byte[8];

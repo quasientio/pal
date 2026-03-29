@@ -16,6 +16,7 @@
 package io.quasient.pal.core.dispatcher;
 
 import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.internal.messages.SessionCommandMsg;
 import io.quasient.pal.core.internal.messages.SessionResponseMsg;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
@@ -102,7 +103,7 @@ public class ControlMessageDispatcher {
    */
   public ControlMessage incomingControlMessage(ControlMessage controlMessage) {
 
-    final UUID remotePeerUuid = UUID.fromString(controlMessage.getFromPeer());
+    final UUID remotePeerUuid = UuidUtils.fromBytes(controlMessage.getFromPeer());
     final String controlMessageId = controlMessage.getMessageId();
     final ControlCommandType commandType = ControlCommandType.fromId(controlMessage.getCommand());
     SessionResponseMsg sessionResponseMsg;

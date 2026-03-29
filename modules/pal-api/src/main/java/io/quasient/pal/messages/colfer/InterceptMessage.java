@@ -22,6 +22,7 @@ package io.quasient.pal.messages.colfer;
 
 import static java.lang.String.format;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import java.io.IOException;
@@ -47,7 +48,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
 
-  public String peerUuid;
+  public byte[] peerUuid;
 
   public String messageId;
 
@@ -80,9 +81,11 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     init();
   }
 
+  private static final byte[] _zeroBytes = new byte[0];
+
   /** Colfer zero values. */
   private void init() {
-    peerUuid = "";
+    peerUuid = _zeroBytes;
     messageId = "";
     clazz = "";
     callbackClass = "";
@@ -185,7 +188,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     long n =
         1L
             + 6
-            + (long) this.peerUuid.length() * 3
+            + (long) this.peerUuid.length
             + 6
             + (long) this.messageId.length() * 3
             + 2
@@ -245,52 +248,26 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     int i = offset;
 
     try {
-      if (!this.peerUuid.isEmpty()) {
+      if (this.peerUuid.length != 0) {
         buf[i++] = (byte) 0;
-        int start = ++i;
 
-        String s = this.peerUuid;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
-          }
-        }
-        int size = i - start;
+        int size = this.peerUuid.length;
         if (size > InterceptMessage.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: io.quasient.pal.messages/colfer.InterceptMessage.peerUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: io.quasient.pal.messages/colfer.InterceptMessage.peerUuid size %d exceeds %d bytes",
                   size, InterceptMessage.colferSizeMax));
 
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
+        int x = size;
+        while (x > 0x7f) {
+          buf[i++] = (byte) (x | 0x80);
+          x >>>= 7;
         }
-        buf[ii] = (byte) size;
+        buf[i++] = (byte) x;
+
+        int start = i;
+        i += size;
+        System.arraycopy(this.peerUuid, 0, buf, start, size);
       }
 
       if (!this.messageId.isEmpty()) {
@@ -608,12 +585,14 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
         if (size < 0 || size > InterceptMessage.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: io.quasient.pal.messages/colfer.InterceptMessage.peerUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: io.quasient.pal.messages/colfer.InterceptMessage.peerUuid size %d exceeds %d bytes",
                   size, InterceptMessage.colferSizeMax));
 
+        this.peerUuid = new byte[size];
         int start = i;
         i += size;
-        this.peerUuid = new String(buf, start, size, StandardCharsets.UTF_8);
+        System.arraycopy(buf, start, this.peerUuid, 0, size);
+
         header = buf[i++];
       }
 
@@ -844,7 +823,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
    *
    * @return the value.
    */
-  public String getPeerUuid() {
+  public byte[] getPeerUuid() {
     return this.peerUuid;
   }
 
@@ -853,7 +832,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
    *
    * @param value the replacement.
    */
-  public void setPeerUuid(String value) {
+  public void setPeerUuid(byte[] value) {
     this.peerUuid = value;
   }
 
@@ -863,7 +842,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
    * @param value the replacement.
    * @return {@code this}.
    */
-  public InterceptMessage withPeerUuid(String value) {
+  public InterceptMessage withPeerUuid(byte[] value) {
     this.peerUuid = value;
     return this;
   }
@@ -1248,7 +1227,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
   @Override
   public final int hashCode() {
     int h = 1;
-    if (this.peerUuid != null) h = 31 * h + this.peerUuid.hashCode();
+    for (byte b : this.peerUuid) h = 31 * h + b;
     if (this.messageId != null) h = 31 * h + this.messageId.hashCode();
     h = 31 * h + (this.interceptType & 0xff);
     if (this.clazz != null) h = 31 * h + this.clazz.hashCode();
@@ -1274,7 +1253,7 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.peerUuid == null ? o.peerUuid == null : this.peerUuid.equals(o.peerUuid))
+    return java.util.Arrays.equals(this.peerUuid, o.peerUuid)
         && (this.messageId == null ? o.messageId == null : this.messageId.equals(o.messageId))
         && this.interceptType == o.interceptType
         && (this.clazz == null ? o.clazz == null : this.clazz.equals(o.clazz))
@@ -1298,9 +1277,13 @@ public class InterceptMessage implements Serializable, io.quasient.pal.messages.
   public InterceptMessage fromJson(JsonObject json) throws JsonParseException {
     try {
       if (json.has("peerUuid")) {
-        this.peerUuid = json.get("peerUuid").getAsString();
+        JsonArray jsonArray = json.getAsJsonArray("peerUuid");
+        this.peerUuid = new byte[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          byte jsonByte = jsonArray.get(i).getAsByte();
+          this.peerUuid[i] = jsonByte;
+        }
       }
-
       if (json.has("messageId")) {
         this.messageId = json.get("messageId").getAsString();
       }

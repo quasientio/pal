@@ -39,7 +39,7 @@ type InterceptableField struct {
 }
 
 type InterceptMessage struct {
-	peerUuid                   text
+	peerUuid                   binary
 	messageId                  text
 	interceptType              uint8
 	clazz                      text
@@ -63,7 +63,7 @@ type InterceptKeyMessage struct {
 }
 
 type InterceptResponse struct {
-	peerUuid     text
+	peerUuid     binary
 	responseToId text
 	result       bool
 }
@@ -92,7 +92,7 @@ type InterceptCallbackRequestMessage struct {
 	interceptType uint8
 
 	// UUID of peer being intercepted
-	interceptedPeer text
+	interceptedPeer binary
 
 	// Callback routing - use callbackId OR (callbackClass + callbackMethod)
 	registeredCallbackId text // If present, lookup registered callback

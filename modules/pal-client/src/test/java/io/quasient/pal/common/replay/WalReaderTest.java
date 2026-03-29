@@ -21,6 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import io.quasient.pal.common.runtime.ExecPhase;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.OutboundMsg;
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ConstructorCall;
@@ -484,9 +485,9 @@ public class WalReaderTest {
     ExecMessage execMsg = new ExecMessage();
     execMsg.setThreadName(threadName);
     execMsg.setBuilderSeq(builderSeq);
-    execMsg.setPeerUuid(UUID.randomUUID().toString());
+    execMsg.setPeerUuid(UuidUtils.toBytes(UUID.randomUUID()));
     execMsg.setMessageId(UUID.randomUUID().toString());
-    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
+    execMsg.setCurrentTime(System.currentTimeMillis() * 1_000_000L);
 
     InstanceMethodCall imc = new InstanceMethodCall();
     imc.setName(methodName);
@@ -523,9 +524,9 @@ public class WalReaderTest {
     ExecMessage execMsg = new ExecMessage();
     execMsg.setThreadName(threadName);
     execMsg.setBuilderSeq(builderSeq);
-    execMsg.setPeerUuid(UUID.randomUUID().toString());
+    execMsg.setPeerUuid(UuidUtils.toBytes(UUID.randomUUID()));
     execMsg.setMessageId(UUID.randomUUID().toString());
-    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
+    execMsg.setCurrentTime(System.currentTimeMillis() * 1_000_000L);
 
     ConstructorCall cc = new ConstructorCall();
     Class clazz = new Class();
@@ -559,9 +560,9 @@ public class WalReaderTest {
     ExecMessage execMsg = new ExecMessage();
     execMsg.setThreadName(threadName);
     execMsg.setBuilderSeq(builderSeq);
-    execMsg.setPeerUuid(UUID.randomUUID().toString());
+    execMsg.setPeerUuid(UuidUtils.toBytes(UUID.randomUUID()));
     execMsg.setMessageId(UUID.randomUUID().toString());
-    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
+    execMsg.setCurrentTime(System.currentTimeMillis() * 1_000_000L);
 
     ReturnValue rv = new ReturnValue();
     rv.setIsVoid(true);
@@ -589,7 +590,7 @@ public class WalReaderTest {
    */
   private void appendControlMessage(ExcerptAppender appender) {
     ControlMessage ctrl = new ControlMessage();
-    ctrl.setFromPeer(UUID.randomUUID().toString());
+    ctrl.setFromPeer(UuidUtils.toBytes(UUID.randomUUID()));
     ctrl.setMessageId(UUID.randomUUID().toString());
     ctrl.setBody("test");
 
@@ -684,9 +685,9 @@ public class WalReaderTest {
     ExecMessage execMsg = new ExecMessage();
     execMsg.setThreadName(threadName);
     execMsg.setBuilderSeq(builderSeq);
-    execMsg.setPeerUuid(UUID.randomUUID().toString());
+    execMsg.setPeerUuid(UuidUtils.toBytes(UUID.randomUUID()));
     execMsg.setMessageId(UUID.randomUUID().toString());
-    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
+    execMsg.setCurrentTime(System.currentTimeMillis() * 1_000_000L);
 
     InstanceMethodCall imc = new InstanceMethodCall();
     imc.setName(methodName);
@@ -732,9 +733,9 @@ public class WalReaderTest {
     ExecMessage execMsg = new ExecMessage();
     execMsg.setThreadName(threadName);
     execMsg.setBuilderSeq(builderSeq);
-    execMsg.setPeerUuid(UUID.randomUUID().toString());
+    execMsg.setPeerUuid(UuidUtils.toBytes(UUID.randomUUID()));
     execMsg.setMessageId(UUID.randomUUID().toString());
-    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
+    execMsg.setCurrentTime(System.currentTimeMillis() * 1_000_000L);
 
     ConstructorCall cc = new ConstructorCall();
     Class clazz = new Class();
@@ -778,9 +779,9 @@ public class WalReaderTest {
     ExecMessage execMsg = new ExecMessage();
     execMsg.setThreadName(threadName);
     execMsg.setBuilderSeq(builderSeq);
-    execMsg.setPeerUuid(UUID.randomUUID().toString());
+    execMsg.setPeerUuid(UuidUtils.toBytes(UUID.randomUUID()));
     execMsg.setMessageId(UUID.randomUUID().toString());
-    execMsg.setCurrentTime(String.valueOf(System.currentTimeMillis()));
+    execMsg.setCurrentTime(System.currentTimeMillis() * 1_000_000L);
 
     ReturnValue rv = new ReturnValue();
     rv.setIsVoid(true);
@@ -817,7 +818,7 @@ public class WalReaderTest {
    */
   private ConsumerRecord<String, byte[]> createKafkaControlRecord(String topic, long offset) {
     ControlMessage ctrl = new ControlMessage();
-    ctrl.setFromPeer(UUID.randomUUID().toString());
+    ctrl.setFromPeer(UuidUtils.toBytes(UUID.randomUUID()));
     ctrl.setMessageId(UUID.randomUUID().toString());
     ctrl.setBody("test");
 

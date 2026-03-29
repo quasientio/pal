@@ -16,7 +16,7 @@
 package colfer
 
 type ControlMessage struct {
-	fromPeer     text
+	fromPeer     binary
 	messageId    text
 	responseToId text
 	command      uint8

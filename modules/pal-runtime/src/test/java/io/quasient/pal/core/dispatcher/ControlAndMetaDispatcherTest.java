@@ -19,6 +19,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
 
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.execution.java.reflect.ClassMetadataSerializer;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
@@ -56,7 +57,7 @@ public class ControlAndMetaDispatcherTest {
     set(d, "objectLookupStore", mock(ObjectLookupStore.class));
 
     ControlMessage req = new ControlMessage();
-    req.setFromPeer(UUID.randomUUID().toString());
+    req.setFromPeer(UuidUtils.toBytes(UUID.randomUUID()));
     req.setMessageId("x1");
     req.setCommand(ControlCommandType.PING.getId());
     ControlMessage resp = d.incomingControlMessage(req);

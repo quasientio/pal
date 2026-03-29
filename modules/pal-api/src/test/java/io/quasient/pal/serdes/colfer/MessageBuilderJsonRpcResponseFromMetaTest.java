@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.MetaMessage;
 import io.quasient.pal.messages.jsonrpc.JsonRpcError;
 import io.quasient.pal.messages.jsonrpc.JsonRpcResponse;
@@ -38,7 +39,7 @@ public class MessageBuilderJsonRpcResponseFromMetaTest {
 
   private static MetaMessage metaResponse(MetaStatusType status, String responseToId, String body) {
     return new MetaMessage()
-        .withFromPeer(UUID.randomUUID().toString())
+        .withFromPeer(UuidUtils.toBytes(UUID.randomUUID()))
         .withMessageId(UUID.randomUUID().toString())
         .withResponseToId(responseToId)
         .withService(MetaServiceType.FETCH_CLASSES_INFO.getId())

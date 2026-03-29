@@ -18,9 +18,13 @@ package io.quasient.pal.serdes.colfer;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ClassMethodCall;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
@@ -30,6 +34,19 @@ import org.junit.Test;
  * threadAffinity field.
  */
 public class ExecMessageThreadAffinityTest {
+
+  /** Fixed UUID used for test peer identity. */
+  private static final byte[] TEST_PEER_UUID =
+      UuidUtils.toBytes(UUID.nameUUIDFromBytes("test-peer-uuid".getBytes(StandardCharsets.UTF_8)));
+
+  /** Converts a byte[] UUID to a JsonArray suitable for fromJson parsing. */
+  private static JsonArray uuidBytesToJsonArray(byte[] bytes) {
+    JsonArray arr = new JsonArray();
+    for (byte b : bytes) {
+      arr.add(b);
+    }
+    return arr;
+  }
 
   /**
    * Test specification: roundTripWithThreadAffinity
@@ -44,7 +61,7 @@ public class ExecMessageThreadAffinityTest {
   public void roundTripWithThreadAffinity() throws Exception {
     // Given: ExecMessage with threadAffinity set to "fx-thread" and a classMethodCall
     ExecMessage message = new ExecMessage();
-    message.setPeerUuid("test-peer-uuid");
+    message.setPeerUuid(TEST_PEER_UUID);
     message.setMessageId("test-message-id");
     message.setClassMethodCall(new ClassMethodCall());
     message.setThreadAffinity("fx-thread");
@@ -72,7 +89,7 @@ public class ExecMessageThreadAffinityTest {
   public void roundTripWithNullThreadAffinity() throws Exception {
     // Given: ExecMessage with threadAffinity left at default (empty string in Colfer)
     ExecMessage message = new ExecMessage();
-    message.setPeerUuid("test-peer-uuid");
+    message.setPeerUuid(TEST_PEER_UUID);
     message.setMessageId("test-message-id");
 
     // When: Serialized then deserialized
@@ -120,7 +137,7 @@ public class ExecMessageThreadAffinityTest {
   public void fromJsonParsesThreadAffinity() {
     // Given: JSON object with "threadAffinity": "fx-thread" and required fields
     JsonObject json = new JsonObject();
-    json.addProperty("peerUuid", "test-peer-uuid");
+    json.add("peerUuid", uuidBytesToJsonArray(TEST_PEER_UUID));
     json.addProperty("messageId", "test-message-id");
     json.addProperty("threadAffinity", "fx-thread");
 
@@ -143,7 +160,7 @@ public class ExecMessageThreadAffinityTest {
   public void fromJsonOmittedThreadAffinityIsNull() {
     // Given: JSON object without threadAffinity field
     JsonObject json = new JsonObject();
-    json.addProperty("peerUuid", "test-peer-uuid");
+    json.add("peerUuid", uuidBytesToJsonArray(TEST_PEER_UUID));
     json.addProperty("messageId", "test-message-id");
 
     // When: ExecMessage.fromJson(json) is called

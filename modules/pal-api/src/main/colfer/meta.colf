@@ -16,7 +16,7 @@
 package colfer
 
 type MetaMessage struct {
-	fromPeer     text
+	fromPeer     binary
 	messageId    text
 	responseToId text
 	service      uint8

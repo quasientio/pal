@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ControlMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.colfer.MetaMessage;
@@ -53,7 +54,7 @@ public class MessageBuilderJsonRpcRequestMetaControlTest {
 
     MetaMessage m = msg.getMetaMessage();
     assertNotNull(m);
-    assertEquals(peerId.toString(), m.getFromPeer());
+    assertEquals(peerId.toString(), UuidUtils.toString(m.getFromPeer()));
     assertEquals(req.getId(), m.getMessageId());
     assertThat(MetaMessageUtils.getMessageTypeOf(m), is(MessageType.META_MESSAGE_REQUEST));
   }
@@ -66,7 +67,7 @@ public class MessageBuilderJsonRpcRequestMetaControlTest {
     Message delObjMsg = builder.jsonRpcRequestToControlMessage(delObj, peerId);
     ControlMessage cm = delObjMsg.getControlMessage();
     assertNotNull(cm);
-    assertEquals(peerId.toString(), cm.getFromPeer());
+    assertEquals(peerId.toString(), UuidUtils.toString(cm.getFromPeer()));
     assertEquals(delObj.getId(), cm.getMessageId());
     assertThat(ControlMessageUtils.getMessageTypeOf(cm), is(MessageType.CONTROL_MESSAGE_REQUEST));
 
@@ -75,7 +76,7 @@ public class MessageBuilderJsonRpcRequestMetaControlTest {
     Message delSessMsg = builder.jsonRpcRequestToControlMessage(delSess, peerId);
     ControlMessage cm2 = delSessMsg.getControlMessage();
     assertNotNull(cm2);
-    assertEquals(peerId.toString(), cm2.getFromPeer());
+    assertEquals(peerId.toString(), UuidUtils.toString(cm2.getFromPeer()));
     assertEquals(delSess.getId(), cm2.getMessageId());
     assertThat(ControlMessageUtils.getMessageTypeOf(cm2), is(MessageType.CONTROL_MESSAGE_REQUEST));
   }

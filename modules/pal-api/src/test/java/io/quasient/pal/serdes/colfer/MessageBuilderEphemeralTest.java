@@ -23,6 +23,7 @@ import io.quasient.pal.common.lang.reflect.FieldSignature;
 import io.quasient.pal.common.lang.reflect.MethodSignature;
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Obj;
 import java.lang.reflect.Field;
@@ -83,7 +84,7 @@ public class MessageBuilderEphemeralTest {
         builder.buildClassMethodMessageEphemeral(ctx, this, ObjectRef.randomRef(), args, argRefs);
 
     assertEquals(EXEC_CLASS_METHOD, getMessageTypeOf(m));
-    assertEquals(peerId.toString(), m.getPeerUuid());
+    assertEquals(peerId.toString(), UuidUtils.toString(m.getPeerUuid()));
     assertNotNull(m.getClassMethodCall().getContext());
     assertEquals(TargetType.class.getName(), m.getClassMethodCall().getClazz().getName());
     assertEquals("sm", m.getClassMethodCall().getName());

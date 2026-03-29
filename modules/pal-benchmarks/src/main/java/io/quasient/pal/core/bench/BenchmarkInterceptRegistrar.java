@@ -16,10 +16,12 @@
 package io.quasient.pal.core.bench;
 
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.intercept.InterceptMatcher;
 import io.quasient.pal.core.internal.messages.InterceptEventMsg;
 import io.quasient.pal.messages.colfer.InterceptMessage;
 import io.quasient.pal.messages.colfer.InterceptableMethod;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -232,7 +234,7 @@ public final class BenchmarkInterceptRegistrar {
     String messageId = peerUuid + "-bench-" + MESSAGE_ID_COUNTER.getAndIncrement();
 
     return new InterceptMessage()
-        .withPeerUuid(peerUuid)
+        .withPeerUuid(UuidUtils.toBytes(UUID.fromString(peerUuid)))
         .withMessageId(messageId)
         .withInterceptType(type.toByte())
         .withClazz(BENCHMARK_CLASS_PATTERN)

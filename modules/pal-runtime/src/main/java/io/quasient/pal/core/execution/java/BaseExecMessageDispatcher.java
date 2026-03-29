@@ -31,6 +31,7 @@ import io.quasient.pal.common.runtime.ContextFactory;
 import io.quasient.pal.common.runtime.Dispatcher;
 import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.common.util.Classes;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.intercept.AroundInterceptChain;
 import io.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import io.quasient.pal.core.intercept.InterceptCallbackDispatcher.ConsolidatedCallbackResponse;
@@ -1583,7 +1584,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         logger.trace(
             "dispatchIncoming:in w/ message id: {}, from peer w/id:{}, channel: {}",
             incomingCall.getMessageId(),
-            incomingCall.getPeerUuid(),
+            UuidUtils.toString(incomingCall.getPeerUuid()),
             messageChannel);
       }
 
@@ -2309,7 +2310,7 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
             replayContext != null && runOptions.contains(RunOptions.WITH_REPLAY);
         if (!isReplayMode && objectRef != null && incomingCall.getPeerUuid() != null) {
           try {
-            final UUID peerUuid = UUID.fromString(incomingCall.getPeerUuid());
+            final UUID peerUuid = UuidUtils.fromBytes(incomingCall.getPeerUuid());
             storeObjectInSession(peerUuid, objectRef);
           } catch (RuntimeException e) {
             logger.error("Error after invocation phase - saving return value to session", e);

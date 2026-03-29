@@ -411,9 +411,9 @@ public class SpanFieldMutationReplayerTest {
     InstanceFieldPutDone done = new InstanceFieldPutDone();
     Class clazz = new Class();
     clazz.setName("com.example.Test");
-    done.setClazz(clazz);
     Field doneField = new Field();
     doneField.setName("done");
+    doneField.setClazz(clazz);
     done.setField(doneField);
     msg.setInstanceFieldPutDone(done);
 
@@ -472,9 +472,9 @@ public class SpanFieldMutationReplayerTest {
     StaticFieldPutDone done = new StaticFieldPutDone();
     Class clazz = new Class();
     clazz.setName("com.example.Test");
-    done.setClazz(clazz);
     Field doneField = new Field();
     doneField.setName("done");
+    doneField.setClazz(clazz);
     done.setField(doneField);
     msg.setStaticFieldPutDone(done);
 

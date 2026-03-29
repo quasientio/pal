@@ -22,6 +22,7 @@ import io.quasient.pal.common.lang.intercept.ExceptionPropagationPolicy;
 import io.quasient.pal.common.lang.intercept.InterceptApiMisuseException;
 import io.quasient.pal.common.lang.intercept.InterceptPhase;
 import io.quasient.pal.common.lang.intercept.InterceptType;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.messages.colfer.ExecMessage;
@@ -368,16 +369,18 @@ public class InterceptCallbackDispatcher {
     // Process synchronous BEFORE intercepts (wait for response)
     for (InterceptMessage interceptMessage : beforeSyncIntercepts) {
       try {
-        UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
-        logger.info(
-            "===== BEFORE callback: interceptMessage.getPeerUuid()='{}', "
-                + "interceptMessage.getMessageId()='{}', interceptMessage.getClazz()='{}', "
-                + "interceptMessage.getCallbackClass()='{}', interceptMessage.getCallbackMethod()='{}'",
-            interceptMessage.getPeerUuid(),
-            interceptMessage.getMessageId(),
-            interceptMessage.getClazz(),
-            interceptMessage.getCallbackClass(),
-            interceptMessage.getCallbackMethod());
+        UUID callbackPeerUuid = UuidUtils.fromBytes(interceptMessage.getPeerUuid());
+        if (logger.isInfoEnabled()) {
+          logger.info(
+              "===== BEFORE callback: interceptMessage.getPeerUuid()='{}', "
+                  + "interceptMessage.getMessageId()='{}', interceptMessage.getClazz()='{}', "
+                  + "interceptMessage.getCallbackClass()='{}', interceptMessage.getCallbackMethod()='{}'",
+              UuidUtils.toString(interceptMessage.getPeerUuid()),
+              interceptMessage.getMessageId(),
+              interceptMessage.getClazz(),
+              interceptMessage.getCallbackClass(),
+              interceptMessage.getCallbackMethod());
+        }
 
         // Build the callback request
         InterceptCallbackRequestMessage request =
@@ -414,7 +417,7 @@ public class InterceptCallbackDispatcher {
       } catch (Exception ex) {
         logger.error(
             "Error sending BEFORE callback to peer: {}, continuing with remaining callbacks",
-            interceptMessage.getPeerUuid(),
+            UuidUtils.toString(interceptMessage.getPeerUuid()),
             ex);
         // Continue with other callbacks on error
       }
@@ -423,16 +426,18 @@ public class InterceptCallbackDispatcher {
     // Process asynchronous BEFORE_ASYNC intercepts (fire-and-forget)
     for (InterceptMessage interceptMessage : beforeAsyncIntercepts) {
       try {
-        UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
-        logger.info(
-            "===== BEFORE_ASYNC callback: interceptMessage.getPeerUuid()='{}', "
-                + "interceptMessage.getMessageId()='{}', interceptMessage.getClazz()='{}', "
-                + "interceptMessage.getCallbackClass()='{}', interceptMessage.getCallbackMethod()='{}'",
-            interceptMessage.getPeerUuid(),
-            interceptMessage.getMessageId(),
-            interceptMessage.getClazz(),
-            interceptMessage.getCallbackClass(),
-            interceptMessage.getCallbackMethod());
+        UUID callbackPeerUuid = UuidUtils.fromBytes(interceptMessage.getPeerUuid());
+        if (logger.isInfoEnabled()) {
+          logger.info(
+              "===== BEFORE_ASYNC callback: interceptMessage.getPeerUuid()='{}', "
+                  + "interceptMessage.getMessageId()='{}', interceptMessage.getClazz()='{}', "
+                  + "interceptMessage.getCallbackClass()='{}', interceptMessage.getCallbackMethod()='{}'",
+              UuidUtils.toString(interceptMessage.getPeerUuid()),
+              interceptMessage.getMessageId(),
+              interceptMessage.getClazz(),
+              interceptMessage.getCallbackClass(),
+              interceptMessage.getCallbackMethod());
+        }
 
         // Build the callback request for async
         InterceptCallbackRequestMessage request =
@@ -448,7 +453,7 @@ public class InterceptCallbackDispatcher {
       } catch (Exception ex) {
         logger.error(
             "Error sending BEFORE_ASYNC callback to peer: {}, continuing with remaining callbacks",
-            interceptMessage.getPeerUuid(),
+            UuidUtils.toString(interceptMessage.getPeerUuid()),
             ex);
         // Continue with other callbacks on error
       }
@@ -536,12 +541,12 @@ public class InterceptCallbackDispatcher {
     // Process synchronous AFTER intercepts (wait for response)
     for (InterceptMessage interceptMessage : afterSyncIntercepts) {
       try {
-        UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
+        UUID callbackPeerUuid = UuidUtils.fromBytes(interceptMessage.getPeerUuid());
         if (logger.isDebugEnabled()) {
           logger.debug(
               "AFTER callback: peer='{}', messageId='{}', class='{}', "
                   + "callbackClass='{}', callbackMethod='{}'",
-              interceptMessage.getPeerUuid(),
+              UuidUtils.toString(interceptMessage.getPeerUuid()),
               interceptMessage.getMessageId(),
               interceptMessage.getClazz(),
               interceptMessage.getCallbackClass(),
@@ -593,7 +598,7 @@ public class InterceptCallbackDispatcher {
       } catch (Exception ex) {
         logger.error(
             "Error sending AFTER callback to peer: {}, continuing with remaining callbacks",
-            interceptMessage.getPeerUuid(),
+            UuidUtils.toString(interceptMessage.getPeerUuid()),
             ex);
         // Continue with other callbacks on error
       }
@@ -602,12 +607,12 @@ public class InterceptCallbackDispatcher {
     // Process asynchronous AFTER_ASYNC intercepts (fire-and-forget)
     for (InterceptMessage interceptMessage : afterAsyncIntercepts) {
       try {
-        UUID callbackPeerUuid = UUID.fromString(interceptMessage.getPeerUuid());
+        UUID callbackPeerUuid = UuidUtils.fromBytes(interceptMessage.getPeerUuid());
         if (logger.isDebugEnabled()) {
           logger.debug(
               "AFTER_ASYNC callback: peer='{}', messageId='{}', class='{}', "
                   + "callbackClass='{}', callbackMethod='{}'",
-              interceptMessage.getPeerUuid(),
+              UuidUtils.toString(interceptMessage.getPeerUuid()),
               interceptMessage.getMessageId(),
               interceptMessage.getClazz(),
               interceptMessage.getCallbackClass(),
@@ -634,7 +639,7 @@ public class InterceptCallbackDispatcher {
       } catch (Exception ex) {
         logger.error(
             "Error sending AFTER_ASYNC callback to peer: {}, continuing with remaining callbacks",
-            interceptMessage.getPeerUuid(),
+            UuidUtils.toString(interceptMessage.getPeerUuid()),
             ex);
         // Continue with other callbacks on error
       }

@@ -19,6 +19,7 @@ import static io.quasient.pal.serdes.colfer.ExecMessageSummaryUtil.getOneLinerSu
 import static io.quasient.pal.serdes.jsonrpc.JsonRpcMessageSummaryUtil.getOneLinerSummary;
 import static io.quasient.pal.serdes.jsonrpc.JsonRpcMessageUtils.getMessageType;
 
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.LogMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.jsonrpc.JsonRpcMessage;
@@ -80,8 +81,8 @@ public class AbstractTool {
   protected static String getPeerUuid(Message msg) {
     final MessageType messageType = MessageType.fromId(msg.getMessageType());
     return switch (messageType.getFamily()) {
-      case EXEC -> msg.getExecMessage().getPeerUuid();
-      case INTERCEPT -> msg.getInterceptMessage().getPeerUuid();
+      case EXEC -> UuidUtils.toString(msg.getExecMessage().getPeerUuid());
+      case INTERCEPT -> UuidUtils.toString(msg.getInterceptMessage().getPeerUuid());
       default -> null;
     };
   }

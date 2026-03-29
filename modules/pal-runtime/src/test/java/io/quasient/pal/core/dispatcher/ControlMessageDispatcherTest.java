@@ -22,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.quasient.pal.common.objects.ObjectRef;
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.core.internal.messages.SessionResponseMsg;
 import io.quasient.pal.core.runtime.objects.ObjectLookupStore;
 import io.quasient.pal.core.transport.gateway.OutboundMessageGateway;
@@ -66,7 +67,7 @@ public class ControlMessageDispatcherTest {
     ControlMessage ping = builder.buildControlCommandMessage(peer, ControlCommandType.PING);
     ControlMessage resp = dispatcher.incomingControlMessage(ping);
     assertThat(resp.getStatus(), is(ControlStatusType.OK.toId()));
-    assertThat(peer.toString(), is(resp.getFromPeer()));
+    assertThat(peer.toString(), is(UuidUtils.toString(resp.getFromPeer())));
   }
 
   @Test

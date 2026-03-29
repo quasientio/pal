@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 
+import io.quasient.pal.common.util.UuidUtils;
 import io.quasient.pal.messages.colfer.Class;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
@@ -29,6 +30,8 @@ import io.quasient.pal.messages.colfer.Method;
 import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.colfer.ReturnValue;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.junit.Test;
 
 /**
@@ -62,7 +65,9 @@ public class TlScratchHolderInterceptNestedDispatchTest {
     // Given: Thread-local ExecMessage obtained via TlScratchHolder.exec()
     //        with fields populated (peerUuid, messageId, instanceMethodCall, etc.)
     ExecMessage outer = TlScratchHolder.exec();
-    outer.setPeerUuid("outer-peer-uuid");
+    outer.setPeerUuid(
+        UuidUtils.toBytes(
+            UUID.nameUUIDFromBytes("outer-peer-uuid".getBytes(StandardCharsets.UTF_8))));
     outer.setMessageId("outer-msg-001");
 
     InstanceMethodCall outerImc = new InstanceMethodCall();
@@ -77,7 +82,7 @@ public class TlScratchHolderInterceptNestedDispatchTest {
     // Then: The outer ExecMessage fields are reset/corrupted because both calls
     //       return the SAME underlying instance (this is the KNOWN hazard).
     assertThat(inner, is(sameInstance(outer)));
-    assertThat(outer.getPeerUuid(), is(""));
+    assertThat(outer.getPeerUuid().length, is(0));
     assertThat(outer.getMessageId(), is(""));
     assertThat(outer.getInstanceMethodCall(), is(nullValue()));
   }
@@ -93,8 +98,12 @@ public class TlScratchHolderInterceptNestedDispatchTest {
   public void shouldPreserveClonedExecMessageDuringNestedDispatch() {
     // Given: ExecMessage obtained via TlScratchHolder.exec(), populated with fields,
     //        then cloned via marshal/unmarshal deep copy (cloneExecMessage pattern)
+    UUID originalUuid =
+        UUID.nameUUIDFromBytes("original-peer-uuid".getBytes(StandardCharsets.UTF_8));
+    UUID nestedUuid = UUID.nameUUIDFromBytes("nested-peer-uuid".getBytes(StandardCharsets.UTF_8));
+
     ExecMessage scratch = TlScratchHolder.exec();
-    scratch.setPeerUuid("original-peer-uuid");
+    scratch.setPeerUuid(UuidUtils.toBytes(originalUuid));
     scratch.setMessageId("original-msg-001");
 
     InstanceMethodCall imc = new InstanceMethodCall();
@@ -112,19 +121,19 @@ public class TlScratchHolderInterceptNestedDispatchTest {
     // When: Nested dispatch occurs — another TlScratchHolder.exec() call that resets
     //       and repopulates the thread-local scratch
     ExecMessage nested = TlScratchHolder.exec();
-    nested.setPeerUuid("nested-peer-uuid");
+    nested.setPeerUuid(UuidUtils.toBytes(nestedUuid));
     nested.setMessageId("nested-msg-002");
 
     // Then: The cloned ExecMessage retains its original values
     assertThat(clone, is(not(sameInstance(scratch))));
-    assertThat(clone.getPeerUuid(), is("original-peer-uuid"));
+    assertThat(UuidUtils.toString(clone.getPeerUuid()), is(originalUuid.toString()));
     assertThat(clone.getMessageId(), is("original-msg-001"));
     assertThat(clone.getInstanceMethodCall(), is(notNullValue()));
     assertThat(clone.getInstanceMethodCall().getName(), is("originalMethod"));
     assertThat(clone.getInstanceMethodCall().getClazz().getName(), is("com.example.Original"));
 
     // The scratch (now corrupted) has the inner dispatch's values
-    assertThat(scratch.getPeerUuid(), is("nested-peer-uuid"));
+    assertThat(UuidUtils.toString(scratch.getPeerUuid()), is(nestedUuid.toString()));
     assertThat(scratch.getMessageId(), is("nested-msg-002"));
   }
 
@@ -176,8 +185,12 @@ public class TlScratchHolderInterceptNestedDispatchTest {
   public void shouldSafelyReuseInterceptScratchesWhenConsumedBeforeNestedDispatch() {
     // Given: Ephemeral ExecMessage obtained via TlScratchHolder.exec(), populated,
     //        and fully consumed by marshaling to a byte[] via marshal()
+    UUID consumedUuid =
+        UUID.nameUUIDFromBytes("consumed-peer-uuid".getBytes(StandardCharsets.UTF_8));
+    UUID nestedUuid = UUID.nameUUIDFromBytes("nested-peer-uuid".getBytes(StandardCharsets.UTF_8));
+
     ExecMessage scratch = TlScratchHolder.exec();
-    scratch.setPeerUuid("consumed-peer-uuid");
+    scratch.setPeerUuid(UuidUtils.toBytes(consumedUuid));
     scratch.setMessageId("consumed-msg-001");
 
     InstanceMethodCall imc = new InstanceMethodCall();
@@ -190,7 +203,7 @@ public class TlScratchHolderInterceptNestedDispatchTest {
     // When: Nested dispatch occurs — TlScratchHolder.exec() is called again,
     //       resetting and repopulating the scratch with different values
     ExecMessage nested = TlScratchHolder.exec();
-    nested.setPeerUuid("nested-peer-uuid");
+    nested.setPeerUuid(UuidUtils.toBytes(nestedUuid));
     nested.setMessageId("nested-msg-002");
 
     InstanceMethodCall nestedImc = new InstanceMethodCall();
@@ -202,13 +215,13 @@ public class TlScratchHolderInterceptNestedDispatchTest {
     ExecMessage restored = new ExecMessage();
     restored.unmarshal(serialized, 0, len);
 
-    assertThat(restored.getPeerUuid(), is("consumed-peer-uuid"));
+    assertThat(UuidUtils.toString(restored.getPeerUuid()), is(consumedUuid.toString()));
     assertThat(restored.getMessageId(), is("consumed-msg-001"));
     assertThat(restored.getInstanceMethodCall(), is(notNullValue()));
     assertThat(restored.getInstanceMethodCall().getName(), is("consumedMethod"));
 
     // The scratch object itself now has the inner dispatch's values (expected)
-    assertThat(scratch.getPeerUuid(), is("nested-peer-uuid"));
+    assertThat(UuidUtils.toString(scratch.getPeerUuid()), is(nestedUuid.toString()));
     assertThat(scratch.getMessageId(), is("nested-msg-002"));
   }
 
@@ -222,9 +235,13 @@ public class TlScratchHolderInterceptNestedDispatchTest {
    */
   @Test
   public void shouldHandleTripleNestedDispatchWithScratchReuse() {
+    UUID outerUuid = UUID.nameUUIDFromBytes("outer-peer".getBytes(StandardCharsets.UTF_8));
+    UUID middleUuid = UUID.nameUUIDFromBytes("middle-peer".getBytes(StandardCharsets.UTF_8));
+    UUID innerUuid = UUID.nameUUIDFromBytes("inner-peer".getBytes(StandardCharsets.UTF_8));
+
     // Level 1 (outer): obtain scratch and populate
     ExecMessage level1Scratch = TlScratchHolder.exec();
-    level1Scratch.setPeerUuid("outer-peer");
+    level1Scratch.setPeerUuid(UuidUtils.toBytes(outerUuid));
     level1Scratch.setMessageId("outer-msg");
 
     // Clone level 1 before yielding to nested dispatch
@@ -235,7 +252,7 @@ public class TlScratchHolderInterceptNestedDispatchTest {
 
     // Level 2 (middle): obtain scratch and populate
     ExecMessage level2Scratch = TlScratchHolder.exec();
-    level2Scratch.setPeerUuid("middle-peer");
+    level2Scratch.setPeerUuid(UuidUtils.toBytes(middleUuid));
     level2Scratch.setMessageId("middle-msg");
 
     // All exec() calls return the same underlying instance
@@ -249,20 +266,20 @@ public class TlScratchHolderInterceptNestedDispatchTest {
 
     // Level 3 (innermost): obtain scratch and populate
     ExecMessage level3Scratch = TlScratchHolder.exec();
-    level3Scratch.setPeerUuid("inner-peer");
+    level3Scratch.setPeerUuid(UuidUtils.toBytes(innerUuid));
     level3Scratch.setMessageId("inner-msg");
 
     assertThat(level3Scratch, is(sameInstance(level1Scratch)));
 
     // Each clone preserves its respective values
-    assertThat(level1Clone.getPeerUuid(), is("outer-peer"));
+    assertThat(UuidUtils.toString(level1Clone.getPeerUuid()), is(outerUuid.toString()));
     assertThat(level1Clone.getMessageId(), is("outer-msg"));
 
-    assertThat(level2Clone.getPeerUuid(), is("middle-peer"));
+    assertThat(UuidUtils.toString(level2Clone.getPeerUuid()), is(middleUuid.toString()));
     assertThat(level2Clone.getMessageId(), is("middle-msg"));
 
     // The scratch (live instance) has the innermost values
-    assertThat(level1Scratch.getPeerUuid(), is("inner-peer"));
+    assertThat(UuidUtils.toString(level1Scratch.getPeerUuid()), is(innerUuid.toString()));
     assertThat(level1Scratch.getMessageId(), is("inner-msg"));
   }
 }

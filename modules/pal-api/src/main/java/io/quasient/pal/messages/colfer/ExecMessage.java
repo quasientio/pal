@@ -51,13 +51,13 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
   /** The upper limit for the number of elements in a list. */
   public static int colferListMax = 64 * 1024;
 
-  public String peerUuid;
+  public byte[] peerUuid;
 
   public String messageId;
 
   public String threadName;
 
-  public String currentTime;
+  public long currentTime;
 
   public int dispatchSeq;
 
@@ -112,14 +112,14 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     init();
   }
 
+  private static final byte[] _zeroBytes = new byte[0];
   private static final String[] _zeroDeclaredExceptions = new String[0];
 
   /** Colfer zero values. */
   private void init() {
-    peerUuid = "";
+    peerUuid = _zeroBytes;
     messageId = "";
     threadName = "";
-    currentTime = "";
     responseToId = "";
     declaredExceptions = _zeroDeclaredExceptions;
     threadAffinity = "";
@@ -221,13 +221,12 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     long n =
         1L
             + 6
-            + (long) this.peerUuid.length() * 3
+            + (long) this.peerUuid.length
             + 6
             + (long) this.messageId.length() * 3
             + 6
             + (long) this.threadName.length() * 3
-            + 6
-            + (long) this.currentTime.length() * 3
+            + 9
             + 5
             + 5
             + 6
@@ -296,52 +295,26 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     int i = offset;
 
     try {
-      if (!this.peerUuid.isEmpty()) {
+      if (this.peerUuid.length != 0) {
         buf[i++] = (byte) 0;
-        int start = ++i;
 
-        String s = this.peerUuid;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
-          }
-        }
-        int size = i - start;
+        int size = this.peerUuid.length;
         if (size > ExecMessage.colferSizeMax)
           throw new IllegalStateException(
               format(
-                  "colfer: io.quasient.pal.messages/colfer.ExecMessage.peerUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: io.quasient.pal.messages/colfer.ExecMessage.peerUuid size %d exceeds %d bytes",
                   size, ExecMessage.colferSizeMax));
 
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
+        int x = size;
+        while (x > 0x7f) {
+          buf[i++] = (byte) (x | 0x80);
+          x >>>= 7;
         }
-        buf[ii] = (byte) size;
+        buf[i++] = (byte) x;
+
+        int start = i;
+        i += size;
+        System.arraycopy(this.peerUuid, 0, buf, start, size);
       }
 
       if (!this.messageId.isEmpty()) {
@@ -440,52 +413,26 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         buf[ii] = (byte) size;
       }
 
-      if (!this.currentTime.isEmpty()) {
-        buf[i++] = (byte) 3;
-        int start = ++i;
-
-        String s = this.currentTime;
-        for (int sIndex = 0, sLength = s.length(); sIndex < sLength; sIndex++) {
-          char c = s.charAt(sIndex);
-          if (c < '\u0080') {
-            buf[i++] = (byte) c;
-          } else if (c < '\u0800') {
-            buf[i++] = (byte) (192 | c >>> 6);
-            buf[i++] = (byte) (128 | c & 63);
-          } else if (c < '\ud800' || c > '\udfff') {
-            buf[i++] = (byte) (224 | c >>> 12);
-            buf[i++] = (byte) (128 | c >>> 6 & 63);
-            buf[i++] = (byte) (128 | c & 63);
-          } else {
-            int cp = 0;
-            if (++sIndex < sLength) cp = Character.toCodePoint(c, s.charAt(sIndex));
-            if ((cp >= 1 << 16) && (cp < 1 << 21)) {
-              buf[i++] = (byte) (240 | cp >>> 18);
-              buf[i++] = (byte) (128 | cp >>> 12 & 63);
-              buf[i++] = (byte) (128 | cp >>> 6 & 63);
-              buf[i++] = (byte) (128 | cp & 63);
-            } else buf[i++] = (byte) '?';
+      if (this.currentTime != 0) {
+        long x = this.currentTime;
+        if ((x & ~((1L << 49) - 1)) != 0) {
+          buf[i++] = (byte) (3 | 0x80);
+          buf[i++] = (byte) (x >>> 56);
+          buf[i++] = (byte) (x >>> 48);
+          buf[i++] = (byte) (x >>> 40);
+          buf[i++] = (byte) (x >>> 32);
+          buf[i++] = (byte) (x >>> 24);
+          buf[i++] = (byte) (x >>> 16);
+          buf[i++] = (byte) (x >>> 8);
+          buf[i++] = (byte) (x);
+        } else {
+          buf[i++] = (byte) 3;
+          while (x > 0x7fL) {
+            buf[i++] = (byte) (x | 0x80);
+            x >>>= 7;
           }
+          buf[i++] = (byte) x;
         }
-        int size = i - start;
-        if (size > ExecMessage.colferSizeMax)
-          throw new IllegalStateException(
-              format(
-                  "colfer: io.quasient.pal.messages/colfer.ExecMessage.currentTime size %d exceeds %d UTF-8 bytes",
-                  size, ExecMessage.colferSizeMax));
-
-        int ii = start - 1;
-        if (size > 0x7f) {
-          i++;
-          for (int x = size; x >= 1 << 14; x >>>= 7) i++;
-          System.arraycopy(buf, start, buf, i - size, size);
-
-          do {
-            buf[ii++] = (byte) (size | 0x80);
-            size >>>= 7;
-          } while (size > 0x7f);
-        }
-        buf[ii] = (byte) size;
       }
 
       if (this.dispatchSeq != 0) {
@@ -808,12 +755,14 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         if (size < 0 || size > ExecMessage.colferSizeMax)
           throw new SecurityException(
               format(
-                  "colfer: io.quasient.pal.messages/colfer.ExecMessage.peerUuid size %d exceeds %d UTF-8 bytes",
+                  "colfer: io.quasient.pal.messages/colfer.ExecMessage.peerUuid size %d exceeds %d bytes",
                   size, ExecMessage.colferSizeMax));
 
+        this.peerUuid = new byte[size];
         int start = i;
         i += size;
-        this.peerUuid = new String(buf, start, size, StandardCharsets.UTF_8);
+        System.arraycopy(buf, start, this.peerUuid, 0, size);
+
         header = buf[i++];
       }
 
@@ -856,21 +805,27 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
       }
 
       if (header == (byte) 3) {
-        int size = 0;
+        long x = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
-          size |= (b & 0x7f) << shift;
-          if (shift == 28 || b >= 0) break;
+          if (shift == 56 || b >= 0) {
+            x |= (b & 0xffL) << shift;
+            break;
+          }
+          x |= (b & 0x7fL) << shift;
         }
-        if (size < 0 || size > ExecMessage.colferSizeMax)
-          throw new SecurityException(
-              format(
-                  "colfer: io.quasient.pal.messages/colfer.ExecMessage.currentTime size %d exceeds %d UTF-8 bytes",
-                  size, ExecMessage.colferSizeMax));
-
-        int start = i;
-        i += size;
-        this.currentTime = new String(buf, start, size, StandardCharsets.UTF_8);
+        this.currentTime = x;
+        header = buf[i++];
+      } else if (header == (byte) (3 | 0x80)) {
+        this.currentTime =
+            (buf[i++] & 0xffL) << 56
+                | (buf[i++] & 0xffL) << 48
+                | (buf[i++] & 0xffL) << 40
+                | (buf[i++] & 0xffL) << 32
+                | (buf[i++] & 0xffL) << 24
+                | (buf[i++] & 0xffL) << 16
+                | (buf[i++] & 0xffL) << 8
+                | (buf[i++] & 0xffL);
         header = buf[i++];
       }
 
@@ -1106,7 +1061,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
    *
    * @return the value.
    */
-  public String getPeerUuid() {
+  public byte[] getPeerUuid() {
     return this.peerUuid;
   }
 
@@ -1115,7 +1070,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
    *
    * @param value the replacement.
    */
-  public void setPeerUuid(String value) {
+  public void setPeerUuid(byte[] value) {
     this.peerUuid = value;
   }
 
@@ -1125,7 +1080,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
    * @param value the replacement.
    * @return {@code this}.
    */
-  public ExecMessage withPeerUuid(String value) {
+  public ExecMessage withPeerUuid(byte[] value) {
     this.peerUuid = value;
     return this;
   }
@@ -1193,7 +1148,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
    *
    * @return the value.
    */
-  public String getCurrentTime() {
+  public long getCurrentTime() {
     return this.currentTime;
   }
 
@@ -1202,7 +1157,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
    *
    * @param value the replacement.
    */
-  public void setCurrentTime(String value) {
+  public void setCurrentTime(long value) {
     this.currentTime = value;
   }
 
@@ -1212,7 +1167,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
    * @param value the replacement.
    * @return {@code this}.
    */
-  public ExecMessage withCurrentTime(String value) {
+  public ExecMessage withCurrentTime(long value) {
     this.currentTime = value;
     return this;
   }
@@ -1742,10 +1697,10 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
   @Override
   public final int hashCode() {
     int h = 1;
-    if (this.peerUuid != null) h = 31 * h + this.peerUuid.hashCode();
+    for (byte b : this.peerUuid) h = 31 * h + b;
     if (this.messageId != null) h = 31 * h + this.messageId.hashCode();
     if (this.threadName != null) h = 31 * h + this.threadName.hashCode();
-    if (this.currentTime != null) h = 31 * h + this.currentTime.hashCode();
+    h = 31 * h + (int) (this.currentTime ^ this.currentTime >>> 32);
     h = 31 * h + this.dispatchSeq;
     h = 31 * h + this.builderSeq;
     if (this.responseToId != null) h = 31 * h + this.responseToId.hashCode();
@@ -1776,12 +1731,10 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.peerUuid == null ? o.peerUuid == null : this.peerUuid.equals(o.peerUuid))
+    return java.util.Arrays.equals(this.peerUuid, o.peerUuid)
         && (this.messageId == null ? o.messageId == null : this.messageId.equals(o.messageId))
         && (this.threadName == null ? o.threadName == null : this.threadName.equals(o.threadName))
-        && (this.currentTime == null
-            ? o.currentTime == null
-            : this.currentTime.equals(o.currentTime))
+        && this.currentTime == o.currentTime
         && this.dispatchSeq == o.dispatchSeq
         && this.builderSeq == o.builderSeq
         && (this.responseToId == null
@@ -1832,9 +1785,13 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
   public ExecMessage fromJson(JsonObject json) throws JsonParseException {
     try {
       if (json.has("peerUuid")) {
-        this.peerUuid = json.get("peerUuid").getAsString();
+        JsonArray jsonArray = json.getAsJsonArray("peerUuid");
+        this.peerUuid = new byte[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+          byte jsonByte = jsonArray.get(i).getAsByte();
+          this.peerUuid[i] = jsonByte;
+        }
       }
-
       if (json.has("messageId")) {
         this.messageId = json.get("messageId").getAsString();
       }
@@ -1844,7 +1801,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
       }
 
       if (json.has("currentTime")) {
-        this.currentTime = json.get("currentTime").getAsString();
+        this.currentTime = json.get("currentTime").getAsLong();
       }
 
       if (json.has("dispatchSeq")) {
@@ -1946,6 +1903,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
    */
   public void reset() {
     init();
+    this.currentTime = 0L;
     this.dispatchSeq = 0;
     this.builderSeq = 0;
     this.constructorCall = null;
