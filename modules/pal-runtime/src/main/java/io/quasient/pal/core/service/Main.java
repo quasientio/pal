@@ -2005,9 +2005,10 @@ public class Main implements Callable<Integer> {
         runAsServiceLatch.countDown();
       }
     } catch (TimeoutException ie) {
-      logger.error("Timeout exception in shutdown hook", ie);
+      logger.warn("Timeout exception in shutdown hook", ie);
     } catch (InterruptedException e) {
-      logger.error("Interrupted while shutting down", e);
+      logger.warn("Interrupted while shutting down", e);
+      Thread.currentThread().interrupt();
     } finally {
       logger.info("This peer is done! bye");
     }

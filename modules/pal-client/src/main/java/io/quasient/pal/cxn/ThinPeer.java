@@ -2046,7 +2046,7 @@ public class ThinPeer {
           logger.info("Zmq context closed.");
         }
       } catch (Exception ex) {
-        logger.error("Error freeing zmq resources", ex);
+        logger.warn("Error freeing zmq resources", ex);
       }
     }
 
@@ -2064,7 +2064,7 @@ public class ThinPeer {
         peerLease.close(); // revoke + stop keep-alive
         getPalDirectory().deletePeer(this.peerUuid);
       } catch (Exception e) {
-        logger.error("Error unregistering self from pal directory.", e);
+        logger.warn("Error unregistering self from pal directory", e);
       }
     }
 

@@ -390,7 +390,8 @@ class JsonRpcWebSocketServer extends WebSocketServer {
     try {
       stop(STOP_TIMEOUT_MS, CLOSE_MSG);
     } catch (InterruptedException e) {
-      logger.error("Error closing WebSocket server", e);
+      logger.warn("Error closing WebSocket server", e);
+      Thread.currentThread().interrupt();
     }
   }
 

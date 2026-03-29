@@ -179,7 +179,7 @@ public abstract class ConnectedService extends AbstractService {
    * Attempts to close the provided resource while logging any exceptions encountered.
    *
    * <p>If the resource is non-null, this method will invoke its close method. Any exceptions thrown
-   * during the close operation are caught and logged at debug level using the supplied message.
+   * during the close operation are caught and logged at warn level using the supplied message.
    *
    * @param closeable the resource to be closed; if null, no action is taken
    * @param msgForException log message used to report any exception that occurs during closing

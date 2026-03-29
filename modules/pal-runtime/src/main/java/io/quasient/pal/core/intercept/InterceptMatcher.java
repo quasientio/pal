@@ -519,7 +519,7 @@ public class InterceptMatcher extends ConnectedService {
       try {
         poller.close();
       } catch (Exception e) {
-        logger.error("Error closing poller", e);
+        logger.debug("Error closing poller", e);
       }
     }
     closeConnection(registerSocket, "Error closing register (REP) socket");
