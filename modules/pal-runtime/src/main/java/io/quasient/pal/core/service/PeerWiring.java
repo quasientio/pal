@@ -226,7 +226,12 @@ public class PeerWiring extends AbstractModule {
     bind(ObjectLookupStore.class)
         .toProvider(ConcurrentHashMapObjectLookupStore::createSyncManaged)
         .asEagerSingleton();
-    bind(MessageBuilder.class).toProvider(() -> new MessageBuilder(peerUuid)).asEagerSingleton();
+    bind(MessageBuilder.class)
+        .toProvider(
+            () ->
+                new MessageBuilder(
+                    peerUuid, properties.getProperty("messages.with_src_context", "false")))
+        .asEagerSingleton();
     bind(DirectoryConnectionProvider.class).asEagerSingleton();
 
     // Intercept coordination components

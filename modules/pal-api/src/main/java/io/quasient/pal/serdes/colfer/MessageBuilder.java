@@ -1689,7 +1689,7 @@ public final class MessageBuilder {
       classMethodCall.setArgs(createArgs(parameterTypes, args, argObjRefs));
     }
 
-    if (includeSourceContext) {
+    if (includeSourceContext && senderObjRef != null) {
       classMethodCall.setContext(getWrappedContext(null, sender, senderObjRef));
     }
     ExecMessage execMessage = newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
@@ -1729,7 +1729,7 @@ public final class MessageBuilder {
       classMethodCall.setArgs(createArgs(parameterTypes, args, argObjRefs));
     }
 
-    if (includeSourceContext) {
+    if (includeSourceContext && senderObjRef != null) {
       classMethodCall.setContext(getWrappedContext(null, sender, senderObjRef));
     }
 
