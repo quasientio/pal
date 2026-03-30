@@ -19,6 +19,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -108,67 +109,128 @@ public class ContinuousPrinter implements Runnable {
     logger.debug("Starting to print");
     while (!done) {
       clearScreen();
-      if (asJson) {
-        System.out.println(gson.toJson(counters));
-      } else {
-        Arrays.stream(MessageType.values())
-            .forEach(
-                msgType -> {
-                  AtomicLong messageCounter = counters.getMessagesByType().get(msgType.name());
-                  System.out.printf(
-                      "# messages of type: %16s : %d%n",
-                      msgType, messageCounter == null ? 0 : messageCounter.longValue());
-                });
-        printSeparator();
-        counters
-            .getMessagesFromPeer()
-            .forEach(
-                (key, value) ->
-                    System.out.printf(
-                        "# messages by peer: %40s : %d%n",
-                        key, value == null ? 0 : value.longValue()));
-        printSeparator();
-        counters
-            .getMessagesByThread()
-            .forEach(
-                (key, value) ->
-                    System.out.printf(
-                        "# messages by thread: %40s : %d%n",
-                        key, value == null ? 0 : value.longValue()));
-        printSeparator();
-        counters
-            .getObjectsCreated()
-            .forEach(
-                (key, value) ->
-                    System.out.printf(
-                        "# created objects of class: %40s = %d%n",
-                        key, value == null ? 0 : value.longValue()));
-        printSeparator();
-        counters
-            .getMethodsCalled()
-            .forEach(
-                (key, value) ->
-                    System.out.printf(
-                        "# calls to <class>.<method>: %40s = %d%n",
-                        key, value == null ? 0 : value.longValue()));
-        printSeparator();
-        counters
-            .getFieldReads()
-            .forEach(
-                (key, value) ->
-                    System.out.printf(
-                        "# reads from <class>.<field>: %40s = %d%n",
-                        key, value == null ? 0 : value.longValue()));
-        printSeparator();
-        counters
-            .getFieldWrites()
-            .forEach(
-                (key, value) ->
-                    System.out.printf(
-                        "# writes to <class>.<field>: %40s = %d%n",
-                        key, value == null ? 0 : value.longValue()));
-      }
+      printCounters(counters, asJson, gson);
       sleep();
+    }
+  }
+
+  /**
+   * Prints counter statistics to standard output in the requested format.
+   *
+   * <p>This is the shared formatting logic used by both the continuous printer loop and one-shot
+   * stats commands (e.g., Chronicle log stats).
+   *
+   * @param counters the {@link Counters} instance containing statistical data to print
+   * @param asJson if {@code true}, outputs the data in JSON format; otherwise, uses a
+   *     human-readable format
+   * @param gson the {@link Gson} instance for JSON serialization, or {@code null} if {@code asJson}
+   *     is {@code false}
+   */
+  public static void printCounters(Counters counters, boolean asJson, @Nullable Gson gson) {
+    if (asJson) {
+      Gson gsonToUse = gson != null ? gson : new GsonBuilder().setPrettyPrinting().create();
+      System.out.println(gsonToUse.toJson(counters));
+    } else {
+      Arrays.stream(MessageType.values())
+          .forEach(
+              msgType -> {
+                AtomicLong messageCounter = counters.getMessagesByType().get(msgType.name());
+                System.out.printf(
+                    "# messages of type: %16s : %d%n",
+                    msgType, messageCounter == null ? 0 : messageCounter.longValue());
+              });
+      printSeparator();
+      counters
+          .getMessagesFromPeer()
+          .forEach(
+              (key, value) ->
+                  System.out.printf(
+                      "# messages by peer: %40s : %d%n",
+                      key, value == null ? 0 : value.longValue()));
+      printSeparator();
+      counters
+          .getMessagesByThread()
+          .forEach(
+              (key, value) ->
+                  System.out.printf(
+                      "# messages by thread: %40s : %d%n",
+                      key, value == null ? 0 : value.longValue()));
+      printSeparator();
+      counters
+          .getObjectsCreated()
+          .forEach(
+              (key, value) ->
+                  System.out.printf(
+                      "# created objects of class: %40s = %d%n",
+                      key, value == null ? 0 : value.longValue()));
+      printSeparator();
+      counters
+          .getMethodsCalled()
+          .forEach(
+              (key, value) ->
+                  System.out.printf(
+                      "# calls to <class>.<method>: %40s = %d%n",
+                      key, value == null ? 0 : value.longValue()));
+      printSeparator();
+      counters
+          .getFieldReads()
+          .forEach(
+              (key, value) ->
+                  System.out.printf(
+                      "# reads from <class>.<field>: %40s = %d%n",
+                      key, value == null ? 0 : value.longValue()));
+      printSeparator();
+      counters
+          .getFieldWrites()
+          .forEach(
+              (key, value) ->
+                  System.out.printf(
+                      "# writes to <class>.<field>: %40s = %d%n",
+                      key, value == null ? 0 : value.longValue()));
+      printSeparator();
+      counters
+          .getExceptionsByType()
+          .forEach(
+              (key, value) ->
+                  System.out.printf(
+                      "# exceptions of type: %40s = %d%n",
+                      key, value == null ? 0 : value.longValue()));
+      printSeparator();
+      counters
+          .getExceptionsPerMethod()
+          .forEach(
+              (key, value) ->
+                  System.out.printf(
+                      "# exceptions from <class>.<method>: %40s = %d%n",
+                      key, value == null ? 0 : value.longValue()));
+      printSeparator();
+      System.out.printf("# entry points (RPC calls): %d%n", counters.getEntryPointCount().get());
+      printSeparator();
+      printTimeSpan(counters);
+    }
+  }
+
+  /**
+   * Prints time span and message rate statistics.
+   *
+   * <p>If timing data is available, prints the duration of the message stream and the average
+   * message rate. Skips output if no timing data was recorded.
+   *
+   * @param counters the {@link Counters} instance containing time span data
+   */
+  private static void printTimeSpan(Counters counters) {
+    long firstNanos = counters.getFirstMessageTimeNanos();
+    long lastNanos = counters.getLastMessageTimeNanos();
+    if (firstNanos == 0 || lastNanos == 0) {
+      return;
+    }
+    long durationNanos = lastNanos - firstNanos;
+    long durationMs = TimeUnit.NANOSECONDS.toMillis(durationNanos);
+    double durationSecs = durationNanos / 1_000_000_000.0;
+    long totalMessages = counters.getNumberOfMessages().get();
+    System.out.printf("time span: %d ms%n", durationMs);
+    if (durationSecs > 0) {
+      System.out.printf("message rate: %.1f msgs/sec%n", totalMessages / durationSecs);
     }
   }
 
@@ -177,7 +239,7 @@ public class ContinuousPrinter implements Runnable {
    *
    * <p>Used to visually separate different sections of the printed statistical data.
    */
-  private void printSeparator() {
+  private static void printSeparator() {
     System.out.printf("===============================================================%n");
   }
 

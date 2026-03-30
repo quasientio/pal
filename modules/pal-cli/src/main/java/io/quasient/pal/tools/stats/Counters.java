@@ -60,6 +60,21 @@ public class Counters {
   /** Maps each thread name to the number of unique dispatches performed by that thread. */
   private final Map<String, AtomicLong> dispatchesByThread = new HashMap<>();
 
+  /** Maps each exception type to the number of times it was thrown. */
+  private final Map<String, AtomicLong> exceptionsByType = new HashMap<>();
+
+  /** Maps each method to the number of exceptions thrown from it. */
+  private final Map<String, AtomicLong> exceptionsPerMethod = new HashMap<>();
+
+  /** Tracks the total number of entry-point messages (RPC calls). */
+  private final AtomicLong entryPointCount = new AtomicLong();
+
+  /** Tracks the earliest message timestamp in nanoseconds. Zero means no messages seen yet. */
+  private long firstMessageTimeNanos;
+
+  /** Tracks the latest message timestamp in nanoseconds. */
+  private long lastMessageTimeNanos;
+
   /** Constructs a new Counters instance with all counts initialized to zero. */
   public Counters() {}
 
@@ -251,5 +266,92 @@ public class Counters {
    */
   public void incrementFieldWrites(String fieldKey) {
     fieldWrites.computeIfAbsent(fieldKey, k -> new AtomicLong()).incrementAndGet();
+  }
+
+  /**
+   * Retrieves an unmodifiable view of the mapping of exception types to their throw counts.
+   *
+   * @return an unmodifiable map where keys are exception class names and values are throw counts
+   */
+  public Map<String, AtomicLong> getExceptionsByType() {
+    return Collections.unmodifiableMap(exceptionsByType);
+  }
+
+  /**
+   * Increments the counter for a specific exception type, creating a new counter if needed.
+   *
+   * @param exceptionType the fully qualified exception class name
+   */
+  public void incrementExceptionsByType(String exceptionType) {
+    exceptionsByType.computeIfAbsent(exceptionType, k -> new AtomicLong()).incrementAndGet();
+  }
+
+  /**
+   * Retrieves an unmodifiable view of the mapping of methods to their exception counts.
+   *
+   * @return an unmodifiable map where keys are method keys and values are exception counts
+   */
+  public Map<String, AtomicLong> getExceptionsPerMethod() {
+    return Collections.unmodifiableMap(exceptionsPerMethod);
+  }
+
+  /**
+   * Increments the counter for exceptions thrown from a specific method, creating a new counter if
+   * needed.
+   *
+   * @param methodKey the method key (e.g., "ClassName.methodName()")
+   */
+  public void incrementExceptionsPerMethod(String methodKey) {
+    exceptionsPerMethod.computeIfAbsent(methodKey, k -> new AtomicLong()).incrementAndGet();
+  }
+
+  /**
+   * Retrieves the total number of entry-point messages (RPC calls).
+   *
+   * @return an AtomicLong representing the entry-point count
+   */
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP",
+      justification = "AtomicLong intentionally shared for thread-safe counter reads")
+  public AtomicLong getEntryPointCount() {
+    return entryPointCount;
+  }
+
+  /**
+   * Retrieves the earliest message timestamp in nanoseconds.
+   *
+   * @return the first message timestamp, or zero if no messages have been processed
+   */
+  public long getFirstMessageTimeNanos() {
+    return firstMessageTimeNanos;
+  }
+
+  /**
+   * Retrieves the latest message timestamp in nanoseconds.
+   *
+   * @return the last message timestamp, or zero if no messages have been processed
+   */
+  public long getLastMessageTimeNanos() {
+    return lastMessageTimeNanos;
+  }
+
+  /**
+   * Updates the time span tracking with the given message timestamp.
+   *
+   * <p>Maintains the earliest and latest timestamps seen across all processed messages. Timestamps
+   * of zero are ignored (they indicate missing timing data).
+   *
+   * @param timeNanos the message timestamp in nanoseconds
+   */
+  public void updateTimeSpan(long timeNanos) {
+    if (timeNanos == 0) {
+      return;
+    }
+    if (firstMessageTimeNanos == 0 || timeNanos < firstMessageTimeNanos) {
+      firstMessageTimeNanos = timeNanos;
+    }
+    if (timeNanos > lastMessageTimeNanos) {
+      lastMessageTimeNanos = timeNanos;
+    }
   }
 }

@@ -20,11 +20,16 @@ import static picocli.CommandLine.Parameters;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.cli.PalCommand;
+import io.quasient.pal.common.directory.nodes.LogInfo;
+import io.quasient.pal.common.directory.nodes.LogInfo.LogType;
+import io.quasient.pal.cxn.chronicle.ChronicleLogUtil;
+import io.quasient.pal.messages.OutboundMsg;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Message;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.tools.stats.ContinuousPrinter;
 import io.quasient.pal.tools.stats.Counters;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -32,6 +37,9 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptTailer;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -47,22 +55,26 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.ParentCommand;
 
 /**
- * Collects and displays message stream statistics from a Kafka log.
+ * Collects and displays message stream statistics from a log (Kafka topic or Chronicle Queue).
  *
  * <p>This is the log-specific stats command for the {@code pal log stats} pattern. It accepts a log
- * name as a positional argument and aggregates statistics via Kafka Streams. Messages are filtered
- * by type, peer UUID, or thread name, and counters are continuously printed in plain text or JSON
- * format.
+ * name or {@code file:}-prefixed Chronicle Queue path as a positional argument and aggregates
+ * statistics. For Kafka logs, aggregation uses Kafka Streams; for Chronicle logs, messages are read
+ * directly from the queue. Messages are filtered by type, peer UUID, or thread name, and counters
+ * are continuously printed in plain text or JSON format.
  *
  * <p>Usage examples:
  *
  * <pre>
  *   pal log stats my-log-topic -k localhost:9092
  *   pal log stats my-log-topic -k localhost:9092 -t EXEC_INSTANCE_METHOD -j
+ *   pal log stats file:/tmp/my-wal
+ *   pal log stats file:/tmp/my-wal -t EXEC_CONSTRUCTOR -j
  * </pre>
  *
  * @see Counters
  * @see ContinuousPrinter
+ * @see LogResolver
  */
 @Command(name = "stats", description = "Show log message statistics")
 @SuppressFBWarnings(
@@ -102,22 +114,24 @@ public class LogStats extends AbstractStatsCommand {
   /** Parent command providing access to the PAL directory connection string. */
   @ParentCommand PalCommand palCommand;
 
-  /** Positional log name argument specifying the Kafka topic to read from. */
-  @Parameters(index = "0", arity = "0..1", paramLabel = "LOG_NAME", description = "log name")
+  /** Positional log identifier: a Kafka topic name or {@code file:}-prefixed Chronicle path. */
+  @Parameters(
+      index = "0",
+      arity = "0..1",
+      paramLabel = "LOG",
+      description = "log name or file: path")
   private String logName;
 
   /**
    * Kafka bootstrap server addresses.
    *
-   * <p>Specifies the Kafka bootstrap servers to connect to. Defaults to "localhost:9092" if not
-   * provided.
+   * <p>Specifies the Kafka bootstrap servers to connect to. Required for Kafka logs; ignored for
+   * Chronicle logs.
    */
   @Option(
       names = {"-k", "--kafka-servers"},
-      required = true,
       paramLabel = "BOOTSTRAP_SERVERS",
-      defaultValue = "localhost:9092",
-      description = "kafka bootstrap servers (default: ${DEFAULT-VALUE})")
+      description = "kafka bootstrap servers (required for Kafka logs)")
   private String bootstrapServers;
 
   /**
@@ -237,11 +251,40 @@ public class LogStats extends AbstractStatsCommand {
   /**
    * Performs initialization steps required before running the command.
    *
-   * <p>No initialization is required for log stats since it connects directly to Kafka.
+   * <p>Initializes the directory connection provider if a PAL directory connection string is
+   * available from the parent command.
    */
   @Override
   protected void initialize() {
-    // No directory connection needed for log stats - connects directly to Kafka
+    if (palCommand != null && palCommand.getPalDirectoryConnectionString() != null) {
+      initializeDirectoryConnectionProvider(palCommand.getPalDirectoryConnectionString());
+    }
+  }
+
+  /**
+   * Routes to the appropriate stats method based on the resolved log type.
+   *
+   * <p>Uses {@link LogResolver} to resolve the log identifier to a {@link LogInfo}, then delegates
+   * to either {@link #runKafkaStats()} or {@link #runChronicleStats(LogInfo)}.
+   *
+   * @return exit code indicating success (0) or failure (1)
+   */
+  @Override
+  protected int runCommand() {
+    String kafkaServersToUse = bootstrapServers != null ? bootstrapServers : getKafkaServers();
+    LogResolver logResolver = new LogResolver(directoryConnectionProvider, kafkaServersToUse);
+    LogInfo log = logResolver.resolveLogInfo(logName);
+
+    if (log == null) {
+      logger.error("No Log found for identifier: {}", logName);
+      return 1;
+    }
+
+    if (log.getLogType() == LogType.CHRONICLE) {
+      return runChronicleStats(log);
+    } else {
+      return runKafkaStats();
+    }
   }
 
   /**
@@ -253,9 +296,9 @@ public class LogStats extends AbstractStatsCommand {
    *
    * @return exit code indicating success (0) or failure (1)
    */
-  @Override
-  protected int runCommand() {
-    Objects.requireNonNull(bootstrapServers, "bootstrap servers required");
+  private int runKafkaStats() {
+    String kafkaServersToUse = bootstrapServers != null ? bootstrapServers : getKafkaServers();
+    Objects.requireNonNull(kafkaServersToUse, "Kafka bootstrap servers required for Kafka logs");
 
     Properties props = new Properties();
     String consumerId = "printer-" + UUID.randomUUID();
@@ -264,10 +307,10 @@ public class LogStats extends AbstractStatsCommand {
       System.out.println("=======");
       System.out.printf(
           "Kafka config: topic=%s bootstrap_servers=%s app_id=%s%n",
-          logName, bootstrapServers, consumerId);
+          logName, kafkaServersToUse, consumerId);
     }
     props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);
-    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServersToUse);
     props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
     props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass());
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
@@ -322,6 +365,77 @@ public class LogStats extends AbstractStatsCommand {
       return 1;
     }
     return 0;
+  }
+
+  /**
+   * Processes and aggregates statistics from a Chronicle Queue log.
+   *
+   * <p>Reads all messages from the Chronicle Queue, applies type and peer filters, and updates the
+   * counters. After reading all messages, prints the final statistics once.
+   *
+   * @param log the resolved {@link LogInfo} for the Chronicle log
+   * @return exit code indicating success (0) or failure (1)
+   */
+  private int runChronicleStats(LogInfo log) {
+    Path queuePath = Path.of(log.getName());
+
+    if (!ChronicleLogUtil.queueExists(queuePath)) {
+      logger.error("Chronicle log does not exist at path: {}", queuePath);
+      return 1;
+    }
+
+    if (verbose) {
+      System.out.println("CONFIG:");
+      System.out.println("=======");
+      System.out.printf("Chronicle queue: path=%s%n", queuePath);
+    }
+
+    try (ChronicleQueue queue =
+        SingleChronicleQueueBuilder.binary(queuePath.toFile()).readOnly(true).build()) {
+
+      ExcerptTailer tailer = queue.createTailer();
+      tailer.toStart();
+
+      while (true) {
+        OutboundMsg outboundMsg = OutboundMsg.readNext(tailer);
+        if (outboundMsg == null) {
+          break;
+        }
+
+        Message message = new Message();
+        message.unmarshal(outboundMsg.getBody(), 0);
+
+        // Apply type filter
+        if (msgTypes != null) {
+          ExecMessage execMessage = message.getExecMessage();
+          MessageType messageType = MessageType.fromId(message.getMessageType());
+          if (execMessage == null || !msgTypes.contains(messageType.name())) {
+            continue;
+          }
+        }
+
+        // Apply peer filter
+        if (fromPeer != null && !fromPeer.equalsIgnoreCase(getPeerUuid(message))) {
+          continue;
+        }
+
+        updateCounters(message);
+      }
+    }
+
+    // Print final statistics
+    printStats();
+    return 0;
+  }
+
+  /**
+   * Prints the collected statistics to standard output.
+   *
+   * <p>Delegates to {@link ContinuousPrinter#printCounters(Counters, boolean,
+   * com.google.gson.Gson)} for the shared formatting logic.
+   */
+  private void printStats() {
+    ContinuousPrinter.printCounters(getCounters(), jsonOutput, null);
   }
 
   /**

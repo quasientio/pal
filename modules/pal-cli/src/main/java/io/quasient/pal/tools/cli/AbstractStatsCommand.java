@@ -18,6 +18,8 @@ package io.quasient.pal.tools.cli;
 import com.google.common.base.Splitter;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.colfer.RaisedThrowable;
+import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.tools.stats.Counters;
 import java.io.IOException;
@@ -80,6 +82,11 @@ abstract class AbstractStatsCommand extends AbstractPalSubcommand {
     }
 
     counters.incrementMessagesByThread(execMessage.getThreadName());
+    counters.updateTimeSpan(execMessage.getCurrentTime());
+
+    if (execMessage.getEntryPoint()) {
+      counters.getEntryPointCount().incrementAndGet();
+    }
 
     String className;
     String methodName;
@@ -127,7 +134,36 @@ abstract class AbstractStatsCommand extends AbstractPalSubcommand {
         classFieldKey = String.format("%s.%s", getShortClassname(className), fieldName);
         incrementFieldWrites(classFieldKey);
       }
-      default -> throw new IllegalStateException("Unexpected type: " + messageType);
+      case EXEC_THROWABLE -> updateExceptionCounters(execMessage);
+      default -> {}
+    }
+  }
+
+  /**
+   * Updates exception-related counters from a throwable message.
+   *
+   * <p>Extracts the exception type and the method from which it was thrown, incrementing the
+   * corresponding counters.
+   *
+   * @param execMessage the exec message containing the raised throwable
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  private void updateExceptionCounters(ExecMessage execMessage) {
+    RaisedThrowable raised = execMessage.getRaisedThrowable();
+    if (raised == null) {
+      return;
+    }
+    io.quasient.pal.messages.colfer.Throwable thrown = raised.getThrowable();
+    if (thrown != null && thrown.getType() != null) {
+      counters.incrementExceptionsByType(thrown.getType());
+    }
+    Reflectable from = raised.getFrom();
+    if (from != null && from.getMethod() != null && from.getMethod().getName() != null) {
+      String fromClass =
+          from.getMethod().getClazz() != null ? from.getMethod().getClazz().getName() : "";
+      String methodKey =
+          String.format("%s.%s()", getShortClassname(fromClass), from.getMethod().getName());
+      counters.incrementExceptionsPerMethod(methodKey);
     }
   }
 
