@@ -2039,9 +2039,17 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                               injectedOffsetForCompletion = injectedOffset;
                             }
                           }
-                          Object invokeResult =
-                              invokeIncoming(
-                                  accessibleForChain, targetForChain, chainArgs, chainValue);
+                          // Increment dispatch depth so nested woven operations inside the
+                          // invoked method see depth > 0 and are not marked as entry points.
+                          TL_DISPATCH_DEPTH.set(TL_DISPATCH_DEPTH.get() + 1);
+                          Object invokeResult;
+                          try {
+                            invokeResult =
+                                invokeIncoming(
+                                    accessibleForChain, targetForChain, chainArgs, chainValue);
+                          } finally {
+                            TL_DISPATCH_DEPTH.set(TL_DISPATCH_DEPTH.get() - 1);
+                          }
 
                           // After invoke completes, register the return value in
                           // ReplayObjectStore (critical for constructors — subsequent method
@@ -2214,8 +2222,16 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
                           injectedOffsetForCompletion = injectedOffset;
                         }
                       }
-                      Object invokeResult =
-                          invokeIncoming(directAccessible, directTarget, directArgs, directValue);
+                      // Increment dispatch depth so nested woven operations inside the
+                      // invoked method see depth > 0 and are not marked as entry points.
+                      TL_DISPATCH_DEPTH.set(TL_DISPATCH_DEPTH.get() + 1);
+                      Object invokeResult;
+                      try {
+                        invokeResult =
+                            invokeIncoming(directAccessible, directTarget, directArgs, directValue);
+                      } finally {
+                        TL_DISPATCH_DEPTH.set(TL_DISPATCH_DEPTH.get() - 1);
+                      }
 
                       // After invoke completes, register the return value in
                       // ReplayObjectStore (critical for constructors — subsequent method
