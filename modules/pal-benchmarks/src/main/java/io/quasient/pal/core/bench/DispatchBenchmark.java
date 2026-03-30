@@ -107,7 +107,7 @@ import org.zeromq.ZMQ.Socket;
  * locally installed Kafka.
  *
  * <pre>
- * >> start_kafka_docker.sh  # or start_kafka
+ * >> start-kafka-docker.sh  # or start-kafka
  * </pre>
  *
  * Use the <b>run.sh</b> script to configure and launch this benchmark.

@@ -7,7 +7,7 @@ instructions in the next section to download our docker images for the correspon
 
 If you have etcd and/or kafka installed on your machine or an accessible host, then skip to
 [Running the tests](#Running-the-tests). If either `etcd` or `kafka` are not listening on localhost or their standard
-ports (2379 and 29092 respectively), then adjust the corresponding variables in the `export_env` file.
+ports (2379 and 29092 respectively), then adjust the corresponding variables in the `export-env` file.
 
 ### Download Etcd and Kafka docker images
 Pull and tag the provided images for etcd and kafka:
@@ -21,7 +21,7 @@ __NOTE__: if you already added `$PAL_HOME/bin` and `$PAL_HOME/infra/bin` to your
 
 1. Open a terminal and export the ENV variables required to run the tests
     ```bash
-    source export_env
+    source export-env
     ```
 2. Clean up logs from previous tests
     ```bash
@@ -33,9 +33,9 @@ __NOTE__: if you already added `$PAL_HOME/bin` and `$PAL_HOME/infra/bin` to your
     ```
 4. Restart the etcd and kafka containers
     ```bash
-    infra/bin/restart_containers.sh
+    infra/bin/restart-containers.sh
     ```
-   NOTE: If you're using a local installation of etcd and kafka, then replace the above by `start_etcd.sh && start_kafka.sh`.
+   NOTE: If you're using a local installation of etcd and kafka, then replace the above by `start-etcd.sh && start-kafka.sh`.
 5. Run the integration tests
     ```bash
     timeout 30m mvn -pl modules/itt verify
@@ -67,7 +67,7 @@ See `modules/itt/pom.xml` failsafe plugin configuration for authoritative suite 
 
 ### Using itt-focus.sh
 
-When you need to run or debug a specific test class or method within a suite, use the `itt-focus.sh` utility script (available in PATH after sourcing `export_env`).
+When you need to run or debug a specific test class or method within a suite, use the `itt-focus.sh` utility script (available in PATH after sourcing `export-env`).
 
 **Commands:**
 
@@ -167,7 +167,7 @@ Full cleanup before a test run:
 ```bash
 pkill -9 -f "pal-1.0.0-SNAPSHOT.jar"
 mvn clean -Plogs
-infra/bin/restart_containers.sh
+infra/bin/restart-containers.sh
 ```
 
 ## Adding new tests

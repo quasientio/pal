@@ -21,8 +21,8 @@ A simple distributed system with:
 
 ```bash
 # In PAL directory
-source export_env.sh
-infra/bin/start_etcd_and_kafka_docker.sh
+source export-env.sh
+infra/bin/start-etcd-and-kafka-docker.sh
 
 # Wait ~30 seconds for services to start
 
@@ -420,7 +420,7 @@ pal peer rm -d localhost:2379 calculator monitor --force
 pal log rm -d localhost:2379 calculator-wal
 
 # Stop infrastructure
-infra/bin/stop_etcd_and_kafka_docker.sh
+infra/bin/stop-etcd-and-kafka-docker.sh
 ```
 
 ## Key Takeaways

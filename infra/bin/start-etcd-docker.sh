@@ -20,7 +20,7 @@
 SCRIPTS_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 
 # Load common functions
-source "$SCRIPTS_DIR/docker_utils.sh"
+source "$SCRIPTS_DIR/docker-utils.sh"
 
 # Change to infra/ dir
 cd "$SCRIPTS_DIR/.."

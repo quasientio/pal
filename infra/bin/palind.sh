@@ -35,7 +35,7 @@
 # 0. helper paths / functions
 ###############################################################################
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPTS_DIR/docker_utils.sh"        # createPalNetwork, log, …
+source "$SCRIPTS_DIR/docker-utils.sh"        # createPalNetwork, log, …
 
 IMAGE="pal"          # adjust if you pushed the image under another tag/registry
 NETWORK="pal"

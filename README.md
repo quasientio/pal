@@ -99,7 +99,7 @@ export PATH="$PAL_HOME/bin:$PATH"
 
 ```bash
 # Start infrastructure (etcd + Kafka in Docker)
-infra/bin/start_etcd_and_kafka_docker.sh
+infra/bin/start-etcd-and-kafka-docker.sh
 
 # Run a simple peer
 pal run -d localhost:2379 -k localhost:29092 \

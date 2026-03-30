@@ -25,7 +25,7 @@ IMAGE="$CI_REGISTRY/quasientio/pal/etcd:latest"
                                                                                                         
 if ! docker pull "$IMAGE"; then                                                                         
   echo "Error: Failed to pull $IMAGE"                                                                   
-  echo "Run ./build_etcd_image.sh to build and push it first"                                           
+  echo "Run ./build-etcd-image.sh to build and push it first"                                           
   exit 1                                                                                                
 fi                                                                                                      
                                                                                                         

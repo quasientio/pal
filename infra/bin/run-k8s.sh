@@ -16,9 +16,9 @@
 #
 
 # ---------------------------------------------------------------------------
-#  run_k8s.sh  –  start / switch / stop a Minikube-backed Kustomize profile
+#  run-k8s.sh  –  start / switch / stop a Minikube-backed Kustomize profile
 #
-#  Usage:  ./run_k8s.sh  <dev|prod|stop>
+#  Usage:  ./run-k8s.sh  <dev|prod|stop>
 # ---------------------------------------------------------------------------
 
 set -euo pipefail

@@ -394,7 +394,7 @@ Start etcd and Kafka using Docker:
 ```bash
 # From the PAL source directory
 cd $PAL_HOME
-infra/bin/start_etcd_and_kafka_docker.sh
+infra/bin/start-etcd-and-kafka-docker.sh
 
 # Verify they're running
 curl http://localhost:2379/health
@@ -598,10 +598,10 @@ The key point: You can register intercepts at runtime that execute callbacks bef
 
 ```bash
 # Start (from PAL_HOME)
-infra/bin/start_etcd_and_kafka_docker.sh
+infra/bin/start-etcd-and-kafka-docker.sh
 
 # Stop
-infra/bin/stop_etcd_and_kafka_docker.sh
+infra/bin/stop-etcd-and-kafka-docker.sh
 
 # Check status
 docker ps | grep -E "etcd|kafka"
@@ -668,7 +668,7 @@ curl http://localhost:2379/health
 
 # If not, start it
 cd $PAL_HOME
-infra/bin/start_etcd_and_kafka_docker.sh
+infra/bin/start-etcd-and-kafka-docker.sh
 ```
 
 ### "ERROR_NO_KAFKA_SERVERS_GIVEN" (exit code 6)
@@ -689,7 +689,7 @@ docker ps | grep kafka
 
 # If not, start infrastructure
 cd $PAL_HOME
-infra/bin/start_etcd_and_kafka_docker.sh
+infra/bin/start-etcd-and-kafka-docker.sh
 ```
 
 **Chronicle source log doesn't exist:**

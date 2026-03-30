@@ -29,14 +29,14 @@ kubectl version --client
 Run the helper script from anywhere inside the repo:
 
 ```bash
-run_k8s.sh <dev | prod | stop>
+run-k8s.sh <dev | prod | stop>
 ```
 
 | Command | What happens |
 |---------|--------------|
-| `run_k8s.sh dev`  | • Creates/starts Minikube<br>• Deploys **dev** overlay (`emptyDir` volumes)<br>• Stops **prod** overlay first if it exists |
-| `run_k8s.sh prod` | • Creates/starts Minikube<br>• Deploys **prod** overlay (PVCs)<br>• Stops **dev** overlay first if it exists |
-| `run_k8s.sh stop` | Deletes whichever overlay is active |
+| `run-k8s.sh dev`  | • Creates/starts Minikube<br>• Deploys **dev** overlay (`emptyDir` volumes)<br>• Stops **prod** overlay first if it exists |
+| `run-k8s.sh prod` | • Creates/starts Minikube<br>• Deploys **prod** overlay (PVCs)<br>• Stops **dev** overlay first if it exists |
+| `run-k8s.sh stop` | Deletes whichever overlay is active |
 
 > **Default IP expectation**  
 > Manifests assume Minikube assigns **`192.168.49.2`**.  
@@ -83,7 +83,7 @@ pal run \
 ## Customising
 
 * **Change NodePorts/IP** – edit the Service patches in `overlays/*/patches/`.
-* **Use a different driver** – pass `--driver=<name>` to `minikube start` inside `run_k8s.sh`.
+* **Use a different driver** – pass `--driver=<name>` to `minikube start` inside `run-k8s.sh`.
 * **Full reset** – `minikube delete` removes the VM, images, and all volumes.
 
 ---
