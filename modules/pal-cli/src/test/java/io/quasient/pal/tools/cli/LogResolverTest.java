@@ -28,6 +28,7 @@ import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
+import java.nio.file.Paths;
 import java.util.Optional;
 import org.junit.Test;
 
@@ -124,6 +125,69 @@ public class LogResolverTest {
     assertThat(result.getName(), is("/tmp/my-wal"));
     assertThat(result.getLogType(), is(LogType.CHRONICLE));
     verify(dcp, never()).get();
+  }
+
+  /**
+   * Tests that a relative {@code file:} path is resolved to an absolute path.
+   *
+   * <p>Verifies that when the log name starts with {@code file:} followed by a relative path, the
+   * resolver returns a LogInfo whose name is an absolute, normalized filesystem path.
+   */
+  @Test
+  public void resolveLogInfo_withRelativeFilePath_resolvesToAbsolutePath() {
+    LogResolver resolver = new LogResolver(null, null);
+
+    LogInfo result = resolver.resolveLogInfo("file:my-wal");
+
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getLogType(), is(LogType.CHRONICLE));
+    assertThat(
+        "Relative path should be resolved to absolute",
+        Paths.get(result.getName()).isAbsolute(),
+        is(true));
+    assertThat(
+        "Resolved path should end with my-wal", result.getName().endsWith("my-wal"), is(true));
+  }
+
+  /**
+   * Tests that a relative {@code file:} path with subdirectories is resolved correctly.
+   *
+   * <p>Verifies that relative subdirectory paths like {@code file:data/app.wal} are resolved to
+   * their absolute form.
+   */
+  @Test
+  public void resolveLogInfo_withRelativeSubdirectoryFilePath_resolvesToAbsolutePath() {
+    LogResolver resolver = new LogResolver(null, null);
+
+    LogInfo result = resolver.resolveLogInfo("file:data/app.wal");
+
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getLogType(), is(LogType.CHRONICLE));
+    assertThat(
+        "Relative subdirectory path should be resolved to absolute",
+        Paths.get(result.getName()).isAbsolute(),
+        is(true));
+    assertThat(
+        "Resolved path should contain data/app.wal",
+        result.getName().endsWith("data/app.wal"),
+        is(true));
+  }
+
+  /**
+   * Tests that an absolute {@code file:} path is preserved unchanged.
+   *
+   * <p>Verifies that when the log name starts with {@code file:} followed by an absolute path, the
+   * resolver does not modify the path.
+   */
+  @Test
+  public void resolveLogInfo_withAbsoluteFilePath_preservesPath() {
+    LogResolver resolver = new LogResolver(null, null);
+
+    LogInfo result = resolver.resolveLogInfo("file:/tmp/my-wal");
+
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getName(), is("/tmp/my-wal"));
+    assertThat(result.getLogType(), is(LogType.CHRONICLE));
   }
 
   // ==================== Kafka Fallback Tests ====================

@@ -204,6 +204,62 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     return runCliSubcommand("wal-index", null, args);
   }
 
+  /**
+   * Executes a `pal wal-index` command with the given working directory and arguments.
+   *
+   * <p>The working directory controls where relative {@code file:} WAL paths are resolved against.
+   *
+   * @param workingDir the working directory for the process
+   * @param args command-line arguments to pass to `pal wal-index`
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runWalIndexFromDir(File workingDir, String... args) throws Exception {
+    return runCliSubcommand(new String[] {"wal-index"}, null, workingDir, args);
+  }
+
+  /**
+   * Executes a {@code pal log print} command with the given working directory and arguments.
+   *
+   * <p>The working directory controls where relative {@code file:} log paths are resolved against.
+   *
+   * @param workingDir the working directory for the process
+   * @param args command-line arguments to pass to {@code pal log print}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogPrintFromDir(File workingDir, String... args) throws Exception {
+    return runCliSubcommand(new String[] {"log", "print"}, null, workingDir, args);
+  }
+
+  /**
+   * Executes a {@code pal log rm} command with the given working directory and arguments.
+   *
+   * <p>The working directory controls where relative {@code file:} log paths are resolved against.
+   *
+   * @param workingDir the working directory for the process
+   * @param args command-line arguments to pass to {@code pal log rm}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogRmFromDir(File workingDir, String... args) throws Exception {
+    return runCliSubcommand(new String[] {"log", "rm"}, null, workingDir, args);
+  }
+
+  /**
+   * Executes a {@code pal log index} command with the given working directory and arguments.
+   *
+   * <p>The working directory controls where relative {@code file:} log paths are resolved against.
+   *
+   * @param workingDir the working directory for the process
+   * @param args command-line arguments to pass to {@code pal log index}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogIndexFromDir(File workingDir, String... args) throws Exception {
+    return runCliSubcommand(new String[] {"log", "index"}, null, workingDir, args);
+  }
+
   // ==========================================================================
   // Entity-operation helpers for the CLI structure.
   // These use multi-part subcommand paths (e.g., {"peer", "ls"}).

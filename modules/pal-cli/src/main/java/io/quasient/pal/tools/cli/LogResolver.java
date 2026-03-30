@@ -19,6 +19,8 @@ import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -94,10 +96,15 @@ public class LogResolver {
 
     // (1) file: prefix → Chronicle log
     if (logNameOrPath.startsWith(CHRONICLE_FILE_PREFIX)) {
-      String path = logNameOrPath.substring(CHRONICLE_FILE_PREFIX.length());
-      LogInfo logInfo = new LogInfo(path);
+      String pathStr = logNameOrPath.substring(CHRONICLE_FILE_PREFIX.length());
+      Path path = Paths.get(pathStr);
+      if (!path.isAbsolute()) {
+        path = path.toAbsolutePath().normalize();
+      }
+      String resolvedPath = path.toString();
+      LogInfo logInfo = new LogInfo(resolvedPath);
       logInfo.setLogType(LogType.CHRONICLE);
-      logger.debug("Resolved Chronicle log from file: prefix: {}", path);
+      logger.debug("Resolved Chronicle log from file: prefix: {}", resolvedPath);
       return logInfo;
     }
 
