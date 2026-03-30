@@ -25,6 +25,10 @@
         </encoder>
     </appender>
 
+    <!-- Silence benign "Overriding roll length from existing metadata" warnings when
+         the CLI reader opens a queue whose roll cycle differs from Chronicle's default -->
+    <logger name="io.quasient.pal.shd.openhft.chronicle.queue.impl.single.SCQMeta" level="ERROR"/>
+
     <root level="WARN">
         <appender-ref ref="FILE"/>
     </root>
