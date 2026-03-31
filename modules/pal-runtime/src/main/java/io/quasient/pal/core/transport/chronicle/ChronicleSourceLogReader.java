@@ -18,15 +18,19 @@ package io.quasient.pal.core.transport.chronicle;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.core.internal.messages.InboundLogMsg;
+import io.quasient.pal.core.internal.messages.PublishedOffsetMsg;
 import io.quasient.pal.core.transport.SourceLogReader;
 import io.quasient.pal.messages.OutboundMsg;
 import io.quasient.pal.messages.types.MessageFormatType;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.nio.channels.ClosedSelectorException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -36,6 +40,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
+import org.zeromq.ZMQException;
+import zmq.ZError;
 
 /**
  * ChronicleSourceLogReader is responsible for reading messages from a Chronicle queue and
@@ -51,6 +58,81 @@ public class ChronicleSourceLogReader extends SourceLogReader {
 
   /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(ChronicleSourceLogReader.class);
+
+  /** Shared empty headers instance — Chronicle messages have no Kafka-style headers. */
+  private static final Headers EMPTY_HEADERS = new RecordHeaders();
+
+  /**
+   * Set of Chronicle indices to skip, populated by the {@link OffsetUpdater} thread. Uses a
+   * concurrent set for thread-safe access between the OffsetUpdater and the main reader thread.
+   */
+  private final Set<Long> skipIndices = ConcurrentHashMap.newKeySet();
+
+  /** OffsetUpdater instance that receives published indices to skip via ZMQ SUB. */
+  private OffsetUpdater offsetUpdater;
+
+  /**
+   * A dedicated thread that listens for published offset messages through a ZMQ SUB socket. The
+   * thread adds received indices to the {@link #skipIndices} set, which instructs the reader to
+   * skip dispatching messages with those specific Chronicle indices.
+   */
+  private final class OffsetUpdater extends Thread {
+
+    /** ZMQ subscriber socket used to receive published offset updates. */
+    private final ZMQ.Socket offsetSubscriber;
+
+    /**
+     * Constructs an OffsetUpdater thread.
+     *
+     * @param offsetSubscriber ZMQ subscriber socket for receiving offset update messages.
+     */
+    OffsetUpdater(ZMQ.Socket offsetSubscriber) {
+      super("chronicle-offset-updater");
+      this.offsetSubscriber = offsetSubscriber;
+    }
+
+    /**
+     * Continuously receives published offset updates from the configured ZMQ subscriber socket and
+     * adds them to the skipIndices set. The loop terminates when a shutdown is requested, the
+     * thread is interrupted, or a socket error occurs.
+     */
+    @Override
+    public void run() {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Chronicle OffsetUpdater running");
+      }
+      boolean socketError = false;
+      while (!shutdownRequested && !interrupted() && !socketError) {
+        try {
+          PublishedOffsetMsg msg = PublishedOffsetMsg.receive(offsetSubscriber, true);
+          if (msg == null) {
+            if (logger.isDebugEnabled()) {
+              logger.debug(
+                  "Received null during blocking read, ZMQ context probably closed. Breaking out.");
+            }
+            socketError = true;
+          } else {
+            skipIndices.add(msg.getOffset());
+          }
+        } catch (ClosedSelectorException ex) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("Caught ClosedSelectorException. Breaking out.");
+          }
+          socketError = true;
+        } catch (ZMQException ex) {
+          int errorCode = ex.getErrorCode();
+          if (errorCode == ZError.ETERM || errorCode == ZError.EINTR) {
+            if (logger.isDebugEnabled()) {
+              logger.debug("Caught ZMQ error {} during blocking read. Breaking out.", errorCode);
+            }
+            socketError = true;
+          } else {
+            throw ex;
+          }
+        }
+      }
+    }
+  }
 
   /** Base directory for Chronicle queue files. */
   private final Path baseDir;
@@ -110,8 +192,9 @@ public class ChronicleSourceLogReader extends SourceLogReader {
    * method sets the queue path and initial index, and verifies the queue exists if necessary.
    *
    * @param log The Log information containing the queue name/path.
-   * @param skipWrittenOffsets Flag indicating if already written offsets should be skipped (not
-   *     applicable for Chronicle but kept for interface consistency).
+   * @param skipWrittenOffsets Flag indicating if already written offsets should be skipped. When
+   *     true (source log and WAL are the same Chronicle queue), the reader subscribes to offset
+   *     updates via ZMQ and skips dispatching messages at published indices.
    * @param initialOffset The initial Chronicle index from which to start reading; if null,
    *     processing starts from the beginning.
    * @param sourceLogWillBeCreated Flag indicating whether this source log will also be written to
@@ -209,6 +292,16 @@ public class ChronicleSourceLogReader extends SourceLogReader {
     this.logDealerSocket = zmqContext.createSocket(SocketType.DEALER);
     logDealerSocket.bind(sourceLogAddress);
 
+    // If skipping written offsets, subscribe to the WAL writer's offset publisher
+    if (skipWrittenOffsets) {
+      this.offsetSubscriberSocket = zmqContext.createSocket(SocketType.SUB);
+      offsetSubscriberSocket.connect(offsetPubAddress);
+      offsetSubscriberSocket.subscribe(ZMQ.SUBSCRIPTION_ALL);
+      this.offsetUpdater = new OffsetUpdater(offsetSubscriberSocket);
+      this.offsetUpdater.start();
+      logger.info("Started Chronicle OffsetUpdater, subscribing to {}", offsetPubAddress);
+    }
+
     logger.info("Chronicle queue reader connections open for log: {}", queuePath);
   }
 
@@ -229,7 +322,9 @@ public class ChronicleSourceLogReader extends SourceLogReader {
         break;
       }
 
-      // read from Chronicle queue
+      // read from Chronicle queue — capture index before read because readNext() advances the
+      // tailer past the entry, making tailer.index() return the NEXT entry's index
+      final long indexBeforeRead = tailer.index();
       long t0 = System.nanoTime();
       OutboundMsg msg = OutboundMsg.readNext(tailer);
       totalPollingNanos.getAndAdd(System.nanoTime() - t0);
@@ -237,7 +332,7 @@ public class ChronicleSourceLogReader extends SourceLogReader {
 
       if (msg != null) {
         messagesReceived.getAndIncrement();
-        final long messageIndex = tailer.index();
+        final long messageIndex = indexBeforeRead;
 
         if (logger.isDebugEnabled()) {
           logger.debug(
@@ -247,15 +342,21 @@ public class ChronicleSourceLogReader extends SourceLogReader {
               msg.getMessageType());
         }
 
-        // Send message to DEALER socket
-        // Chronicle messages don't have Kafka-style headers, so create empty headers
-        Headers emptyHeaders = new RecordHeaders();
-        InboundLogMsg inboundMsg =
-            new InboundLogMsg(messageIndex, MessageFormatType.BINARY, emptyHeaders, msg.getBody());
-        inboundMsg.send(logDealerSocket);
+        // Skip self-produced messages when source log and WAL are the same queue
+        if (skipWrittenOffsets && skipIndices.remove(messageIndex)) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("Skipped self-produced message at index: {}", messageIndex);
+          }
+        } else {
+          // Send message to DEALER socket
+          InboundLogMsg inboundMsg =
+              new InboundLogMsg(
+                  messageIndex, MessageFormatType.BINARY, EMPTY_HEADERS, msg.getBody());
+          inboundMsg.send(logDealerSocket);
 
-        if (logger.isDebugEnabled()) {
-          logger.debug("Dealt new log message with index: {}", messageIndex);
+          if (logger.isDebugEnabled()) {
+            logger.debug("Dealt new log message with index: {}", messageIndex);
+          }
         }
       }
 
@@ -303,7 +404,22 @@ public class ChronicleSourceLogReader extends SourceLogReader {
   protected void closeConnections() {
     closeChronicleQueue();
     closeConnection(logDealerSocket, "Error closing dealer");
-    // Chronicle reader doesn't use offset subscriber socket
+    if (offsetSubscriberSocket != null) {
+      closeConnection(offsetSubscriberSocket, "Error closing offset subscriber");
+    }
     logger.info("Closed Chronicle source log reader connections");
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Triggers shutdown and stops the offset updater thread if running.
+   */
+  @Override
+  protected void triggerStop() {
+    super.triggerStop();
+    if (offsetUpdater != null) {
+      offsetUpdater.interrupt();
+    }
   }
 }
