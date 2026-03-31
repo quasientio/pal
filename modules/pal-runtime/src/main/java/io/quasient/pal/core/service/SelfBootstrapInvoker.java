@@ -288,6 +288,20 @@ public class SelfBootstrapInvoker {
     if (mainClass == null) {
       throw new PeerException(PeerException.FatalCode.ERROR_NO_MAIN_CLASS_IN_JAR_MANIFEST);
     }
+
+    // Spring Boot 3.2+ fat JARs use a "nested:" URL protocol for nested JARs. Register
+    // our shaded copy of the protocol handler so the JDK can find it via the system
+    // classloader (Spring Boot's own Handlers.register() sets the un-relocated package
+    // path which the system classloader can't resolve since the classes are shaded).
+    if (attributes.getValue("Spring-Boot-Classes") != null) {
+      String prop = "java.protocol.handler.pkgs";
+      String shadedPkg = "io.quasient.pal.shd.springframework.boot.loader.net.protocol";
+      String existing = System.getProperty(prop, "");
+      if (!existing.contains(shadedPkg)) {
+        System.setProperty(prop, existing.isEmpty() ? shadedPkg : existing + "|" + shadedPkg);
+      }
+    }
+
     return callMain(mainClass, argList);
   }
 
