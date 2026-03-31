@@ -118,19 +118,23 @@ public class DynamicResourceBundleControlProvider implements ResourceBundleContr
           String baseName, Locale locale, String format, ClassLoader loader, boolean reload)
           throws IllegalAccessException, InstantiationException, IOException {
 
-        ClassLoader actualLoader = loader; // fallback
+        // Try the original loader first (e.g. LaunchedClassLoader) — it already has access
+        // to nested JARs and avoids issues with classloaders in transient states (such as
+        // Tomcat's WebappClassLoaderBase which may be stopped during early initialization).
+        ResourceBundle bundle = super.newBundle(baseName, locale, format, loader, reload);
+        if (bundle != null) {
+          return bundle;
+        }
 
-        // if we have a resolver, use its suggested ClassLoader:
+        // Original loader failed; try with our resolved ClassLoader as a fallback
         if (classLoaderResolver != null) {
-          actualLoader = classLoaderResolver.getClassLoaderFor(baseName, locale);
-          if (actualLoader == null) {
-            // If resolver returns null for some reason, fallback to original
-            actualLoader = loader;
+          ClassLoader resolved = classLoaderResolver.getClassLoaderFor(baseName, locale);
+          if (resolved != null && resolved != loader) {
+            bundle = super.newBundle(baseName, locale, format, resolved, reload);
           }
         }
 
-        // load the bundle with the chosen ClassLoader
-        return super.newBundle(baseName, locale, format, actualLoader, reload);
+        return bundle;
       }
     };
   }
