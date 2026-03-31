@@ -14,6 +14,7 @@ nav:
     - Log Backends: concepts/logs.md
   - Guides:
     - Local Development: guides/local-development.md
+    - JVM Configuration: guides/jvm-configuration.md
     - Deterministic Replay: guides/deterministic-replay.md
     - Distributed Application: guides/distributed-application.md
     - Testing with Interception: guides/testing-with-interception.md

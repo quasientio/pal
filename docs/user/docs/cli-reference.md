@@ -1854,10 +1854,27 @@ pal log print -d localhost:2379 bench-wal --compact | grep -E "method=process"
 
 ## Environment Variables
 
+### JVM Configuration (`pal run`)
+
+These variables control how the JVM is launched for peer processes. See the [JVM Configuration](guides/jvm-configuration.md) guide for full details and examples.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PAL_HEAP_OPTS` | `-Xmx1g` | Heap sizing (replaces default when set) |
+| `PAL_GC_OPTS` | G1GC, 200ms pause | GC selection and tuning (replaces default when set) |
+| `PAL_JMX_OPTS` | _(from HOST/PORT)_ | Full JMX configuration (replaces default when set) |
+| `PAL_JMX_HOST` | _(unset)_ | JMX hostname (convenience, used to build `PAL_JMX_OPTS`) |
+| `PAL_JMX_PORT` | _(unset)_ | JMX port (convenience, used to build `PAL_JMX_OPTS`) |
+| `PAL_JAVA_OPTS` | _(empty)_ | Catch-all JVM flags, appended last (always wins) |
+| `JAVA_AGENT` | _(unset)_ | Path to a Java agent JAR |
+| `PAL_PEER_LOGGING_CONFIG` | _(unset)_ | Peer Logback configuration file |
+| `PAL_CLI_LOGGING_CONFIG` | _(unset)_ | CLI Logback configuration file |
+
+### Application
+
 - `PAL_DIRECTORY` - Default directory URL (etcd endpoint)
 - `KAFKA_SERVERS` - Kafka bootstrap servers
 - `CHRONICLE_BASE_DIR` - Base directory for Chronicle queues (default: current directory)
-- `PAL_CLI_LOGGING_CONFIG` - Custom CLI logging configuration file
 - `IN_FLIGHT_TRACKING` - Enable in-flight dispatch tracking for safe intercept activation (default: `true`)
 - `DRAIN_TIMEOUT_MS` - Timeout in milliseconds for drain operations during intercept activation (default: `5000`)
 - `CALLBACK_TIMEOUT_MS` - Default timeout for intercept callback responses in milliseconds (default: `3000`). A value of `0` means no timeout (infinite wait). Can be overridden per-intercept via intercept bundles
