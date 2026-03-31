@@ -29,18 +29,9 @@ for arg in "$@"; do
   esac
 done
 
-# Pick up JMX host/port from *prefixed* environment variables
-if [ -n "$PAL_JMX_HOST" ]; then
-  JMX_HOST="$PAL_JMX_HOST"
-fi
-if [ -n "$PAL_JMX_PORT" ]; then
-  JMX_PORT="$PAL_JMX_PORT"
-fi
-
-# Default JVM options
-JAVA_OPTS=${JAVA_OPTS:-""}
-
-# Apply Chronicle Queue exports for all commands (needed for ls, print, call, run)
+# ---------------------------------------------------------------------------
+# Chronicle Queue module exports (required for all commands)
+# ---------------------------------------------------------------------------
 CHRONICLE_EXPORTS="--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
           --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
           --add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED \
@@ -52,36 +43,87 @@ CHRONICLE_EXPORTS="--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \
           --add-opens=java.base/java.util=ALL-UNNAMED \
           --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
 
-JAVA_OPTS="$JAVA_OPTS $CHRONICLE_EXPORTS"
-
-# Apply specific options for 'run' command
+# ---------------------------------------------------------------------------
+# Category environment variables for 'run' command (Kafka-style)
+#
+# Each variable has a sensible default.  Setting the variable REPLACES
+# the default entirely, giving full control over that category.
+#
+#   PAL_HEAP_OPTS  - Heap sizing          (default: -Xmx1g)
+#   PAL_GC_OPTS    - GC tuning            (default: G1GC, 200ms pause target)
+#   PAL_JMX_OPTS   - JMX configuration    (default: built from PAL_JMX_HOST/PORT)
+#
+# PAL_JAVA_OPTS is a catch-all appended LAST and always wins (see below).
+# ---------------------------------------------------------------------------
 if [ "$COMMAND" = "run" ]; then
-  JAVA_OPTS="$JAVA_OPTS -server -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled -Xmx1g -XX:+IgnoreUnrecognizedVMOptions -Xverify:none"
+  if [ -z "$PAL_HEAP_OPTS" ]; then
+    PAL_HEAP_OPTS="-Xmx1g"
+  fi
 
-  # Include JMX options if JMX_HOST and JMX_PORT are now set
-  if [ -n "$JMX_HOST" ] && [ -n "$JMX_PORT" ]; then
-    JAVA_OPTS="$JAVA_OPTS \
-      -Dcom.sun.management.jmxremote \
-      -Djava.rmi.server.hostname=$JMX_HOST \
-      -Dcom.sun.management.jmxremote.port=$JMX_PORT \
-      -Dcom.sun.management.jmxremote.local.only=true \
-      -Dcom.sun.management.jmxremote.authenticate=false \
-      -Dcom.sun.management.jmxremote.ssl=false"
+  if [ -z "$PAL_GC_OPTS" ]; then
+    PAL_GC_OPTS="-server -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled"
+  fi
+
+  if [ -z "$PAL_JMX_OPTS" ]; then
+    if [ -n "$PAL_JMX_HOST" ] && [ -n "$PAL_JMX_PORT" ]; then
+      PAL_JMX_OPTS="-Dcom.sun.management.jmxremote \
+        -Djava.rmi.server.hostname=$PAL_JMX_HOST \
+        -Dcom.sun.management.jmxremote.port=$PAL_JMX_PORT \
+        -Dcom.sun.management.jmxremote.local.only=true \
+        -Dcom.sun.management.jmxremote.authenticate=false \
+        -Dcom.sun.management.jmxremote.ssl=false"
+    fi
   fi
 fi
 
-# Include Java agent
-if [ -n "$JAVA_AGENT" ]; then
-  JAVA_OPTS="$JAVA_OPTS -javaagent:$JAVA_AGENT"
+# ---------------------------------------------------------------------------
+# pal.vmoptions file — persistent JVM configuration
+#
+# One JVM option per line; blank lines and lines starting with '#' are
+# ignored.  Loaded from $PAL_HOME/config/pal.vmoptions if the file exists.
+# Copy config/pal.vmoptions.example to config/pal.vmoptions to get started.
+# ---------------------------------------------------------------------------
+PAL_VMOPTIONS_FILE="${PAL_HOME:-.}/config/pal.vmoptions"
+PAL_VMOPTIONS=""
+if [ -f "$PAL_VMOPTIONS_FILE" ]; then
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      ''|\#*) continue ;;
+    esac
+    PAL_VMOPTIONS="$PAL_VMOPTIONS $line"
+  done < "$PAL_VMOPTIONS_FILE"
 fi
 
-# Include logging configuration
+# ---------------------------------------------------------------------------
+# Java agent
+# ---------------------------------------------------------------------------
+AGENT_OPT=""
+if [ -n "$JAVA_AGENT" ]; then
+  AGENT_OPT="-javaagent:$JAVA_AGENT"
+fi
+
+# ---------------------------------------------------------------------------
+# Logging configuration
+# ---------------------------------------------------------------------------
+LOGGING_OPTS=""
 if [ -f "$PAL_PEER_LOGGING_CONFIG" ]; then
-  JAVA_OPTS="$JAVA_OPTS -Dpeer.logging=$PAL_PEER_LOGGING_CONFIG"
+  LOGGING_OPTS="$LOGGING_OPTS -Dpeer.logging=$PAL_PEER_LOGGING_CONFIG"
 fi
 if [ -f "$PAL_CLI_LOGGING_CONFIG" ]; then
-  JAVA_OPTS="$JAVA_OPTS -Dcli.logging=$PAL_CLI_LOGGING_CONFIG"
+  LOGGING_OPTS="$LOGGING_OPTS -Dcli.logging=$PAL_CLI_LOGGING_CONFIG"
 fi
+
+# ---------------------------------------------------------------------------
+# Assemble final JVM options
+#
+# Precedence (last wins):
+#   Chronicle exports → category vars → vmoptions file → PAL_JAVA_OPTS
+# ---------------------------------------------------------------------------
+JAVA_OPTS="$CHRONICLE_EXPORTS"
+if [ "$COMMAND" = "run" ]; then
+  JAVA_OPTS="$JAVA_OPTS $PAL_HEAP_OPTS $PAL_GC_OPTS -XX:+IgnoreUnrecognizedVMOptions -Xverify:none $PAL_JMX_OPTS"
+fi
+JAVA_OPTS="$JAVA_OPTS $AGENT_OPT $LOGGING_OPTS $PAL_VMOPTIONS $PAL_JAVA_OPTS"
 
 # Find pal's jar under $PAL_HOME/lib, fallback to lib/
 PAL_JAR="${PAL_HOME:-.}/lib/pal-*.jar"

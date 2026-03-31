@@ -1,0 +1,37 @@
+#
+# PAL JVM Options
+#
+# Copy this file to pal.vmoptions (same directory) to customize JVM settings.
+# One option per line. Blank lines and lines starting with '#' are ignored.
+#
+# These options are loaded after category environment variables
+# (PAL_HEAP_OPTS, PAL_GC_OPTS, PAL_JMX_OPTS) and before PAL_JAVA_OPTS.
+#
+# Precedence (last wins):
+#   Category env vars -> this file -> PAL_JAVA_OPTS env var
+#
+# See config/pal.vmoptions.example for reference defaults.
+#
+
+# --- Heap sizing (overrides PAL_HEAP_OPTS) ---
+# -Xmx1g
+# -Xms512m
+
+# --- GC tuning (overrides PAL_GC_OPTS) ---
+# -XX:+UseG1GC
+# -XX:MaxGCPauseMillis=200
+# -XX:+UseZGC
+# -XX:+ZGenerational
+
+# --- Remote debugging ---
+# -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
+
+# --- System properties ---
+# -Dmy.property=value
+
+# --- JMX (overrides PAL_JMX_OPTS) ---
+# -Dcom.sun.management.jmxremote
+# -Dcom.sun.management.jmxremote.port=9010
+# -Dcom.sun.management.jmxremote.local.only=true
+# -Dcom.sun.management.jmxremote.authenticate=false
+# -Dcom.sun.management.jmxremote.ssl=false
