@@ -30,38 +30,36 @@ import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.tools.stats.ContinuousPrinter;
 import io.quasient.pal.tools.stats.Counters;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler;
-import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ParentCommand;
 
 /**
- * Collects and displays message stream statistics from a log (Kafka topic or Chronicle Queue).
+ * Collects and displays message statistics from a log (Kafka topic or Chronicle Queue).
  *
  * <p>This is the log-specific stats command for the {@code pal log stats} pattern. It accepts a log
  * name or {@code file:}-prefixed Chronicle Queue path as a positional argument and aggregates
- * statistics. For Kafka logs, aggregation uses Kafka Streams; for Chronicle logs, messages are read
- * directly from the queue. Messages are filtered by type, peer UUID, or thread name, and counters
- * are continuously printed in plain text or JSON format.
+ * statistics. For Kafka logs, all messages are consumed from the topic; for Chronicle logs,
+ * messages are read directly from the queue. Messages are filtered by type, peer UUID, or thread
+ * name, and the final counters are printed in plain text or JSON format.
  *
  * <p>Usage examples:
  *
@@ -78,38 +76,13 @@ import picocli.CommandLine.ParentCommand;
  */
 @Command(name = "stats", description = "Show log message statistics")
 @SuppressFBWarnings(
-    value = {
-      "EI_EXPOSE_REP2",
-      "SIC_INNER_SHOULD_BE_STATIC_ANON",
-      "URF_UNREAD_FIELD",
-      "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"
-    },
+    value = {"EI_EXPOSE_REP2", "URF_UNREAD_FIELD", "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"},
     justification =
         "CLI stats command - shared state for thread operations; format strings intentional")
 public class LogStats extends AbstractStatsCommand {
 
   /** Logger for logging information and errors. */
   private final Logger logger = LoggerFactory.getLogger(LogStats.class);
-
-  /**
-   * Latch used to coordinate shutdown signal handling for Kafka streams.
-   *
-   * <p>Package-private for test access.
-   */
-  final CountDownLatch shutdownLatch = new CountDownLatch(1);
-
-  /**
-   * Kafka streams instance for log-based message processing.
-   *
-   * <p>Package-private for test access.
-   */
-  KafkaStreams kafkaStreams;
-
-  /** Handles continuous printing of aggregated statistics. */
-  ContinuousPrinter continuousPrinter;
-
-  /** Indicates whether statistics are being printed externally. */
-  private boolean externalPrinting = false;
 
   /** Parent command providing access to the PAL directory connection string. */
   @ParentCommand PalCommand palCommand;
@@ -199,22 +172,22 @@ public class LogStats extends AbstractStatsCommand {
   private boolean helpRequested = false;
 
   /**
-   * Constructs a LogStats instance for log-based streams, intended for use from another class
-   * rather than the command line (e.g., from a Web/GUI application).
+   * Constructs a LogStats instance for log-based stats, intended for use from another class rather
+   * than the command line (e.g., from a Web/GUI application).
    *
    * @param bootstrapServers Kafka bootstrap servers
-   * @param logName Kafka topic name
+   * @param logName Kafka topic name or {@code file:}-prefixed Chronicle path
    */
   public LogStats(String bootstrapServers, String logName) {
     this(bootstrapServers, logName, null, null, null);
   }
 
   /**
-   * Constructs a LogStats instance for log-based streams with additional filtering options.
-   * Intended for use from another class rather than the command line.
+   * Constructs a LogStats instance for log-based stats with additional filtering options. Intended
+   * for use from another class rather than the command line.
    *
    * @param bootstrapServers Kafka bootstrap servers
-   * @param logName Kafka topic name
+   * @param logName Kafka topic name or {@code file:}-prefixed Chronicle path
    * @param msgTypes message types to filter by
    * @param fromPeer peer UUID to filter by
    * @param threadName thread name to filter by
@@ -230,7 +203,6 @@ public class LogStats extends AbstractStatsCommand {
     this.msgTypes = msgTypes;
     this.fromPeer = fromPeer;
     this.threadName = threadName;
-    this.externalPrinting = true;
   }
 
   /** Default constructor for running as a Picocli command (i.e., from the command line). */
@@ -288,11 +260,10 @@ public class LogStats extends AbstractStatsCommand {
   }
 
   /**
-   * Processes and aggregates statistics from Kafka message streams.
+   * Reads all messages from a Kafka topic and aggregates statistics.
    *
-   * <p>Sets up Kafka Streams with the specified configurations, applies necessary filters based on
-   * message types and peer UUID, and updates the counters accordingly. This method initializes the
-   * stream processing topology and starts the Kafka Streams application.
+   * <p>Creates a plain Kafka consumer that reads from the beginning of each partition up to the
+   * current end offsets, applies filters, updates counters, and prints the final statistics.
    *
    * @return exit code indicating success (0) or failure (1)
    */
@@ -301,70 +272,81 @@ public class LogStats extends AbstractStatsCommand {
     Objects.requireNonNull(kafkaServersToUse, "Kafka bootstrap servers required for Kafka logs");
 
     Properties props = new Properties();
-    String consumerId = "printer-" + UUID.randomUUID();
+    String groupId = "log-stats-" + UUID.randomUUID();
     if (verbose) {
       System.out.println("CONFIG:");
       System.out.println("=======");
       System.out.printf(
-          "Kafka config: topic=%s bootstrap_servers=%s app_id=%s%n",
-          logName, kafkaServersToUse, consumerId);
+          "Kafka config: topic=%s bootstrap_servers=%s group_id=%s%n",
+          logName, kafkaServersToUse, groupId);
     }
-    props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerId);
-    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServersToUse);
-    props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteArray().getClass());
+    props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServersToUse);
+    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+    props.put(
+        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-    final StreamsBuilder builder = new StreamsBuilder();
+    try (KafkaConsumer<String, byte[]> consumer = new KafkaConsumer<>(props)) {
+      List<PartitionInfo> partitionInfos = consumer.partitionsFor(logName);
+      if (partitionInfos == null || partitionInfos.isEmpty()) {
+        logger.error("No partitions found for topic: {}", logName);
+        return 1;
+      }
 
-    KStream<String, Message> stream =
-        builder.<String, byte[]>stream(logName)
-            .map(
-                (k, v) -> {
-                  Message message = new Message();
-                  message.unmarshal(v, 0);
-                  return new KeyValue<>(k, message);
-                });
+      List<TopicPartition> partitions =
+          partitionInfos.stream()
+              .map(pi -> new TopicPartition(pi.topic(), pi.partition()))
+              .toList();
+      consumer.assign(partitions);
 
-    if (msgTypes != null) {
-      stream =
-          stream.filter(
-              (k, m) -> {
-                ExecMessage execMessage = m.getExecMessage();
-                MessageType messageType = MessageType.fromId(m.getMessageType());
-                return execMessage != null && msgTypes.contains(messageType.name());
-              });
+      Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
+      consumer.seekToBeginning(partitions);
+
+      while (!reachedEnd(consumer, endOffsets)) {
+        ConsumerRecords<String, byte[]> records = consumer.poll(Duration.ofSeconds(1));
+        for (ConsumerRecord<String, byte[]> record : records) {
+          Message message = new Message();
+          message.unmarshal(record.value(), 0);
+
+          // Apply type filter
+          if (msgTypes != null) {
+            ExecMessage execMessage = message.getExecMessage();
+            MessageType messageType = MessageType.fromId(message.getMessageType());
+            if (execMessage == null || !msgTypes.contains(messageType.name())) {
+              continue;
+            }
+          }
+
+          // Apply peer filter
+          if (fromPeer != null && !fromPeer.equalsIgnoreCase(getPeerUuid(message))) {
+            continue;
+          }
+
+          updateCounters(message);
+        }
+      }
     }
 
-    if (fromPeer != null) {
-      stream = stream.filter((k, m) -> fromPeer.equalsIgnoreCase(getPeerUuid(m)));
-    }
-
-    stream.foreach((key, message) -> updateCounters(message));
-
-    final Topology topology = builder.build();
-    if (verbose) {
-      System.out.println(topology.describe());
-    }
-
-    kafkaStreams = new KafkaStreams(topology, props);
-    Runtime.getRuntime()
-        .addShutdownHook(
-            new Thread("streams-shutdown-hook") {
-              @Override
-              public void run() {
-                performKafkaShutdown();
-              }
-            });
-
-    startStreams(kafkaStreams, getCounters());
-    try {
-      shutdownLatch.await();
-    } catch (Throwable e) {
-      logger.error("Uncaught error processing stream", e);
-      return 1;
-    }
+    printStats();
     return 0;
+  }
+
+  /**
+   * Checks whether the consumer has reached the end offset for all assigned partitions.
+   *
+   * @param consumer the Kafka consumer to check position for
+   * @param endOffsets the target end offsets per partition
+   * @return {@code true} if the consumer position has reached the end offset for every partition
+   */
+  private static boolean reachedEnd(
+      KafkaConsumer<?, ?> consumer, Map<TopicPartition, Long> endOffsets) {
+    for (Map.Entry<TopicPartition, Long> entry : endOffsets.entrySet()) {
+      if (consumer.position(entry.getKey()) < entry.getValue()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -436,73 +418,5 @@ public class LogStats extends AbstractStatsCommand {
    */
   private void printStats() {
     ContinuousPrinter.printCounters(getCounters(), jsonOutput, null);
-  }
-
-  /**
-   * Performs shutdown for Kafka-based message streaming.
-   *
-   * <p>This method closes the Kafka streams, signals the continuous printer to stop, and counts
-   * down the shutdown latch.
-   *
-   * <p>Package-private for test access.
-   */
-  void performKafkaShutdown() {
-    kafkaStreams.close();
-    if (continuousPrinter != null) {
-      continuousPrinter.setDone(true);
-    }
-    shutdownLatch.countDown();
-  }
-
-  /**
-   * Stops the ongoing stream processing by triggering a shutdown.
-   *
-   * <p>Signals the stream processing threads to terminate gracefully.
-   */
-  @SuppressWarnings("unused")
-  public void stopStreams() {
-    shutdownLatch.countDown();
-  }
-
-  /**
-   * Initializes and starts the Kafka Streams processing.
-   *
-   * <p>Sets up state listeners and exception handlers, starts the Kafka Streams instance, and
-   * optionally starts the continuous statistics printer if external printing is not enabled.
-   *
-   * @param streams the {@link KafkaStreams} instance to start
-   * @param counters the {@link Counters} instance to update with stream data
-   */
-  private void startStreams(KafkaStreams streams, Counters counters) {
-    CompletableFuture<KafkaStreams.State> stateFuture = new CompletableFuture<>();
-    streams.setStateListener(
-        (newState, oldState) -> {
-          if (stateFuture.isDone()) {
-            return;
-          }
-
-          if (newState == KafkaStreams.State.RUNNING || newState == KafkaStreams.State.ERROR) {
-            stateFuture.complete(newState);
-          }
-        });
-
-    streams.setUncaughtExceptionHandler(
-        throwable -> {
-          logger.error("Uncaught exception in stream. Will shutdown client.", throwable);
-          return StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
-        });
-
-    streams.start();
-    try {
-      KafkaStreams.State finalState = stateFuture.get();
-      if (finalState == KafkaStreams.State.RUNNING) {
-        if (!externalPrinting) {
-          this.continuousPrinter = new ContinuousPrinter(counters, jsonOutput);
-          new Thread(continuousPrinter).start();
-        }
-      }
-    } catch (InterruptedException | ExecutionException ex) {
-      logger.error("Error waiting for Kafka Streams to reach running state", ex);
-    }
   }
 }

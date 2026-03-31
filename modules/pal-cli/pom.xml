@@ -408,10 +408,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-streams</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
         </dependency>
         <dependency>
@@ -431,7 +427,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-loader</artifactId>
         </dependency>
-        <!-- explicit import of slf4j-api, since otherwise it pulls in older version from kafka-streams -->
+        <!-- explicit import of slf4j-api to pin a consistent version -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

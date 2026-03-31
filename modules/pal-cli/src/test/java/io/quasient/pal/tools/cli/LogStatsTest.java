@@ -19,8 +19,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.ExecPhase;
@@ -38,7 +36,6 @@ import io.quasient.pal.messages.colfer.Reflectable;
 import io.quasient.pal.messages.types.ControlCommandType;
 import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.colfer.MessageBuilder;
-import io.quasient.pal.tools.stats.ContinuousPrinter;
 import io.quasient.pal.tools.stats.Counters;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -51,7 +48,6 @@ import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptAppender;
 import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
 import net.openhft.chronicle.wire.WireType;
-import org.apache.kafka.streams.KafkaStreams;
 import org.junit.Test;
 
 /**
@@ -322,70 +318,6 @@ public class LogStatsTest {
 
     // Then: returns "MyClass"
     assertThat(result, is("MyClass"));
-  }
-
-  // ==================== performKafkaShutdown() Tests ====================
-
-  /**
-   * Tests that performKafkaShutdown closes the Kafka streams.
-   *
-   * <p>Verifies that calling performKafkaShutdown() invokes close() on the KafkaStreams instance.
-   */
-  @Test
-  public void performKafkaShutdown_closesStreams() {
-    // Given: LogStats instance with a mock KafkaStreams set
-    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
-    KafkaStreams mockStreams = mock(KafkaStreams.class);
-    stats.kafkaStreams = mockStreams;
-
-    // When: performKafkaShutdown() called
-    stats.performKafkaShutdown();
-
-    // Then: streams.close() is invoked
-    verify(mockStreams).close();
-  }
-
-  /**
-   * Tests that performKafkaShutdown stops the continuous printer when present.
-   *
-   * <p>Verifies that calling performKafkaShutdown() invokes setDone(true) on the continuousPrinter
-   * if it is not null.
-   */
-  @Test
-  public void performKafkaShutdown_stopsContinuousPrinter() {
-    // Given: LogStats instance with mock KafkaStreams and mock ContinuousPrinter
-    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
-    KafkaStreams mockStreams = mock(KafkaStreams.class);
-    stats.kafkaStreams = mockStreams;
-    ContinuousPrinter mockPrinter = mock(ContinuousPrinter.class);
-    stats.continuousPrinter = mockPrinter;
-
-    // When: performKafkaShutdown() called
-    stats.performKafkaShutdown();
-
-    // Then: continuousPrinter.setDone(true) is invoked
-    verify(mockPrinter).setDone(true);
-  }
-
-  /**
-   * Tests that performKafkaShutdown counts down the shutdown latch.
-   *
-   * <p>Verifies that calling performKafkaShutdown() decrements the shutdownLatch count to 0.
-   */
-  @Test
-  public void performKafkaShutdown_countsDownLatch() {
-    // Given: LogStats instance with shutdownLatch count of 1
-    LogStats stats = new LogStats("localhost:9092", "test-log", null, null, null);
-    KafkaStreams mockStreams = mock(KafkaStreams.class);
-    stats.kafkaStreams = mockStreams;
-
-    assertThat(stats.shutdownLatch.getCount(), is(1L));
-
-    // When: performKafkaShutdown() called
-    stats.performKafkaShutdown();
-
-    // Then: shutdownLatch.getCount() returns 0
-    assertThat(stats.shutdownLatch.getCount(), is(0L));
   }
 
   // ==================== Chronicle Stats Tests ====================

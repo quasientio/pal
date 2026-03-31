@@ -102,10 +102,9 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
     peerProcess = null;
 
-    CliProcessResult result =
-        runCliSubcommandForDuration(
-            new String[] {"log", "stats"}, 5, "-d", palDir, "-k", kafkaServers, walName);
+    CliProcessResult result = runLogStats("-d", palDir, "-k", kafkaServers, walName);
 
+    assertEquals(0, result.exitCode());
     assertThat(result.stdout(), is(not("")));
   }
 
@@ -138,22 +137,9 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     peerProcess = null;
 
     CliProcessResult result =
-        runCliSubcommandForDuration(
-            new String[] {"log", "stats"},
-            5,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            walName,
-            "--types",
-            "CONSTRUCTOR");
+        runLogStats("-d", palDir, "-k", kafkaServers, walName, "--types", "CONSTRUCTOR");
 
-    // The command should complete (killed after timeout) or exit cleanly
-    assertThat(
-        "Exit code should be 0 or -1 (killed after timeout)",
-        result.exitCode() == 0 || result.exitCode() == -1,
-        is(true));
+    assertEquals(0, result.exitCode());
   }
 
   /**
@@ -185,21 +171,9 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     peerProcess = null;
 
     CliProcessResult result =
-        runCliSubcommandForDuration(
-            new String[] {"log", "stats"},
-            5,
-            "-d",
-            palDir,
-            "-k",
-            kafkaServers,
-            "--from-peer",
-            peerId.toString(),
-            walName);
+        runLogStats("-d", palDir, "-k", kafkaServers, "--from-peer", peerId.toString(), walName);
 
-    assertThat(
-        "Exit code should be 0 or -1 (killed after timeout)",
-        result.exitCode() == 0 || result.exitCode() == -1,
-        is(true));
+    assertEquals(0, result.exitCode());
   }
 
   /**
@@ -230,15 +204,14 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     joinPeer(peerProcess, PROCESS_TIMEOUT_SECONDS);
     peerProcess = null;
 
-    CliProcessResult result =
-        runCliSubcommandForDuration(
-            new String[] {"log", "stats"}, 5, "-d", palDir, "-k", kafkaServers, walName);
+    CliProcessResult result = runLogStats("-d", palDir, "-k", kafkaServers, walName);
 
+    assertEquals(0, result.exitCode());
     assertThat(result.stdout(), is(not("")));
   }
 
   /**
-   * Tests that {@code pal log stats} handles empty logs gracefully.
+   * Tests that {@code pal log stats} handles non-existent logs gracefully.
    *
    * @throws Exception if test execution fails
    */
@@ -247,15 +220,11 @@ public class MessageStreamStatsIT extends AbstractCliIT {
     String kafkaServers = getKafkaServers();
     String nonExistentLog = "nonexistent-log-" + generateId();
 
-    CliProcessResult result =
-        runCliSubcommandForDuration(
-            new String[] {"log", "stats"}, 5, "-k", kafkaServers, nonExistentLog);
+    CliProcessResult result = runLogStats("-k", kafkaServers, nonExistentLog);
 
-    // The command may exit with an error or produce empty stats; either is acceptable
+    // The command may exit with an error (no partitions) or produce empty stats
     assertThat(
-        "Exit code should be 0, 1, or -1 (killed after timeout)",
-        result.exitCode() == 0 || result.exitCode() == 1 || result.exitCode() == -1,
-        is(true));
+        "Exit code should be 0 or 1", result.exitCode() == 0 || result.exitCode() == 1, is(true));
   }
 
   // ==========================================================================
