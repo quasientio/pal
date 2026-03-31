@@ -403,6 +403,7 @@ public class KafkaSourceLogReader extends SourceLogReader {
       }
 
       // process records if any
+      boolean alreadySeeked = false;
       for (var record : records) {
         messagesReceived.getAndIncrement();
         if (logger.isDebugEnabled()) {
@@ -439,8 +440,8 @@ public class KafkaSourceLogReader extends SourceLogReader {
         }
         // get next offset to poll
         if (skipWrittenOffsets) {
-          Long nextOffset = nextOffset();
-          if (nextOffset > (lastOffsetRead + 1)) {
+          long nextOffset = nextOffset();
+          if (nextOffset > lastOffsetRead + 1) {
             if (logger.isDebugEnabled()) {
               logger.debug(
                   "Skipping received records. Jumping from offset: {} to: {}",
@@ -448,6 +449,7 @@ public class KafkaSourceLogReader extends SourceLogReader {
                   nextOffset);
             }
             consumer.seek(topicPartition, nextOffset);
+            alreadySeeked = true;
             break;
           }
         }
@@ -477,10 +479,10 @@ public class KafkaSourceLogReader extends SourceLogReader {
       // let's not to be eager
       Thread.yield();
 
-      // get next offset to poll
-      if (skipWrittenOffsets) {
-        Long nextOffset = nextOffset();
-        if (nextOffset > (lastOffsetRead + 1)) {
+      // get next offset to poll (only if the record loop didn't already seek)
+      if (skipWrittenOffsets && !alreadySeeked) {
+        long nextOffset = nextOffset();
+        if (nextOffset > lastOffsetRead + 1) {
           if (logger.isDebugEnabled()) {
             logger.debug("Jumping from offset: {} to: {}", lastOffsetRead, nextOffset);
           }
@@ -613,17 +615,17 @@ public class KafkaSourceLogReader extends SourceLogReader {
    *
    * @return The computed next Kafka offset to poll.
    */
-  private Long nextOffset() {
+  private long nextOffset() {
     // initial candidate == last read + 1
-    Long nextToRead = lastOffsetRead + 1;
+    long nextToRead = lastOffsetRead + 1;
     Long nextOffsetToSkip = skipOffsets.peek();
     // clean up all possible offsets up to and including last read
-    while ((nextOffsetToSkip != null) && (nextOffsetToSkip < nextToRead)) {
+    while (nextOffsetToSkip != null && nextOffsetToSkip < nextToRead) {
       skipOffsets.poll();
       nextOffsetToSkip = skipOffsets.peek();
     }
     // while queue not empty, pop next offsets in sequence
-    while (nextToRead.equals(nextOffsetToSkip)) {
+    while (nextOffsetToSkip != null && nextOffsetToSkip == nextToRead) {
       skipOffsets.poll();
       nextToRead++;
       nextOffsetToSkip = skipOffsets.peek();
