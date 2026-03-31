@@ -43,6 +43,7 @@ import picocli.CommandLine.Spec;
     subcommands = {
       LogList.class,
       LogRemove.class,
+      LogPrune.class,
       LogPrint.class,
       LogCall.class,
       LogIndexCommand.class,

@@ -307,6 +307,17 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
+   * Executes a {@code pal log prune} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal log prune}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runLogPrune(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"log", "prune"}, null, args);
+  }
+
+  /**
    * Executes a {@code pal log ls} command with the given arguments.
    *
    * @param args command-line arguments to pass to {@code pal log ls}
