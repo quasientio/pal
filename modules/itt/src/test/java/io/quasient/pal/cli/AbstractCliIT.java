@@ -192,33 +192,6 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
-   * Executes a `pal wal-index` command with the given arguments.
-   *
-   * <p>Retained for wal-index tests outside the CLI package.
-   *
-   * @param args command-line arguments to pass to `pal wal-index`
-   * @return CliProcessResult containing exit code, stdout, and stderr
-   * @throws Exception if command execution fails
-   */
-  protected CliProcessResult runWalIndex(String... args) throws Exception {
-    return runCliSubcommand("wal-index", null, args);
-  }
-
-  /**
-   * Executes a `pal wal-index` command with the given working directory and arguments.
-   *
-   * <p>The working directory controls where relative {@code file:} WAL paths are resolved against.
-   *
-   * @param workingDir the working directory for the process
-   * @param args command-line arguments to pass to `pal wal-index`
-   * @return CliProcessResult containing exit code, stdout, and stderr
-   * @throws Exception if command execution fails
-   */
-  protected CliProcessResult runWalIndexFromDir(File workingDir, String... args) throws Exception {
-    return runCliSubcommand(new String[] {"wal-index"}, null, workingDir, args);
-  }
-
-  /**
    * Executes a {@code pal log print} command with the given working directory and arguments.
    *
    * <p>The working directory controls where relative {@code file:} log paths are resolved against.

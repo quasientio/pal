@@ -36,8 +36,7 @@ import org.slf4j.LoggerFactory;
  * <p>Each test records a WAL to an absolute path in {@code /tmp}, then invokes a CLI command using
  * a relative {@code file:} path with the WAL's parent directory as the process CWD.
  *
- * <p>Covers: {@code pal log print}, {@code pal wal-index}, {@code pal log index}, and {@code pal
- * log rm}.
+ * <p>Covers: {@code pal log print}, {@code pal log index}, and {@code pal log rm}.
  */
 public class RelativePathChronicleCliIT extends AbstractCliIT {
 
@@ -121,35 +120,6 @@ public class RelativePathChronicleCliIT extends AbstractCliIT {
 
     assertThat("Expected exit code 0", result.exitCode(), is(0));
     assertThat("Expected non-empty stdout", result.stdout(), is(not("")));
-  }
-
-  // ==========================================================================
-  // pal wal-index
-  // ==========================================================================
-
-  /**
-   * Tests that {@code pal wal-index} resolves a relative Chronicle path against the process CWD.
-   *
-   * @throws Exception if test execution fails
-   */
-  @Test
-  public void walIndex_withRelativeChronicleWalPath() throws Exception {
-    String walDirName = "pal-relpath-walidx-" + generateId();
-    recordWal(walDirName);
-
-    File parentDir = new File("/tmp");
-    CliProcessResult result = runWalIndexFromDir(parentDir, "file:" + walDirName);
-
-    logger.info("wal-index exit code: {}", result.exitCode());
-    logger.info("wal-index stdout:\n{}", result.stdout());
-
-    assertThat("Expected exit code 0", result.exitCode(), is(0));
-    assertThat(
-        "Expected WAL Index Summary in output",
-        result.stdout(),
-        containsString("WAL Index Summary"));
-    assertThat(
-        "Expected non-zero entry count", result.stdout(), not(containsString("Entries:       0")));
   }
 
   // ==========================================================================
