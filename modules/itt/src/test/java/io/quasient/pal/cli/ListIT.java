@@ -155,7 +155,7 @@ public class ListIT extends AbstractCliIT {
     String palDir = getPalDirectoryUrl();
     String kafkaServers = getKafkaServers();
     UUID peerId = UUID.randomUUID();
-    String peerName = "long-fmt-peer-" + generateId();
+    String peerName = "lfp-" + generateId().substring(0, 6);
     String walName = "wal-" + generateId();
 
     peerProcess =
@@ -182,7 +182,47 @@ public class ListIT extends AbstractCliIT {
     CliProcessResult result = runPeerLs("-d", palDir, "-l");
 
     assertThat(result.exitCode(), is(0));
-    assertThat(result.stdout(), is(not("")));
+    String trimmedUuid = peerId.toString().substring(0, 8) + "..";
+    assertThat(result.stdout(), containsString(trimmedUuid));
+    assertThat(result.stdout(), not(containsString(peerId.toString())));
+    assertThat(result.stdout(), containsString(peerName));
+  }
+
+  /**
+   * Tests that {@code pal peer ls -l --no-trim} shows full UUIDs without truncation.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testListPeers_longFormat_noTrimShowsFullUuid() throws Exception {
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "notrim-peer-" + generateId();
+    String walName = "wal-" + generateId();
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--wal",
+            walName,
+            "--zmq-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    CliProcessResult result = runPeerLs("-d", palDir, "-l", "--no-trim");
+
+    assertThat(result.exitCode(), is(0));
+    assertThat(result.stdout(), containsString(peerId.toString()));
+    assertThat(result.stdout(), containsString(peerName));
   }
 
   /**

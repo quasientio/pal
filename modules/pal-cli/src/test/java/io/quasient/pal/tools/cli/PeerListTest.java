@@ -19,6 +19,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -178,7 +179,9 @@ public class PeerListTest {
     assertThat(result, is(0));
     assertThat(output, containsString("total 1"));
     assertThat(output, containsString("UUID"));
-    assertThat(output, containsString(peerUuid.toString()));
+    String expectedUuid = peerUuid.toString().substring(0, 8) + "..";
+    assertThat(output, containsString(expectedUuid));
+    assertThat(output, not(containsString(peerUuid.toString())));
     assertThat(output, containsString("my-peer"));
     assertThat(output, containsString("192.168.1.1:5555"));
   }
@@ -272,8 +275,9 @@ public class PeerListTest {
     PalDirectory mockDir = mock(PalDirectory.class);
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     String longName = "this-is-a-very-long-peer-name-that-exceeds-max";
+    UUID peerUuid = UUID.randomUUID();
     Set<PeerInfo> peers = new HashSet<>();
-    peers.add(createPeerInfo(UUID.randomUUID(), longName, now));
+    peers.add(createPeerInfo(peerUuid, longName, now));
     when(mockDir.listPeers()).thenReturn(peers);
 
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -286,9 +290,10 @@ public class PeerListTest {
     runCommand.setAccessible(true);
     runCommand.invoke(cmd);
 
-    // Then: full name printed without truncation
+    // Then: full name and full UUID printed without truncation
     String output = bout.toString(UTF_8);
     assertThat(output, containsString(longName));
+    assertThat(output, containsString(peerUuid.toString()));
   }
 
   // ==================== optionallyTrim() Tests ====================

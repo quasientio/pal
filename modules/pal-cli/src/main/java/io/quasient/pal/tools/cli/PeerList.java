@@ -100,6 +100,9 @@ public class PeerList extends AbstractPalSubcommand {
       description = "display this help message")
   private boolean helpRequested = false;
 
+  /** Maximum allowed length (in characters) for UUID display. */
+  private static final short MAX_UUID_LEN = 10;
+
   /** Maximum allowed length (in characters) for peer names. */
   private static final short MAX_PEER_NAME_LEN = 15;
 
@@ -107,18 +110,21 @@ public class PeerList extends AbstractPalSubcommand {
   private static final short MAX_ENDPOINT_LEN = 20;
 
   /**
-   * Format string for long listing of peers.
+   * Builds the format string for long listing, adjusting UUID column width based on trimming.
    *
-   * <p>uuid name rpc jsonrpc pub jmx Uptime
+   * @return the format string for long listing
    */
-  private static final String PEERS_LONG_FORMAT =
-      format(
-          "%%-36s %%-%ds %%-%ds %%-%ds %%-%ds %%-%ds %%-8s",
-          MAX_PEER_NAME_LEN,
-          MAX_ENDPOINT_LEN,
-          MAX_ENDPOINT_LEN,
-          MAX_ENDPOINT_LEN,
-          MAX_ENDPOINT_LEN);
+  private String peersLongFormat() {
+    int uuidWidth = noTrimming ? 36 : MAX_UUID_LEN;
+    return format(
+        "%%-%ds %%-%ds %%-%ds %%-%ds %%-%ds %%-%ds %%-8s",
+        uuidWidth,
+        MAX_PEER_NAME_LEN,
+        MAX_ENDPOINT_LEN,
+        MAX_ENDPOINT_LEN,
+        MAX_ENDPOINT_LEN,
+        MAX_ENDPOINT_LEN);
+  }
 
   /** Constructs a new {@code PeerList} instance. */
   public PeerList() {}
@@ -170,7 +176,7 @@ public class PeerList extends AbstractPalSubcommand {
       out.printf("total %d%n", peers.size());
       if (!peers.isEmpty()) {
         out.printf(
-            PEERS_LONG_FORMAT + "%n",
+            peersLongFormat() + "%n",
             "UUID",
             "Name",
             "ZMQ-RPC",
@@ -192,8 +198,8 @@ public class PeerList extends AbstractPalSubcommand {
   private void print(PeerInfo peerInfo) {
     if (longListing) {
       out.printf(
-          PEERS_LONG_FORMAT + "%n",
-          peerInfo.getUuid(),
+          peersLongFormat() + "%n",
+          optionallyTrim(peerInfo.getUuid().toString(), MAX_UUID_LEN),
           peerInfo.getName() == null ? "" : optionallyTrim(peerInfo.getName(), MAX_PEER_NAME_LEN),
           peerInfo.getZmqRpcAddress() == null
               ? ""
