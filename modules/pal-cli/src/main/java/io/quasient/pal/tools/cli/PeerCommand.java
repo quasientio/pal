@@ -43,6 +43,7 @@ import picocli.CommandLine.Spec;
     subcommands = {
       PeerList.class,
       PeerRemove.class,
+      PeerPrune.class,
       PeerPrint.class,
       PeerCall.class,
       PeerStats.class,

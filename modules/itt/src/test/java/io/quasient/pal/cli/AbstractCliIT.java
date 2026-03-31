@@ -261,6 +261,17 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
   }
 
   /**
+   * Executes a {@code pal peer prune} command with the given arguments.
+   *
+   * @param args command-line arguments to pass to {@code pal peer prune}
+   * @return CliProcessResult containing exit code, stdout, and stderr
+   * @throws Exception if command execution fails
+   */
+  protected CliProcessResult runPeerPrune(String... args) throws Exception {
+    return runCliSubcommand(new String[] {"peer", "prune"}, null, args);
+  }
+
+  /**
    * Executes a {@code pal peer print} command with the given arguments.
    *
    * @param args command-line arguments to pass to {@code pal peer print}
