@@ -27,9 +27,11 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,6 +104,25 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
       return null;
     }
     return kafkaServers;
+  }
+
+  /**
+   * Retrieves the Chronicle base directory from the {@code PAL_CHRONICLE_BASE_DIR} environment
+   * variable.
+   *
+   * <p>This allows CLI commands to resolve relative Chronicle log paths against the same base
+   * directory used by {@code pal run --chronicle-base-dir}, ensuring consistent path resolution
+   * between log creation and querying.
+   *
+   * @return the Chronicle base directory as a {@link Path}, or {@code null} if not configured
+   */
+  @Nullable
+  protected static Path getChronicleBaseDir() {
+    String baseDir = System.getenv("PAL_CHRONICLE_BASE_DIR");
+    if (baseDir == null || baseDir.isEmpty()) {
+      return null;
+    }
+    return Path.of(baseDir);
   }
 
   /**

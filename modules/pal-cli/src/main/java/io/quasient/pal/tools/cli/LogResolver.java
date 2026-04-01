@@ -19,6 +19,7 @@ import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutionException;
@@ -55,7 +56,16 @@ public class LogResolver {
   @Nullable private final String kafkaServers;
 
   /**
-   * Constructs a new {@code LogResolver}.
+   * Base directory for resolving relative Chronicle log paths. When set (typically via {@code
+   * PAL_CHRONICLE_BASE_DIR}), relative paths are checked here first, then against the current
+   * working directory. May be null, in which case only the CWD is used.
+   */
+  @Nullable private final Path chronicleBaseDir;
+
+  /**
+   * Constructs a new {@code LogResolver} without a Chronicle base directory.
+   *
+   * <p>Relative Chronicle paths will be resolved against the current working directory only.
    *
    * @param directoryConnectionProvider provider for the PAL directory connection, or {@code null}
    *     if no directory is available
@@ -64,8 +74,30 @@ public class LogResolver {
   public LogResolver(
       @Nullable DirectoryConnectionProvider directoryConnectionProvider,
       @Nullable String kafkaServers) {
+    this(directoryConnectionProvider, kafkaServers, null);
+  }
+
+  /**
+   * Constructs a new {@code LogResolver} with an optional Chronicle base directory.
+   *
+   * <p>When {@code chronicleBaseDir} is non-null, relative Chronicle paths (e.g., {@code
+   * file:mylog}) are resolved by checking {@code chronicleBaseDir/relativePath} first; if that
+   * location does not exist, the current working directory is checked as a fallback. This mirrors
+   * the resolution strategy used by {@code pal run --chronicle-base-dir}.
+   *
+   * @param directoryConnectionProvider provider for the PAL directory connection, or {@code null}
+   *     if no directory is available
+   * @param kafkaServers Kafka bootstrap servers string, or {@code null} if Kafka is not available
+   * @param chronicleBaseDir base directory for relative Chronicle paths, or {@code null} to resolve
+   *     against CWD only
+   */
+  public LogResolver(
+      @Nullable DirectoryConnectionProvider directoryConnectionProvider,
+      @Nullable String kafkaServers,
+      @Nullable Path chronicleBaseDir) {
     this.directoryConnectionProvider = directoryConnectionProvider;
     this.kafkaServers = kafkaServers;
+    this.chronicleBaseDir = chronicleBaseDir;
   }
 
   /**
@@ -99,7 +131,7 @@ public class LogResolver {
       String pathStr = logNameOrPath.substring(CHRONICLE_FILE_PREFIX.length());
       Path path = Paths.get(pathStr);
       if (!path.isAbsolute()) {
-        path = path.toAbsolutePath().normalize();
+        path = resolveChronicleRelativePath(path, chronicleBaseDir);
       }
       String resolvedPath = path.toString();
       LogInfo logInfo = new LogInfo(resolvedPath);
@@ -135,5 +167,56 @@ public class LogResolver {
 
     // (4) Cannot resolve
     return null;
+  }
+
+  /**
+   * Resolves a relative Chronicle queue path, checking both the Chronicle base directory (if
+   * configured) and the current working directory.
+   *
+   * <p>This method implements the dual-location resolution strategy used by CLI commands that query
+   * existing logs. Since these commands only read or remove logs that were previously created by
+   * {@code pal run}, the log may reside under the configured base directory or the CWD.
+   *
+   * <p>Resolution order:
+   *
+   * <ol>
+   *   <li>If {@code chronicleBaseDir} is non-null and the path exists at {@code
+   *       baseDir/relativePath}, use it.
+   *   <li>If the path exists at {@code CWD/relativePath}, use it.
+   *   <li>If neither exists: prefer the base directory path (if set), otherwise fall back to CWD.
+   * </ol>
+   *
+   * @param relativePath the relative path to resolve (must not be absolute)
+   * @param chronicleBaseDir the Chronicle base directory, or {@code null} if not configured
+   * @return the resolved absolute path
+   */
+  static Path resolveChronicleRelativePath(Path relativePath, @Nullable Path chronicleBaseDir) {
+    if (chronicleBaseDir != null) {
+      Path baseDirPath = chronicleBaseDir.resolve(relativePath).normalize();
+      if (Files.exists(baseDirPath)) {
+        logger.debug(
+            "Resolved relative Chronicle path '{}' against base dir: {}",
+            relativePath,
+            baseDirPath);
+        return baseDirPath;
+      }
+    }
+
+    Path cwdPath = relativePath.toAbsolutePath().normalize();
+    if (Files.exists(cwdPath)) {
+      logger.debug("Resolved relative Chronicle path '{}' against CWD: {}", relativePath, cwdPath);
+      return cwdPath;
+    }
+
+    // Neither location exists — prefer base dir if configured
+    if (chronicleBaseDir != null) {
+      Path baseDirPath = chronicleBaseDir.resolve(relativePath).normalize();
+      logger.debug(
+          "Chronicle log not found at base dir ({}) or CWD ({}); defaulting to base dir path",
+          baseDirPath,
+          cwdPath);
+      return baseDirPath;
+    }
+    return cwdPath;
   }
 }

@@ -365,13 +365,14 @@ public class Replay extends AbstractPalSubcommand {
               + "For Chronicle Queue WALs, use the 'file:' prefix (e.g., file:/tmp/my-wal).");
     }
 
-    // Resolve relative Chronicle WAL paths against the current working directory so that
-    // "pal replay file:app.wal" works when the WAL is in the CWD.
+    // Resolve relative Chronicle WAL paths against the chronicle base directory (if configured)
+    // and the current working directory, so that "pal replay file:app.wal" works whether the WAL
+    // was created under PAL_CHRONICLE_BASE_DIR or in the CWD.
     if (walPath.startsWith("file:")) {
       String pathPart = walPath.substring("file:".length());
       Path path = Paths.get(pathPart);
       if (!path.isAbsolute()) {
-        walPath = "file:" + path.toAbsolutePath().normalize();
+        walPath = "file:" + LogResolver.resolveChronicleRelativePath(path, getChronicleBaseDir());
       }
     }
 

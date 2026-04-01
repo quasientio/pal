@@ -265,7 +265,8 @@ class LogCall extends AbstractCallCommand {
     loadProperties();
 
     String effectiveKafkaServers = kafkaServers != null ? kafkaServers : getKafkaServers();
-    logResolver = new LogResolver(directoryConnectionProvider, effectiveKafkaServers);
+    logResolver =
+        new LogResolver(directoryConnectionProvider, effectiveKafkaServers, getChronicleBaseDir());
   }
 
   /**

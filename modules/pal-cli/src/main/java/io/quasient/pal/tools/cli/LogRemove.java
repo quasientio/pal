@@ -159,7 +159,9 @@ public class LogRemove extends AbstractPalSubcommand {
     }
     String effectiveKafkaServers = kafkaServers != null ? kafkaServers : getKafkaServers();
     if (logResolver == null) {
-      logResolver = new LogResolver(directoryConnectionProvider, effectiveKafkaServers);
+      logResolver =
+          new LogResolver(
+              directoryConnectionProvider, effectiveKafkaServers, getChronicleBaseDir());
     }
   }
 

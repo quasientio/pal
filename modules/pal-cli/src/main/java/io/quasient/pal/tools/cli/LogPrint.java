@@ -203,7 +203,8 @@ class LogPrint extends AbstractPrintCommand {
     logger.info("Started printer for log: {}", logIdentifier);
 
     String kafkaServersToUse = kafkaServers != null ? kafkaServers : getKafkaServers();
-    LogResolver logResolver = new LogResolver(directoryConnectionProvider, kafkaServersToUse);
+    LogResolver logResolver =
+        new LogResolver(directoryConnectionProvider, kafkaServersToUse, getChronicleBaseDir());
     LogInfo log = logResolver.resolveLogInfo(logIdentifier);
 
     if (log == null) {

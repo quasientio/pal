@@ -244,7 +244,8 @@ public class LogStats extends AbstractStatsCommand {
   @Override
   protected int runCommand() {
     String kafkaServersToUse = bootstrapServers != null ? bootstrapServers : getKafkaServers();
-    LogResolver logResolver = new LogResolver(directoryConnectionProvider, kafkaServersToUse);
+    LogResolver logResolver =
+        new LogResolver(directoryConnectionProvider, kafkaServersToUse, getChronicleBaseDir());
     LogInfo log = logResolver.resolveLogInfo(logName);
 
     if (log == null) {

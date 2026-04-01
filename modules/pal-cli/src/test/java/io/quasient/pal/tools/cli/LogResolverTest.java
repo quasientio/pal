@@ -28,9 +28,14 @@ import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.LogInfo.LogType;
 import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
  * Unit test specifications for {@code LogResolver}.
@@ -43,6 +48,9 @@ import org.junit.Test;
  * lookup, (3) Kafka fallback.
  */
 public class LogResolverTest {
+
+  /** Temporary folder for creating directories used by Chronicle resolution tests. */
+  @Rule public TemporaryFolder tempFolder = new TemporaryFolder();
 
   // ==================== Directory Lookup Tests ====================
 
@@ -247,5 +255,95 @@ public class LogResolverTest {
     resolver.resolveLogInfo(null);
 
     // Then: throws IllegalArgumentException (handled by annotation)
+  }
+
+  // ==================== Chronicle Base Dir Resolution Tests ====================
+
+  /**
+   * Tests that a relative path is resolved against the chronicle base dir when the log exists
+   * there.
+   */
+  @Test
+  public void resolveLogInfo_withRelativePath_prefersBaseDirWhenLogExists() throws IOException {
+    // Given: log directory exists under base dir
+    Path baseDir = tempFolder.newFolder("base").toPath();
+    Files.createDirectory(baseDir.resolve("my-wal"));
+
+    LogResolver resolver = new LogResolver(null, null, baseDir);
+
+    // When
+    LogInfo result = resolver.resolveLogInfo("file:my-wal");
+
+    // Then: resolves to base dir path
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getLogType(), is(LogType.CHRONICLE));
+    assertThat(result.getName(), is(baseDir.resolve("my-wal").normalize().toString()));
+  }
+
+  /**
+   * Tests that when the log does not exist under the base dir but exists in CWD, the CWD path is
+   * used.
+   */
+  @Test
+  public void resolveChronicleRelativePath_fallsToCwdWhenNotInBaseDir() throws IOException {
+    // Given: base dir exists but does not contain the log
+    Path baseDir = tempFolder.newFolder("base").toPath();
+
+    Path resolved = LogResolver.resolveChronicleRelativePath(Paths.get("nonexistent"), baseDir);
+
+    // Then: since neither exists, should prefer base dir
+    assertThat(resolved, is(baseDir.resolve("nonexistent").normalize()));
+  }
+
+  /** Tests that when no base dir is configured, relative paths resolve against CWD. */
+  @Test
+  public void resolveChronicleRelativePath_usesCwdWhenNoBaseDir() {
+    Path resolved = LogResolver.resolveChronicleRelativePath(Paths.get("my-wal"), null);
+
+    assertThat(resolved.isAbsolute(), is(true));
+    assertThat(resolved, is(Paths.get("my-wal").toAbsolutePath().normalize()));
+  }
+
+  /** Tests that when the log exists under both base dir and CWD, the base dir takes priority. */
+  @Test
+  public void resolveChronicleRelativePath_prefersBaseDirWhenBothExist() throws IOException {
+    // Given: log exists in both base dir and a "cwd" directory
+    Path baseDir = tempFolder.newFolder("base").toPath();
+    Files.createDirectory(baseDir.resolve("shared-wal"));
+
+    // The static method checks Files.exists for baseDir path first
+    Path resolved = LogResolver.resolveChronicleRelativePath(Paths.get("shared-wal"), baseDir);
+
+    // Then: base dir takes priority
+    assertThat(resolved, is(baseDir.resolve("shared-wal").normalize()));
+  }
+
+  /** Tests that absolute paths bypass chronicle base dir resolution entirely. */
+  @Test
+  public void resolveLogInfo_withAbsolutePath_ignoresBaseDir() throws IOException {
+    Path baseDir = tempFolder.newFolder("base").toPath();
+    LogResolver resolver = new LogResolver(null, null, baseDir);
+
+    LogInfo result = resolver.resolveLogInfo("file:/tmp/absolute-wal");
+
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getName(), is("/tmp/absolute-wal"));
+    assertThat(result.getLogType(), is(LogType.CHRONICLE));
+  }
+
+  /**
+   * Tests that the three-argument constructor with null base dir behaves the same as the
+   * two-argument constructor.
+   */
+  @Test
+  public void resolveLogInfo_withNullBaseDir_resolvesAgainstCwd() {
+    LogResolver resolver = new LogResolver(null, null, null);
+
+    LogInfo result = resolver.resolveLogInfo("file:my-wal");
+
+    assertThat(result, is(notNullValue()));
+    assertThat(result.getLogType(), is(LogType.CHRONICLE));
+    assertThat(Paths.get(result.getName()).isAbsolute(), is(true));
+    assertThat(result.getName().endsWith("my-wal"), is(true));
   }
 }

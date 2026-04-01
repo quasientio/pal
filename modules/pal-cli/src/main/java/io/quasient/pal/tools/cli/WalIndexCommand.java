@@ -195,7 +195,7 @@ public class WalIndexCommand extends AbstractPalSubcommand {
       String filesystemPath = logPath.substring(CHRONICLE_FILE_PREFIX.length());
       Path queuePath = Paths.get(filesystemPath);
       if (!queuePath.isAbsolute()) {
-        queuePath = queuePath.toAbsolutePath().normalize();
+        queuePath = LogResolver.resolveChronicleRelativePath(queuePath, getChronicleBaseDir());
       }
 
       if (!ChronicleLogUtil.queueExists(queuePath)) {
