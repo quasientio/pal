@@ -87,17 +87,17 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
   }
 
   /**
-   * Retrieves the Kafka bootstrap servers from the KAFKA_SERVERS environment variable.
+   * Retrieves the Kafka bootstrap servers from the PAL_KAFKA_SERVERS environment variable.
    *
-   * <p>This method reads the {@code KAFKA_SERVERS} environment variable and returns its value. If
-   * the environment variable is not set or is empty, {@code null} is returned. This allows CLI
+   * <p>This method reads the {@code PAL_KAFKA_SERVERS} environment variable and returns its value.
+   * If the environment variable is not set or is empty, {@code null} is returned. This allows CLI
    * commands to use Kafka without requiring a PAL directory connection.
    *
    * @return the Kafka bootstrap servers connection string (e.g., "localhost:9092"), or {@code null}
    *     if not configured
    */
   protected static String getKafkaServers() {
-    final String kafkaServers = System.getenv("KAFKA_SERVERS");
+    final String kafkaServers = System.getenv("PAL_KAFKA_SERVERS");
     if (kafkaServers == null || kafkaServers.isEmpty()) {
       return null;
     }

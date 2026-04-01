@@ -30,7 +30,7 @@ import java.util.List;
  *
  * <ul>
  *   <li>{@code LOCAL} — WAL path set, distributed variables commented out
- *   <li>{@code DISTRIBUTED} — PAL_DIRECTORY and KAFKA_SERVERS set, local WAL commented out
+ *   <li>{@code DISTRIBUTED} — PAL_DIRECTORY and PAL_KAFKA_SERVERS set, local WAL commented out
  *   <li>{@code BOTH} — local defaults active, distributed settings present as comments
  * </ul>
  *
@@ -116,7 +116,7 @@ public final class EnvFileGenerator {
   private void appendLocalSection(StringBuilder sb, boolean commented) {
     String prefix = commented ? "# " : "";
     sb.append("# Local mode (Chronicle Queue)\n");
-    sb.append(prefix).append("export WAL=\"file:./wal\"\n");
+    sb.append(prefix).append("export PAL_WAL=\"file:./wal\"\n");
   }
 
   /**
@@ -129,7 +129,7 @@ public final class EnvFileGenerator {
     String prefix = commented ? "# " : "";
     sb.append("# Distributed mode (etcd + Kafka)\n");
     sb.append(prefix).append("export PAL_DIRECTORY=\"localhost:2379\"\n");
-    sb.append(prefix).append("export KAFKA_SERVERS=\"localhost:29092\"\n");
+    sb.append(prefix).append("export PAL_KAFKA_SERVERS=\"localhost:29092\"\n");
   }
 
   /**

@@ -28,22 +28,23 @@ export PAL_CLI_LOGGING_CONFIG=$PAL_HOME/.local/conf/cli-logging.xml
 # export NO_COLOR=
 
 # The following properties can be given as args to the `pal` command.
+# All PAL-specific env vars use the PAL_ prefix (except CLASSPATH which is standard Java).
 # In production you may want these in a file.
 
 export PAL_DIRECTORY=localhost:2379
-export KAFKA_SERVERS=localhost:29092
+export PAL_KAFKA_SERVERS=localhost:29092
 export KAFKA_JMX_PORT=10121
-export CHRONICLE_BASE_DIR=/tmp/chronicle-logs
+export PAL_CHRONICLE_BASE_DIR=/tmp/chronicle-logs
 # export CLASSPATH=
-# export PEER_NAME=
-# export PEER_UUID=
-# export ZMQ_RPC=
-# export JSON_RPC=
-# export TCP_PUB=
-# export LOG=
-# export SOURCE_LOG=
-# export WAL=
-# export LOG_PREFIX=
+# export PAL_PEER_NAME=
+# export PAL_PEER_UUID=
+# export PAL_ZMQ_RPC=
+# export PAL_JSON_RPC=
+# export PAL_TCP_PUB=
+# export PAL_LOG=
+# export PAL_SOURCE_LOG=
+# export PAL_WAL=
+# export PAL_LOG_PREFIX=
 
 # Source local-specific vars
 [ -f "$PAL_HOME/.env.local" ] && source "$PAL_HOME/.env.local"

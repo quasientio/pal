@@ -136,7 +136,7 @@ class LogCall extends AbstractCallCommand {
    * Kafka bootstrap servers for direct access to Kafka logs without PAL_DIRECTORY.
    *
    * <p>When provided, allows accessing Kafka logs directly without connecting to the PAL directory.
-   * Takes precedence over the KAFKA_SERVERS environment variable.
+   * Takes precedence over the PAL_KAFKA_SERVERS environment variable.
    */
   @Option(
       names = {"-k", "--kafka-servers"},
