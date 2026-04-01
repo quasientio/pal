@@ -28,14 +28,15 @@ import jakarta.inject.Singleton;
 import java.nio.channels.ClosedSelectorException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 import net.openhft.chronicle.queue.ChronicleQueue;
 import net.openhft.chronicle.queue.ExcerptTailer;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.jctools.queues.SpscUnboundedArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -63,17 +64,24 @@ public class ChronicleSourceLogReader extends SourceLogReader {
   private static final Headers EMPTY_HEADERS = new RecordHeaders();
 
   /**
-   * Set of Chronicle indices to skip, populated by the {@link OffsetUpdater} thread. Uses a
-   * concurrent set for thread-safe access between the OffsetUpdater and the main reader thread.
+   * SPSC queue for cross-thread delivery of Chronicle indices to skip. The {@link OffsetUpdater}
+   * thread produces into this queue; the reader thread drains it into {@link #localSkipSet} before
+   * each check. Array-backed chunks avoid per-element node allocation.
    */
-  private final Set<Long> skipIndices = ConcurrentHashMap.newKeySet();
+  private final SpscUnboundedArrayQueue<Long> skipQueue = new SpscUnboundedArrayQueue<>(256);
+
+  /**
+   * Reader-thread-local set of indices to skip, populated by draining {@link #skipQueue}. No
+   * concurrent access — only touched by the reader thread — so a plain {@link HashSet} suffices.
+   */
+  private final Set<Long> localSkipSet = new HashSet<>();
 
   /** OffsetUpdater instance that receives published indices to skip via ZMQ SUB. */
   private OffsetUpdater offsetUpdater;
 
   /**
    * A dedicated thread that listens for published offset messages through a ZMQ SUB socket. The
-   * thread adds received indices to the {@link #skipIndices} set, which instructs the reader to
+   * thread adds received indices to the {@link #localSkipSet} set, which instructs the reader to
    * skip dispatching messages with those specific Chronicle indices.
    */
   private final class OffsetUpdater extends Thread {
@@ -93,7 +101,7 @@ public class ChronicleSourceLogReader extends SourceLogReader {
 
     /**
      * Continuously receives published offset updates from the configured ZMQ subscriber socket and
-     * adds them to the skipIndices set. The loop terminates when a shutdown is requested, the
+     * enqueues them into the skipQueue. The loop terminates when a shutdown is requested, the
      * thread is interrupted, or a socket error occurs.
      */
     @Override
@@ -112,7 +120,7 @@ public class ChronicleSourceLogReader extends SourceLogReader {
             }
             socketError = true;
           } else {
-            skipIndices.add(msg.getOffset());
+            skipQueue.offer(msg.getOffset());
           }
         } catch (ClosedSelectorException ex) {
           if (logger.isDebugEnabled()) {
@@ -342,8 +350,15 @@ public class ChronicleSourceLogReader extends SourceLogReader {
               msg.getMessageType());
         }
 
-        // Skip self-produced messages when source log and WAL are the same queue
-        if (skipWrittenOffsets && skipIndices.remove(messageIndex)) {
+        // Skip self-produced messages when source log and WAL are the same queue.
+        // Drain the SPSC queue into the local set first, then check.
+        if (skipWrittenOffsets) {
+          Long idx;
+          while ((idx = skipQueue.poll()) != null) {
+            localSkipSet.add(idx);
+          }
+        }
+        if (skipWrittenOffsets && localSkipSet.remove(messageIndex)) {
           if (logger.isDebugEnabled()) {
             logger.debug("Skipped self-produced message at index: {}", messageIndex);
           }

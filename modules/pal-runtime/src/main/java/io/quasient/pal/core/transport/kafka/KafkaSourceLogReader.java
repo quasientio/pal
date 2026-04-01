@@ -30,13 +30,11 @@ import jakarta.inject.Singleton;
 import java.nio.channels.ClosedSelectorException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.AbstractQueue;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -47,6 +45,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
+import org.jctools.queues.SpscUnboundedArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -107,9 +106,11 @@ public class KafkaSourceLogReader extends SourceLogReader {
   private final DirectoryConnectionProvider directoryConnectionProvider;
 
   /**
-   * Queue of Kafka offsets to skip, shared between the OffsetUpdater thread and the main LogReader.
+   * Queue of Kafka offsets to skip, shared between the OffsetUpdater thread (producer) and the main
+   * LogReader thread (consumer). Uses an SPSC unbounded array queue to avoid per-element node
+   * allocation and reduce GC pressure under sustained write throughput.
    */
-  private final AbstractQueue<Long> skipOffsets = new ConcurrentLinkedQueue<>();
+  private final SpscUnboundedArrayQueue<Long> skipOffsets = new SpscUnboundedArrayQueue<>(256);
 
   /** An OffsetUpdater instance, which enables skipping processing of self-produced messages. */
   private OffsetUpdater offsetUpdater;
