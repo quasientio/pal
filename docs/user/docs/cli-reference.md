@@ -39,7 +39,7 @@ pal <entity> <operation> [OPTIONS] [ARGUMENTS]
 - `-d, --dir <HOST:PORT>` - PAL directory URL (etcd endpoint, e.g., `localhost:2379`)
 - `-h, --help` - Display help for the command
 
-The directory URL can also be set via the `PAL_DIRECTORY` environment variable. Kafka servers can be set via the `KAFKA_SERVERS` environment variable.
+The directory URL can also be set via the `PAL_DIRECTORY` environment variable. Kafka servers can be set via the `PAL_KAFKA_SERVERS` environment variable.
 
 Run `pal COMMAND --help` for more information on a command.
 
@@ -1873,11 +1873,11 @@ These variables control how the JVM is launched for peer processes. See the [JVM
 ### Application
 
 - `PAL_DIRECTORY` - Default directory URL (etcd endpoint)
-- `KAFKA_SERVERS` - Kafka bootstrap servers
-- `CHRONICLE_BASE_DIR` - Base directory for Chronicle queues (default: current directory)
-- `IN_FLIGHT_TRACKING` - Enable in-flight dispatch tracking for safe intercept activation (default: `true`)
-- `DRAIN_TIMEOUT_MS` - Timeout in milliseconds for drain operations during intercept activation (default: `5000`)
-- `CALLBACK_TIMEOUT_MS` - Default timeout for intercept callback responses in milliseconds (default: `3000`). A value of `0` means no timeout (infinite wait). Can be overridden per-intercept via intercept bundles
+- `PAL_KAFKA_SERVERS` - Kafka bootstrap servers
+- `PAL_CHRONICLE_BASE_DIR` - Base directory for Chronicle queues (default: current directory)
+- `PAL_IN_FLIGHT_TRACKING` - Enable in-flight dispatch tracking for safe intercept activation (default: `true`)
+- `PAL_DRAIN_TIMEOUT_MS` - Timeout in milliseconds for drain operations during intercept activation (default: `5000`)
+- `PAL_CALLBACK_TIMEOUT_MS` - Default timeout for intercept callback responses in milliseconds (default: `3000`). A value of `0` means no timeout (infinite wait). Can be overridden per-intercept via intercept bundles
 
 ---
 

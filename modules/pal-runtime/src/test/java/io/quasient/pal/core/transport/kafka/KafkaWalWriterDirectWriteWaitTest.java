@@ -45,6 +45,7 @@ public class KafkaWalWriterDirectWriteWaitTest {
         /* batchSize */ null,
         /* compressionType */ null,
         /* bufferMemory */ null,
+        /* offsetsRingSize */ null,
         (Properties p) -> null);
   }
 

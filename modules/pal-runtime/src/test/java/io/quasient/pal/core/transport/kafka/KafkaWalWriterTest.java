@@ -120,6 +120,7 @@ public class KafkaWalWriterTest extends ZmqEnabledTest {
             null, // use default
             null, // use default
             null, // use default
+            null, // use default
             props -> mockProducer);
 
     kafkaWalWriter.writeToLog(WAL_INFO, /* publishOffsets */ false);
@@ -152,6 +153,7 @@ public class KafkaWalWriterTest extends ZmqEnabledTest {
             walQueue,
             new AtomicBoolean(false),
             /* offset.pub */ "inproc://offsets",
+            null, // use default
             null, // use default
             null, // use default
             null, // use default
@@ -276,6 +278,7 @@ public class KafkaWalWriterTest extends ZmqEnabledTest {
             methodLocalQueue,
             methodLocalWalFailed,
             "inproc://offsets",
+            null, // use default
             null, // use default
             null, // use default
             null, // use default

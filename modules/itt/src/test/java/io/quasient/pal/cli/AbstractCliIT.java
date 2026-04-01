@@ -502,8 +502,8 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     pb.environment()
         .put("PAL_CLI_LOGGING_CONFIG", Paths.get(palHome, "config", "cli-logging.xml").toString());
     pb.environment().remove("PAL_DIRECTORY");
-    pb.environment().remove("KAFKA_SERVERS");
-    pb.environment().remove("CHRONICLE_BASE_DIR");
+    pb.environment().remove("PAL_KAFKA_SERVERS");
+    pb.environment().remove("PAL_CHRONICLE_BASE_DIR");
     pb.environment().remove("PAL_JMX_HOST");
     pb.environment().remove("PAL_JMX_PORT");
 
@@ -665,8 +665,8 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     // Remove environment variables that would interfere with tests
     // Tests must explicitly pass configuration via CLI args (e.g., -d, -k)
     pb.environment().remove("PAL_DIRECTORY");
-    pb.environment().remove("KAFKA_SERVERS");
-    pb.environment().remove("CHRONICLE_BASE_DIR");
+    pb.environment().remove("PAL_KAFKA_SERVERS");
+    pb.environment().remove("PAL_CHRONICLE_BASE_DIR");
     pb.environment().remove("PAL_JMX_HOST");
     pb.environment().remove("PAL_JMX_PORT");
 
@@ -754,14 +754,14 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
    *
    * <ul>
    *   <li>Handles global options (like -d) that must appear before the subcommand name
-   *   <li>Cleans environment variables (PAL_DIRECTORY, KAFKA_SERVERS, etc.) to ensure tests are
+   *   <li>Cleans environment variables (PAL_DIRECTORY, PAL_KAFKA_SERVERS, etc.) to ensure tests are
    *       explicit about configuration
    *   <li>Optionally sends data to stdin if provided
    * </ul>
    *
-   * <p><b>Important:</b> This method removes PAL_DIRECTORY and KAFKA_SERVERS from the environment.
-   * Tests must explicitly pass these via command-line arguments (-d, -k) or the peer/log will not
-   * be able to connect.
+   * <p><b>Important:</b> This method removes PAL_DIRECTORY and PAL_KAFKA_SERVERS from the
+   * environment. Tests must explicitly pass these via command-line arguments (-d, -k) or the
+   * peer/log will not be able to connect.
    *
    * @param subcommand the subcommand name (e.g., "ls", "rm", "print", "call")
    * @param stdinData optional data to send to stdin, or null for no stdin input

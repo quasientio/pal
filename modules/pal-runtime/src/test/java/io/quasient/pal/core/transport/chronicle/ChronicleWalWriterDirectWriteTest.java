@@ -81,6 +81,8 @@ public class ChronicleWalWriterDirectWriteTest extends ZmqEnabledTest {
             "TEN_MINUTELY",
             null,
             null,
+            /* indexSpacing */ null,
+            /* offsetsRingSize */ null,
             new DefaultChronicleQueueFactory());
 
     writer.writeToLog(WAL_INFO, /* publishOffsets */ true);

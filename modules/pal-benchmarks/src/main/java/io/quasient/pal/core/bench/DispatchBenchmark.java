@@ -601,6 +601,9 @@ public class DispatchBenchmark {
     props.setProperty(
         "wal.kafka.compression_type", System.getProperty("wal.kafka.compression_type", ""));
     props.setProperty("wal.kafka.buffer_memory", System.getProperty("wal.kafka.buffer_memory", ""));
+    props.setProperty(
+        "wal.chronicle.index_spacing", System.getProperty("wal.chronicle.index_spacing", ""));
+    props.setProperty("wal.offsets.ring_size", System.getProperty("wal.offsets.ring_size", ""));
 
     // other WAL params
     props.setProperty("wal.flush_on_close", System.getProperty("wal.flush_on_close", ""));
@@ -653,10 +656,6 @@ public class DispatchBenchmark {
 
     // KafkaSourceLogReader params (required by Guice even when SOURCE_LOG is disabled)
     props.setProperty("source.log", "");
-    props.setProperty(
-        "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-    props.setProperty(
-        "value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
     props.setProperty("enable.auto.commit", "true");
     props.setProperty("auto.commit.interval.ms", "1000");
     props.setProperty("auto.offset.reset", "earliest");

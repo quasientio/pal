@@ -54,10 +54,10 @@ public class EnvFileGeneratorTest {
     Path envFile = tempDir.getRoot().toPath().resolve(".env.pal");
     assertTrue(".env.pal should exist", Files.exists(envFile));
     String content = Files.readString(envFile);
-    assertThat(content, containsString("export WAL=\"file:./wal\""));
+    assertThat(content, containsString("export PAL_WAL=\"file:./wal\""));
     assertThat(content, containsString("export PAL_HOME="));
     assertThat(content, containsString("# export PAL_DIRECTORY="));
-    assertThat(content, containsString("# export KAFKA_SERVERS="));
+    assertThat(content, containsString("# export PAL_KAFKA_SERVERS="));
   }
 
   /**
@@ -81,8 +81,8 @@ public class EnvFileGeneratorTest {
     Path envFile = tempDir.getRoot().toPath().resolve(".env.pal");
     String content = Files.readString(envFile);
     assertThat(content, containsString("export PAL_DIRECTORY=\"localhost:2379\""));
-    assertThat(content, containsString("export KAFKA_SERVERS=\"localhost:29092\""));
-    assertThat(content, containsString("# export WAL=\"file:./wal\""));
+    assertThat(content, containsString("export PAL_KAFKA_SERVERS=\"localhost:29092\""));
+    assertThat(content, containsString("# export PAL_WAL=\"file:./wal\""));
   }
 
   /**
@@ -102,9 +102,9 @@ public class EnvFileGeneratorTest {
     // Then
     Path envFile = tempDir.getRoot().toPath().resolve(".env.pal");
     String content = Files.readString(envFile);
-    assertThat(content, containsString("export WAL=\"file:./wal\""));
+    assertThat(content, containsString("export PAL_WAL=\"file:./wal\""));
     assertThat(content, containsString("# export PAL_DIRECTORY="));
-    assertThat(content, containsString("# export KAFKA_SERVERS="));
+    assertThat(content, containsString("# export PAL_KAFKA_SERVERS="));
   }
 
   /** Verifies that all variable assignments use {@code export VAR=value} syntax. */

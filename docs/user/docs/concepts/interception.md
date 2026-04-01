@@ -566,7 +566,7 @@ The **drain timeout** controls how long PAL waits for in-flight calls to complet
 pal run --drain-timeout-ms 10000 -d localhost:2379 -cp app.jar
 ```
 
-Both settings are also available as environment variables: `IN_FLIGHT_TRACKING` and `DRAIN_TIMEOUT_MS`.
+Both settings are also available as environment variables: `PAL_IN_FLIGHT_TRACKING` and `PAL_DRAIN_TIMEOUT_MS`.
 
 ### Per-Intercept Override: forceImmediate
 
@@ -1187,7 +1187,8 @@ The programmatic API uses the same `InterceptManager` as the CLI commands. Apply
 
 By default, the intercepted peer waits 3000ms for a callback peer to respond to synchronous BEFORE/AFTER callbacks. This can be configured at two levels:
 
-**Global default** via `pal run --callback-timeout-ms <ms>` (or env var `CALLBACK_TIMEOUT_MS`):
+**Global default** via `pal run --callback-timeout-ms <ms>` (or env var `PAL_CALLBACK_TIMEOUT_MS`):
+
 - `--callback-timeout-ms 3000` — wait up to 3 seconds (default)
 - `--callback-timeout-ms 0` — no timeout (infinite wait)
 

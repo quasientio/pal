@@ -56,6 +56,7 @@ public class KafkaWalWriterOffsetsPublishTest {
         /* batchSize */ null,
         /* compressionType */ null,
         /* bufferMemory */ null,
+        /* offsetsRingSize */ null,
         (Properties p) -> null);
   }
 

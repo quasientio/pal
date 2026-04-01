@@ -125,6 +125,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             "TEN_MINUTELY",
             null, // use default
             null, // use default
+            null, // use default
+            null, // use default
             factory);
 
     chronicleWalWriter.writeToLog(WAL_INFO, /* publishOffsets */ false);
@@ -162,6 +164,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             null, // use default
             baseDir,
             "TEN_MINUTELY",
+            null, // use default
+            null, // use default
             null, // use default
             null, // use default
             new DefaultChronicleQueueFactory());
@@ -269,6 +273,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             "TEN_MINUTELY",
             null, // use default
             null, // use default
+            null, // use default
+            null, // use default
             new FailingFactory());
 
     failingWriter.writeToLog(WAL_INFO, false);
@@ -336,6 +342,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             "TEN_MINUTELY",
             null,
             null,
+            /* indexSpacing */ null,
+            /* offsetsRingSize */ null,
             new DefaultChronicleQueueFactory());
 
     directWriter.writeToLog(directWriteLog, false);
@@ -436,6 +444,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             "TEN_MINUTELY",
             null,
             null,
+            /* indexSpacing */ null,
+            /* offsetsRingSize */ null,
             new DefaultChronicleQueueFactory());
 
     queueWriter.writeToLog(queueTestLog, false);
@@ -524,6 +534,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             "TEN_MINUTELY",
             null,
             null,
+            /* indexSpacing */ null,
+            /* offsetsRingSize */ null,
             new DefaultChronicleQueueFactory());
 
     interruptWriter.writeToLog(interruptTestLog, false);
@@ -609,6 +621,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             "TEN_MINUTELY",
             null,
             null,
+            /* indexSpacing */ null,
+            /* offsetsRingSize */ null,
             new DefaultChronicleQueueFactory());
 
     // Enable offset publishing by passing true to writeToLog
@@ -684,6 +698,8 @@ public class ChronicleWalWriterTest extends ZmqEnabledTest {
             "TEN_MINUTELY",
             null,
             null,
+            /* indexSpacing */ null,
+            /* offsetsRingSize */ null,
             new DefaultChronicleQueueFactory());
 
     msgTypesWriter.writeToLog(msgTypesTestLog, false);

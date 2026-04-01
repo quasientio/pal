@@ -103,16 +103,16 @@ public abstract class AbstractIntegrationTest {
   }
 
   protected static String getKafkaServers() {
-    final String kafkaServers = System.getenv("KAFKA_SERVERS");
+    final String kafkaServers = System.getenv("PAL_KAFKA_SERVERS");
     if (kafkaServers == null || kafkaServers.isEmpty()) {
       throw new RuntimeException(
-          "Please set the environment variable KAFKA_SERVERS (eg. KAFKA_SERVERS=localhost:9092)");
+          "Please set the environment variable PAL_KAFKA_SERVERS (eg. PAL_KAFKA_SERVERS=localhost:9092)");
     }
     return kafkaServers;
   }
 
   protected static String getKafkaServersOrDefault(String defaultServers) {
-    return System.getenv().getOrDefault("KAFKA_SERVERS", defaultServers);
+    return System.getenv().getOrDefault("PAL_KAFKA_SERVERS", defaultServers);
   }
 
   protected static Optional<PeerInfo> findRpcPeer(
@@ -227,8 +227,8 @@ public abstract class AbstractIntegrationTest {
     }
 
     // Remove other environment variables that would interfere with tests
-    pb.environment().remove("KAFKA_SERVERS");
-    pb.environment().remove("CHRONICLE_BASE_DIR");
+    pb.environment().remove("PAL_KAFKA_SERVERS");
+    pb.environment().remove("PAL_CHRONICLE_BASE_DIR");
     pb.environment().remove("PAL_JMX_HOST");
     pb.environment().remove("PAL_JMX_PORT");
 
@@ -362,7 +362,7 @@ public abstract class AbstractIntegrationTest {
    * <p>The peer log is configured to write to {@code logs/peer.log} relative to PAL_HOME, or {@code
    * logs/{peerName}.log} for named peers like "interceptable-peer" or "interceptor-peer".
    *
-   * <p><b>Note:</b> This method removes PAL_DIRECTORY and KAFKA_SERVERS from the environment to
+   * <p><b>Note:</b> This method removes PAL_DIRECTORY and PAL_KAFKA_SERVERS from the environment to
    * ensure tests are explicit. Tests should pass configuration via command-line arguments (e.g.,
    * {@code "-d", palDirectory}).
    *
@@ -455,8 +455,8 @@ public abstract class AbstractIntegrationTest {
     // Remove environment variables that would interfere with tests
     // Tests must pass configuration explicitly via command-line arguments (e.g., "-d", "-k")
     pb.environment().remove("PAL_DIRECTORY");
-    pb.environment().remove("KAFKA_SERVERS");
-    pb.environment().remove("CHRONICLE_BASE_DIR");
+    pb.environment().remove("PAL_KAFKA_SERVERS");
+    pb.environment().remove("PAL_CHRONICLE_BASE_DIR");
     pb.environment().remove("PAL_JMX_HOST");
     pb.environment().remove("PAL_JMX_PORT");
 

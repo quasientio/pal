@@ -179,7 +179,7 @@ public class ChronicleLogIT extends AbstractIntegrationTest {
    * Tests that using file:/ prefix doesn't require Kafka configuration.
    *
    * <p>This test verifies that when using Chronicle queues (file:/ prefix), PAL doesn't require
-   * KAFKA_SERVERS or --kafka-servers to be set, and messages are still written.
+   * PAL_KAFKA_SERVERS or --kafka-servers to be set, and messages are still written.
    */
   @Test
   public void chronicleDoesNotRequireKafka() throws IOException, InterruptedException {

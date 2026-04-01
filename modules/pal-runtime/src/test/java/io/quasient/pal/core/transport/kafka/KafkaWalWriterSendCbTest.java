@@ -48,6 +48,7 @@ public class KafkaWalWriterSendCbTest {
         /* batchSize */ null,
         /* compressionType */ null,
         /* bufferMemory */ null,
+        /* offsetsRingSize */ null,
         (Properties props) -> null);
   }
 

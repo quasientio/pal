@@ -497,12 +497,10 @@ public class DispatchBenchmarkInterceptVariantTest {
     props.setProperty("wal.kafka.batch_size", "");
     props.setProperty("wal.kafka.compression_type", "");
     props.setProperty("wal.kafka.buffer_memory", "");
+    props.setProperty("wal.chronicle.index_spacing", "");
+    props.setProperty("wal.offsets.ring_size", "");
 
     // Kafka source log reader config
-    props.setProperty(
-        "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-    props.setProperty(
-        "value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
     props.setProperty("enable.auto.commit", "false");
     props.setProperty("auto.commit.interval.ms", "500");
     props.setProperty("auto.offset.reset", "earliest");

@@ -152,8 +152,8 @@ public class MainFxThreadOptionTest {
     method.setAccessible(true);
     method.invoke(main);
 
-    // In the test environment, FX_THREAD env var is not set, so fxThread remains false.
-    // The code path System.getenv("FX_THREAD") is exercised; if the env var were set
+    // In the test environment, PAL_FX_THREAD env var is not set, so fxThread remains false.
+    // The code path System.getenv("PAL_FX_THREAD") is exercised; if the env var were set
     // to "true", fxThread would become true.
     assertThat((boolean) fxThreadField.get(main), is(false));
   }

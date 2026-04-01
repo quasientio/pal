@@ -137,13 +137,13 @@ public class AbstractPalSubcommandTest {
   /**
    * Tests that getKafkaServers returns the environment variable value when set.
    *
-   * <p>Note: This test behavior depends on the actual KAFKA_SERVERS environment variable. If
-   * KAFKA_SERVERS is set in the environment, the test verifies it returns that value. If not set,
-   * the test documents this assumption and verifies null is returned.
+   * <p>Note: This test behavior depends on the actual PAL_KAFKA_SERVERS environment variable. If
+   * PAL_KAFKA_SERVERS is set in the environment, the test verifies it returns that value. If not
+   * set, the test documents this assumption and verifies null is returned.
    */
   @Test
   public void testGetKafkaServers_returnsEnvValue_whenSet() throws Exception {
-    // Given: KAFKA_SERVERS env var state is determined by the runtime environment
+    // Given: PAL_KAFKA_SERVERS env var state is determined by the runtime environment
     // When: getKafkaServers() called via reflection (it's protected static)
     Method getKafkaServersMethod = AbstractPalSubcommand.class.getDeclaredMethod("getKafkaServers");
     getKafkaServersMethod.setAccessible(true);
@@ -151,11 +151,11 @@ public class AbstractPalSubcommandTest {
     String result = (String) getKafkaServersMethod.invoke(null);
 
     // Then: Returns the env var value if set, or null if not set
-    String envValue = System.getenv("KAFKA_SERVERS");
+    String envValue = System.getenv("PAL_KAFKA_SERVERS");
     if (envValue != null && !envValue.isEmpty()) {
       assertThat(result, is(envValue));
     } else {
-      // Document assumption: KAFKA_SERVERS is not set in this test environment
+      // Document assumption: PAL_KAFKA_SERVERS is not set in this test environment
       assertThat(result, is((String) null));
     }
   }
@@ -163,12 +163,12 @@ public class AbstractPalSubcommandTest {
   /**
    * Tests that getKafkaServers returns null when the environment variable is not set.
    *
-   * <p>Note: This test assumes KAFKA_SERVERS is not set. If run in an environment where
-   * KAFKA_SERVERS is set, the test verifies the non-null path instead.
+   * <p>Note: This test assumes PAL_KAFKA_SERVERS is not set. If run in an environment where
+   * PAL_KAFKA_SERVERS is set, the test verifies the non-null path instead.
    */
   @Test
   public void testGetKafkaServers_returnsNull_whenEnvNotSet() throws Exception {
-    // Given: KAFKA_SERVERS env var state - this test documents behavior in both scenarios
+    // Given: PAL_KAFKA_SERVERS env var state - this test documents behavior in both scenarios
     // When: getKafkaServers() called via reflection
     Method getKafkaServersMethod = AbstractPalSubcommand.class.getDeclaredMethod("getKafkaServers");
     getKafkaServersMethod.setAccessible(true);
@@ -176,7 +176,7 @@ public class AbstractPalSubcommandTest {
     String result = (String) getKafkaServersMethod.invoke(null);
 
     // Then: Returns null if env var not set, otherwise returns the env value
-    String envValue = System.getenv("KAFKA_SERVERS");
+    String envValue = System.getenv("PAL_KAFKA_SERVERS");
     if (envValue == null) {
       assertThat(result, is((String) null));
     } else if (envValue.isEmpty()) {
@@ -193,11 +193,11 @@ public class AbstractPalSubcommandTest {
    *
    * <p>Note: Environment variables cannot be easily set to empty in Java tests. This test verifies
    * the logic by checking the actual implementation handles empty strings correctly. If
-   * KAFKA_SERVERS is set to a non-empty value, the test documents this.
+   * PAL_KAFKA_SERVERS is set to a non-empty value, the test documents this.
    */
   @Test
   public void testGetKafkaServers_returnsNull_whenEnvEmpty() throws Exception {
-    // Given: KAFKA_SERVERS env var state
+    // Given: PAL_KAFKA_SERVERS env var state
     // When: getKafkaServers() called via reflection
     Method getKafkaServersMethod = AbstractPalSubcommand.class.getDeclaredMethod("getKafkaServers");
     getKafkaServersMethod.setAccessible(true);
@@ -206,7 +206,7 @@ public class AbstractPalSubcommandTest {
 
     // Then: Verify the method's behavior based on actual env state
     // The implementation returns null for null or empty env vars
-    String envValue = System.getenv("KAFKA_SERVERS");
+    String envValue = System.getenv("PAL_KAFKA_SERVERS");
     if (envValue == null || envValue.isEmpty()) {
       assertThat(result, is((String) null));
     } else {

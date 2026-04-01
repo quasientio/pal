@@ -60,6 +60,7 @@ public class KafkaWalWriterDrainTest {
           null,
           null,
           null,
+          /* offsetsRingSize */ null,
           (Properties p) -> null);
     }
 

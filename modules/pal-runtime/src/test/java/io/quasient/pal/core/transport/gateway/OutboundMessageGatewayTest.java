@@ -465,7 +465,8 @@ public class OutboundMessageGatewayTest extends ZmqEnabledTest {
           null,
           walFailedFlag,
           "inproc://offsets",
-          null);
+          /* flushOnClose */ null,
+          /* offsetsRingSize */ null);
     }
 
     @Override

@@ -45,6 +45,7 @@ public class KafkaWalWriterPropsTest {
             /* batchSize */ "32768",
             /* compressionType */ "gzip",
             /* bufferMemory */ "65536",
+            /* offsetsRingSize */ null,
             (Properties p) -> (Producer<String, byte[]>) null);
 
     Field f = KafkaWalWriter.class.getDeclaredField("producerProperties");

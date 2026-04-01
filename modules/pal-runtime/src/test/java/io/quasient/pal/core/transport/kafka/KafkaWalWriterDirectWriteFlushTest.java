@@ -84,6 +84,7 @@ public class KafkaWalWriterDirectWriteFlushTest extends ZmqEnabledTest {
         null,
         null,
         null,
+        /* offsetsRingSize */ null,
         props -> producer);
   }
 
