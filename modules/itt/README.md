@@ -38,7 +38,7 @@ __NOTE__: if you already added `$PAL_HOME/bin` and `$PAL_HOME/infra/bin` to your
    NOTE: If you're using a local installation of etcd and kafka, then replace the above by `start-etcd.sh && start-kafka.sh`.
 5. Run the integration tests
     ```bash
-    timeout 30m mvn -pl modules/itt verify
+    timeout 45m mvn -pl modules/itt verify
     ```
    NOTE: Tests that require a peer automatically launch and manage their own peer processes via test suites:
    - `RpcTestSuite`: Manages a peer for all RPC tests, exposing both binary and JSON rpc interfaces.
