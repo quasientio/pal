@@ -175,8 +175,10 @@ class LogCall extends AbstractCallCommand {
   /** Specifies whether to print response messages received from the log. */
   @Option(
       names = {"--print-responses"},
+      negatable = true,
       defaultValue = "true",
-      description = "print response messages (default: true)")
+      fallbackValue = "true",
+      description = "print response messages (default: ${DEFAULT-VALUE})")
   private boolean printResponses;
 
   /** Specifies the number of threads (clients) to use for sending requests. */
