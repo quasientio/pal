@@ -331,7 +331,7 @@ public class LogConfiguratorTest {
     assertEquals("/var/log/pal", method.invoke(configurator, "/var/log/pal"));
   }
 
-  /** Tests normalizeChronicleQueuePath converts relative paths to absolute. */
+  /** Tests normalizeChronicleQueuePath converts relative paths to absolute via CWD. */
   @Test
   public void normalizeChronicleQueuePath_relativePath_convertsToAbsolute() throws Exception {
     LogConfigurator configurator =
@@ -343,6 +343,25 @@ public class LogConfiguratorTest {
     String result = (String) method.invoke(configurator, "relative/path");
     assertTrue("Path should be absolute", result.startsWith("/"));
     assertTrue("Path should end with relative/path", result.endsWith("relative/path"));
+  }
+
+  /** Tests normalizeChronicleQueuePath resolves relative paths against chronicle base dir. */
+  @Test
+  public void normalizeChronicleQueuePath_withBaseDir_resolvesAgainstBaseDir() throws Exception {
+    Properties propsWithBaseDir = new Properties();
+    propsWithBaseDir.putAll(appProps);
+    propsWithBaseDir.setProperty("wal.chronicle.base_dir", "/opt/chronicle");
+
+    LogConfigurator configurator =
+        new LogConfigurator(null, null, null, propsWithBaseDir, mockedInjector, false);
+    Method method =
+        LogConfigurator.class.getDeclaredMethod("normalizeChronicleQueuePath", String.class);
+    method.setAccessible(true);
+
+    assertEquals("/opt/chronicle/my-queue", method.invoke(configurator, "my-queue"));
+    assertEquals("/opt/chronicle/nested/path", method.invoke(configurator, "nested/path"));
+    // Absolute paths should still be returned unchanged
+    assertEquals("/tmp/absolute-queue", method.invoke(configurator, "/tmp/absolute-queue"));
   }
 
   // ========== createChronicleLogInfo() Tests ==========

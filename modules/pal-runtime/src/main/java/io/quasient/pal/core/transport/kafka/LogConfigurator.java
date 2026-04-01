@@ -201,9 +201,9 @@ public class LogConfigurator {
    * Normalizes a Chronicle queue path to absolute.
    *
    * <p>If the path is already absolute, it is returned as-is. If it is relative, it is resolved
-   * against the current working directory to create an absolute path. This ensures that Chronicle
-   * log paths stored in the directory are unambiguous and can be accessed from any working
-   * directory.
+   * against {@code wal.chronicle.base_dir} (set via {@code --chronicle-base-dir}) if configured,
+   * otherwise against the current working directory. This ensures that Chronicle log paths stored
+   * in the directory are unambiguous and can be accessed from any working directory.
    *
    * @param queuePath the Chronicle queue path (relative or absolute)
    * @return the absolute path
@@ -216,7 +216,11 @@ public class LogConfigurator {
       return queuePath;
     }
 
-    // Resolve relative path to absolute based on current working directory
+    // Resolve relative path against --chronicle-base-dir if configured, otherwise CWD
+    String baseDir = appProps.getProperty("wal.chronicle.base_dir");
+    if (baseDir != null && !baseDir.isBlank()) {
+      return Paths.get(baseDir).resolve(path).normalize().toString();
+    }
     return path.toAbsolutePath().normalize().toString();
   }
 
