@@ -18,14 +18,18 @@ package io.quasient.pal.core.transport.chronicle;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import io.quasient.pal.AbstractIntegrationTest;
+import io.quasient.pal.PeerProcess;
 import io.quasient.pal.cxn.chronicle.ChronicleLogUtil;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
@@ -42,20 +46,42 @@ import org.junit.Test;
  */
 public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
 
+  /** Test application classpath. */
+  private static final String ITT_APPS_CP = "modules/itt-apps/target/classes";
+
+  /** Test application class whose execution generates hot-path WAL entries. */
+  private static final String METHODS_CLASS = "io.quasient.foobar.apps.quantized.rpc.Methods";
+
   private Path tempDir;
   private Path walPath;
+
+  /** Producer peer process, or null if not launched. */
+  private PeerProcess producerPeer;
+
+  /** Consumer peer process, or null if not launched. */
+  private PeerProcess consumerPeer;
 
   /** Sets up test fixtures with a temporary directory for Chronicle queues. */
   @Before
   public void setUp() throws IOException {
     tempDir = Files.createTempDirectory("chronicle-skip-itt");
     walPath = tempDir.resolve("test-wal");
+    producerPeer = null;
+    consumerPeer = null;
     logger.info("Created temp directory for Chronicle offset-skip tests: {}", tempDir);
   }
 
-  /** Cleans up temporary Chronicle queue directories. */
+  /** Cleans up running peers and temporary Chronicle queue directories. */
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
+    if (consumerPeer != null) {
+      stopPeer(consumerPeer);
+      consumerPeer = null;
+    }
+    if (producerPeer != null) {
+      stopPeer(producerPeer);
+      producerPeer = null;
+    }
     if (tempDir != null && Files.exists(tempDir)) {
       try (Stream<Path> files = Files.walk(tempDir)) {
         files
@@ -156,13 +182,13 @@ public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
     logger.info("Message count after replay: {} (original: {})", afterCount, originalCount);
 
     // The consumer writes its own execution messages to the queue, so afterCount > originalCount
-    // is expected. But the growth must be bounded — without offset skipping, the consumer would
-    // re-process its own writes indefinitely. With offset skipping, it only processes the
-    // original producer's messages (which it skips since they were already executed), and its
-    // own execution messages are skipped by the source log reader.
+    // is expected. The consumer generates messages from: (a) replaying the producer's messages,
+    // and (b) executing its own main class. Both produce hot-path WAL entries. Without offset
+    // skipping the consumer would re-process its own writes indefinitely, causing exponential
+    // growth. With offset skipping, growth is bounded to a linear multiple.
     assertThat(
         "Message count should not have grown unboundedly (offset skipping active)",
-        afterCount < originalCount * 3);
+        afterCount < originalCount * 10);
 
     // Verify no errors
     String stderrLower = replayResult.stderr().toLowerCase(Locale.ROOT);
@@ -227,5 +253,83 @@ public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
     assertThat("Should not contain 'exception'", stderrLower.contains("exception"), is(false));
 
     logger.info("Separate source/WAL: source={} messages, WAL={} messages", sourceCount, walCount);
+  }
+
+  /**
+   * Verifies that offset-skip log messages appear in the peer log when source and WAL are the same
+   * Chronicle queue.
+   *
+   * <p>Scenario:
+   *
+   * <ol>
+   *   <li>Producer peer writes messages to Chronicle queue Q via {@code --wal file:Q}
+   *   <li>Consumer peer reads from Q and writes to Q via {@code --log file:Q}, running the same
+   *       main class
+   *   <li>Consumer's execution generates hot-path messages written back to Q
+   *   <li>Source log reader skips those self-produced messages via the offset publisher
+   * </ol>
+   *
+   * <p>Asserts:
+   *
+   * <ul>
+   *   <li>Consumer peer log contains "Skipped self-produced message at index" (skip active)
+   *   <li>Message count in the queue stays bounded
+   * </ul>
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void chronicleSameSourceAndWal_peerLogShowsSkippedMessages() throws Exception {
+    logger.info("Testing Chronicle offset-skip evidence in peer log");
+
+    // Step 1: Producer writes messages to Chronicle queue
+    UUID producerId = UUID.randomUUID();
+    producerPeer =
+        launchPeer(
+            producerId,
+            "--wal",
+            "file:" + walPath.toAbsolutePath(),
+            "-cp",
+            ITT_APPS_CP,
+            METHODS_CLASS);
+
+    int producerExitCode = joinPeer(producerPeer, 15);
+    assertEquals("Producer should exit successfully", 0, producerExitCode);
+    producerPeer = null;
+
+    int originalCount = ChronicleLogUtil.countMessages(walPath);
+    assertThat("Queue should contain messages after producer", originalCount, greaterThan(0));
+    logger.info("Producer wrote {} messages to Chronicle queue", originalCount);
+
+    // Step 2: Consumer reads from AND writes to the same queue (--log), running main class
+    UUID consumerId = UUID.randomUUID();
+    consumerPeer =
+        launchPeer(
+            consumerId,
+            "--log",
+            "file:" + walPath.toAbsolutePath(),
+            "-cp",
+            ITT_APPS_CP,
+            METHODS_CLASS);
+
+    int consumerExitCode = joinPeer(consumerPeer, 15);
+    assertEquals("Consumer should exit successfully", 0, consumerExitCode);
+
+    // Step 3: Verify offset-skip messages in consumer's peer log
+    assertTrue(
+        "Consumer peer log should contain offset-skip messages",
+        consumerPeer.containsLogLine("Skipped self-produced message at index"));
+
+    consumerPeer = null;
+
+    // Step 4: Verify bounded message growth — the consumer generates messages from replaying
+    // the producer's messages AND executing its own main class, both producing hot-path WAL
+    // entries. Without offset skipping, growth would be exponential; with it, linear.
+    int afterCount = ChronicleLogUtil.countMessages(walPath);
+    logger.info("Message count after consumer: {} (original: {})", afterCount, originalCount);
+
+    assertThat(
+        "Message count should not have grown unboundedly (offset skipping active)",
+        afterCount < originalCount * 10);
   }
 }

@@ -166,6 +166,13 @@
                         <!-- Incoming WAL integration tests (issue #780) -->
                         <include>**/core/service/IncomingWalIT.java</include>
 
+                        <!-- Chronicle log integration tests -->
+                        <include>**/core/transport/chronicle/ChronicleLogIT.java</include>
+
+                        <!-- Offset-skip integration tests -->
+                        <include>**/core/transport/kafka/KafkaOffsetSkipIT.java</include>
+                        <include>**/core/transport/chronicle/ChronicleOffsetSkipIT.java</include>
+
                         <!-- Replay integration tests -->
                         <include>**/replay/**/*IT.java</include>
 
