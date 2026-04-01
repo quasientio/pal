@@ -168,7 +168,7 @@ public class Main implements Callable<Integer> {
       names = {"-u", "--uuid"},
       paramLabel = "uuid",
       description = "uuid for this peer (default: <random>)")
-  private UUID uuid; // corresponding ENV var: PEER_UUID
+  private UUID uuid; // corresponding ENV var: PAL_PEER_UUID
 
   /**
    * Human-readable name for this peer. Used during registration and corresponds to the PEER_NAME
@@ -179,7 +179,7 @@ public class Main implements Callable<Integer> {
       arity = "1",
       paramLabel = "name",
       description = "name for this peer")
-  private String name; // corresponding ENV var: PEER_NAME
+  private String name; // corresponding ENV var: PAL_PEER_NAME
 
   /**
    * Flag indicating whether to continue running as a service after executing the main class or JAR.
@@ -200,7 +200,7 @@ public class Main implements Callable<Integer> {
           "Kafka topic or Chronicle queue to consume messages from. Use 'auto' to let Pal generate"
               + " a Kafka topic name with --log-prefix ('auto' works only with <pal_directory>)."
               + " Use 'file:/path' for Chronicle queue (absolute or relative path).")
-  private String sourceLog; // corresponding ENV var: SOURCE_LOG
+  private String sourceLog; // corresponding ENV var: PAL_SOURCE_LOG
 
   /**
    * Specifies the starting offset/index for reading messages from the source-log. For Kafka, this
@@ -224,7 +224,7 @@ public class Main implements Callable<Integer> {
           "Kafka topic or Chronicle queue where Pal writes its write-ahead log. Use 'auto' to let"
               + " Pal generate a Kafka topic name with --log-prefix ('auto' works only with"
               + " <pal_directory>). Use 'file:/path' for Chronicle queue (absolute or relative path).")
-  private String wal; // corresponding ENV var: WAL
+  private String wal; // corresponding ENV var: PAL_WAL
 
   /**
    * Flag to enable writing incoming RPC calls (from ZMQ, JSON-RPC, and CLI channels) to WAL/PUB in
@@ -457,18 +457,18 @@ public class Main implements Callable<Integer> {
           "Shorthand: use the same Kafka topic or Chronicle queue for both source and wal. Use 'auto'"
               + " to let Pal generate a Kafka topic name with --log-prefix ('auto' works only with"
               + " <pal_directory>). Use 'file:/path' for Chronicle queue (absolute or relative path).")
-  private String log; // corresponding ENV var: LOG
+  private String log; // corresponding ENV var: PAL_LOG
 
   /**
    * Comma-separated list of Kafka bootstrap servers. Required when Log options are provided. Maps
-   * to the KAFKA_SERVERS environment variable.
+   * to the PAL_KAFKA_SERVERS environment variable.
    */
   @Option(
       names = {"-k", "--kafka-servers"},
       paramLabel = "bootstrap_servers",
       description =
           "connect to given kafka servers (required with -l/--log, -s/--source-log and -w/--wal)")
-  private String kafkaServers; // corresponding ENV var: KAFKA_SERVERS
+  private String kafkaServers; // corresponding ENV var: PAL_KAFKA_SERVERS
 
   /**
    * Prefix to be used when generating Log names for --log auto / --source-log auto / --wal auto.
@@ -480,7 +480,7 @@ public class Main implements Callable<Integer> {
           "prefix to generate Log names when specified as 'auto' (default: ${DEFAULT-VALUE})",
       defaultValue = "app",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
-  private String logPrefix; // corresponding ENV var: LOG_PREFIX
+  private String logPrefix; // corresponding ENV var: PAL_LOG_PREFIX
 
   /** Base directory for Chronicle queues when using relative paths with file: prefix. */
   @Option(
@@ -489,7 +489,18 @@ public class Main implements Callable<Integer> {
       description =
           "base directory for relative Chronicle paths (file:mylog). Absolute paths (file:/path)"
               + " ignore this. Default: current working directory")
-  private String chronicleBaseDir; // corresponding ENV var: CHRONICLE_BASE_DIR
+  private String chronicleBaseDir; // corresponding ENV var: PAL_CHRONICLE_BASE_DIR
+
+  /**
+   * Path to an external properties file that overlays the built-in {@code pal.properties} defaults.
+   * Individual property overrides can be supplied via {@code -D} system properties (through {@code
+   * PAL_JAVA_OPTS} or {@code pal.vmoptions}).
+   */
+  @Option(
+      names = {"--properties"},
+      paramLabel = "path",
+      description = "path to external properties file (overlays built-in pal.properties defaults)")
+  private String propertiesFile; // corresponding ENV var: PAL_PROPERTIES
 
   /**
    * Timeout in milliseconds for Kafka connection health check during initialization. If Kafka
@@ -523,7 +534,7 @@ public class Main implements Callable<Integer> {
       names = {"-p", "--tcp-pub"},
       paramLabel = "[HOST:]PORT|auto",
       description = "publish messages to ZeroMQ socket (auto = localhost:random_port)")
-  private String tcpPub; // corresponding ENV var: TCP_PUB
+  private String tcpPub; // corresponding ENV var: PAL_TCP_PUB
 
   /**
    * Configuration for the ZMQ-RPC listener over ZeroMQ. Accepts "[HOST:]PORT" or "auto" and
@@ -533,7 +544,7 @@ public class Main implements Callable<Integer> {
       names = {"-r", "--zmq-rpc"},
       paramLabel = "[HOST:]PORT|auto",
       description = "listen for RPC requests on ZeroMQ socket (auto = localhost:random_port)")
-  private String zmqRpc; // corresponding ENV var: ZMQ_RPC
+  private String zmqRpc; // corresponding ENV var: PAL_ZMQ_RPC
 
   /**
    * Configuration for the JSON-RPC listener over WebSocket. Accepts "[HOST:]PORT" or "auto" and
@@ -543,7 +554,7 @@ public class Main implements Callable<Integer> {
       names = {"-j", "--json-rpc"},
       paramLabel = "[HOST:]PORT|auto",
       description = "listen for JSON-RPC requests on WebSocket (auto = localhost:random_port)")
-  private String jsonRpc; // corresponding ENV var: JSON_RPC
+  private String jsonRpc; // corresponding ENV var: PAL_JSON_RPC
 
   /** Number of threads allocated for handling RPC requests. The default value is 1. */
   @Option(
@@ -551,13 +562,13 @@ public class Main implements Callable<Integer> {
       defaultValue = "1",
       paramLabel = "num_threads",
       description = "number of threads for RPC requests (default: ${DEFAULT-VALUE})")
-  private Integer rpcThreads;
+  private Integer rpcThreads; // corresponding ENV var: PAL_RPC_THREADS
 
   /** Path to an RPC access policy YAML file that controls which operations are allowed via RPC. */
   @Option(
       names = {"--rpc-policy"},
       description = "path to RPC access policy YAML file")
-  private String rpcPolicyPath;
+  private String rpcPolicyPath; // corresponding ENV var: PAL_RPC_POLICY
 
   /**
    * Comma-separated list of built-in preset names to enable (e.g., {@code
@@ -566,7 +577,7 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"--rpc-policy-preset"},
       description = "comma-separated preset names (e.g., deny-unsafe,deny-jdk-internals)")
-  private String rpcPolicyPresets;
+  private String rpcPolicyPresets; // corresponding ENV var: PAL_RPC_POLICY_PRESET
 
   /**
    * Default RPC action when no policy rule matches. Must be {@code ALLOW} or {@code DENY}. Defaults
@@ -577,7 +588,7 @@ public class Main implements Callable<Integer> {
       defaultValue = "DENY",
       description =
           "default RPC action when no rule matches: ALLOW or DENY (default: ${DEFAULT-VALUE})")
-  private String rpcDefaultAction = "DENY";
+  private String rpcDefaultAction = "DENY"; // corresponding ENV var: PAL_RPC_DEFAULT_ACTION
 
   /**
    * Poll interval in milliseconds for the RPC policy file watcher. When set, the peer watches the
@@ -588,7 +599,7 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"--rpc-policy-watch-interval"},
       description = "policy file poll interval in ms (default: 2000, 0 = disable watching)")
-  private Integer rpcPolicyWatchInterval;
+  private Integer rpcPolicyWatchInterval; // corresponding ENV var: PAL_RPC_POLICY_WATCH_INTERVAL
 
   /**
    * Flag indicating whether message interception is enabled. Only applicable when registering with
@@ -637,7 +648,7 @@ public class Main implements Callable<Integer> {
       fallbackValue = "true",
       arity = "0..1",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
-  private Boolean inFlightTracking; // corresponding ENV var: IN_FLIGHT_TRACKING
+  private Boolean inFlightTracking; // corresponding ENV var: PAL_IN_FLIGHT_TRACKING
 
   /**
    * Timeout in milliseconds for drain operations when waiting for in-flight dispatches to complete
@@ -650,7 +661,7 @@ public class Main implements Callable<Integer> {
           "timeout for drain operations when waiting for in-flight dispatches (default: ${DEFAULT-VALUE})",
       defaultValue = "5000",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
-  private Integer drainTimeoutMs; // corresponding ENV var: DRAIN_TIMEOUT_MS
+  private Integer drainTimeoutMs; // corresponding ENV var: PAL_DRAIN_TIMEOUT_MS
 
   /**
    * Default timeout in milliseconds for receiving responses from synchronous intercept callback
@@ -666,7 +677,7 @@ public class Main implements Callable<Integer> {
           "default timeout for intercept callback responses, 0 = no timeout (default: ${DEFAULT-VALUE})",
       defaultValue = "3000",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
-  private Integer callbackTimeoutMs; // corresponding ENV var: CALLBACK_TIMEOUT_MS
+  private Integer callbackTimeoutMs; // corresponding ENV var: PAL_CALLBACK_TIMEOUT_MS
 
   /**
    * Global default exception propagation policy for intercept callbacks. Determines how exceptions
@@ -680,7 +691,7 @@ public class Main implements Callable<Integer> {
           "global exception propagation policy for intercept callbacks. Valid values: "
               + "PROPAGATE_ALL, PROPAGATE_EXPLICIT_ONLY, SWALLOW_ALL, PROPAGATE_CONTROLLED_ONLY "
               + "(default: PROPAGATE_CONTROLLED_ONLY)")
-  private String exceptionPolicy; // corresponding ENV var: EXCEPTION_POLICY
+  private String exceptionPolicy; // corresponding ENV var: PAL_EXCEPTION_POLICY
 
   /**
    * Global default checked exception policy for intercept callbacks. Determines how checked
@@ -692,7 +703,7 @@ public class Main implements Callable<Integer> {
       description =
           "global checked exception policy for intercept callbacks. Valid values: "
               + "WRAP, REJECT, ALLOW_ALL (default: WRAP)")
-  private String checkedExceptionPolicy; // corresponding ENV var: CHECKED_EXCEPTION_POLICY
+  private String checkedExceptionPolicy; // corresponding ENV var: PAL_CHECKED_EXCEPTION_POLICY
 
   /**
    * Flag to trigger display of the help message for command-line usage. Handled automatically by
@@ -757,7 +768,7 @@ public class Main implements Callable<Integer> {
   private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
   /** Path to the peer properties file in the classpath. */
-  private static final String PROPERTIES_FILE = "/peer.properties";
+  private static final String PROPERTIES_FILE = "/pal.properties";
 
   /** Path to the default logging configuration file in the classpath. */
   private static final String LOGGING_CONFIG = "/peer-logging-fallback.xml";
@@ -769,7 +780,7 @@ public class Main implements Callable<Integer> {
   private static final Duration EXECUTOR_AWAIT_TERM = Duration.of(1, ChronoUnit.SECONDS);
 
   /** Default value, in seconds, for this peer's keep-alive. */
-  private static final long PEER_KA_SECS = 60;
+  private static final long PEER_KA_SECS_DEFAULT = 60;
 
   /** Default initial capacity for WAL and PUB queue (must be power of 2). */
   private static final int MPSC_INITIAL_DEFAULT = 1 << 10; // 1024
@@ -870,13 +881,24 @@ public class Main implements Callable<Integer> {
     }
   }
 
+  /** Property keys that must not be overridden — PAL's internal serdes classes. */
+  private static final Set<String> LOCKED_PROPERTIES =
+      Set.of("key.deserializer", "value.deserializer");
+
   /**
-   * Loads application properties from the properties file located in the classpath.
+   * Loads application properties with the following precedence (highest wins):
    *
-   * <p>If the properties cannot be loaded, the application terminates with a fatal error.
+   * <ol>
+   *   <li>{@code -D} system properties (via {@code PAL_JAVA_OPTS} or {@code pal.vmoptions})
+   *   <li>External properties file ({@code --properties /path})
+   *   <li>Built-in {@code pal.properties} from classpath
+   * </ol>
+   *
+   * <p>If the built-in properties cannot be loaded, the application terminates with a fatal error.
+   * Properties in {@link #LOCKED_PROPERTIES} are ignored if set by external sources.
    */
   private void loadProps() {
-    // load properties from file in classpath
+    // 1. load built-in pal.properties from classpath
     try (final InputStream stream = Main.class.getResourceAsStream(PROPERTIES_FILE)) {
       properties.load(stream);
     } catch (IOException ex) {
@@ -885,7 +907,51 @@ public class Main implements Callable<Integer> {
           PeerException.FatalCode.ERROR_LOADING_PROPERTIES,
           format("Make sure to have `%s` in the classpath", PROPERTIES_FILE));
     }
-    logger.info("Loaded application properties from `{}`", PROPERTIES_FILE);
+    logger.info("Loaded built-in properties from `{}`", PROPERTIES_FILE);
+
+    // 2. overlay external properties file if provided
+    String externalFile = propertiesFile;
+    if (externalFile == null || externalFile.isBlank()) {
+      externalFile = System.getenv("PAL_PROPERTIES");
+    }
+    if (externalFile != null && !externalFile.isBlank()) {
+      Path externalPath = Paths.get(externalFile.trim());
+      if (!Files.exists(externalPath)) {
+        fatalExit(
+            new IOException("Properties file not found: " + externalPath),
+            PeerException.FatalCode.ERROR_LOADING_PROPERTIES,
+            format("External properties file `%s` does not exist", externalPath));
+      }
+      try (InputStream stream = Files.newInputStream(externalPath)) {
+        properties.load(stream);
+        logger.info("Loaded external properties from `{}`", externalPath);
+      } catch (IOException ex) {
+        fatalExit(
+            ex,
+            PeerException.FatalCode.ERROR_LOADING_PROPERTIES,
+            format("Error reading external properties file `%s`", externalPath));
+      }
+    }
+
+    // 3. overlay -D system properties for any key present in the loaded properties
+    for (String key : properties.stringPropertyNames()) {
+      String sysProp = System.getProperty(key);
+      if (sysProp != null) {
+        properties.setProperty(key, sysProp);
+        logger.debug("Property `{}` overridden by -D system property", key);
+      }
+    }
+
+    // 4. enforce locked properties — warn and restore if overridden
+    for (String lockedKey : LOCKED_PROPERTIES) {
+      String value = properties.getProperty(lockedKey);
+      if (value != null) {
+        logger.warn(
+            "Property `{}` is locked (PAL internal serdes) and cannot be overridden — ignoring",
+            lockedKey);
+        properties.remove(lockedKey);
+      }
+    }
   }
 
   /**
@@ -1026,13 +1092,11 @@ public class Main implements Callable<Integer> {
   }
 
   /**
-   * Retrieves a parameter value by checking the provided value and falling back to an environment
-   * variable.
+   * Returns the first non-blank value from: the CLI-provided value, then the environment variable.
    *
    * @param envKey the environment variable key
    * @param paramValue the command-line provided parameter value
-   * @return the non-empty parameter value from either the command-line or environment; null if none
-   *     provided
+   * @return the resolved value, or null if neither source provides one
    */
   private static String getParameter(String envKey, String paramValue) {
     if (paramValue != null && !paramValue.trim().isEmpty()) {
@@ -1046,101 +1110,132 @@ public class Main implements Callable<Integer> {
   }
 
   /**
+   * Returns the environment variable value parsed as an Integer, or null if absent/invalid.
+   *
+   * @param envKey the environment variable key
+   * @return the parsed integer, or null
+   */
+  private static Integer getIntEnv(String envKey) {
+    String val = System.getenv(envKey);
+    if (val != null && !val.isBlank()) {
+      try {
+        return Integer.parseInt(val.trim());
+      } catch (NumberFormatException ignored) {
+        // keep CLI/default
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Returns the environment variable value parsed as a Boolean, or null if absent.
+   *
+   * @param envKey the environment variable key
+   * @return the parsed boolean, or null
+   */
+  @SuppressFBWarnings(
+      value = "NP_BOOLEAN_RETURN_NULL",
+      justification = "Null signals 'env var not set' vs 'set to false'")
+  private static Boolean getBoolEnv(String envKey) {
+    String val = System.getenv(envKey);
+    if (val != null && !val.isBlank()) {
+      return Boolean.parseBoolean(val.trim());
+    }
+    return null;
+  }
+
+  /**
    * Sets various parameters from environment variables if they are not already provided via
-   * command-line options.
+   * command-line options. All PAL-specific environment variables use the {@code PAL_} prefix.
    *
    * <p>This method prioritizes command-line inputs and, if missing, retrieves values from
-   * corresponding environment variables.
+   * corresponding environment variables. The only exception is {@code CLASSPATH}, which is a
+   * standard Java convention and does not use the {@code PAL_} prefix.
    */
   private void setEmptyParamsFromEnv() {
     classpath = getParameter("CLASSPATH", classpath);
-    kafkaServers = getParameter("KAFKA_SERVERS", kafkaServers);
-    name = getParameter("PEER_NAME", name);
-    String uuidString = getParameter("PEER_UUID", uuid == null ? null : uuid.toString());
+    kafkaServers = getParameter("PAL_KAFKA_SERVERS", kafkaServers);
+    name = getParameter("PAL_PEER_NAME", name);
+    String uuidString = getParameter("PAL_PEER_UUID", uuid == null ? null : uuid.toString());
     uuid = uuidString == null ? null : UUID.fromString(uuidString);
-    log = getParameter("LOG", log);
-    sourceLog = getParameter("SOURCE_LOG", sourceLog);
-    wal = getParameter("WAL", wal);
-    logPrefix = getParameter("LOG_PREFIX", logPrefix);
-    chronicleBaseDir = getParameter("CHRONICLE_BASE_DIR", chronicleBaseDir);
-    zmqRpc = getParameter("ZMQ_RPC", zmqRpc);
-    jsonRpc = getParameter("JSON_RPC", jsonRpc);
-    tcpPub = getParameter("TCP_PUB", tcpPub);
+    log = getParameter("PAL_LOG", log);
+    sourceLog = getParameter("PAL_SOURCE_LOG", sourceLog);
+    wal = getParameter("PAL_WAL", wal);
+    logPrefix = getParameter("PAL_LOG_PREFIX", logPrefix);
+    chronicleBaseDir = getParameter("PAL_CHRONICLE_BASE_DIR", chronicleBaseDir);
+    zmqRpc = getParameter("PAL_ZMQ_RPC", zmqRpc);
+    jsonRpc = getParameter("PAL_JSON_RPC", jsonRpc);
+    tcpPub = getParameter("PAL_TCP_PUB", tcpPub);
 
-    // timeouts via env override if CLI not provided
     if (kafkaConnectTimeout == null) {
-      String kt = System.getenv("KAFKA_CONNECT_TIMEOUT_MS");
-      if (kt == null) {
-        kt = System.getenv("KAFKA_TIMEOUT_MS");
-      }
-      if (kt != null && !kt.isBlank()) {
-        try {
-          kafkaConnectTimeout = Integer.parseInt(kt.trim());
-        } catch (NumberFormatException ignored) {
-          // keep CLI/default
-        }
-      }
+      kafkaConnectTimeout = getIntEnv("PAL_KAFKA_TIMEOUT_MS");
     }
     if (etcdConnectTimeout == null) {
-      String et = System.getenv("ETCD_CONNECT_TIMEOUT_MS");
-      if (et != null && !et.isBlank()) {
-        try {
-          etcdConnectTimeout = Integer.parseInt(et.trim());
-        } catch (NumberFormatException ignored) {
-          // keep CLI/default
-        }
-      }
+      etcdConnectTimeout = getIntEnv("PAL_ETCD_TIMEOUT_MS");
     }
-
-    // in-flight tracking via env override if CLI not provided
     if (inFlightTracking == null) {
-      String ift = System.getenv("IN_FLIGHT_TRACKING");
-      if (ift != null && !ift.isBlank()) {
-        inFlightTracking = Boolean.parseBoolean(ift.trim());
-      }
+      inFlightTracking = getBoolEnv("PAL_IN_FLIGHT_TRACKING");
     }
-
-    // drain timeout via env override if CLI not provided
     if (drainTimeoutMs == null) {
-      String dt = System.getenv("DRAIN_TIMEOUT_MS");
-      if (dt != null && !dt.isBlank()) {
-        try {
-          drainTimeoutMs = Integer.parseInt(dt.trim());
-        } catch (NumberFormatException ignored) {
-          // keep CLI/default
-        }
-      }
+      drainTimeoutMs = getIntEnv("PAL_DRAIN_TIMEOUT_MS");
     }
-
-    // callback timeout via env override if CLI not provided
     if (callbackTimeoutMs == null) {
-      String ct = System.getenv("CALLBACK_TIMEOUT_MS");
-      if (ct != null && !ct.isBlank()) {
-        try {
-          callbackTimeoutMs = Integer.parseInt(ct.trim());
-        } catch (NumberFormatException ignored) {
-          // keep CLI/default
-        }
-      }
+      callbackTimeoutMs = getIntEnv("PAL_CALLBACK_TIMEOUT_MS");
     }
-
-    // fx thread via env override if CLI not provided
     if (!fxThread) {
-      String fxEnv = System.getenv("FX_THREAD");
-      if (fxEnv != null && Boolean.parseBoolean(fxEnv.trim())) {
+      Boolean fxEnv = getBoolEnv("PAL_FX_THREAD");
+      if (fxEnv != null && fxEnv) {
         fxThread = true;
       }
     }
 
-    // exception policy via env override if CLI not provided
-    exceptionPolicy = getParameter("EXCEPTION_POLICY", exceptionPolicy);
+    exceptionPolicy = getParameter("PAL_EXCEPTION_POLICY", exceptionPolicy);
+    checkedExceptionPolicy = getParameter("PAL_CHECKED_EXCEPTION_POLICY", checkedExceptionPolicy);
 
-    // checked exception policy via env override if CLI not provided
-    checkedExceptionPolicy = getParameter("CHECKED_EXCEPTION_POLICY", checkedExceptionPolicy);
+    // RPC configuration
+    if (rpcThreads == null || rpcThreads == 1) {
+      Integer envRpcThreads = getIntEnv("PAL_RPC_THREADS");
+      if (envRpcThreads != null) {
+        rpcThreads = envRpcThreads;
+      }
+    }
+    rpcDefaultAction = getParameter("PAL_RPC_DEFAULT_ACTION", rpcDefaultAction);
+    rpcPolicyPath = getParameter("PAL_RPC_POLICY", rpcPolicyPath);
+    rpcPolicyPresets = getParameter("PAL_RPC_POLICY_PRESET", rpcPolicyPresets);
+    if (rpcPolicyWatchInterval == null) {
+      rpcPolicyWatchInterval = getIntEnv("PAL_RPC_POLICY_WATCH_INTERVAL");
+    }
+
+    // WAL incoming flags
+    Boolean walIncomingRpcEnv = getBoolEnv("PAL_WAL_INCOMING_RPC");
+    if (walIncomingRpcEnv != null) {
+      walIncomingRpc = walIncomingRpcEnv;
+    }
+    Boolean walAllIncomingRpcEnv = getBoolEnv("PAL_WAL_ALL_INCOMING_RPC");
+    if (walAllIncomingRpcEnv != null) {
+      walAllIncomingRpc = walAllIncomingRpcEnv;
+    }
+    Boolean walIncomingCliEnv = getBoolEnv("PAL_WAL_INCOMING_CLI");
+    if (walIncomingCliEnv != null) {
+      walIncomingCli = walIncomingCliEnv;
+    }
+
+    // interceptable and source context
+    if (!interceptable) {
+      Boolean interceptableEnv = getBoolEnv("PAL_INTERCEPTABLE");
+      if (interceptableEnv != null && interceptableEnv) {
+        interceptable = true;
+      }
+    }
+    if (!includeSourceContext) {
+      Boolean srcCtxEnv = getBoolEnv("PAL_WITH_SOURCE_CONTEXT");
+      if (srcCtxEnv != null && srcCtxEnv) {
+        includeSourceContext = true;
+      }
+    }
 
     // if not given as option to this CMD, check if it was given to parent (Pal) or ENV
     if (palDirectoryUrl == null || palDirectoryUrl.trim().isEmpty()) {
-      // check ENV variable
       String palDirectoryEnvVar = System.getenv("PAL_DIRECTORY");
       palDirectoryEnvVar = palDirectoryEnvVar != null ? palDirectoryEnvVar.trim() : null;
       // check if it was given to parent command (Pal) as option
@@ -1149,7 +1244,6 @@ public class Main implements Callable<Integer> {
               .contains(palCommand.getPalDirectoryConnectionString())) {
         palDirectoryUrl = palCommand.getPalDirectoryConnectionString();
       } else {
-        // set it from parsed ENV variable (which at this point may be null, that's ok)
         palDirectoryUrl = palDirectoryEnvVar;
       }
     }
@@ -1436,7 +1530,7 @@ public class Main implements Callable<Integer> {
   private void addMiscProperties() {
     // set this peer's UUID if given from param or ENV, otherwise create random UUID
     if (uuid == null) {
-      final String envUuid = System.getenv("PEER_UUID");
+      final String envUuid = System.getenv("PAL_PEER_UUID");
       if (envUuid != null) {
         uuid = UUID.fromString(envUuid.trim());
       } else {
@@ -1806,7 +1900,11 @@ public class Main implements Callable<Integer> {
         self.setName(name);
       }
       palDirectory.createPeer(self);
-      peerLease = palDirectory.createPeerLease(self.getUuid(), PEER_KA_SECS);
+      long keepAliveSecs =
+          Long.parseLong(
+              properties.getProperty(
+                  "peer.keepalive.seconds", String.valueOf(PEER_KA_SECS_DEFAULT)));
+      peerLease = palDirectory.createPeerLease(self.getUuid(), keepAliveSecs);
     } catch (EtcdUnavailableException ex) {
       fatalExit(ex, PeerException.FatalCode.ERROR_UNREACHABLE_ETCD);
     } catch (Exception ex) {

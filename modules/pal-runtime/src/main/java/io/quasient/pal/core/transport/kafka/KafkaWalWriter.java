@@ -158,6 +158,7 @@ public class KafkaWalWriter extends WalWriter {
    * @param batchSize value for Kafka Producer's {@code batch.size}
    * @param compressionType value for Kafka Producer's {@code compression.type}
    * @param bufferMemory value for Kafka Producer's {@code buffer.memory}
+   * @param offsetsRingSize configurable ring size for offset Disruptor (must be power of 2)
    * @param producerFactory the factory used to get an initialized Producer
    */
   @Inject
@@ -175,6 +176,7 @@ public class KafkaWalWriter extends WalWriter {
       @Named("wal.kafka.batch_size") @Nullable String batchSize,
       @Named("wal.kafka.compression_type") @Nullable String compressionType,
       @Named("wal.kafka.buffer_memory") @Nullable String bufferMemory,
+      @Named("wal.offsets.ring_size") @Nullable String offsetsRingSize,
       ProducerFactory producerFactory) {
     super(
         peerUuid,
@@ -185,7 +187,8 @@ public class KafkaWalWriter extends WalWriter {
         walQueue,
         walFailed,
         offsetPubAddress,
-        flushOnClose);
+        flushOnClose,
+        offsetsRingSize);
 
     this.producerFactory = producerFactory;
     this.producerKeyStr = peerUuid.toString();
@@ -221,7 +224,7 @@ public class KafkaWalWriter extends WalWriter {
       offsetsDisruptor =
           new Disruptor<>(
               OffsetEvent::new,
-              OFFSETS_RING_SIZE,
+              offsetsRingSize,
               r -> {
                 Thread t = new Thread(threadGroup, r, serviceName + "-offset-publisher");
                 t.setDaemon(true);

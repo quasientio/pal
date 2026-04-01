@@ -106,6 +106,9 @@ public class ChronicleWalWriter extends WalWriter {
   /** Block size to use for the {@link ChronicleQueue}. */
   private final int blockSize;
 
+  /** Index spacing for the Chronicle queue. */
+  private final int indexSpacing;
+
   /** Sync policy: -1 disables explicit syncs; >0 means sync every N messages or after time cap. */
   private final int syncEvery;
 
@@ -151,6 +154,8 @@ public class ChronicleWalWriter extends WalWriter {
    * @param rollCycle the roll cycle to use for the {@link ChronicleQueue}
    * @param blockSize the block size to use for the {@link ChronicleQueue}
    * @param syncEvery explicit sync every N messages; -1 disables explicit syncs
+   * @param indexSpacing index spacing for the Chronicle queue
+   * @param offsetsRingSize configurable ring size for offset Disruptor (must be power of 2)
    * @param queueFactory used to create queue instances for appending messages
    */
   @Inject
@@ -168,6 +173,8 @@ public class ChronicleWalWriter extends WalWriter {
       @Named("wal.chronicle.roll_cycle") @Nullable String rollCycle,
       @Named("wal.chronicle.block_size") @Nullable String blockSize,
       @Named("wal.chronicle.sync_every") @Nullable String syncEvery,
+      @Named("wal.chronicle.index_spacing") @Nullable String indexSpacing,
+      @Named("wal.offsets.ring_size") @Nullable String offsetsRingSize,
       ChronicleQueueFactory queueFactory) {
     super(
         peerUuid,
@@ -178,7 +185,8 @@ public class ChronicleWalWriter extends WalWriter {
         walQueue,
         walFailed,
         offsetPubAddress,
-        flushOnClose);
+        flushOnClose,
+        offsetsRingSize);
 
     this.baseDir = baseDir;
     this.rollCycle =
@@ -190,6 +198,10 @@ public class ChronicleWalWriter extends WalWriter {
             ? Integer.parseInt(blockSize)
             : DEFAULT_BLOCK_SIZE;
     this.syncEvery = (syncEvery != null && !syncEvery.isBlank()) ? Integer.parseInt(syncEvery) : -1;
+    this.indexSpacing =
+        indexSpacing != null && !indexSpacing.isBlank()
+            ? Integer.parseInt(indexSpacing)
+            : DEFAULT_INDEX_SPACING;
     this.queueFactory = queueFactory;
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -213,7 +225,7 @@ public class ChronicleWalWriter extends WalWriter {
       offsetsDisruptor =
           new Disruptor<>(
               OffsetEvent::new,
-              OFFSETS_RING_SIZE,
+              offsetsRingSize,
               r -> {
                 Thread t = new Thread(r, serviceName + "-offset-publisher");
                 t.setDaemon(true);
@@ -266,7 +278,7 @@ public class ChronicleWalWriter extends WalWriter {
         logNamePath.isAbsolute() ? logNamePath : baseDir.resolve(writeAheadLog.getName());
 
     if (chronicleQueue == null) {
-      chronicleQueue = queueFactory.create(queuePath, rollCycle, DEFAULT_INDEX_SPACING, blockSize);
+      chronicleQueue = queueFactory.create(queuePath, rollCycle, indexSpacing, blockSize);
     }
 
     if (queueless) {

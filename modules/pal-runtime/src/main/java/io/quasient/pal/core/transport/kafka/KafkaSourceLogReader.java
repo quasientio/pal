@@ -71,6 +71,14 @@ public class KafkaSourceLogReader extends SourceLogReader {
   /** Logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(KafkaSourceLogReader.class);
 
+  /** Hard-coded Kafka key deserializer class — PAL's custom serdes. */
+  private static final String KEY_DESERIALIZER =
+      "io.quasient.pal.serdes.kafka.KafkaKeyDeserializer";
+
+  /** Hard-coded Kafka value deserializer class — PAL's custom serdes. */
+  private static final String VALUE_DESERIALIZER =
+      "io.quasient.pal.serdes.kafka.KafkaMessageDeserializer";
+
   /*----- Kafka-specific fields ------*/
 
   /** Duration to use for each Kafka poll operation. */
@@ -192,8 +200,6 @@ public class KafkaSourceLogReader extends SourceLogReader {
    * @param syncSocketAddress Address for service synchronization readiness.
    * @param serviceThreadGroup Thread group for service threads.
    * @param serviceName Name for this Log reader service.
-   * @param keyDeserializer Kafka key deserializer class name.
-   * @param valueDeserializer Kafka value deserializer class name.
    * @param autoCommit Flag to enable automatic committing of consumer offsets.
    * @param autoCommitInterval Interval (in ms) for automatic offset committing.
    * @param autoOffsetReset Strategy for resetting offsets if no offset is present.
@@ -214,8 +220,6 @@ public class KafkaSourceLogReader extends SourceLogReader {
       @Named("sync.ready") String syncSocketAddress,
       ThreadGroup serviceThreadGroup,
       @Named("LogReader.service") String serviceName,
-      @Named("key.deserializer") String keyDeserializer,
-      @Named("value.deserializer") String valueDeserializer,
       @Named("enable.auto.commit") String autoCommit,
       @Named("auto.commit.interval.ms") String autoCommitInterval,
       @Named("auto.offset.reset") String autoOffsetReset,
@@ -237,8 +241,8 @@ public class KafkaSourceLogReader extends SourceLogReader {
     // prepare Kafka consumer
     this.pollDuration = Duration.of(Long.parseLong(pollDuration), ChronoUnit.MILLIS);
     consumerProperties.put("group.id", peerId);
-    consumerProperties.put("key.deserializer", keyDeserializer);
-    consumerProperties.put("value.deserializer", valueDeserializer);
+    consumerProperties.put("key.deserializer", KEY_DESERIALIZER);
+    consumerProperties.put("value.deserializer", VALUE_DESERIALIZER);
     consumerProperties.put("enable.auto.commit", autoCommit);
     this.autoCommitEnabled = Boolean.parseBoolean(autoCommit);
     if (autoCommitEnabled) {

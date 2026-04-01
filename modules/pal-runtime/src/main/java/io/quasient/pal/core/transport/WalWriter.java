@@ -50,8 +50,11 @@ public abstract class WalWriter extends ConnectedService {
   protected static final MessagePassingQueue.WaitStrategy ADAPTIVE_100_MICROSECONDS =
       new AdaptiveSpinParkWaitStrategy();
 
-  /** Offset events ring size */
-  protected static final int OFFSETS_RING_SIZE = 1 << 16; // power of two
+  /** Default offset events ring size (must be power of two). */
+  protected static final int OFFSETS_RING_SIZE_DEFAULT = 1 << 16;
+
+  /** Offset events ring size (configurable via {@code wal.offsets.ring_size} property). */
+  protected final int offsetsRingSize;
 
   /** ZeroMQ publisher socket used to publish message offsets when enabled. */
   protected ZMQ.Socket offsetPublisherSocket;
@@ -125,7 +128,12 @@ public abstract class WalWriter extends ConnectedService {
    * @param walFailed global flag used to indicate failure when writing/appending to the WAL, so
    *     that producers halt enqueuing.
    * @param offsetPubAddress ZeroMQ address for the message offset publisher connection.
+   * @param offsetsRingSizeStr configurable ring size for offset Disruptor (must be power of 2), or
+   *     null to use default.
    */
+  @SuppressFBWarnings(
+      value = "CT_CONSTRUCTOR_THROW",
+      justification = "Fail-fast on invalid configuration is intentional")
   protected WalWriter(
       UUID peerUuid,
       ZContext context,
@@ -135,7 +143,8 @@ public abstract class WalWriter extends ConnectedService {
       @Nullable HwmMessageQueue<OutboundMsg> walQueue,
       AtomicBoolean walFailed,
       String offsetPubAddress,
-      @Nullable String flushOnClose) {
+      @Nullable String flushOnClose,
+      @Nullable String offsetsRingSizeStr) {
     super(peerUuid, context, syncSocketAddress, serviceThreadGroup, serviceName);
     this.walQueue = walQueue;
     this.walFailed = walFailed;
@@ -148,6 +157,12 @@ public abstract class WalWriter extends ConnectedService {
       isFlushOnClose = DEF_FLUSH_ON_CLOSE;
     }
     queueless = walQueue == null;
+
+    if (offsetsRingSizeStr != null && !offsetsRingSizeStr.isBlank()) {
+      this.offsetsRingSize = Integer.parseInt(offsetsRingSizeStr);
+    } else {
+      this.offsetsRingSize = OFFSETS_RING_SIZE_DEFAULT;
+    }
   }
 
   /**
