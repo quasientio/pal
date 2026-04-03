@@ -117,16 +117,13 @@ See the [Getting Started Guide](docs/user/docs/getting-started.md) for a complet
 
 ## Documentation
 
-**User Documentation:** [docs/user/docs/](docs/user/docs/)
-- [Understanding PAL](docs/user/docs/understanding-pal.md) - Deep dive on the message abstraction
-- [Getting Started](docs/user/docs/getting-started.md) - Hands-on tutorial
-- [Use Cases](docs/user/docs/use-cases.md) - Scenarios for developers, SREs, and architects
-- [CLI Reference](docs/user/docs/cli-reference.md) - Complete command reference
+**User Documentation:** [quasientio.github.io/pal](https://quasientio.github.io/pal/)
+- [Understanding PAL](https://quasientio.github.io/pal/understanding-pal/) - Deep dive on the message abstraction
+- [Getting Started](https://quasientio.github.io/pal/getting-started/) - Hands-on tutorial
+- [Use Cases](https://quasientio.github.io/pal/use-cases/) - Scenarios for developers, SREs, and architects
+- [CLI Reference](https://quasientio.github.io/pal/cli-reference/) - Complete command reference
 
-**Developer Documentation:** [docs/developer/docs/](docs/developer/docs/)
-- [Architecture Overview](docs/developer/docs/architecture/overview.md)
-- [Building and Testing](docs/developer/docs/development/building.md)
-- [Code Conventions](docs/developer/docs/development/code-conventions.md)
+**API Javadoc:** [javadoc.io/doc/io.quasient.pal](https://javadoc.io/doc/io.quasient.pal)
 
 ## Core Concepts
 
