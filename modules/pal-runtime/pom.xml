@@ -31,6 +31,7 @@
     </parent>
 
     <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
         <file.appender.class>io.quasient.pal.common.logging.PeerFileAppender</file.appender.class>
         <console.appender.class>io.quasient.pal.common.logging.PeerConsoleAppender</console.appender.class>
         <kafka.logger.name>org.apache.kafka</kafka.logger.name>
