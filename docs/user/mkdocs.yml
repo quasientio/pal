@@ -66,3 +66,6 @@ extra:
     - { rel: 'mask-icon', href: 'assets/imgs/safari-pinned-tab.svg', color: '#5bbad5' }
   msapplication_config: 'browserconfig.xml'
   theme_color: '#ffffff'
+  analytics:
+    provider: google
+    property: G-QE77GLRLF2
