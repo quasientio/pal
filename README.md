@@ -86,7 +86,7 @@ Because operations are messages, they can be:
 
 ```bash
 # Clone and build
-git clone https://github.io/quasient/pal.git
+git clone https://github.com/quasientio/pal.git
 cd pal
 mvn install -DskipITs
 
@@ -103,17 +103,13 @@ infra/bin/start-etcd-and-kafka-docker.sh
 
 # Run a simple peer
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal my-log --rpc auto \
+  --wal my-log \
   -cp target/my-app.jar \
   com.example.Main
 
-# Or use Chronicle for local development (no Kafka needed)
-pal run --wal file:/tmp/my-wal --rpc auto \
-  -cp target/my-app.jar \
-  com.example.Main
+# Or use Chronicle for local development (no etcd nor Kafka needed)
+pal run --wal file:/tmp/my-wal -cp target/my-app.jar com.example.Main
 ```
-
-See the [Getting Started Guide](docs/user/docs/getting-started.md) for a complete tutorial.
 
 ## Documentation
 
@@ -162,12 +158,11 @@ See [LICENSE](LICENSE) for details.
 
 Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-- Bug reports and feature requests: [GitHub Issues](https://github.io/quasient/pal/issues)
-- Code contributions: [GitHub Pull Requests](https://github.io/quasient/pal/pulls)
+- Bug reports and feature requests: [GitHub Issues](https://github.com/quasientio/pal/issues)
+- Code contributions: [GitHub Pull Requests](https://github.com/quasientio/pal/pulls)
 
 ## Community
 
-- **Discord:** [Join the PAL community](https://discord.gg/k4XsMyUA)
-- **Documentation:** [Full docs](docs/user/docs/)
-- **Examples:** [pal-examples repository](https://github.com/cometera/pal-examples)
-- **Discussion:** [GitHub Discussions](https://github.io/quasient/pal/discussions)
+- **Discord:** [Join the PAL community](https://discord.gg/cHrbfsB2ev)
+- **Documentation:** [Full docs](https://quasientio.github.io/pal/)
+- **Examples:** [pal-examples repository](https://github.com/quasientio/pal-examples)
