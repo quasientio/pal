@@ -46,6 +46,13 @@ import org.junit.Test;
  */
 public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
 
+  /**
+   * Per-process timeout in seconds. Chronicle-only peers skip Kafka/etcd but still incur JVM
+   * startup and Chronicle queue initialization. Under CI load this can exceed the default 15 s, so
+   * we allow 30 s per process to avoid intermittent timeouts.
+   */
+  private static final int CHRONICLE_PROCESS_TIMEOUT = 30;
+
   /** Test application classpath. */
   private static final String ITT_APPS_CP = "modules/itt-apps/target/classes";
 
@@ -113,11 +120,12 @@ public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
 
     ProcessResult result =
         runPeer(
+            CHRONICLE_PROCESS_TIMEOUT,
             "--log",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
-            "modules/itt-apps/target/classes",
-            "io.quasient.foobar.apps.quantized.rpc.Methods");
+            ITT_APPS_CP,
+            METHODS_CLASS);
 
     assertThat("Peer should exit with code 0", result.exitCode(), is(0));
 
@@ -155,11 +163,12 @@ public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
     // Step 1: Producer writes messages to the Chronicle queue
     ProcessResult writeResult =
         runPeer(
+            CHRONICLE_PROCESS_TIMEOUT,
             "--wal",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
-            "modules/itt-apps/target/classes",
-            "io.quasient.foobar.apps.quantized.rpc.Methods");
+            ITT_APPS_CP,
+            METHODS_CLASS);
 
     assertThat("Producer should exit with code 0", writeResult.exitCode(), is(0));
 
@@ -170,11 +179,12 @@ public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
     // Step 2: Consumer reads from AND writes to the same queue (--log)
     ProcessResult replayResult =
         runPeer(
+            CHRONICLE_PROCESS_TIMEOUT,
             "--log",
             "file:" + walPath.toAbsolutePath(),
             "-cp",
-            "modules/itt-apps/target/classes",
-            "io.quasient.foobar.apps.quantized.rpc.Methods");
+            ITT_APPS_CP,
+            METHODS_CLASS);
 
     assertThat("Consumer should exit with code 0", replayResult.exitCode(), is(0));
 
@@ -214,11 +224,12 @@ public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
     // Step 1: Write messages to source queue
     ProcessResult writeResult =
         runPeer(
+            CHRONICLE_PROCESS_TIMEOUT,
             "--wal",
             "file:" + sourcePath.toAbsolutePath(),
             "-cp",
-            "modules/itt-apps/target/classes",
-            "io.quasient.foobar.apps.quantized.rpc.Methods");
+            ITT_APPS_CP,
+            METHODS_CLASS);
 
     assertThat("Producer should exit with code 0", writeResult.exitCode(), is(0));
 
@@ -229,13 +240,14 @@ public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
     // Step 2: Read from source, write to separate WAL
     ProcessResult readResult =
         runPeer(
+            CHRONICLE_PROCESS_TIMEOUT,
             "--source-log",
             "file:" + sourcePath.toAbsolutePath(),
             "--wal",
             "file:" + walSeparatePath.toAbsolutePath(),
             "-cp",
-            "modules/itt-apps/target/classes",
-            "io.quasient.foobar.apps.quantized.rpc.Methods");
+            ITT_APPS_CP,
+            METHODS_CLASS);
 
     assertThat("Reader should exit with code 0", readResult.exitCode(), is(0));
 
@@ -293,7 +305,7 @@ public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
             ITT_APPS_CP,
             METHODS_CLASS);
 
-    int producerExitCode = joinPeer(producerPeer, 15);
+    int producerExitCode = joinPeer(producerPeer, CHRONICLE_PROCESS_TIMEOUT);
     assertEquals("Producer should exit successfully", 0, producerExitCode);
     producerPeer = null;
 
@@ -312,7 +324,7 @@ public class ChronicleOffsetSkipIT extends AbstractIntegrationTest {
             ITT_APPS_CP,
             METHODS_CLASS);
 
-    int consumerExitCode = joinPeer(consumerPeer, 15);
+    int consumerExitCode = joinPeer(consumerPeer, CHRONICLE_PROCESS_TIMEOUT);
     assertEquals("Consumer should exit successfully", 0, consumerExitCode);
 
     // Step 3: Verify offset-skip messages in consumer's peer log

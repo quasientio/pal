@@ -167,7 +167,7 @@ public abstract class AbstractIntegrationTest {
 
   /**
    * Executes `pal run` with the given arguments, waits for it to finish and returns the process
-   * result.
+   * result. Uses the default timeout of {@link #PROCESS_TIMEOUT_SECONDS}.
    *
    * @param args the command-line arguments to pass to `pal run`
    * @return ProcessResult containing exit code, stdout, and stderr
@@ -175,12 +175,28 @@ public abstract class AbstractIntegrationTest {
    * @throws InterruptedException if the process is interrupted
    */
   protected ProcessResult runPeer(String... args) throws IOException, InterruptedException {
-    return runPeerWithEnv(null, args);
+    return runPeerWithEnv(null, PROCESS_TIMEOUT_SECONDS, args);
+  }
+
+  /**
+   * Executes `pal run` with the given arguments, waits for the specified timeout and returns the
+   * process result.
+   *
+   * @param timeoutSeconds maximum time to wait for the process to finish
+   * @param args the command-line arguments to pass to `pal run`
+   * @return ProcessResult containing exit code, stdout, and stderr
+   * @throws IOException if process execution fails
+   * @throws InterruptedException if the process is interrupted
+   */
+  protected ProcessResult runPeer(int timeoutSeconds, String... args)
+      throws IOException, InterruptedException {
+    return runPeerWithEnv(null, timeoutSeconds, args);
   }
 
   /**
    * Executes `pal run` with the given arguments, while adding/removing environment variables, waits
-   * for it to finish and returns the process result.
+   * for it to finish and returns the process result. Uses the default timeout of {@link
+   * #PROCESS_TIMEOUT_SECONDS}.
    *
    * @param palDirectory the PAL_DIRECTORY value to set, or null to remove it from Environment
    * @param args the command-line arguments to pass to `pal run`
@@ -189,6 +205,22 @@ public abstract class AbstractIntegrationTest {
    * @throws InterruptedException if the process is interrupted
    */
   protected ProcessResult runPeerWithEnv(String palDirectory, String... args)
+      throws IOException, InterruptedException {
+    return runPeerWithEnv(palDirectory, PROCESS_TIMEOUT_SECONDS, args);
+  }
+
+  /**
+   * Executes `pal run` with the given arguments, while adding/removing environment variables, waits
+   * for the specified timeout and returns the process result.
+   *
+   * @param palDirectory the PAL_DIRECTORY value to set, or null to remove it from Environment
+   * @param timeoutSeconds maximum time to wait for the process to finish
+   * @param args the command-line arguments to pass to `pal run`
+   * @return ProcessResult containing exit code, stdout, and stderr
+   * @throws IOException if process execution fails
+   * @throws InterruptedException if the process is interrupted
+   */
+  protected ProcessResult runPeerWithEnv(String palDirectory, int timeoutSeconds, String... args)
       throws IOException, InterruptedException {
     String palHome = System.getenv("PAL_HOME");
     if (palHome == null) {
@@ -269,10 +301,10 @@ public abstract class AbstractIntegrationTest {
     stdoutReader.start();
     stderrReader.start();
 
-    boolean finished = process.waitFor(PROCESS_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
     if (!finished) {
       process.destroyForcibly();
-      throw new RuntimeException("Process timed out after " + PROCESS_TIMEOUT_SECONDS + " seconds");
+      throw new RuntimeException("Process timed out after " + timeoutSeconds + " seconds");
     }
 
     stdoutReader.join(1000);
