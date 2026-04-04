@@ -16,6 +16,9 @@
 #
 
 
+# Resolve PAL_HOME from script location (no env var required)
+PAL_HOME="$(cd "$(dirname "$0")/.." && pwd)"
+
 # Determine the command (first non-option argument)
 for arg in "$@"; do
   case $arg in
@@ -83,7 +86,7 @@ fi
 # ignored.  Loaded from $PAL_HOME/config/pal.vmoptions if the file exists.
 # Copy config/pal.vmoptions.example to config/pal.vmoptions to get started.
 # ---------------------------------------------------------------------------
-PAL_VMOPTIONS_FILE="${PAL_HOME:-.}/config/pal.vmoptions"
+PAL_VMOPTIONS_FILE="$PAL_HOME/config/pal.vmoptions"
 PAL_VMOPTIONS=""
 if [ -f "$PAL_VMOPTIONS_FILE" ]; then
   while IFS= read -r line || [ -n "$line" ]; do
@@ -125,8 +128,8 @@ if [ "$COMMAND" = "run" ]; then
 fi
 JAVA_OPTS="$JAVA_OPTS $AGENT_OPT $LOGGING_OPTS $PAL_VMOPTIONS $PAL_JAVA_OPTS"
 
-# Find pal's jar under $PAL_HOME/lib, fallback to lib/
-PAL_JAR="${PAL_HOME:-.}/lib/pal-*.jar"
+# Find pal's jar under $PAL_HOME/lib
+PAL_JAR="$PAL_HOME/lib/pal-*.jar"
 
 # Execute the Pal application
 exec java $JAVA_OPTS -jar $PAL_JAR "$@"

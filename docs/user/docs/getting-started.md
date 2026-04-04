@@ -39,8 +39,7 @@ Add PAL to your PATH:
 
 ```bash
 # From the PAL source directory
-export PAL_HOME="$(pwd)"
-export PATH="$PAL_HOME/bin:$PATH"
+export PATH="$(pwd)/bin:$PATH"
 
 # Verify installation
 pal help
@@ -392,8 +391,6 @@ Now let's see how PAL enables transparent RPC between peers.
 Start etcd and Kafka using Docker:
 
 ```bash
-# From the PAL source directory
-cd $PAL_HOME
 infra/bin/start-etcd-and-kafka-docker.sh
 
 # Verify they're running
@@ -597,7 +594,7 @@ The key point: You can register intercepts at runtime that execute callbacks bef
 ### Start/Stop Infrastructure
 
 ```bash
-# Start (from PAL_HOME)
+# Start infrastructure
 infra/bin/start-etcd-and-kafka-docker.sh
 
 # Stop
@@ -667,7 +664,6 @@ rm -rf /tmp/tutorial-wal
 curl http://localhost:2379/health
 
 # If not, start it
-cd $PAL_HOME
 infra/bin/start-etcd-and-kafka-docker.sh
 ```
 
@@ -688,7 +684,6 @@ Common causes:
 docker ps | grep kafka
 
 # If not, start infrastructure
-cd $PAL_HOME
 infra/bin/start-etcd-and-kafka-docker.sh
 ```
 

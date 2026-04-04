@@ -87,10 +87,6 @@ public final class EnvFileGenerator {
     sb.append("# PAL Environment Configuration\n");
     sb.append("# Source this file: source .env.pal\n");
     sb.append('\n');
-    sb.append("export PAL_HOME=\"").append(palHome()).append("\"\n");
-    sb.append("export PATH=\"$PAL_HOME/bin:$PATH\"\n");
-    sb.append('\n');
-
     DeploymentMode mode = config.getDeploymentMode();
 
     if (mode == DeploymentMode.DISTRIBUTED) {
@@ -132,16 +128,4 @@ public final class EnvFileGenerator {
     sb.append(prefix).append("export PAL_KAFKA_SERVERS=\"localhost:29092\"\n");
   }
 
-  /**
-   * Returns the PAL_HOME value, defaulting to a placeholder if not determinable.
-   *
-   * @return the PAL_HOME path
-   */
-  private String palHome() {
-    String palHome = System.getenv("PAL_HOME");
-    if (palHome != null && !palHome.isEmpty()) {
-      return palHome;
-    }
-    return "/path/to/pal";
-  }
 }

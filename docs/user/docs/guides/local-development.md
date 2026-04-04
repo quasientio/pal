@@ -83,8 +83,7 @@ Usage: pal [COMMAND] [OPTIONS]
 If `pal` command not found, add PAL to your PATH:
 
 ```bash
-export PAL_HOME="/path/to/pal"
-export PATH="$PAL_HOME/bin:$PATH"
+export PATH="/path/to/pal/bin:$PATH"
 ```
 
 ## Basic Development Workflow
@@ -289,7 +288,7 @@ Run PAL peer from your IDE for breakpoint debugging:
 
 - **Main class**: `io.quasient.pal.cli.Pal`
 - **Program arguments**: `run --wal file:/tmp/debug-wal -cp target/classes com.example.HelloService arg1`
-- **VM options**: `-DPAL_HOME=/path/to/pal`
+- **VM options**: (Chronicle exports as needed, see `bin/pal` for reference)
 
 Set breakpoints in your application code and debug normally.
 

@@ -90,9 +90,8 @@ git clone https://github.com/quasientio/pal.git
 cd pal
 mvn install -DskipITs
 
-# Set up environment
-export PAL_HOME="$(pwd)"
-export PATH="$PAL_HOME/bin:$PATH"
+# Add to PATH
+export PATH="$(pwd)/bin:$PATH"
 ```
 
 ### Run Your First PAL Application

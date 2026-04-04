@@ -83,9 +83,8 @@ git clone https://github.io/quasientinc/pal.git
 cd pal
 mvn install -DskipITs
 
-# Set up environment
-export PAL_HOME="$(pwd)"
-export PATH="$PAL_HOME/bin:$PATH"
+# Add to PATH
+export PATH="$(pwd)/bin:$PATH"
 
 # Verify
 pal help

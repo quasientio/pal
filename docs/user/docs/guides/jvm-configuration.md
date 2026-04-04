@@ -65,7 +65,7 @@ Setting `PAL_JMX_OPTS` directly takes precedence over `PAL_JMX_HOST`/`PAL_JMX_PO
 For persistent JVM configuration that doesn't require environment variables, create a `pal.vmoptions` file in the PAL config directory:
 
 ```
-$PAL_HOME/config/pal.vmoptions
+config/pal.vmoptions
 ```
 
 The file contains one JVM option per line. Blank lines and lines starting with `#` are ignored.
