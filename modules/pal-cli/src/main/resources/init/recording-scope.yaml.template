@@ -10,11 +10,11 @@
 defaultAction: SKIP
 
 rules:
-  # Record all application code
+  # Skip field reads on application types (noise reduction)
   - class: "${package}.**"
-    action: RECORD
-
-  # Skip field reads on JDK types (noise reduction)
-  - class: "java.**"
     categories: [FIELD_GET]
     action: SKIP
+
+  # Record all other application code
+  - class: "${package}.**"
+    action: RECORD

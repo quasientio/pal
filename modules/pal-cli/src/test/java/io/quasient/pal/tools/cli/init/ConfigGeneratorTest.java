@@ -122,7 +122,10 @@ public class ConfigGeneratorTest {
     Path scopeFile = tempDir.getRoot().toPath().resolve("config/recording-scope.yaml");
     assertTrue("recording-scope.yaml should exist", Files.exists(scopeFile));
     String content = Files.readString(scopeFile);
-    assertThat(content, containsString("com.example"));
+    assertThat(content, containsString("defaultAction: SKIP"));
+    assertThat(content, containsString("com.example.**"));
+    assertThat(content, containsString("categories: [FIELD_GET]"));
+    assertThat(content, containsString("action: RECORD"));
   }
 
   /**
