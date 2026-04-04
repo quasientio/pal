@@ -29,6 +29,7 @@ import io.quasient.pal.tools.cli.init.InitConfig;
 import io.quasient.pal.tools.cli.init.InitWizard;
 import io.quasient.pal.tools.cli.init.JLinePromptProvider;
 import io.quasient.pal.tools.cli.init.PalWeaveResolver;
+import io.quasient.pal.tools.cli.init.ReadmeGenerator;
 import io.quasient.pal.tools.cli.init.SampleAppGenerator;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -402,6 +403,12 @@ public class Init extends AbstractPalSubcommand {
     // Step 5: Infra files
     List<Path> infraFiles = new InfraGenerator(config).generate(effectiveDir);
     for (Path f : infraFiles) {
+      actions.add(new FileAction("[CREATE]", f));
+    }
+
+    // Step 6: README
+    List<Path> readmeFiles = new ReadmeGenerator(config).generate(effectiveDir);
+    for (Path f : readmeFiles) {
       actions.add(new FileAction("[CREATE]", f));
     }
 
