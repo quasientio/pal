@@ -71,10 +71,24 @@
       </excludes>
     </fileSet>
 
-    <!-- everything from ../bin -->
+    <!-- unix launcher (executable) -->
     <fileSet>
       <directory>../bin</directory>
       <outputDirectory>bin</outputDirectory>
+      <includes>
+        <include>pal</include>
+      </includes>
+      <fileMode>0755</fileMode>
+    </fileSet>
+
+    <!-- windows launcher -->
+    <fileSet>
+      <directory>../bin</directory>
+      <outputDirectory>bin</outputDirectory>
+      <includes>
+        <include>pal.bat</include>
+      </includes>
+      <lineEnding>crlf</lineEnding>
     </fileSet>
 
   </fileSets>
