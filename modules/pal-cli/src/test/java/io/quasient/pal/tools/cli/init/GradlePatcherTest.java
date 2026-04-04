@@ -64,11 +64,11 @@ public class GradlePatcherTest {
   }
 
   /**
-   * Verifies that patching a {@code build.gradle} with an existing {@code plugins} block adds the
-   * {@code io.freefair.aspectj.post-compile-weaving} plugin.
+   * Verifies that patching a {@code build.gradle} adds the {@code weaveClasses} task and {@code
+   * aspectjTools}/{@code aspect} configurations.
    */
   @Test
-  public void testAddsAspectjPlugin() throws Exception {
+  public void testAddsWeaveTaskAndConfigurations() throws Exception {
     // Given
     Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
     InitConfig config = defaultConfig().build();
@@ -78,7 +78,11 @@ public class GradlePatcherTest {
 
     // Then
     String content = Files.readString(buildFile, StandardCharsets.UTF_8);
-    assertThat(content, containsString("io.freefair.aspectj.post-compile-weaving"));
+    assertThat(content, containsString("weaveClasses"));
+    assertThat(content, containsString("mustRunAfter test"));
+    assertThat(content, containsString("org.aspectj.tools.ajc.Main"));
+    assertThat(content, containsString("configurations {"));
+    assertThat(content, containsString("aspectjTools"));
   }
 
   /**
@@ -102,8 +106,8 @@ public class GradlePatcherTest {
   }
 
   /**
-   * Verifies idempotency: patching a {@code build.gradle} that already contains the {@code
-   * pal-weave} dependency and the AspectJ plugin does not produce duplicate entries.
+   * Verifies idempotency: patching a {@code build.gradle} that already contains the full PAL
+   * weaving setup does not produce duplicate entries.
    */
   @Test
   public void testIdempotency() throws Exception {
@@ -164,7 +168,7 @@ public class GradlePatcherTest {
 
   /**
    * Verifies that patching preserves all existing plugins in the {@code build.gradle} while adding
-   * the AspectJ plugin alongside them.
+   * the weave task alongside them.
    */
   @Test
   public void testPreservesExistingPlugins() throws Exception {
@@ -178,12 +182,12 @@ public class GradlePatcherTest {
     // Then
     String content = Files.readString(buildFile, StandardCharsets.UTF_8);
     assertThat(content, containsString("id 'java'"));
-    assertThat(content, containsString("io.freefair.aspectj.post-compile-weaving"));
+    assertThat(content, containsString("weaveClasses"));
   }
 
   /**
-   * Verifies that patching a {@code build.gradle.kts} file uses Kotlin DSL syntax for the {@code
-   * pal-weave} dependency.
+   * Verifies that patching a {@code build.gradle.kts} file uses Kotlin DSL syntax for
+   * configurations, dependencies, and the weave task.
    */
   @Test
   public void testHandlesBuildGradleKts() throws Exception {
@@ -207,9 +211,12 @@ public class GradlePatcherTest {
 
     // Then
     String content = Files.readString(buildFile, StandardCharsets.UTF_8);
-    assertThat(content, containsString("aspect(\"io.quasient.pal:pal-weave:1.0.0\")"));
+    assertThat(content, containsString("add(\"aspect\", \"io.quasient.pal:pal-weave:1.0.0\")"));
     assertThat(content, containsString("implementation(\"org.aspectj:aspectjrt:"));
-    assertThat(content, containsString("id(\"io.freefair.aspectj.post-compile-weaving\")"));
+    assertThat(content, containsString("add(\"aspectjTools\", \"org.aspectj:aspectjtools:"));
+    assertThat(content, containsString("tasks.register<JavaExec>(\"weaveClasses\")"));
+    assertThat(content, containsString("create(\"aspectjTools\")"));
+    assertThat(content, containsString("create(\"aspect\")"));
   }
 
   /**
@@ -238,8 +245,8 @@ public class GradlePatcherTest {
   }
 
   /**
-   * Verifies that when a {@code build.gradle} already contains a different AspectJ plugin, the
-   * patcher emits a warning and does not add a conflicting plugin.
+   * Verifies that when a {@code build.gradle} already contains an AspectJ plugin, the patcher emits
+   * a warning and does not add the weave task or modify the file.
    */
   @Test
   public void testWarnsOnExistingAspectjPlugin() throws Exception {
@@ -264,7 +271,8 @@ public class GradlePatcherTest {
     // Then
     assertFalse(result.getWarnings().isEmpty());
     String content = Files.readString(buildFile, StandardCharsets.UTF_8);
-    assertThat(content, not(containsString("io.freefair.aspectj.post-compile-weaving")));
+    assertThat(content, not(containsString("weaveClasses")));
+    assertThat(content, not(containsString("pal-weave")));
   }
 
   /**
@@ -283,6 +291,24 @@ public class GradlePatcherTest {
     // Then
     String content = Files.readString(buildFile, StandardCharsets.UTF_8);
     assertThat(content, containsString("implementation 'org.aspectj:aspectjrt:"));
+  }
+
+  /**
+   * Verifies that patching adds {@code aspectjtools} on the {@code aspectjTools} configuration for
+   * the weave task.
+   */
+  @Test
+  public void testAddsAspectjToolsDependency() throws Exception {
+    // Given
+    Path buildFile = writeBuildGradle(BASIC_BUILD_GRADLE);
+    InitConfig config = defaultConfig().build();
+
+    // When
+    new GradlePatcher().patch(config, buildFile);
+
+    // Then
+    String content = Files.readString(buildFile, StandardCharsets.UTF_8);
+    assertThat(content, containsString("aspectjTools 'org.aspectj:aspectjtools:"));
   }
 
   /**

@@ -724,7 +724,7 @@ public class Init extends AbstractPalSubcommand {
     out.println("  " + step + ". source .env.pal          # Set up environment");
     step++;
 
-    String compileCmd = config.getBuildTool() == BuildTool.GRADLE ? "gradle build" : "mvn compile";
+    String compileCmd = config.getBuildTool() == BuildTool.GRADLE ? "gradle build" : "mvn package";
     out.println("  " + step + ". " + compileCmd + "              # Build with AspectJ weaving");
     step++;
 

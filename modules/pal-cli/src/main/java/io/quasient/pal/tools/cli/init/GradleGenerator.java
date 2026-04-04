@@ -25,13 +25,13 @@ import java.nio.file.Path;
  * Generates new Gradle build files ({@code build.gradle} and {@code settings.gradle}) for fresh PAL
  * projects.
  *
- * <p>Loads templates from the classpath (pre-filtered by Maven resource filtering for build-time
- * constants like the freefair plugin version) and substitutes runtime variables such as group ID,
+ * <p>Loads templates from the classpath and substitutes runtime variables such as group ID,
  * artifact ID, project version, PAL version, and AspectJ version.
  *
- * <p>The generated {@code build.gradle} uses the {@code io.freefair.aspectj.post-compile-weaving}
- * plugin for AspectJ post-compile weaving, the {@code aspect} configuration for {@code pal-weave},
- * and {@code implementation} for {@code aspectjrt}.
+ * <p>The generated {@code build.gradle} uses a manual {@code weaveClasses} task (backed by {@code
+ * org.aspectj.tools.ajc.Main}) that runs after tests so unit tests always execute against unwoven
+ * classes. The {@code jar} task depends on {@code weaveClasses} so the packaged artifact contains
+ * woven bytecode.
  *
  * <p>Respects {@link InitConfig#isDryRun()}: when true, computes what would be generated but does
  * not write files.

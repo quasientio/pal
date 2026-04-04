@@ -31,10 +31,10 @@ import org.junit.rules.TemporaryFolder;
  * Unit tests for {@link GradleGenerator}, which generates new Gradle build files ({@code
  * build.gradle} and {@code settings.gradle}) for fresh PAL projects.
  *
- * <p>GradleGenerator must produce a complete, functional {@code build.gradle} with the AspectJ
- * post-compile weaving plugin, the {@code pal-weave} aspect dependency, {@code aspectjrt} runtime
- * dependency, Java 17 target compatibility, and correct project identity (group, version). It must
- * also produce a {@code settings.gradle} with the project name.
+ * <p>GradleGenerator must produce a complete, functional {@code build.gradle} with a manual {@code
+ * weaveClasses} task for AspectJ post-test weaving, the {@code pal-weave} aspect dependency, {@code
+ * aspectjrt} runtime dependency, Java 17 target compatibility, and correct project identity (group,
+ * version). It must also produce a {@code settings.gradle} with the project name.
  *
  * @see GradleGenerator
  */
@@ -79,11 +79,11 @@ public class GradleGeneratorTest {
   }
 
   /**
-   * Verifies that the generated {@code build.gradle} includes the {@code
-   * io.freefair.aspectj.post-compile-weaving} plugin in the {@code plugins} block.
+   * Verifies that the generated {@code build.gradle} includes the {@code weaveClasses} task for
+   * AspectJ weaving that runs after tests.
    */
   @Test
-  public void testIncludesAspectjPlugin() throws Exception {
+  public void testIncludesWeaveTask() throws Exception {
     // Given
     InitConfig config = defaultConfig().build();
 
@@ -92,7 +92,9 @@ public class GradleGeneratorTest {
 
     // Then
     String content = readBuildGradle();
-    assertThat(content, containsString("io.freefair.aspectj.post-compile-weaving"));
+    assertThat(content, containsString("tasks.register('weaveClasses', JavaExec)"));
+    assertThat(content, containsString("mustRunAfter test"));
+    assertThat(content, containsString("org.aspectj.tools.ajc.Main"));
   }
 
   /**
@@ -127,6 +129,42 @@ public class GradleGeneratorTest {
     // Then
     String content = readBuildGradle();
     assertThat(content, containsString("implementation 'org.aspectj:aspectjrt:"));
+  }
+
+  /**
+   * Verifies that the generated {@code build.gradle} includes {@code aspectjtools} on the {@code
+   * aspectjTools} configuration for the weave task.
+   */
+  @Test
+  public void testIncludesAspectjToolsDependency() throws Exception {
+    // Given
+    InitConfig config = defaultConfig().build();
+
+    // When
+    new GradleGenerator(config).generate(tempDir.getRoot().toPath());
+
+    // Then
+    String content = readBuildGradle();
+    assertThat(content, containsString("aspectjTools 'org.aspectj:aspectjtools:"));
+  }
+
+  /**
+   * Verifies that the generated {@code build.gradle} includes a {@code configurations} block with
+   * {@code aspectjTools} and {@code aspect} entries.
+   */
+  @Test
+  public void testIncludesConfigurations() throws Exception {
+    // Given
+    InitConfig config = defaultConfig().build();
+
+    // When
+    new GradleGenerator(config).generate(tempDir.getRoot().toPath());
+
+    // Then
+    String content = readBuildGradle();
+    assertThat(content, containsString("configurations {"));
+    assertThat(content, containsString("aspectjTools"));
+    assertThat(content, containsString("aspect"));
   }
 
   /**

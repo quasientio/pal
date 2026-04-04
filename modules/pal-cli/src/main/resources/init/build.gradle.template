@@ -1,6 +1,5 @@
 plugins {
     id 'java'
-    id 'io.freefair.aspectj.post-compile-weaving' version '${freefair.aspectj.version}'
 }
 
 group = '{{groupId}}'
@@ -15,7 +14,34 @@ repositories {
     mavenCentral()
 }
 
+configurations {
+    aspectjTools
+    aspect
+}
+
 dependencies {
+    aspectjTools 'org.aspectj:aspectjtools:{{aspectjVersion}}'
     aspect 'io.quasient.pal:pal-weave:{{palVersion}}'
     implementation 'org.aspectj:aspectjrt:{{aspectjVersion}}'
+}
+
+// PAL AspectJ weaving — runs after tests so unit tests use unwoven classes.
+// To skip weaving: gradle build -x weaveClasses
+tasks.register('weaveClasses', JavaExec) {
+    dependsOn classes
+    mustRunAfter test
+    mainClass = 'org.aspectj.tools.ajc.Main'
+    classpath = configurations.aspectjTools
+    args = [
+        '-inpath', sourceSets.main.output.classesDirs.asPath,
+        '-aspectpath', configurations.aspect.asPath,
+        '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
+        '-classpath', sourceSets.main.compileClasspath.asPath,
+        '-source', sourceCompatibility.toString(),
+        '-target', targetCompatibility.toString(),
+    ]
+}
+
+tasks.named('jar') {
+    dependsOn weaveClasses
 }

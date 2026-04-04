@@ -30,11 +30,14 @@ import java.util.regex.Pattern;
  * <p>Adds PAL AspectJ weaving configuration to an existing Gradle project by:
  *
  * <ul>
- *   <li>Adding the {@code io.freefair.aspectj.post-compile-weaving} plugin to the {@code plugins}
- *       block
- *   <li>Adding the {@code pal-weave} aspect dependency
- *   <li>Adding the {@code aspectjrt} implementation dependency
+ *   <li>Adding {@code aspectjTools} and {@code aspect} to the {@code configurations} block
+ *   <li>Adding the {@code aspectjtools}, {@code pal-weave}, and {@code aspectjrt} dependencies
+ *   <li>Appending a {@code weaveClasses} task that runs AspectJ weaving after tests
  * </ul>
+ *
+ * <p>The {@code weaveClasses} task uses {@code mustRunAfter test} so that unit tests always run
+ * against unwoven classes. The {@code jar} task depends on {@code weaveClasses} so the packaged
+ * artifact contains woven bytecode.
  *
  * <p>The patcher is idempotent: it checks for existing entries before adding and skips items that
  * are already present. It creates a backup of the original file before modification (unless in
@@ -47,14 +50,14 @@ import java.util.regex.Pattern;
  */
 public final class GradlePatcher {
 
-  /** The freefair AspectJ post-compile weaving plugin ID. */
-  private static final String FREEFAIR_PLUGIN_ID = "io.freefair.aspectj.post-compile-weaving";
-
   /** The PAL weave artifact name used for idempotency detection. */
   private static final String PAL_WEAVE_ARTIFACT = "pal-weave";
 
   /** The AspectJ runtime artifact name used for idempotency detection. */
   private static final String ASPECTJ_RT_ARTIFACT = "aspectjrt";
+
+  /** The AspectJ compiler tools artifact name used for idempotency detection. */
+  private static final String ASPECTJ_TOOLS_ARTIFACT = "aspectjtools";
 
   /** The PAL weave Maven coordinates prefix. */
   private static final String PAL_WEAVE_COORDS = "io.quasient.pal:pal-weave";
@@ -62,15 +65,73 @@ public final class GradlePatcher {
   /** The AspectJ runtime Maven coordinates prefix. */
   private static final String ASPECTJ_RT_COORDS = "org.aspectj:aspectjrt";
 
+  /** The AspectJ compiler tools Maven coordinates prefix. */
+  private static final String ASPECTJ_TOOLS_COORDS = "org.aspectj:aspectjtools";
+
+  /** Marker string for the weave task, used for idempotency detection. */
+  private static final String WEAVE_TASK_MARKER = "weaveClasses";
+
+  /** Groovy DSL weave task definition, appended to the end of the build file. */
+  private static final String GROOVY_WEAVE_TASK =
+      """
+
+      // PAL AspectJ weaving — runs after tests so unit tests use unwoven classes
+      tasks.register('weaveClasses', JavaExec) {
+          dependsOn classes
+          mustRunAfter test
+          mainClass = 'org.aspectj.tools.ajc.Main'
+          classpath = configurations.aspectjTools
+          args = [
+              '-inpath', sourceSets.main.output.classesDirs.asPath,
+              '-aspectpath', configurations.aspect.asPath,
+              '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
+              '-classpath', sourceSets.main.compileClasspath.asPath,
+              '-source', sourceCompatibility.toString(),
+              '-target', targetCompatibility.toString(),
+          ]
+      }
+
+      tasks.named('jar') {
+          dependsOn weaveClasses
+      }
+      """;
+
+  /** Kotlin DSL weave task definition, appended to the end of the build file. */
+  private static final String KOTLIN_WEAVE_TASK =
+      """
+
+      // PAL AspectJ weaving — runs after tests so unit tests use unwoven classes
+      tasks.register<JavaExec>("weaveClasses") {
+          dependsOn("classes")
+          mustRunAfter("test")
+          mainClass.set("org.aspectj.tools.ajc.Main")
+          classpath = configurations["aspectjTools"]
+          args = listOf(
+              "-inpath", sourceSets["main"].output.classesDirs.asPath,
+              "-aspectpath", configurations["aspect"].asPath,
+              "-d", sourceSets["main"].java.destinationDirectory.get().asFile.path,
+              "-classpath", sourceSets["main"].compileClasspath.asPath,
+              "-source", java.sourceCompatibility.toString(),
+              "-target", java.targetCompatibility.toString(),
+          )
+      }
+
+      tasks.named("jar") {
+          dependsOn("weaveClasses")
+      }
+      """;
+
   /**
    * Patches an existing Gradle build file to add PAL AspectJ weaving configuration.
    *
    * <p>Operations performed:
    *
    * <ol>
-   *   <li>Adds the freefair AspectJ plugin to the {@code plugins} block (creates block if missing)
-   *   <li>Adds {@code pal-weave} as an {@code aspect} dependency (creates block if missing)
-   *   <li>Adds {@code aspectjrt} as an {@code implementation} dependency
+   *   <li>Checks for an existing AspectJ plugin — if found, warns and returns without modification
+   *   <li>Adds {@code aspectjTools} and {@code aspect} configurations (creates block if missing)
+   *   <li>Adds {@code aspectjtools}, {@code pal-weave}, and {@code aspectjrt} dependencies (creates
+   *       block if missing)
+   *   <li>Appends the {@code weaveClasses} task and {@code jar} dependency
    *   <li>Creates a backup at {@code <filename>.backup} before writing changes
    * </ol>
    *
@@ -91,8 +152,14 @@ public final class GradlePatcher {
 
     validateBraces(content);
 
-    content = patchPlugins(content, isKotlinDsl, result);
+    if (hasExistingAspectjPlugin(content)) {
+      result.warning("Existing AspectJ plugin detected; please add pal-weave dependency manually");
+      return result.build();
+    }
+
+    content = patchConfigurations(content, isKotlinDsl, result);
     content = patchDependencies(content, isKotlinDsl, config, result);
+    content = appendWeaveTask(content, isKotlinDsl, result);
 
     if (!config.isDryRun()) {
       Path backupPath = buildFile.resolveSibling(fileName + ".backup");
@@ -104,49 +171,69 @@ public final class GradlePatcher {
   }
 
   /**
-   * Patches the plugins block to add the freefair AspectJ plugin if not already present.
+   * Checks whether the plugins block contains an existing AspectJ plugin that would conflict with
+   * the manual weave task.
+   *
+   * @param content the file content to check
+   * @return true if an AspectJ plugin is present in the plugins block
+   */
+  private boolean hasExistingAspectjPlugin(String content) {
+    int openBrace = findBlockOpenBrace(content, "plugins");
+    if (openBrace >= 0) {
+      int closeBrace = findMatchingCloseBrace(content, openBrace);
+      if (closeBrace >= 0) {
+        String pluginsContent = content.substring(openBrace + 1, closeBrace);
+        return pluginsContent.contains("aspectj");
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Patches the configurations block to add {@code aspectjTools} and {@code aspect} entries.
+   * Creates the block before the dependencies block if it does not exist.
    *
    * @param content the current file content
    * @param isKotlinDsl whether the file uses Kotlin DSL syntax
    * @param result the result builder to record actions
    * @return the possibly modified content
    */
-  private String patchPlugins(String content, boolean isKotlinDsl, PatchResult.Builder result) {
-    int openBrace = findBlockOpenBrace(content, "plugins");
-
-    if (openBrace < 0) {
-      String pluginLine = formatPluginLine(isKotlinDsl);
-      result.addition("Added plugins block with AspectJ plugin");
-      return content + "\nplugins {\n" + pluginLine + "\n}\n";
-    }
-
-    int closeBrace = findMatchingCloseBrace(content, openBrace);
-    if (closeBrace < 0) {
-      result.warning("Could not find closing brace for plugins block");
+  private String patchConfigurations(
+      String content, boolean isKotlinDsl, PatchResult.Builder result) {
+    if (content.contains(ASPECTJ_TOOLS_ARTIFACT)) {
+      result.skip("aspectjTools configuration already present");
       return content;
     }
 
-    String blockContent = content.substring(openBrace + 1, closeBrace);
+    String entries = formatConfigEntries(isKotlinDsl);
+    int openBrace = findBlockOpenBrace(content, "configurations");
 
-    if (blockContent.contains(FREEFAIR_PLUGIN_ID)) {
-      result.skip("AspectJ plugin already present");
-      return content;
+    if (openBrace >= 0) {
+      int closeBrace = findMatchingCloseBrace(content, openBrace);
+      if (closeBrace < 0) {
+        result.warning("Could not find closing brace for configurations block");
+        return content;
+      }
+      result.addition("Added aspectjTools and aspect configurations");
+      return insertBeforeCloseBrace(content, closeBrace, entries);
     }
 
-    if (containsOtherAspectjPlugin(blockContent)) {
-      result.warning("A different AspectJ plugin is already present");
-      return content;
+    String configBlock = "configurations {\n" + entries + "\n}";
+    int depsStart = findBlockKeywordStart(content, "dependencies");
+    if (depsStart >= 0) {
+      result.addition("Added configurations block with aspectjTools and aspect");
+      return content.substring(0, depsStart) + configBlock + "\n\n" + content.substring(depsStart);
     }
 
-    String pluginLine = formatPluginLine(isKotlinDsl);
-    result.addition("Added AspectJ post-compile weaving plugin");
-    return insertBeforeCloseBrace(content, closeBrace, pluginLine);
+    result.addition("Added configurations block with aspectjTools and aspect");
+    return content + "\n" + configBlock + "\n";
   }
 
   /**
-   * Patches the dependencies block to add pal-weave and aspectjrt if not already present.
+   * Patches the dependencies block to add aspectjtools, pal-weave, and aspectjrt if not already
+   * present.
    *
-   * @param content the current file content (possibly modified by plugin patching)
+   * @param content the current file content (possibly modified by configuration patching)
    * @param isKotlinDsl whether the file uses Kotlin DSL syntax
    * @param config the init configuration providing version strings
    * @param result the result builder to record actions
@@ -166,6 +253,13 @@ public final class GradlePatcher {
     }
 
     StringBuilder newDeps = new StringBuilder();
+
+    if (!blockContent.contains(ASPECTJ_TOOLS_ARTIFACT)) {
+      newDeps.append(formatAspectjToolsDep(isKotlinDsl, config.getAspectjVersion())).append("\n");
+      result.addition("Added aspectjtools tools dependency");
+    } else {
+      result.skip("aspectjtools dependency already present");
+    }
 
     if (!blockContent.contains(PAL_WEAVE_ARTIFACT)) {
       newDeps.append(formatPalWeaveDep(isKotlinDsl, config.getPalVersion())).append("\n");
@@ -195,6 +289,25 @@ public final class GradlePatcher {
   }
 
   /**
+   * Appends the {@code weaveClasses} task definition to the end of the file if not already present.
+   *
+   * @param content the current file content
+   * @param isKotlinDsl whether the file uses Kotlin DSL syntax
+   * @param result the result builder to record actions
+   * @return the possibly modified content
+   */
+  private String appendWeaveTask(String content, boolean isKotlinDsl, PatchResult.Builder result) {
+    if (content.contains(WEAVE_TASK_MARKER)) {
+      result.skip("weaveClasses task already present");
+      return content;
+    }
+
+    result.addition("Added weaveClasses task for post-test AspectJ weaving");
+    String taskText = isKotlinDsl ? KOTLIN_WEAVE_TASK : GROOVY_WEAVE_TASK;
+    return content.stripTrailing() + taskText;
+  }
+
+  /**
    * Validates that braces are balanced in the Gradle build file content. Throws if unbalanced,
    * preventing corruption of malformed input.
    *
@@ -220,27 +333,31 @@ public final class GradlePatcher {
   }
 
   /**
-   * Checks whether the plugins block content contains an AspectJ plugin other than the freefair
-   * one.
+   * Formats configuration entries for the configurations block.
    *
-   * @param blockContent the content between the plugins block braces
-   * @return true if a different AspectJ plugin is present
+   * @param isKotlinDsl whether to use Kotlin DSL syntax
+   * @return the formatted entries
    */
-  private static boolean containsOtherAspectjPlugin(String blockContent) {
-    return blockContent.contains("aspectj") && !blockContent.contains(FREEFAIR_PLUGIN_ID);
+  private static String formatConfigEntries(boolean isKotlinDsl) {
+    if (isKotlinDsl) {
+      return "    create(\"aspectjTools\")\n    create(\"aspect\")";
+    }
+    return "    aspectjTools\n    aspect";
   }
 
   /**
-   * Formats a plugin declaration line for the freefair AspectJ plugin.
+   * Formats an aspectjtools tools dependency line.
    *
    * @param isKotlinDsl whether to use Kotlin DSL syntax
-   * @return the formatted plugin line
+   * @param aspectjVersion the AspectJ version string
+   * @return the formatted dependency line
    */
-  private static String formatPluginLine(boolean isKotlinDsl) {
+  private static String formatAspectjToolsDep(boolean isKotlinDsl, String aspectjVersion) {
+    String coords = ASPECTJ_TOOLS_COORDS + ":" + aspectjVersion;
     if (isKotlinDsl) {
-      return "    id(\"" + FREEFAIR_PLUGIN_ID + "\")";
+      return "    add(\"aspectjTools\", \"" + coords + "\")";
     }
-    return "    id '" + FREEFAIR_PLUGIN_ID + "'";
+    return "    aspectjTools '" + coords + "'";
   }
 
   /**
@@ -253,7 +370,7 @@ public final class GradlePatcher {
   private static String formatPalWeaveDep(boolean isKotlinDsl, String palVersion) {
     String coords = PAL_WEAVE_COORDS + ":" + palVersion;
     if (isKotlinDsl) {
-      return "    aspect(\"" + coords + "\")";
+      return "    add(\"aspect\", \"" + coords + "\")";
     }
     return "    aspect '" + coords + "'";
   }
@@ -286,6 +403,23 @@ public final class GradlePatcher {
     Matcher m = p.matcher(content);
     if (m.find()) {
       return m.end() - 1;
+    }
+    return -1;
+  }
+
+  /**
+   * Finds the starting index of a named block keyword (e.g., the position of 'dependencies' in
+   * 'dependencies {').
+   *
+   * @param content the file content to search
+   * @param blockName the block name to find
+   * @return the index of the keyword start, or {@code -1} if not found
+   */
+  private static int findBlockKeywordStart(String content, String blockName) {
+    Pattern p = Pattern.compile("\\b" + Pattern.quote(blockName) + "\\s*\\{");
+    Matcher m = p.matcher(content);
+    if (m.find()) {
+      return m.start();
     }
     return -1;
   }
