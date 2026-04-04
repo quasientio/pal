@@ -1,7 +1,11 @@
 # RPC Policy — Development Profile
 #
 # Permissive policy for local development.
-# Allows all operations except dangerous system calls.
+# Allows all public operations except dangerous system calls and JDK internals.
+# Non-public members (private, package-private, protected) are denied.
+#
+# For production hardening, see config/rpc-policy-prod.yaml.example which adds
+# deny-classloading, deny-reflection, deny-serialization, and deny-scripting.
 #
 # Usage:
 #   pal run --rpc-policy config/rpc-policy.yaml ...
@@ -11,8 +15,5 @@ defaultAction: ALLOW
 
 presets:
   deny-unsafe: true
-
-rules:
-  # Allow all operations on your application classes
-  - pattern: "${package}.**"
-    action: ALLOW
+  deny-jdk-internals: true
+  deny-nonpublic: true

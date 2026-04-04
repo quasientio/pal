@@ -27,13 +27,14 @@ import java.util.List;
 /**
  * Generates PAL configuration files based on templates.
  *
- * <p>Customises templates with the user's package name for scope rules and policy patterns.
- * Generates the following files based on config flags:
+ * <p>Customises templates with the user's package name for scope rules. Generates the following
+ * files based on config flags:
  *
  * <ul>
  *   <li>{@code config/peer-logging.xml} — PAL peer runtime logback config (shaded logback)
  *   <li>{@code config/cli-logging.xml} — PAL CLI logback config (shaded logback)
- *   <li>{@code config/rpc-policy.yaml} — package-based allow patterns
+ *   <li>{@code config/rpc-policy.yaml} — permissive dev policy with deny-unsafe,
+ *       deny-jdk-internals, and deny-nonpublic presets
  *   <li>{@code config/recording-scope.yaml} — package-based include patterns
  *   <li>{@code config/intercept-bundle.yaml} — main class target
  * </ul>
@@ -93,7 +94,6 @@ public final class ConfigGenerator {
     if (config.isRpcPolicy()) {
       Path file = configDir.resolve("rpc-policy.yaml");
       String content = loadTemplate("rpc-policy.yaml.template");
-      content = content.replace("${package}", packageName);
       generated.add(file);
       writeIfAllowed(file, content);
     }

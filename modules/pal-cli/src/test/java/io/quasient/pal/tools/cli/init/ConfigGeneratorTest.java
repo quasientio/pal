@@ -72,7 +72,7 @@ public class ConfigGeneratorTest {
 
   /**
    * Verifies that when {@code rpcPolicy=true}, the generator creates a YAML file at {@code
-   * config/rpc-policy.yaml} containing package patterns derived from the configured package.
+   * config/rpc-policy.yaml} with an ALLOW default and deny-unsafe preset.
    */
   @Test
   public void testGeneratesRpcPolicy() throws Exception {
@@ -93,7 +93,10 @@ public class ConfigGeneratorTest {
     Path rpcFile = tempDir.getRoot().toPath().resolve("config/rpc-policy.yaml");
     assertTrue("rpc-policy.yaml should exist", Files.exists(rpcFile));
     String content = Files.readString(rpcFile);
-    assertThat(content, containsString("com.example"));
+    assertThat(content, containsString("defaultAction: ALLOW"));
+    assertThat(content, containsString("deny-unsafe: true"));
+    assertThat(content, containsString("deny-jdk-internals: true"));
+    assertThat(content, containsString("deny-nonpublic: true"));
   }
 
   /**
