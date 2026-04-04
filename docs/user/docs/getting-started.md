@@ -114,6 +114,7 @@ Generating project...
   ✓ Created src/main/java/com/example/Main.java
   ✓ Created src/main/java/com/example/SampleService.java
   ✓ Created config/peer-logging.xml
+  ✓ Created config/cli-logging.xml
   ✓ Created .env.pal (environment variables)
 
 Next steps:
@@ -281,6 +282,7 @@ Patching pom.xml...
   ✓ Added pal-weave dependency
   ✓ Added aspectj-maven-plugin with pal-weave aspect library
   ✓ Created config/peer-logging.xml
+  ✓ Created config/cli-logging.xml
   ✓ Created .env.pal
 ```
 

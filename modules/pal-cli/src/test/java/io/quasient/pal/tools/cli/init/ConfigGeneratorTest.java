@@ -38,11 +38,11 @@ public class ConfigGeneratorTest {
   @Rule public TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
-   * Verifies that when {@code loggingConfig=true}, the generator creates a valid XML file at {@code
-   * config/peer-logging.xml} containing a logger entry for the configured package.
+   * Verifies that when {@code loggingConfig=true}, the generator creates peer and CLI logging
+   * config files with PAL runtime loggers (not application loggers).
    */
   @Test
-  public void testGeneratesPeerLoggingConfig() throws Exception {
+  public void testGeneratesLoggingConfigs() throws Exception {
     // Given
     InitConfig config =
         InitConfig.builder()
@@ -55,12 +55,19 @@ public class ConfigGeneratorTest {
     // When
     generator.generate(tempDir.getRoot().toPath());
 
-    // Then
-    Path loggingFile = tempDir.getRoot().toPath().resolve("config/peer-logging.xml");
-    assertTrue("peer-logging.xml should exist", Files.exists(loggingFile));
-    String content = Files.readString(loggingFile);
-    assertThat(content, containsString("com.example"));
-    assertThat(content, containsString("<configuration"));
+    // Then — peer-logging.xml
+    Path peerLoggingFile = tempDir.getRoot().toPath().resolve("config/peer-logging.xml");
+    assertTrue("peer-logging.xml should exist", Files.exists(peerLoggingFile));
+    String peerContent = Files.readString(peerLoggingFile);
+    assertThat(peerContent, containsString("<configuration"));
+    assertThat(peerContent, containsString("io.quasient.pal"));
+
+    // Then — cli-logging.xml
+    Path cliLoggingFile = tempDir.getRoot().toPath().resolve("config/cli-logging.xml");
+    assertTrue("cli-logging.xml should exist", Files.exists(cliLoggingFile));
+    String cliContent = Files.readString(cliLoggingFile);
+    assertThat(cliContent, containsString("<configuration"));
+    assertThat(cliContent, containsString("io.quasient.pal"));
   }
 
   /**

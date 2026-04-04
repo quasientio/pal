@@ -100,6 +100,11 @@ public final class EnvFileGenerator {
       appendDistributedSection(sb, true);
     }
 
+    if (config.isLoggingConfig()) {
+      sb.append('\n');
+      appendLoggingSection(sb);
+    }
+
     return sb.toString();
   }
 
@@ -128,4 +133,14 @@ public final class EnvFileGenerator {
     sb.append(prefix).append("export PAL_KAFKA_SERVERS=\"localhost:29092\"\n");
   }
 
+  /**
+   * Appends logging configuration environment variables.
+   *
+   * @param sb the string builder
+   */
+  private void appendLoggingSection(StringBuilder sb) {
+    sb.append("# Logging (configures PAL's own runtime logging, not your application's)\n");
+    sb.append("export PAL_PEER_LOGGING_CONFIG=\"config/peer-logging.xml\"\n");
+    sb.append("export PAL_CLI_LOGGING_CONFIG=\"config/cli-logging.xml\"\n");
+  }
 }

@@ -37,8 +37,8 @@ public class EnvFileGeneratorTest {
   @Rule public TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
-   * Verifies that for LOCAL mode the generated {@code .env.pal} contains a local WAL path and
-   * distributed variables commented out.
+   * Verifies that for LOCAL mode the generated {@code .env.pal} contains a local WAL path,
+   * distributed variables commented out, and logging config paths.
    */
   @Test
   public void testGeneratesEnvPalForLocalMode() throws Exception {
@@ -57,6 +57,8 @@ public class EnvFileGeneratorTest {
     assertThat(content, containsString("export PAL_WAL=\"file:./wal\""));
     assertThat(content, containsString("# export PAL_DIRECTORY="));
     assertThat(content, containsString("# export PAL_KAFKA_SERVERS="));
+    assertThat(content, containsString("export PAL_PEER_LOGGING_CONFIG="));
+    assertThat(content, containsString("export PAL_CLI_LOGGING_CONFIG="));
   }
 
   /**

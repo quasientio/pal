@@ -32,6 +32,7 @@ import java.util.List;
  *
  * <ul>
  *   <li>{@code config/peer-logging.xml} — PAL peer runtime logback config (shaded logback)
+ *   <li>{@code config/cli-logging.xml} — PAL CLI logback config (shaded logback)
  *   <li>{@code config/rpc-policy.yaml} — package-based allow patterns
  *   <li>{@code config/recording-scope.yaml} — package-based include patterns
  *   <li>{@code config/intercept-bundle.yaml} — main class target
@@ -82,6 +83,11 @@ public final class ConfigGenerator {
       String peerContent = loadTemplate("peer-logging.xml.template");
       generated.add(peerFile);
       writeIfAllowed(peerFile, peerContent);
+
+      Path cliFile = configDir.resolve("cli-logging.xml");
+      String cliContent = loadTemplate("cli-logging.xml.template");
+      generated.add(cliFile);
+      writeIfAllowed(cliFile, cliContent);
     }
 
     if (config.isRpcPolicy()) {
