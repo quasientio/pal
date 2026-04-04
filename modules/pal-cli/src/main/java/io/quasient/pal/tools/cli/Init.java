@@ -710,7 +710,7 @@ public class Init extends AbstractPalSubcommand {
     int step = 1;
     Path cwd = Path.of(".").toAbsolutePath().normalize();
     if (!effectiveDir.equals(cwd)) {
-      out.println("  " + step + ". cd " + effectiveDir);
+      out.println("  " + step + ". cd " + cwd.relativize(effectiveDir));
       step++;
     }
 
