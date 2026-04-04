@@ -27,11 +27,11 @@ import java.util.List;
 /**
  * Generates PAL configuration files based on templates.
  *
- * <p>Customises templates with the user's package name for logger patterns and scope rules.
+ * <p>Customises templates with the user's package name for scope rules and policy patterns.
  * Generates the following files based on config flags:
  *
  * <ul>
- *   <li>{@code config/peer-logging.xml} — logback config with package-specific logger
+ *   <li>{@code config/peer-logging.xml} — PAL peer runtime logback config (shaded logback)
  *   <li>{@code config/rpc-policy.yaml} — package-based allow patterns
  *   <li>{@code config/recording-scope.yaml} — package-based include patterns
  *   <li>{@code config/intercept-bundle.yaml} — main class target
@@ -78,11 +78,10 @@ public final class ConfigGenerator {
     Path configDir = targetDir.resolve("config");
 
     if (config.isLoggingConfig()) {
-      Path file = configDir.resolve("peer-logging.xml");
-      String content = loadTemplate("peer-logging.xml.template");
-      content = content.replace("${package}", packageName);
-      generated.add(file);
-      writeIfAllowed(file, content);
+      Path peerFile = configDir.resolve("peer-logging.xml");
+      String peerContent = loadTemplate("peer-logging.xml.template");
+      generated.add(peerFile);
+      writeIfAllowed(peerFile, peerContent);
     }
 
     if (config.isRpcPolicy()) {

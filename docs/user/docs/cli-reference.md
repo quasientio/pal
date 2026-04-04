@@ -299,7 +299,7 @@ pal init -y --group-id com.example   # Non-interactive mode with flags
 | `--sample-app` / `--no-sample-app` | `true` | Generate sample application code |
 | `--rpc-policy` / `--no-rpc-policy` | `false` | Generate RPC policy config |
 | `--scope-policy` / `--no-scope-policy` | `false` | Generate recording scope config |
-| `--logging-config` / `--no-logging-config` | `true` | Generate logging configuration |
+| `--logging-config` / `--no-logging-config` | `true` | Generate PAL runtime logging configuration (`peer-logging.xml`, `cli-logging.xml`) |
 | `--intercept-bundle` / `--no-intercept-bundle` | `false` | Generate intercept bundle example |
 | `--infra` / `--no-infra` | `false` | Generate Docker infrastructure files (etcd + Kafka) |
 
@@ -1867,8 +1867,8 @@ These variables control how the JVM is launched for peer processes. See the [JVM
 | `PAL_JMX_PORT` | _(unset)_ | JMX port (convenience, used to build `PAL_JMX_OPTS`) |
 | `PAL_JAVA_OPTS` | _(empty)_ | Catch-all JVM flags, appended last (always wins) |
 | `JAVA_AGENT` | _(unset)_ | Path to a Java agent JAR |
-| `PAL_PEER_LOGGING_CONFIG` | _(unset)_ | Peer Logback configuration file |
-| `PAL_CLI_LOGGING_CONFIG` | _(unset)_ | CLI Logback configuration file |
+| `PAL_PEER_LOGGING_CONFIG` | _(unset)_ | PAL peer Logback configuration file (not application logging) |
+| `PAL_CLI_LOGGING_CONFIG` | _(unset)_ | PAL CLI Logback configuration file (not application logging) |
 
 ### Application
 

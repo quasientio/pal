@@ -24,10 +24,6 @@
     </appender>
 
     <!-- LOGGERS -->
-    <logger name="${package}" level="debug" additivity="false">
-        <appender-ref ref="peer"/>
-    </logger>
-
     <logger name="io.quasient.pal" level="info" additivity="false">
         <appender-ref ref="peer"/>
     </logger>

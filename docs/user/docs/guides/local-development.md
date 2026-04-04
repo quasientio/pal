@@ -300,23 +300,22 @@ Create local logging config:
 
 ```xml
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="STDOUT" class="io.quasient.pal.common.logging.PeerConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- Debug your package -->
-    <logger name="com.example" level="DEBUG"/>
-
-    <!-- Debug PAL internals if needed -->
-    <logger name="io.quasient.pal.core.dispatcher" level="DEBUG"/>
+    <!-- Debug PAL runtime internals -->
+    <logger name="io.quasient.pal" level="DEBUG"/>
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>
 ```
+
+**Note**: This file configures PAL's own runtime logging (which uses shaded logback), not your application's logging. Your application's logback/SLF4J configuration is independent and unaffected by PAL.
 
 Run with custom logging:
 
