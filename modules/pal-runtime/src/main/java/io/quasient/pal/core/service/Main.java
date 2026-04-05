@@ -157,7 +157,7 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"-d", "--dir"},
       paramLabel = "HOST:PORT",
-      description = "PAL directory (if not given, run unregistered)")
+      description = "PAL directory (if not given, run unregistered) [env: PAL_DIRECTORY]")
   private String palDirectoryUrl; // corresponding ENV var: PAL_DIRECTORY
 
   /**
@@ -167,7 +167,7 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"-u", "--uuid"},
       paramLabel = "uuid",
-      description = "uuid for this peer (default: <random>)")
+      description = "uuid for this peer (default: <random>) [env: PAL_PEER_UUID]")
   private UUID uuid; // corresponding ENV var: PAL_PEER_UUID
 
   /**
@@ -178,7 +178,7 @@ public class Main implements Callable<Integer> {
       names = {"-n", "--name"},
       arity = "1",
       paramLabel = "name",
-      description = "name for this peer")
+      description = "name for this peer [env: PAL_PEER_NAME]")
   private String name; // corresponding ENV var: PAL_PEER_NAME
 
   /**
@@ -199,7 +199,8 @@ public class Main implements Callable<Integer> {
       description =
           "Kafka topic or Chronicle queue to consume messages from. Use 'auto' to let Pal generate"
               + " a Kafka topic name with --log-prefix ('auto' works only with <pal_directory>)."
-              + " Use 'file:/path' for Chronicle queue (absolute or relative path).")
+              + " Use 'file:/path' for Chronicle queue (absolute or relative path)."
+              + " [env: PAL_SOURCE_LOG]")
   private String sourceLog; // corresponding ENV var: PAL_SOURCE_LOG
 
   /**
@@ -223,7 +224,8 @@ public class Main implements Callable<Integer> {
       description =
           "Kafka topic or Chronicle queue where Pal writes its write-ahead log. Use 'auto' to let"
               + " Pal generate a Kafka topic name with --log-prefix ('auto' works only with"
-              + " <pal_directory>). Use 'file:/path' for Chronicle queue (absolute or relative path).")
+              + " <pal_directory>). Use 'file:/path' for Chronicle queue (absolute or relative path)."
+              + " [env: PAL_WAL]")
   private String wal; // corresponding ENV var: PAL_WAL
 
   /**
@@ -236,7 +238,8 @@ public class Main implements Callable<Integer> {
       names = {"--wal-incoming-rpc"},
       negatable = true,
       fallbackValue = "true",
-      description = "Write incoming RPC calls to WAL (in addition to locally-initiated calls)")
+      description =
+          "Write incoming RPC calls to WAL (in addition to locally-initiated calls) [env: PAL_WAL_INCOMING_RPC]")
   private boolean walIncomingRpc = true;
 
   /**
@@ -247,7 +250,8 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"--wal-all-incoming-rpc"},
       description =
-          "Write ALL incoming RPC calls to WAL including LOG_RPC" + " (implies --wal-incoming-rpc)")
+          "Write ALL incoming RPC calls to WAL including LOG_RPC"
+              + " (implies --wal-incoming-rpc) [env: PAL_WAL_ALL_INCOMING_RPC]")
   private boolean walAllIncomingRpc = false;
 
   /**
@@ -259,7 +263,7 @@ public class Main implements Callable<Integer> {
       names = {"--wal-incoming-cli"},
       negatable = true,
       fallbackValue = "true",
-      description = "Write incoming CLI bootstrap calls to WAL")
+      description = "Write incoming CLI bootstrap calls to WAL [env: PAL_WAL_INCOMING_CLI]")
   private boolean walIncomingCli = true;
 
   /**
@@ -456,7 +460,8 @@ public class Main implements Callable<Integer> {
       description =
           "Shorthand: use the same Kafka topic or Chronicle queue for both source and wal. Use 'auto'"
               + " to let Pal generate a Kafka topic name with --log-prefix ('auto' works only with"
-              + " <pal_directory>). Use 'file:/path' for Chronicle queue (absolute or relative path).")
+              + " <pal_directory>). Use 'file:/path' for Chronicle queue (absolute or relative path)."
+              + " [env: PAL_LOG]")
   private String log; // corresponding ENV var: PAL_LOG
 
   /**
@@ -467,7 +472,8 @@ public class Main implements Callable<Integer> {
       names = {"-k", "--kafka-servers"},
       paramLabel = "bootstrap_servers",
       description =
-          "connect to given kafka servers (required with -l/--log, -s/--source-log and -w/--wal)")
+          "connect to given kafka servers (required with -l/--log, -s/--source-log and -w/--wal)"
+              + " [env: PAL_KAFKA_SERVERS]")
   private String kafkaServers; // corresponding ENV var: PAL_KAFKA_SERVERS
 
   /**
@@ -477,7 +483,8 @@ public class Main implements Callable<Integer> {
       names = {"--log-prefix"},
       paramLabel = "prefix",
       description =
-          "prefix to generate Log names when specified as 'auto' (default: ${DEFAULT-VALUE})",
+          "prefix to generate Log names when specified as 'auto' (default: ${DEFAULT-VALUE})"
+              + " [env: PAL_LOG_PREFIX]",
       defaultValue = "app",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
   private String logPrefix; // corresponding ENV var: PAL_LOG_PREFIX
@@ -488,7 +495,8 @@ public class Main implements Callable<Integer> {
       paramLabel = "path",
       description =
           "base directory for relative Chronicle paths (file:mylog). Absolute paths (file:/path)"
-              + " ignore this. Default: current working directory")
+              + " ignore this. Default: current working directory"
+              + " [env: PAL_CHRONICLE_BASE_DIR]")
   private String chronicleBaseDir; // corresponding ENV var: PAL_CHRONICLE_BASE_DIR
 
   /**
@@ -499,7 +507,9 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"--properties"},
       paramLabel = "path",
-      description = "path to external properties file (overlays built-in pal.properties defaults)")
+      description =
+          "path to external properties file (overlays built-in pal.properties defaults)"
+              + " [env: PAL_PROPERTIES]")
   private String propertiesFile; // corresponding ENV var: PAL_PROPERTIES
 
   /**
@@ -510,7 +520,8 @@ public class Main implements Callable<Integer> {
       names = {"--kafka-timeout"},
       paramLabel = "milliseconds",
       description =
-          "timeout for Kafka connection health check in milliseconds (default: ${DEFAULT-VALUE})",
+          "timeout for Kafka connection health check in milliseconds (default: ${DEFAULT-VALUE})"
+              + " [env: PAL_KAFKA_TIMEOUT_MS]",
       defaultValue = "5000")
   private Integer kafkaConnectTimeout;
 
@@ -522,7 +533,8 @@ public class Main implements Callable<Integer> {
       names = {"--etcd-timeout"},
       paramLabel = "milliseconds",
       description =
-          "timeout for etcd connection health check in milliseconds (default: ${DEFAULT-VALUE})",
+          "timeout for etcd connection health check in milliseconds (default: ${DEFAULT-VALUE})"
+              + " [env: PAL_ETCD_TIMEOUT_MS]",
       defaultValue = "5000")
   private Integer etcdConnectTimeout;
 
@@ -533,7 +545,8 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"-p", "--tcp-pub"},
       paramLabel = "[HOST:]PORT|auto",
-      description = "publish messages to ZeroMQ socket (auto = localhost:random_port)")
+      description =
+          "publish messages to ZeroMQ socket (auto = localhost:random_port) [env: PAL_TCP_PUB]")
   private String tcpPub; // corresponding ENV var: PAL_TCP_PUB
 
   /**
@@ -543,7 +556,9 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"-r", "--zmq-rpc"},
       paramLabel = "[HOST:]PORT|auto",
-      description = "listen for RPC requests on ZeroMQ socket (auto = localhost:random_port)")
+      description =
+          "listen for RPC requests on ZeroMQ socket (auto = localhost:random_port)"
+              + " [env: PAL_ZMQ_RPC]")
   private String zmqRpc; // corresponding ENV var: PAL_ZMQ_RPC
 
   /**
@@ -553,7 +568,9 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"-j", "--json-rpc"},
       paramLabel = "[HOST:]PORT|auto",
-      description = "listen for JSON-RPC requests on WebSocket (auto = localhost:random_port)")
+      description =
+          "listen for JSON-RPC requests on WebSocket (auto = localhost:random_port)"
+              + " [env: PAL_JSON_RPC]")
   private String jsonRpc; // corresponding ENV var: PAL_JSON_RPC
 
   /** Number of threads allocated for handling RPC requests. The default value is 1. */
@@ -561,13 +578,14 @@ public class Main implements Callable<Integer> {
       names = {"--rpc-threads"},
       defaultValue = "1",
       paramLabel = "num_threads",
-      description = "number of threads for RPC requests (default: ${DEFAULT-VALUE})")
+      description =
+          "number of threads for RPC requests (default: ${DEFAULT-VALUE}) [env: PAL_RPC_THREADS]")
   private Integer rpcThreads; // corresponding ENV var: PAL_RPC_THREADS
 
   /** Path to an RPC access policy YAML file that controls which operations are allowed via RPC. */
   @Option(
       names = {"--rpc-policy"},
-      description = "path to RPC access policy YAML file")
+      description = "path to RPC access policy YAML file [env: PAL_RPC_POLICY]")
   private String rpcPolicyPath; // corresponding ENV var: PAL_RPC_POLICY
 
   /**
@@ -576,7 +594,9 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--rpc-policy-preset"},
-      description = "comma-separated preset names (e.g., deny-unsafe,deny-jdk-internals)")
+      description =
+          "comma-separated preset names (e.g., deny-unsafe,deny-jdk-internals)"
+              + " [env: PAL_RPC_POLICY_PRESET]")
   private String rpcPolicyPresets; // corresponding ENV var: PAL_RPC_POLICY_PRESET
 
   /**
@@ -587,7 +607,8 @@ public class Main implements Callable<Integer> {
       names = {"--rpc-default-action"},
       defaultValue = "DENY",
       description =
-          "default RPC action when no rule matches: ALLOW or DENY (default: ${DEFAULT-VALUE})")
+          "default RPC action when no rule matches: ALLOW or DENY (default: ${DEFAULT-VALUE})"
+              + " [env: PAL_RPC_DEFAULT_ACTION]")
   private String rpcDefaultAction = "DENY"; // corresponding ENV var: PAL_RPC_DEFAULT_ACTION
 
   /**
@@ -598,7 +619,9 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--rpc-policy-watch-interval"},
-      description = "policy file poll interval in ms (default: 2000, 0 = disable watching)")
+      description =
+          "policy file poll interval in ms (default: 2000, 0 = disable watching)"
+              + " [env: PAL_RPC_POLICY_WATCH_INTERVAL]")
   private Integer rpcPolicyWatchInterval; // corresponding ENV var: PAL_RPC_POLICY_WATCH_INTERVAL
 
   /**
@@ -607,7 +630,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--interceptable"},
-      description = "allow message interception")
+      description = "allow message interception [env: PAL_INTERCEPTABLE]")
   private boolean interceptable = false;
 
   /**
@@ -621,7 +644,7 @@ public class Main implements Callable<Integer> {
           "enable JavaFX Application Thread execution for RPC calls that request"
               + " 'fx-thread' affinity. When using this option, consider --rpc-threads 2+"
               + " to prevent RPC starvation during long UI operations"
-              + " (default: ${DEFAULT-VALUE})",
+              + " (default: ${DEFAULT-VALUE}) [env: PAL_FX_THREAD]",
       defaultValue = "false",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
   private boolean fxThread;
@@ -632,7 +655,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--with-source-context"},
-      description = "include source context in messages")
+      description = "include source context in messages [env: PAL_WITH_SOURCE_CONTEXT]")
   private boolean includeSourceContext = false;
 
   /**
@@ -643,7 +666,8 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"--in-flight-tracking"},
       description =
-          "enable in-flight dispatch tracking for intercept coordination (default: ${DEFAULT-VALUE})",
+          "enable in-flight dispatch tracking for intercept coordination (default: ${DEFAULT-VALUE})"
+              + " [env: PAL_IN_FLIGHT_TRACKING]",
       defaultValue = "true",
       fallbackValue = "true",
       arity = "0..1",
@@ -658,7 +682,8 @@ public class Main implements Callable<Integer> {
       names = {"--drain-timeout-ms"},
       paramLabel = "milliseconds",
       description =
-          "timeout for drain operations when waiting for in-flight dispatches (default: ${DEFAULT-VALUE})",
+          "timeout for drain operations when waiting for in-flight dispatches (default: ${DEFAULT-VALUE})"
+              + " [env: PAL_DRAIN_TIMEOUT_MS]",
       defaultValue = "5000",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
   private Integer drainTimeoutMs; // corresponding ENV var: PAL_DRAIN_TIMEOUT_MS
@@ -674,7 +699,8 @@ public class Main implements Callable<Integer> {
       names = {"--callback-timeout-ms"},
       paramLabel = "milliseconds",
       description =
-          "default timeout for intercept callback responses, 0 = no timeout (default: ${DEFAULT-VALUE})",
+          "default timeout for intercept callback responses, 0 = no timeout (default: ${DEFAULT-VALUE})"
+              + " [env: PAL_CALLBACK_TIMEOUT_MS]",
       defaultValue = "3000",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
   private Integer callbackTimeoutMs; // corresponding ENV var: PAL_CALLBACK_TIMEOUT_MS
@@ -690,7 +716,7 @@ public class Main implements Callable<Integer> {
       description =
           "global exception propagation policy for intercept callbacks. Valid values: "
               + "PROPAGATE_ALL, PROPAGATE_EXPLICIT_ONLY, SWALLOW_ALL, PROPAGATE_CONTROLLED_ONLY "
-              + "(default: PROPAGATE_CONTROLLED_ONLY)")
+              + "(default: PROPAGATE_CONTROLLED_ONLY) [env: PAL_EXCEPTION_POLICY]")
   private String exceptionPolicy; // corresponding ENV var: PAL_EXCEPTION_POLICY
 
   /**
@@ -702,7 +728,7 @@ public class Main implements Callable<Integer> {
       paramLabel = "POLICY",
       description =
           "global checked exception policy for intercept callbacks. Valid values: "
-              + "WRAP, REJECT, ALLOW_ALL (default: WRAP)")
+              + "WRAP, REJECT, ALLOW_ALL (default: WRAP) [env: PAL_CHECKED_EXCEPTION_POLICY]")
   private String checkedExceptionPolicy; // corresponding ENV var: PAL_CHECKED_EXCEPTION_POLICY
 
   /**
