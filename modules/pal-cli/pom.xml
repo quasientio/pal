@@ -128,7 +128,6 @@
                     <minimizeJar>true</minimizeJar>
                     <artifactSet>
                         <excludes>
-                            <exclude>org.aspectj:aspectjtools:*</exclude>
                             <exclude>org.rocksdb:rocksdbjni:*</exclude>
                         </excludes>
                     </artifactSet>
