@@ -147,10 +147,15 @@ public final class ReadmeGenerator {
     String cpDir =
         config.getBuildTool() == BuildTool.GRADLE ? "build/classes/java/main" : "target/classes";
     sb.append("```sh\n");
-    sb.append("source .env.pal\n");
+    sb.append("pal run -cp ").append(cpDir).append(' ').append(mainClass).append('\n');
+    sb.append("```\n\n");
+    sb.append("To enable the write-ahead log (message recording, replay, event sourcing):\n\n");
+    sb.append("```sh\n");
     sb.append("pal run --wal file:./wal -cp ").append(cpDir).append(' ').append(mainClass);
     sb.append('\n');
-    sb.append("```\n");
+    sb.append("```\n\n");
+    sb.append("Optionally, source `.env.pal` before running to set environment variables\n");
+    sb.append("(directory, Kafka, logging, etc.). See `pal run --help` for all available flags.\n");
   }
 
   /**

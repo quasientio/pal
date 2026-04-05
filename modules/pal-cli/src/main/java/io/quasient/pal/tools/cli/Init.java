@@ -728,33 +728,19 @@ public class Init extends AbstractPalSubcommand {
       step++;
     }
 
-    out.println("  " + step + ". source .env.pal          # Set up environment");
-    step++;
-
     String compileCmd = config.getBuildTool() == BuildTool.GRADLE ? "gradle build" : "mvn package";
     out.println("  " + step + ". " + compileCmd + "              # Build with AspectJ weaving");
     step++;
 
-    String runCmd;
-    if (config.isDistributed()) {
-      runCmd =
-          "pal run -d localhost:2379 -k localhost:29092 --wal my-wal --zmq-rpc auto"
-              + " -cp target/classes "
-              + (config.getMainClass() != null
-                  ? config.getMainClass()
-                  : config.getGroupId() + ".Main");
-    } else {
-      String cpDir =
-          config.getBuildTool() == BuildTool.GRADLE ? "build/classes/java/main" : "target/classes";
-      runCmd =
-          "pal run --wal file:./wal -cp "
-              + cpDir
-              + " "
-              + (config.getMainClass() != null
-                  ? config.getMainClass()
-                  : config.getGroupId() + ".Main");
-    }
-    out.println("  " + step + ". " + runCmd);
+    String cpDir =
+        config.getBuildTool() == BuildTool.GRADLE ? "build/classes/java/main" : "target/classes";
+    String mainClass =
+        config.getMainClass() != null ? config.getMainClass() : config.getGroupId() + ".Main";
+    out.println("  " + step + ". pal run -cp " + cpDir + " " + mainClass);
+    step++;
+
+    out.println();
+    out.println("See README.md for more options (WAL, distributed mode, etc.).");
   }
 
   /**

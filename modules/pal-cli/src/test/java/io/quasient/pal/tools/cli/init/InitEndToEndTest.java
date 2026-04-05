@@ -527,11 +527,11 @@ public class InitEndToEndTest {
   }
 
   /**
-   * Verifies that Maven project init output includes next steps with mvn compile and pal run
+   * Verifies that Maven project init output includes next steps with mvn package and pal run
    * instructions.
    *
    * <p>Given a new Maven project init, when stdout is captured, then: output contains "Next steps"
-   * with mvn compile and pal run instructions.
+   * with mvn package and pal run instructions.
    */
   @Test
   public void testOutputIncludesNextStepsMaven() throws IOException {
@@ -552,7 +552,7 @@ public class InitEndToEndTest {
 
     String output = outWriter.toString();
     assertThat("Should show Next steps", output, containsString("Next steps"));
-    assertThat("Should mention mvn compile", output, containsString("mvn compile"));
+    assertThat("Should mention mvn package", output, containsString("mvn package"));
     assertThat("Should mention pal run", output, containsString("pal run"));
   }
 
