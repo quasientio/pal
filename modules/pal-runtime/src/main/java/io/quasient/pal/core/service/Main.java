@@ -146,6 +146,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-c", "-cp", "--classpath"},
+      order = 1,
       paramLabel = "CLASSPATH", // corresponding ENV var: CLASSPATH
       description = "load classes from given folders/jars")
   private String classpath;
@@ -156,6 +157,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-d", "--dir"},
+      order = 2,
       paramLabel = "HOST:PORT",
       description = "PAL directory (if not given, run unregistered) [env: PAL_DIRECTORY]")
   private String palDirectoryUrl; // corresponding ENV var: PAL_DIRECTORY
@@ -166,6 +168,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-u", "--uuid"},
+      order = 3,
       paramLabel = "uuid",
       description = "uuid for this peer (default: <random>) [env: PAL_PEER_UUID]")
   private UUID uuid; // corresponding ENV var: PAL_PEER_UUID
@@ -176,6 +179,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-n", "--name"},
+      order = 4,
       arity = "1",
       paramLabel = "name",
       description = "name for this peer [env: PAL_PEER_NAME]")
@@ -186,6 +190,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--as-service"},
+      order = 5,
       description = "keep running after call to mainClass/jar returns")
   private boolean asService = false;
 
@@ -195,6 +200,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-s", "--source-log"},
+      order = 10,
       paramLabel = "name|auto|file:/path",
       description =
           "Kafka topic or Chronicle queue to consume messages from. Use 'auto' to let Pal generate"
@@ -209,6 +215,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-O", "--start-offset"},
+      order = 11,
       paramLabel = "offset",
       description =
           "seek the source-log to this offset/index before reading (Kafka offset or Chronicle index)")
@@ -220,6 +227,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-w", "--wal"},
+      order = 12,
       paramLabel = "name|auto|file:/path",
       description =
           "Kafka topic or Chronicle queue where Pal writes its write-ahead log. Use 'auto' to let"
@@ -236,6 +244,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--wal-incoming-rpc"},
+      order = 13,
       negatable = true,
       fallbackValue = "true",
       description =
@@ -249,6 +258,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--wal-all-incoming-rpc"},
+      order = 14,
       description =
           "Write ALL incoming RPC calls to WAL including LOG_RPC"
               + " (implies --wal-incoming-rpc) [env: PAL_WAL_ALL_INCOMING_RPC]")
@@ -261,6 +271,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--wal-incoming-cli"},
+      order = 15,
       negatable = true,
       fallbackValue = "true",
       description = "Write incoming CLI bootstrap calls to WAL [env: PAL_WAL_INCOMING_CLI]")
@@ -276,6 +287,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-wal"},
+      order = 40,
       paramLabel = "name|file:/path",
       description =
           "WAL path for deterministic replay: file:/path for Chronicle, topic name for Kafka"
@@ -288,6 +300,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-divergence-policy"},
+      order = 41,
       paramLabel = "WARN|HALT|IGNORE",
       defaultValue = "WARN",
       description =
@@ -301,6 +314,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-threading"},
+      order = 42,
       paramLabel = "ordered|unordered",
       defaultValue = "ordered",
       description =
@@ -315,6 +329,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-delay"},
+      order = 43,
       paramLabel = "milliseconds",
       defaultValue = "0",
       description =
@@ -328,6 +343,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-policy"},
+      order = 44,
       paramLabel = "path",
       description = "Path to YAML replay policy file for side-effect shielding")
   private String replayPolicyPath;
@@ -339,6 +355,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-shield-io"},
+      order = 45,
       description = "Enable built-in I/O stubbing rules for non-deterministic operations")
   private boolean replayShieldIo;
 
@@ -349,6 +366,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-shield-fx"},
+      order = 46,
       description = "Enable built-in JavaFX stubbing rules for animation/timing operations")
   private boolean replayShieldFx;
 
@@ -358,6 +376,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-re-execute"},
+      order = 47,
       paramLabel = "patterns",
       split = ",",
       description = "Comma-separated Ant-style patterns for classes to re-execute during replay")
@@ -370,6 +389,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-stub"},
+      order = 48,
       paramLabel = "patterns",
       split = ",",
       description = "Comma-separated Ant-style patterns for classes to stub from WAL during replay")
@@ -381,6 +401,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-stub-all-else"},
+      order = 49,
       description = "Stub all operations not matching --replay-re-execute patterns")
   private boolean replayStubAllElse;
 
@@ -391,6 +412,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--replay-force-stub"},
+      order = 50,
       description = "Proceed even when unsafe stubs are detected by side-effect analysis")
   private boolean replayForceStub;
 
@@ -403,6 +425,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--scope"},
+      order = 30,
       paramLabel = "patterns",
       split = ",",
       description =
@@ -415,6 +438,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--scope-exclude"},
+      order = 31,
       paramLabel = "patterns",
       split = ",",
       description =
@@ -427,6 +451,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--scope-io"},
+      order = 32,
       description =
           "Include common I/O boundary operations"
               + " (JDBC, HTTP, file I/O, time, random) in recording scope")
@@ -435,6 +460,7 @@ public class Main implements Callable<Integer> {
   /** Path to a YAML recording scope policy file. */
   @Option(
       names = {"--scope-policy"},
+      order = 33,
       paramLabel = "path",
       description = "Path to YAML recording scope policy file")
   private String scopePolicyPath;
@@ -445,6 +471,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--scope-default"},
+      order = 34,
       paramLabel = "record|skip",
       description =
           "Default scope action when no rule matches" + " (inferred from flags if not specified)")
@@ -456,6 +483,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-l", "--log"},
+      order = 16,
       paramLabel = "name|auto|file:/path",
       description =
           "Shorthand: use the same Kafka topic or Chronicle queue for both source and wal. Use 'auto'"
@@ -470,6 +498,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-k", "--kafka-servers"},
+      order = 17,
       paramLabel = "bootstrap_servers",
       description =
           "connect to given kafka servers (required with -l/--log, -s/--source-log and -w/--wal)"
@@ -481,6 +510,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--log-prefix"},
+      order = 18,
       paramLabel = "prefix",
       description =
           "prefix to generate Log names when specified as 'auto' (default: ${DEFAULT-VALUE})"
@@ -492,6 +522,7 @@ public class Main implements Callable<Integer> {
   /** Base directory for Chronicle queues when using relative paths with file: prefix. */
   @Option(
       names = {"--chronicle-base-dir"},
+      order = 19,
       paramLabel = "path",
       description =
           "base directory for relative Chronicle paths (file:mylog). Absolute paths (file:/path)"
@@ -506,6 +537,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--properties"},
+      order = 90,
       paramLabel = "path",
       description =
           "path to external properties file (overlays built-in pal.properties defaults)"
@@ -518,6 +550,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--kafka-timeout"},
+      order = 91,
       paramLabel = "milliseconds",
       description =
           "timeout for Kafka connection health check in milliseconds (default: ${DEFAULT-VALUE})"
@@ -531,6 +564,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--etcd-timeout"},
+      order = 92,
       paramLabel = "milliseconds",
       description =
           "timeout for etcd connection health check in milliseconds (default: ${DEFAULT-VALUE})"
@@ -544,6 +578,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-p", "--tcp-pub"},
+      order = 70,
       paramLabel = "[HOST:]PORT|auto",
       description =
           "publish messages to ZeroMQ socket (auto = localhost:random_port) [env: PAL_TCP_PUB]")
@@ -555,6 +590,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-r", "--zmq-rpc"},
+      order = 71,
       paramLabel = "[HOST:]PORT|auto",
       description =
           "listen for RPC requests on ZeroMQ socket (auto = localhost:random_port)"
@@ -567,6 +603,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-j", "--json-rpc"},
+      order = 72,
       paramLabel = "[HOST:]PORT|auto",
       description =
           "listen for JSON-RPC requests on WebSocket (auto = localhost:random_port)"
@@ -576,6 +613,7 @@ public class Main implements Callable<Integer> {
   /** Number of threads allocated for handling RPC requests. The default value is 1. */
   @Option(
       names = {"--rpc-threads"},
+      order = 73,
       defaultValue = "1",
       paramLabel = "num_threads",
       description =
@@ -585,6 +623,7 @@ public class Main implements Callable<Integer> {
   /** Path to an RPC access policy YAML file that controls which operations are allowed via RPC. */
   @Option(
       names = {"--rpc-policy"},
+      order = 74,
       description = "path to RPC access policy YAML file [env: PAL_RPC_POLICY]")
   private String rpcPolicyPath; // corresponding ENV var: PAL_RPC_POLICY
 
@@ -594,6 +633,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--rpc-policy-preset"},
+      order = 75,
       description =
           "comma-separated preset names (e.g., deny-unsafe,deny-jdk-internals)"
               + " [env: PAL_RPC_POLICY_PRESET]")
@@ -605,6 +645,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--rpc-default-action"},
+      order = 76,
       defaultValue = "DENY",
       description =
           "default RPC action when no rule matches: ALLOW or DENY (default: ${DEFAULT-VALUE})"
@@ -619,6 +660,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--rpc-policy-watch-interval"},
+      order = 77,
       description =
           "policy file poll interval in ms (default: 2000, 0 = disable watching)"
               + " [env: PAL_RPC_POLICY_WATCH_INTERVAL]")
@@ -630,6 +672,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--interceptable"},
+      order = 60,
       description = "allow message interception [env: PAL_INTERCEPTABLE]")
   private boolean interceptable = false;
 
@@ -640,6 +683,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--fx-thread"},
+      order = 78,
       description =
           "enable JavaFX Application Thread execution for RPC calls that request"
               + " 'fx-thread' affinity. When using this option, consider --rpc-threads 2+"
@@ -655,6 +699,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--with-source-context"},
+      order = 20,
       description = "include source context in messages [env: PAL_WITH_SOURCE_CONTEXT]")
   private boolean includeSourceContext = false;
 
@@ -665,6 +710,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--in-flight-tracking"},
+      order = 61,
       description =
           "enable in-flight dispatch tracking for intercept coordination (default: ${DEFAULT-VALUE})"
               + " [env: PAL_IN_FLIGHT_TRACKING]",
@@ -680,6 +726,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--drain-timeout-ms"},
+      order = 62,
       paramLabel = "milliseconds",
       description =
           "timeout for drain operations when waiting for in-flight dispatches (default: ${DEFAULT-VALUE})"
@@ -697,6 +744,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--callback-timeout-ms"},
+      order = 63,
       paramLabel = "milliseconds",
       description =
           "default timeout for intercept callback responses, 0 = no timeout (default: ${DEFAULT-VALUE})"
@@ -712,6 +760,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--exception-policy"},
+      order = 64,
       paramLabel = "POLICY",
       description =
           "global exception propagation policy for intercept callbacks. Valid values: "
@@ -725,6 +774,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--checked-exception-policy"},
+      order = 65,
       paramLabel = "POLICY",
       description =
           "global checked exception policy for intercept callbacks. Valid values: "
@@ -737,6 +787,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"-h", "--help"},
+      order = 6,
       usageHelp = true,
       description = "display this help message")
   @SuppressWarnings("unused")

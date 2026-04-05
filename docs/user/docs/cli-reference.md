@@ -1895,6 +1895,8 @@ These variables control how the JVM is launched for peer processes. See the [JVM
 | `PAL_WAL_ALL_INCOMING_RPC` | `--wal-all-incoming-rpc` | `false` | Write ALL incoming RPC calls to WAL/PUB including LOG_RPC channel. Implies `PAL_WAL_INCOMING_RPC` |
 | `PAL_WAL_INCOMING_CLI` | `--wal-incoming-cli` | `true` | Write incoming CLI bootstrap calls to WAL/PUB |
 | `PAL_WITH_SOURCE_CONTEXT` | `--with-source-context` | `false` | Include source context in log messages |
+| `PAL_KAFKA_SERVERS` | `-k, --kafka-servers` | _(unset)_ | Kafka bootstrap servers. Required when using Kafka-backed logs |
+| `PAL_CHRONICLE_BASE_DIR` | `--chronicle-base-dir` | _(cwd)_ | Base directory for Chronicle queues with relative `file:` paths |
 
 ### RPC
 
@@ -1921,15 +1923,13 @@ These variables control how the JVM is launched for peer processes. See the [JVM
 | `PAL_EXCEPTION_POLICY` | `--exception-policy` | `PROPAGATE_CONTROLLED_ONLY` | Exception propagation policy for intercept callbacks. Values: `PROPAGATE_ALL`, `PROPAGATE_EXPLICIT_ONLY`, `SWALLOW_ALL`, `PROPAGATE_CONTROLLED_ONLY` |
 | `PAL_CHECKED_EXCEPTION_POLICY` | `--checked-exception-policy` | `WRAP` | Checked exception handling for intercept callbacks. Values: `WRAP`, `REJECT`, `ALLOW_ALL` |
 
-### Infrastructure
+### Configuration
 
 | Variable | Flag | Default | Description |
 |----------|------|---------|-------------|
-| `PAL_KAFKA_SERVERS` | `-k, --kafka-servers` | _(unset)_ | Kafka bootstrap servers. Required when using Kafka-backed logs |
+| `PAL_PROPERTIES` | `--properties` | _(unset)_ | Path to external properties file overlaying built-in defaults |
 | `PAL_KAFKA_TIMEOUT_MS` | `--kafka-timeout` | `5000` | Kafka connection health check timeout in ms |
 | `PAL_ETCD_TIMEOUT_MS` | `--etcd-timeout` | `5000` | etcd connection health check timeout in ms |
-| `PAL_CHRONICLE_BASE_DIR` | `--chronicle-base-dir` | _(cwd)_ | Base directory for Chronicle queues with relative `file:` paths |
-| `PAL_PROPERTIES` | `--properties` | _(unset)_ | Path to external properties file overlaying built-in defaults |
 
 ---
 

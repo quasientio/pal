@@ -18,6 +18,7 @@ package io.quasient.pal.tools.cli;
 import static picocli.CommandLine.Option;
 
 import io.quasient.pal.common.cli.PalCommand;
+import io.quasient.pal.core.service.GroupedOptionListRenderer;
 import io.quasient.pal.core.service.Main;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import java.util.Map;
@@ -26,6 +27,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Model.UsageMessageSpec;
 import picocli.CommandLine.ParseResult;
 import picocli.CommandLine.Spec;
 
@@ -88,6 +90,11 @@ public class Pal implements Callable<Integer>, PalCommand {
 
     // top-level commands
     commandLine.addSubcommand("run", new Main());
+    commandLine
+        .getSubcommands()
+        .get("run")
+        .getHelpSectionMap()
+        .put(UsageMessageSpec.SECTION_KEY_OPTION_LIST, new GroupedOptionListRenderer());
     commandLine.addSubcommand(new Replay());
     commandLine.addSubcommand(new Init());
 
