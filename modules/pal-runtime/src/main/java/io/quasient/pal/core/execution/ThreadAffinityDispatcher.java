@@ -15,10 +15,13 @@
  */
 package io.quasient.pal.core.execution;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +41,9 @@ public class ThreadAffinityDispatcher {
 
   /** Map of affinity keys to their registered executors. */
   private final Map<String, InvocationExecutor> executors = new ConcurrentHashMap<>();
+
+  /** Thread name patterns mapped to affinity keys, for recording-side resolution. */
+  private final List<PatternMapping> threadNamePatterns = new ArrayList<>();
 
   /** Fallback executor for direct invocation on the current thread. */
   private final InvocationExecutor directExecutor = new DirectInvocationExecutor();
@@ -95,4 +101,44 @@ public class ThreadAffinityDispatcher {
   public boolean hasExecutor(String affinityKey) {
     return executors.containsKey(affinityKey);
   }
+
+  /**
+   * Registers a thread name pattern that maps to an affinity key during recording.
+   *
+   * <p>When {@link #resolveAffinity(String)} is called with a thread name that matches the pattern,
+   * the corresponding affinity key is returned. Patterns are evaluated in registration order; the
+   * first match wins.
+   *
+   * @param pattern the regex pattern to match against thread names
+   * @param affinityKey the affinity key to set on matching entry points
+   */
+  public void registerThreadPattern(Pattern pattern, String affinityKey) {
+    Objects.requireNonNull(pattern, "pattern must not be null");
+    Objects.requireNonNull(affinityKey, "affinityKey must not be null");
+    threadNamePatterns.add(new PatternMapping(pattern, affinityKey));
+    logger.info("Registered thread affinity pattern: {} -> {}", pattern.pattern(), affinityKey);
+  }
+
+  /**
+   * Resolves a thread name to an affinity key using registered patterns.
+   *
+   * @param threadName the name of the current thread
+   * @return the matching affinity key, or {@code null} if no pattern matches
+   */
+  public String resolveAffinity(String threadName) {
+    for (PatternMapping mapping : threadNamePatterns) {
+      if (mapping.pattern.matcher(threadName).matches()) {
+        return mapping.affinityKey;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * A thread name pattern paired with its target affinity key.
+   *
+   * @param pattern the regex pattern to match against thread names
+   * @param affinityKey the affinity key to return when the pattern matches
+   */
+  private record PatternMapping(Pattern pattern, String affinityKey) {}
 }

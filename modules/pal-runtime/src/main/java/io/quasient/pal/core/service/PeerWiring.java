@@ -32,6 +32,7 @@ import io.quasient.pal.common.runtime.DispatchForwarder;
 import io.quasient.pal.common.runtime.ProxyDispatcher;
 import io.quasient.pal.common.runtime.ThreadAffinity;
 import io.quasient.pal.core.dispatcher.InterceptAsyncThreadFactory;
+import io.quasient.pal.core.execution.CdiRequestContextExecutor;
 import io.quasient.pal.core.execution.JavaFxInvocationExecutor;
 import io.quasient.pal.core.execution.ThreadAffinityDispatcher;
 import io.quasient.pal.core.execution.java.AspectProxyDispatcher;
@@ -88,6 +89,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.jctools.queues.MessagePassingQueue;
@@ -735,9 +737,14 @@ public class PeerWiring extends AbstractModule {
   /**
    * Provides the {@link ThreadAffinityDispatcher} for routing invocations based on thread affinity.
    *
-   * <p>When the {@code execution.fx.thread.enabled} property is {@code true}, registers a {@link
-   * JavaFxInvocationExecutor} for the {@link ThreadAffinity#FX_THREAD} affinity key. The executor
-   * marshals invocations onto the JavaFX Application Thread.
+   * <p>Registers thread name patterns and executors based on configuration:
+   *
+   * <ul>
+   *   <li>{@code execution.fx.thread.enabled} — registers the JavaFX Application Thread pattern and
+   *       executor
+   *   <li>{@code execution.service.thread.pattern} — registers a service request thread pattern and
+   *       CDI request context executor
+   * </ul>
    *
    * @return the configured thread affinity dispatcher
    */
@@ -746,12 +753,34 @@ public class PeerWiring extends AbstractModule {
   @Singleton
   public ThreadAffinityDispatcher provideThreadAffinityDispatcher() {
     ThreadAffinityDispatcher dispatcher = new ThreadAffinityDispatcher();
+
+    // JavaFX thread affinity
     String fxThreadEnabled = properties.getProperty("execution.fx.thread.enabled", "false");
     if (Boolean.parseBoolean(fxThreadEnabled)) {
       long timeoutMs = Long.parseLong(properties.getProperty("execution.fx.timeout.ms", "30000"));
+      dispatcher.registerThreadPattern(
+          Pattern.compile(Pattern.quote("JavaFX Application Thread")), ThreadAffinity.FX_THREAD);
       dispatcher.register(
           ThreadAffinity.FX_THREAD, new JavaFxInvocationExecutor(timeoutMs, customClassloader));
     }
+
+    // Service request thread affinity (for web frameworks like Quarkus, etc.)
+    String serviceThreadPattern = properties.getProperty("execution.service.thread.pattern", null);
+    if (serviceThreadPattern != null) {
+      // Always register the pattern so entry points get tagged during recording
+      dispatcher.registerThreadPattern(
+          Pattern.compile(serviceThreadPattern), ThreadAffinity.SERVICE_REQUEST);
+      // CDI executor is only needed for replay — gracefully skip if CDI is not on classpath
+      try {
+        dispatcher.register(
+            ThreadAffinity.SERVICE_REQUEST, new CdiRequestContextExecutor(customClassloader));
+      } catch (IllegalStateException e) {
+        logger.info(
+            "CDI not on classpath — service-request entry points will be tagged during"
+                + " recording but will use direct execution during replay");
+      }
+    }
+
     return dispatcher;
   }
 

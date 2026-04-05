@@ -96,11 +96,8 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    */
   private static final ThreadLocal<Integer> TL_DISPATCH_DEPTH = ThreadLocal.withInitial(() -> 0);
 
-  /** The name of the JavaFX Application Thread as created by the JavaFX runtime. */
-  private static final String JAVAFX_APPLICATION_THREAD = "JavaFX Application Thread";
-
-  /** Thread affinity key for routing to the JavaFX Application Thread during replay. */
-  private static final String FX_THREAD_AFFINITY = "fx-thread";
+  // Thread name constants removed — thread-to-affinity mapping is now handled by
+  // ThreadAffinityDispatcher.resolveAffinity() with configurable patterns.
 
   /**
    * Replayer for field mutations within stubbed spans. Used by the {@link
@@ -238,9 +235,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         // Mark as entry point if this call originated from unweaved code (e.g., JavaFX callback)
         if (isEntryPoint) {
           beforeExecMsg.setEntryPoint(true);
-          // Set thread affinity for JavaFX thread so replay can route to the real FX thread
-          if (JAVAFX_APPLICATION_THREAD.equals(Thread.currentThread().getName())) {
-            beforeExecMsg.setThreadAffinity(FX_THREAD_AFFINITY);
+          // Resolve thread affinity from registered patterns (e.g., FX thread, service threads)
+          String affinity =
+              threadAffinityDispatcher.resolveAffinity(Thread.currentThread().getName());
+          if (affinity != null) {
+            beforeExecMsg.setThreadAffinity(affinity);
           }
         }
 
@@ -499,9 +498,11 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         // Mark as entry point if this call originated from unweaved code
         if (isEntryPoint) {
           afterExecMsg.setEntryPoint(true);
-          // Set thread affinity for JavaFX thread so replay can route to the real FX thread
-          if (JAVAFX_APPLICATION_THREAD.equals(Thread.currentThread().getName())) {
-            afterExecMsg.setThreadAffinity(FX_THREAD_AFFINITY);
+          // Resolve thread affinity from registered patterns (e.g., FX thread, service threads)
+          String affinity =
+              threadAffinityDispatcher.resolveAffinity(Thread.currentThread().getName());
+          if (affinity != null) {
+            afterExecMsg.setThreadAffinity(affinity);
           }
         }
 

@@ -694,6 +694,20 @@ public class Main implements Callable<Integer> {
   private boolean fxThread;
 
   /**
+   * Regex pattern for service request handler thread names. Entry points on matching threads are
+   * tagged with 'service-request' affinity and wrapped in a CDI request context during replay.
+   */
+  @Option(
+      names = {"--service-thread"},
+      order = 69,
+      paramLabel = "<pattern>",
+      description =
+          "regex pattern for service request handler thread names. Entry points on matching"
+              + " threads are tagged with 'service-request' affinity and wrapped in CDI"
+              + " request context during replay [env: PAL_SERVICE_THREAD]")
+  private String serviceThreadPattern;
+
+  /**
    * Flag to include source context in Log messages. When enabled, additional source information is
    * included.
    */
@@ -1265,6 +1279,7 @@ public class Main implements Callable<Integer> {
         fxThread = true;
       }
     }
+    serviceThreadPattern = getParameter("PAL_SERVICE_THREAD", serviceThreadPattern);
 
     exceptionPolicy = getParameter("PAL_EXCEPTION_POLICY", exceptionPolicy);
     checkedExceptionPolicy = getParameter("PAL_CHECKED_EXCEPTION_POLICY", checkedExceptionPolicy);
@@ -1799,6 +1814,11 @@ public class Main implements Callable<Integer> {
 
     // fx thread execution
     properties.setProperty("execution.fx.thread.enabled", String.valueOf(fxThread));
+
+    // service thread affinity (CDI request context wrapping)
+    if (serviceThreadPattern != null) {
+      properties.setProperty("execution.service.thread.pattern", serviceThreadPattern);
+    }
 
     // source-log and WAL same-log determination (circularity guard for incoming WAL writes)
     properties.setProperty(

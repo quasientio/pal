@@ -175,6 +175,16 @@ public class Replay extends AbstractPalSubcommand {
   private boolean fxThread;
 
   /**
+   * Regex pattern for service request handler thread names. Passed through to Main's
+   * --service-thread option.
+   */
+  @Option(
+      names = {"--service-thread"},
+      paramLabel = "<pattern>",
+      description = "regex pattern for service request handler thread names (CDI request context)")
+  private String serviceThreadPattern;
+
+  /**
    * Delay in milliseconds before processing each OPERATION entry during replay.
    *
    * <p>Used for slow-motion replay visualization: pauses before each recorded operation to make it
@@ -520,6 +530,10 @@ public class Replay extends AbstractPalSubcommand {
     }
     if (fxThread) {
       args.add("--fx-thread");
+    }
+    if (serviceThreadPattern != null) {
+      args.add("--service-thread");
+      args.add(serviceThreadPattern);
     }
     if (delay != null && !"0".equals(delay)) {
       args.add("--replay-delay");

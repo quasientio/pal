@@ -29,6 +29,9 @@ public final class ThreadAffinity {
   /** Execute on the JavaFX Application Thread via {@code Platform.runLater()}. */
   public static final String FX_THREAD = "fx-thread";
 
+  /** Execute within an active CDI request context and transaction. */
+  public static final String SERVICE_REQUEST = "service-request";
+
   /** Prevents instantiation. */
   private ThreadAffinity() {}
 }
