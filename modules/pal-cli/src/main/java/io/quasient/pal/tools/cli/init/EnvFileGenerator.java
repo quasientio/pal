@@ -24,15 +24,11 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Generates a {@code .env.pal} sourceable shell file with environment variable exports.
+ * Generates a {@code .env.pal} sourceable shell file with commented-out environment variable
+ * exports for local (Chronicle), distributed (etcd + Kafka), and logging configuration.
  *
- * <p>Content varies by deployment mode:
- *
- * <ul>
- *   <li>{@code LOCAL} — WAL path set, distributed variables commented out
- *   <li>{@code DISTRIBUTED} — PAL_DIRECTORY and PAL_KAFKA_SERVERS set, local WAL commented out
- *   <li>{@code BOTH} — local defaults active, distributed settings present as comments
- * </ul>
+ * <p>All variables are commented out by default so users uncomment only what they need. A header
+ * line points to {@code pal run --help} for the full list of flags and environment variables.
  *
  * <p>Respects {@link InitConfig#isDryRun()}: when true, computes and reports what would be
  * generated but does not write files.
@@ -86,19 +82,12 @@ public final class EnvFileGenerator {
     StringBuilder sb = new StringBuilder();
     sb.append("# PAL Environment Configuration\n");
     sb.append("# Source this file: source .env.pal\n");
+    sb.append("# See 'pal run --help' for all available flags and environment variables.\n");
     sb.append('\n');
-    DeploymentMode mode = config.getDeploymentMode();
 
-    if (mode == DeploymentMode.DISTRIBUTED) {
-      appendLocalSection(sb, true);
-      sb.append('\n');
-      appendDistributedSection(sb, false);
-    } else {
-      // LOCAL and BOTH: local active, distributed commented
-      appendLocalSection(sb, false);
-      sb.append('\n');
-      appendDistributedSection(sb, true);
-    }
+    appendLocalSection(sb);
+    sb.append('\n');
+    appendDistributedSection(sb);
 
     if (config.isLoggingConfig()) {
       sb.append('\n');
@@ -109,38 +98,34 @@ public final class EnvFileGenerator {
   }
 
   /**
-   * Appends the local WAL configuration section.
+   * Appends the local WAL configuration section (commented out).
    *
    * @param sb the string builder
-   * @param commented whether to comment out the variables
    */
-  private void appendLocalSection(StringBuilder sb, boolean commented) {
-    String prefix = commented ? "# " : "";
+  private void appendLocalSection(StringBuilder sb) {
     sb.append("# Local mode (Chronicle Queue)\n");
-    sb.append(prefix).append("export PAL_WAL=\"file:./wal\"\n");
+    sb.append("# export PAL_WAL=\"file:./wal\"\n");
   }
 
   /**
-   * Appends the distributed configuration section.
+   * Appends the distributed configuration section (commented out).
    *
    * @param sb the string builder
-   * @param commented whether to comment out the variables
    */
-  private void appendDistributedSection(StringBuilder sb, boolean commented) {
-    String prefix = commented ? "# " : "";
+  private void appendDistributedSection(StringBuilder sb) {
     sb.append("# Distributed mode (etcd + Kafka)\n");
-    sb.append(prefix).append("export PAL_DIRECTORY=\"localhost:2379\"\n");
-    sb.append(prefix).append("export PAL_KAFKA_SERVERS=\"localhost:29092\"\n");
+    sb.append("# export PAL_DIRECTORY=\"localhost:2379\"\n");
+    sb.append("# export PAL_KAFKA_SERVERS=\"localhost:29092\"\n");
   }
 
   /**
-   * Appends logging configuration environment variables.
+   * Appends logging configuration environment variables (commented out).
    *
    * @param sb the string builder
    */
   private void appendLoggingSection(StringBuilder sb) {
     sb.append("# Logging (configures PAL's own runtime logging, not your application's)\n");
-    sb.append("export PAL_PEER_LOGGING_CONFIG=\"config/peer-logging.xml\"\n");
-    sb.append("export PAL_CLI_LOGGING_CONFIG=\"config/cli-logging.xml\"\n");
+    sb.append("# export PAL_PEER_LOGGING_CONFIG=\"config/peer-logging.xml\"\n");
+    sb.append("# export PAL_CLI_LOGGING_CONFIG=\"config/cli-logging.xml\"\n");
   }
 }

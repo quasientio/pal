@@ -37,11 +37,11 @@ public class EnvFileGeneratorTest {
   @Rule public TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
-   * Verifies that for LOCAL mode the generated {@code .env.pal} contains a local WAL path,
-   * distributed variables commented out, and logging config paths.
+   * Verifies that the generated {@code .env.pal} contains all variables commented out with local,
+   * distributed, and logging sections.
    */
   @Test
-  public void testGeneratesEnvPalForLocalMode() throws Exception {
+  public void testGeneratesEnvPalWithAllVarsCommentedOut() throws Exception {
     // Given
     InitConfig config =
         InitConfig.builder().groupId("com.example").deploymentMode(DeploymentMode.LOCAL).build();
@@ -54,58 +54,11 @@ public class EnvFileGeneratorTest {
     Path envFile = tempDir.getRoot().toPath().resolve(".env.pal");
     assertTrue(".env.pal should exist", Files.exists(envFile));
     String content = Files.readString(envFile);
-    assertThat(content, containsString("export PAL_WAL=\"file:./wal\""));
-    assertThat(content, containsString("# export PAL_DIRECTORY="));
-    assertThat(content, containsString("# export PAL_KAFKA_SERVERS="));
-    assertThat(content, containsString("export PAL_PEER_LOGGING_CONFIG="));
-    assertThat(content, containsString("export PAL_CLI_LOGGING_CONFIG="));
-  }
-
-  /**
-   * Verifies that for DISTRIBUTED mode the generated {@code .env.pal} contains distributed settings
-   * uncommented.
-   */
-  @Test
-  public void testGeneratesEnvPalForDistributedMode() throws Exception {
-    // Given
-    InitConfig config =
-        InitConfig.builder()
-            .groupId("com.example")
-            .deploymentMode(DeploymentMode.DISTRIBUTED)
-            .build();
-    EnvFileGenerator generator = new EnvFileGenerator(config);
-
-    // When
-    generator.generate(tempDir.getRoot().toPath());
-
-    // Then
-    Path envFile = tempDir.getRoot().toPath().resolve(".env.pal");
-    String content = Files.readString(envFile);
-    assertThat(content, containsString("export PAL_DIRECTORY=\"localhost:2379\""));
-    assertThat(content, containsString("export PAL_KAFKA_SERVERS=\"localhost:29092\""));
     assertThat(content, containsString("# export PAL_WAL=\"file:./wal\""));
-  }
-
-  /**
-   * Verifies that for BOTH mode the generated {@code .env.pal} contains local defaults active with
-   * distributed settings as comments.
-   */
-  @Test
-  public void testGeneratesEnvPalForBothMode() throws Exception {
-    // Given
-    InitConfig config =
-        InitConfig.builder().groupId("com.example").deploymentMode(DeploymentMode.BOTH).build();
-    EnvFileGenerator generator = new EnvFileGenerator(config);
-
-    // When
-    generator.generate(tempDir.getRoot().toPath());
-
-    // Then
-    Path envFile = tempDir.getRoot().toPath().resolve(".env.pal");
-    String content = Files.readString(envFile);
-    assertThat(content, containsString("export PAL_WAL=\"file:./wal\""));
-    assertThat(content, containsString("# export PAL_DIRECTORY="));
-    assertThat(content, containsString("# export PAL_KAFKA_SERVERS="));
+    assertThat(content, containsString("# export PAL_DIRECTORY=\"localhost:2379\""));
+    assertThat(content, containsString("# export PAL_KAFKA_SERVERS=\"localhost:29092\""));
+    assertThat(content, containsString("# export PAL_PEER_LOGGING_CONFIG="));
+    assertThat(content, containsString("# export PAL_CLI_LOGGING_CONFIG="));
   }
 
   /** Verifies that all variable assignments use {@code export VAR=value} syntax. */
