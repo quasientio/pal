@@ -1867,17 +1867,69 @@ These variables control how the JVM is launched for peer processes. See the [JVM
 | `PAL_JMX_PORT` | _(unset)_ | JMX port (convenience, used to build `PAL_JMX_OPTS`) |
 | `PAL_JAVA_OPTS` | _(empty)_ | Catch-all JVM flags, appended last (always wins) |
 | `JAVA_AGENT` | _(unset)_ | Path to a Java agent JAR |
-| `PAL_PEER_LOGGING_CONFIG` | _(unset)_ | PAL peer Logback configuration file (not application logging) |
-| `PAL_CLI_LOGGING_CONFIG` | _(unset)_ | PAL CLI Logback configuration file (not application logging) |
 
-### Application
+### Logging
 
-- `PAL_DIRECTORY` - Default directory URL (etcd endpoint)
-- `PAL_KAFKA_SERVERS` - Kafka bootstrap servers
-- `PAL_CHRONICLE_BASE_DIR` - Base directory for Chronicle queues (default: current directory)
-- `PAL_IN_FLIGHT_TRACKING` - Enable in-flight dispatch tracking for safe intercept activation (default: `true`)
-- `PAL_DRAIN_TIMEOUT_MS` - Timeout in milliseconds for drain operations during intercept activation (default: `5000`)
-- `PAL_CALLBACK_TIMEOUT_MS` - Default timeout for intercept callback responses in milliseconds (default: `3000`). A value of `0` means no timeout (infinite wait). Can be overridden per-intercept via intercept bundles
+| Variable | Flag | Default | Description |
+|----------|------|---------|-------------|
+| `PAL_PEER_LOGGING_CONFIG` | — | _(unset)_ | PAL peer Logback configuration file (not application logging) |
+| `PAL_CLI_LOGGING_CONFIG` | — | _(unset)_ | PAL CLI Logback configuration file (not application logging) |
+
+### Peer
+
+| Variable | Flag | Default | Description |
+|----------|------|---------|-------------|
+| `PAL_DIRECTORY` | `-d, --dir` | _(unset)_ | PAL directory URL (etcd endpoint, `HOST:PORT`). If unset, the peer runs unregistered |
+| `PAL_PEER_UUID` | `-u, --uuid` | _(random)_ | Unique peer identifier. Auto-generated if not set |
+| `PAL_PEER_NAME` | `-n, --name` | _(unset)_ | Human-readable peer name for directory registration |
+
+### WAL/PUB
+
+| Variable | Flag | Default | Description |
+|----------|------|---------|-------------|
+| `PAL_WAL` | `-w, --wal` | _(unset)_ | Write-ahead log destination. `auto`, `file:/path` (Chronicle), or Kafka topic name |
+| `PAL_LOG` | `-l, --log` | _(unset)_ | Shorthand to use the same topic/queue for both source-log and WAL |
+| `PAL_SOURCE_LOG` | `-s, --source-log` | _(unset)_ | Source log to consume messages from. `auto`, `file:/path`, or Kafka topic |
+| `PAL_LOG_PREFIX` | `--log-prefix` | `app` | Prefix for auto-generated log names |
+| `PAL_WAL_INCOMING_RPC` | `--wal-incoming-rpc` | `true` | Write incoming RPC calls (ZMQ, JSON-RPC, CLI) to WAL/PUB |
+| `PAL_WAL_ALL_INCOMING_RPC` | `--wal-all-incoming-rpc` | `false` | Write ALL incoming RPC calls to WAL/PUB including LOG_RPC channel. Implies `PAL_WAL_INCOMING_RPC` |
+| `PAL_WAL_INCOMING_CLI` | `--wal-incoming-cli` | `true` | Write incoming CLI bootstrap calls to WAL/PUB |
+| `PAL_WITH_SOURCE_CONTEXT` | `--with-source-context` | `false` | Include source context in log messages |
+
+### RPC
+
+| Variable | Flag | Default | Description |
+|----------|------|---------|-------------|
+| `PAL_ZMQ_RPC` | `-r, --zmq-rpc` | _(unset)_ | ZMQ-RPC listener. `[HOST:]PORT` or `auto` |
+| `PAL_JSON_RPC` | `-j, --json-rpc` | _(unset)_ | JSON-RPC WebSocket listener. `[HOST:]PORT` or `auto` |
+| `PAL_TCP_PUB` | `-p, --tcp-pub` | _(unset)_ | TCP publication endpoint (ZeroMQ). `[HOST:]PORT` or `auto` |
+| `PAL_RPC_THREADS` | `--rpc-threads` | `1` | Number of RPC handler threads |
+| `PAL_RPC_POLICY` | `--rpc-policy` | _(unset)_ | Path to RPC access policy YAML file |
+| `PAL_RPC_POLICY_PRESET` | `--rpc-policy-preset` | _(unset)_ | Comma-separated list of policy presets (e.g., `deny-unsafe,deny-jdk-internals`) |
+| `PAL_RPC_DEFAULT_ACTION` | `--rpc-default-action` | `DENY` | Default action when no policy rule matches (`ALLOW` or `DENY`) |
+| `PAL_RPC_POLICY_WATCH_INTERVAL` | `--rpc-policy-watch-interval` | `2000` | Policy file watch interval in ms. `0` to disable |
+| `PAL_FX_THREAD` | `--fx-thread` | `false` | Route RPC calls with `fx-thread` affinity to the JavaFX Application Thread |
+
+### Interception
+
+| Variable | Flag | Default | Description |
+|----------|------|---------|-------------|
+| `PAL_INTERCEPTABLE` | `--interceptable` | `false` | Enable message interception (requires PAL directory) |
+| `PAL_IN_FLIGHT_TRACKING` | `--in-flight-tracking` | `true` | Track in-flight dispatches for safe intercept activation |
+| `PAL_DRAIN_TIMEOUT_MS` | `--drain-timeout-ms` | `5000` | Timeout in ms for draining in-flight dispatches before intercept activation |
+| `PAL_CALLBACK_TIMEOUT_MS` | `--callback-timeout-ms` | `3000` | Timeout in ms for intercept callback responses. `0` = infinite. Overridable per-intercept |
+| `PAL_EXCEPTION_POLICY` | `--exception-policy` | `PROPAGATE_CONTROLLED_ONLY` | Exception propagation policy for intercept callbacks. Values: `PROPAGATE_ALL`, `PROPAGATE_EXPLICIT_ONLY`, `SWALLOW_ALL`, `PROPAGATE_CONTROLLED_ONLY` |
+| `PAL_CHECKED_EXCEPTION_POLICY` | `--checked-exception-policy` | `WRAP` | Checked exception handling for intercept callbacks. Values: `WRAP`, `REJECT`, `ALLOW_ALL` |
+
+### Infrastructure
+
+| Variable | Flag | Default | Description |
+|----------|------|---------|-------------|
+| `PAL_KAFKA_SERVERS` | `-k, --kafka-servers` | _(unset)_ | Kafka bootstrap servers. Required when using Kafka-backed logs |
+| `PAL_KAFKA_TIMEOUT_MS` | `--kafka-timeout` | `5000` | Kafka connection health check timeout in ms |
+| `PAL_ETCD_TIMEOUT_MS` | `--etcd-timeout` | `5000` | etcd connection health check timeout in ms |
+| `PAL_CHRONICLE_BASE_DIR` | `--chronicle-base-dir` | _(cwd)_ | Base directory for Chronicle queues with relative `file:` paths |
+| `PAL_PROPERTIES` | `--properties` | _(unset)_ | Path to external properties file overlaying built-in defaults |
 
 ---
 
