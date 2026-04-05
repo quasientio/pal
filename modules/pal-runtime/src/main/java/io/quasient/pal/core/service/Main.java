@@ -699,7 +699,7 @@ public class Main implements Callable<Integer> {
    */
   @Option(
       names = {"--service-thread"},
-      order = 69,
+      order = 51,
       paramLabel = "<pattern>",
       description =
           "regex pattern for service request handler thread names. Entry points on matching"
