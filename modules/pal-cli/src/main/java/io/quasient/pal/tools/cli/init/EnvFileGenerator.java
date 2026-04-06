@@ -25,10 +25,12 @@ import java.util.List;
 
 /**
  * Generates a {@code .env.pal} sourceable shell file with commented-out environment variable
- * exports for local (Chronicle), distributed (etcd + Kafka), and logging configuration.
+ * exports for WAL, etcd (when intercepts are enabled), Kafka (when Kafka WAL is enabled), and
+ * logging configuration.
  *
- * <p>All variables are commented out by default so users uncomment only what they need. A header
- * line points to {@code pal run --help} for the full list of flags and environment variables.
+ * <p>All variables are commented out by default so users uncomment only what they need. Sections
+ * are included based on the project's intent flags. A header line points to {@code pal run --help}
+ * for the full list of flags and environment variables.
  *
  * <p>Respects {@link InitConfig#isDryRun()}: when true, computes and reports what would be
  * generated but does not write files.
@@ -85,9 +87,17 @@ public final class EnvFileGenerator {
     sb.append("# See 'pal run --help' for all available flags and environment variables.\n");
     sb.append('\n');
 
-    appendLocalSection(sb);
-    sb.append('\n');
-    appendDistributedSection(sb);
+    appendWalSection(sb);
+
+    if (config.needsEtcd()) {
+      sb.append('\n');
+      appendEtcdSection(sb);
+    }
+
+    if (config.needsKafka()) {
+      sb.append('\n');
+      appendKafkaSection(sb);
+    }
 
     if (config.isLoggingConfig()) {
       sb.append('\n');
@@ -102,19 +112,28 @@ public final class EnvFileGenerator {
    *
    * @param sb the string builder
    */
-  private void appendLocalSection(StringBuilder sb) {
-    sb.append("# Local mode (Chronicle Queue)\n");
+  private void appendWalSection(StringBuilder sb) {
+    sb.append("# Write-ahead log (Chronicle Queue for local, or use Kafka below)\n");
     sb.append("# export PAL_WAL=\"file:./wal\"\n");
   }
 
   /**
-   * Appends the distributed configuration section (commented out).
+   * Appends the etcd (directory) configuration section (commented out).
    *
    * @param sb the string builder
    */
-  private void appendDistributedSection(StringBuilder sb) {
-    sb.append("# Distributed mode (etcd + Kafka)\n");
+  private void appendEtcdSection(StringBuilder sb) {
+    sb.append("# PAL directory (etcd) — required for intercepts and peer discovery\n");
     sb.append("# export PAL_DIRECTORY=\"localhost:2379\"\n");
+  }
+
+  /**
+   * Appends the Kafka configuration section (commented out).
+   *
+   * @param sb the string builder
+   */
+  private void appendKafkaSection(StringBuilder sb) {
+    sb.append("# Kafka WAL\n");
     sb.append("# export PAL_KAFKA_SERVERS=\"localhost:29092\"\n");
   }
 

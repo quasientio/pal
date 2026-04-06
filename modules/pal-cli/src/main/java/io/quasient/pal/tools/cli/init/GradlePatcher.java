@@ -275,6 +275,11 @@ public final class GradlePatcher {
       result.skip("aspectjrt dependency already present");
     }
 
+    if (config.isPalClient() && !blockContent.contains("pal-client")) {
+      newDeps.append(formatPalClientDep(isKotlinDsl, config.getPalVersion())).append("\n");
+      result.addition("Added pal-client implementation dependency");
+    }
+
     if (newDeps.length() == 0) {
       return content;
     }
@@ -384,6 +389,21 @@ public final class GradlePatcher {
    */
   private static String formatAspectjRtDep(boolean isKotlinDsl, String aspectjVersion) {
     String coords = ASPECTJ_RT_COORDS + ":" + aspectjVersion;
+    if (isKotlinDsl) {
+      return "    implementation(\"" + coords + "\")";
+    }
+    return "    implementation '" + coords + "'";
+  }
+
+  /**
+   * Formats the {@code pal-client} implementation dependency line.
+   *
+   * @param isKotlinDsl whether the project uses Kotlin DSL
+   * @param palVersion the PAL version string
+   * @return the formatted dependency line
+   */
+  private static String formatPalClientDep(boolean isKotlinDsl, String palVersion) {
+    String coords = "io.quasient.pal:pal-client:" + palVersion;
     if (isKotlinDsl) {
       return "    implementation(\"" + coords + "\")";
     }

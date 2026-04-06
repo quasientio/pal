@@ -87,10 +87,6 @@ The interactive wizard guides you through the setup:
 ```
 Welcome to PAL! Let's set up your project.
 
-? Project type:
-  ❯ New project (create from scratch)
-    Existing project (add PAL to current project)
-
 ? Build tool:
   ❯ Maven
     Gradle
@@ -98,30 +94,23 @@ Welcome to PAL! Let's set up your project.
 ? Project group ID: [com.example]
 ? Project artifact ID: [pal-tutorial]
 ? Project version: [1.0-SNAPSHOT]
-? Main class (fully qualified): [com.example.Main]
-? Package name: [com.example]
+? Will this app be interceptable by other peers? [y/N]
+? Will this app intercept other peers? [y/N]
+? Main class (for pal run): [com.example.Main]
+? Will you use Kafka for WAL (write-ahead log)? [y/N]
 
-? Deployment mode:
-  ❯ Local only (Chronicle Queue, no infrastructure needed)
-    Distributed (etcd + Kafka)
-    Both (local dev + distributed prod configs)
-
-? Generate sample application code? [Y/n]
-? Generate logging config? [Y/n]
-
-Generating project...
   ✓ Created pom.xml with AspectJ weaving
   ✓ Created src/main/java/com/example/Main.java
   ✓ Created src/main/java/com/example/SampleService.java
   ✓ Created config/peer-logging.xml
   ✓ Created config/cli-logging.xml
   ✓ Created .env.pal (environment variables)
+  ✓ Created README.md
 
 Next steps:
   1. cd pal-tutorial
-  2. source .env.pal
-  3. mvn compile
-  4. pal run --wal file:./wal -cp target/classes com.example.Main
+  2. mvn package
+  3. pal run -cp target/classes com.example.Main
 ```
 
 For scripted or CI environments, use non-interactive mode:
@@ -130,9 +119,7 @@ For scripted or CI environments, use non-interactive mode:
 pal init pal-tutorial -y \
   --group-id com.example \
   --artifact-id pal-tutorial \
-  --main-class com.example.Main \
-  --mode local \
-  --sample-app
+  --main-class com.example.Main
 ```
 
 **Tip:** Use `--dry-run` to preview what `pal init` would generate without writing any files:
@@ -271,19 +258,16 @@ pal init
 ```
 Detected existing Maven project: com.acme:order-service (1.2.0)
 
-? Add PAL AspectJ weaving to this project? [Y/n]
+? Will this app be interceptable by other peers? [y/N]
+? Will this app intercept other peers? [y/N]
 ? Main class (for pal run): [com.acme.OrderServiceMain]
-? Deployment mode:
-  ❯ Local only
-    Distributed
-    Both
+? Will you use Kafka for WAL (write-ahead log)? [y/N]
 
-Patching pom.xml...
-  ✓ Added pal-weave dependency
-  ✓ Added aspectj-maven-plugin with pal-weave aspect library
+  ✓ [PATCH] pom.xml (added pal-weave dependency, aspectj-maven-plugin)
   ✓ Created config/peer-logging.xml
   ✓ Created config/cli-logging.xml
   ✓ Created .env.pal
+  ✓ Created README.md
 ```
 
 A backup of your original build file is created automatically (`pom.xml.backup` or `build.gradle.backup`). Use `--dry-run` to preview the changes before applying them:

@@ -8,14 +8,10 @@
 
 bundle: "${artifactId}-intercepts"
 
-defaults:
-  peer: "monitor-peer"
-  priority: 0
-
 intercepts:
-  # Example: log every call to the main class entry point
-  - target: ${mainClass}.main
-    type: BEFORE_ASYNC
+  # Example: intercept every call to SampleService.processOrder
+  - target: ${package}.SampleService.processOrder
+    type: BEFORE
     callback:
-      class: ${package}.MonitorCallback
-      method: onMain
+      class: ${package}.SampleCallbacks
+      method: handle

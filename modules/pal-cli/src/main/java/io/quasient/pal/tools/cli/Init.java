@@ -22,7 +22,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.tools.cli.init.BuildTool;
 import io.quasient.pal.tools.cli.init.BuildToolStrategy;
 import io.quasient.pal.tools.cli.init.ConfigGenerator;
-import io.quasient.pal.tools.cli.init.DeploymentMode;
 import io.quasient.pal.tools.cli.init.EnvFileGenerator;
 import io.quasient.pal.tools.cli.init.InfraGenerator;
 import io.quasient.pal.tools.cli.init.InitConfig;
@@ -155,19 +154,44 @@ public class Init extends AbstractPalSubcommand {
       description = "Build tool: maven or gradle (default: auto-detect or maven)")
   private String buildToolStr;
 
-  /** Deployment mode. */
-  @Option(
-      names = {"--mode"},
-      paramLabel = "local|distributed|both",
-      defaultValue = "local",
-      description = "Deployment mode: local, distributed, both (default: ${DEFAULT-VALUE})")
-  private String mode;
-
   /** Skip interactive prompts and use flags/defaults. */
   @Option(
       names = {"--non-interactive", "-y"},
       description = "Skip interactive prompts, use defaults/flags")
   private boolean nonInteractive;
+
+  /** Whether this app can be intercepted by other peers. */
+  @Option(
+      names = {"--interceptable"},
+      negatable = true,
+      defaultValue = "false",
+      fallbackValue = "true",
+      description = "App can be intercepted by other peers (default: ${DEFAULT-VALUE})")
+  private boolean interceptable;
+
+  /** Whether this app intercepts other peers via callbacks. */
+  @Option(
+      names = {"--intercepting"},
+      negatable = true,
+      defaultValue = "false",
+      fallbackValue = "true",
+      description = "App intercepts other peers via callbacks (default: ${DEFAULT-VALUE})")
+  private boolean intercepting;
+
+  /** Whether this app uses Kafka for WAL. */
+  @Option(
+      names = {"--kafka"},
+      negatable = true,
+      defaultValue = "false",
+      fallbackValue = "true",
+      description = "Use Kafka for WAL (default: ${DEFAULT-VALUE})")
+  private boolean kafka;
+
+  /** No main class; run with pal run --as-service. */
+  @Option(
+      names = {"--as-service"},
+      description = "No main class; run with pal run --as-service")
+  private boolean asService;
 
   /** Generate sample application code. */
   @Option(
@@ -177,15 +201,6 @@ public class Init extends AbstractPalSubcommand {
       fallbackValue = "true",
       description = "Generate sample application code (default: ${DEFAULT-VALUE})")
   private boolean sampleApp;
-
-  /** Generate RPC policy config. */
-  @Option(
-      names = {"--rpc-policy"},
-      negatable = true,
-      defaultValue = "false",
-      fallbackValue = "true",
-      description = "Generate RPC policy config (default: ${DEFAULT-VALUE})")
-  private boolean rpcPolicy;
 
   /** Generate recording scope config. */
   @Option(
@@ -204,24 +219,6 @@ public class Init extends AbstractPalSubcommand {
       fallbackValue = "true",
       description = "Generate logging configuration (default: ${DEFAULT-VALUE})")
   private boolean loggingConfig;
-
-  /** Generate intercept bundle example. */
-  @Option(
-      names = {"--intercept-bundle"},
-      negatable = true,
-      defaultValue = "false",
-      fallbackValue = "true",
-      description = "Generate intercept bundle example (default: ${DEFAULT-VALUE})")
-  private boolean interceptBundle;
-
-  /** Generate Docker infrastructure files. */
-  @Option(
-      names = {"--infra"},
-      negatable = true,
-      defaultValue = "false",
-      fallbackValue = "true",
-      description = "Generate Docker infrastructure files (default: ${DEFAULT-VALUE})")
-  private boolean infra;
 
   /** Overwrite existing files without prompting. */
   @Option(
@@ -264,8 +261,8 @@ public class Init extends AbstractPalSubcommand {
    * Validates command-line input.
    *
    * <p>In non-interactive mode, ensures required flags ({@code --group-id}, {@code --artifact-id},
-   * {@code --main-class}) are provided for new projects. Validates {@code --build-tool} and {@code
-   * --mode} values if specified.
+   * {@code --main-class}) are provided for new projects. Validates {@code --build-tool} if
+   * specified.
    *
    * @throws RuntimeException if required flags are missing or values are invalid
    */
@@ -277,14 +274,6 @@ public class Init extends AbstractPalSubcommand {
         throw new RuntimeException(
             "Invalid build tool: '" + buildToolStr + "'. Must be 'maven' or 'gradle'.");
       }
-    }
-
-    String normalizedMode = mode.toUpperCase(Locale.ROOT);
-    if (!"LOCAL".equals(normalizedMode)
-        && !"DISTRIBUTED".equals(normalizedMode)
-        && !"BOTH".equals(normalizedMode)) {
-      throw new RuntimeException(
-          "Invalid mode: '" + mode + "'. Must be 'local', 'distributed', or 'both'.");
     }
 
     if (nonInteractive) {
@@ -311,9 +300,10 @@ public class Init extends AbstractPalSubcommand {
         throw new RuntimeException(
             "Missing required option '--artifact-id' for non-interactive mode on new projects.");
       }
-      if (!optionGiven(mainClass)) {
+      if (!asService && !optionGiven(mainClass)) {
         throw new RuntimeException(
-            "Missing required option '--main-class' for non-interactive mode on new projects.");
+            "Missing required option '--main-class' for non-interactive mode on new projects"
+                + " (or use --as-service).");
       }
     }
   }
@@ -442,26 +432,28 @@ public class Init extends AbstractPalSubcommand {
   InitConfig buildConfigFromFlags() {
     Path effectiveDir = resolveTargetDir();
     BuildTool buildTool = resolveBuildTool();
-    DeploymentMode deploymentMode = DeploymentMode.valueOf(mode.toUpperCase(Locale.ROOT));
 
     InitConfig.Builder builder =
         InitConfig.builder()
             .groupId(groupId)
             .artifactId(artifactId)
-            .mainClass(mainClass)
             .buildTool(buildTool)
-            .deploymentMode(deploymentMode)
             .palVersion(palVersion)
             .aspectjVersion(DEFAULT_ASPECTJ_VERSION)
             .targetDir(effectiveDir)
+            .interceptable(interceptable)
+            .intercepting(intercepting)
+            .kafka(kafka)
             .sampleApp(sampleApp)
-            .rpcPolicy(rpcPolicy)
             .scopePolicy(scopePolicy)
             .loggingConfig(loggingConfig)
-            .interceptBundle(interceptBundle)
-            .infra(infra)
             .force(force)
             .dryRun(dryRun);
+
+    // Only set mainClass when not in as-service mode
+    if (!asService && mainClass != null) {
+      builder.mainClass(mainClass);
+    }
 
     if (projectVersion != null) {
       builder.projectVersion(projectVersion);
@@ -611,17 +603,16 @@ public class Init extends AbstractPalSubcommand {
         .mainClass(wizardConfig.getMainClass())
         .packageName(wizardConfig.getPackageName())
         .buildTool(wizardConfig.getBuildTool())
-        .deploymentMode(wizardConfig.getDeploymentMode())
         .palVersion(wizardConfig.getPalVersion())
         .aspectjVersion(wizardConfig.getAspectjVersion())
         .targetDir(wizardConfig.getTargetDir())
         .existingBuildFile(wizardConfig.getExistingBuildFile())
+        .interceptable(wizardConfig.isInterceptable())
+        .intercepting(wizardConfig.isIntercepting())
+        .kafka(wizardConfig.isKafka())
         .sampleApp(wizardConfig.isSampleApp())
-        .rpcPolicy(wizardConfig.isRpcPolicy())
         .scopePolicy(wizardConfig.isScopePolicy())
         .loggingConfig(wizardConfig.isLoggingConfig())
-        .interceptBundle(wizardConfig.isInterceptBundle())
-        .infra(wizardConfig.isInfra())
         .force(force)
         .dryRun(dryRun)
         .build();
@@ -699,7 +690,7 @@ public class Init extends AbstractPalSubcommand {
   }
 
   /**
-   * Prints next steps tailored to build tool and deployment mode.
+   * Prints next steps tailored to build tool and intent flags.
    *
    * @param config the init configuration
    * @param effectiveDir the target directory
@@ -721,8 +712,9 @@ public class Init extends AbstractPalSubcommand {
       step++;
     }
 
-    if (config.isDistributed() && config.isInfra()) {
-      out.println("  " + step + ". cd infra && ./start.sh   # Start etcd + Kafka");
+    if (config.isInfra()) {
+      String infraHint = buildInfraHint(config);
+      out.println("  " + step + ". cd infra && ./start.sh   # " + infraHint);
       step++;
       out.println("  " + step + ". cd ..");
       step++;
@@ -732,15 +724,40 @@ public class Init extends AbstractPalSubcommand {
     out.println("  " + step + ". " + compileCmd + "              # Build with AspectJ weaving");
     step++;
 
-    String cpDir =
-        config.getBuildTool() == BuildTool.GRADLE ? "build/classes/java/main" : "target/classes";
-    String mainClass =
-        config.getMainClass() != null ? config.getMainClass() : config.getGroupId() + ".Main";
-    out.println("  " + step + ". pal run -cp " + cpDir + " " + mainClass);
+    out.println("  " + step + ". " + buildRunCommand(config));
     step++;
 
     out.println();
-    out.println("See README.md for more options (WAL, distributed mode, etc.).");
+    out.println("See README.md for more options (WAL, interception, etc.).");
+  }
+
+  /**
+   * Builds a hint string describing what infrastructure will be started.
+   *
+   * @param config the init configuration
+   * @return the hint string
+   */
+  private String buildInfraHint(InitConfig config) {
+    if (config.needsEtcd() && config.needsKafka()) {
+      return "Start etcd + Kafka";
+    } else if (config.needsEtcd()) {
+      return "Start etcd";
+    } else {
+      return "Start Kafka";
+    }
+  }
+
+  /**
+   * Builds the {@code pal run} command string with flags matching the user's intent.
+   *
+   * @param config the init configuration
+   * @return the formatted run command
+   */
+  private String buildRunCommand(InitConfig config) {
+    String cpDir =
+        config.getBuildTool() == BuildTool.GRADLE ? "build/classes/java/main" : "target/classes";
+    String mainFallback = config.getGroupId() + ".Main";
+    return config.buildRunCommand(cpDir, mainFallback);
   }
 
   /**

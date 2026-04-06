@@ -36,6 +36,10 @@ import org.junit.rules.TemporaryFolder;
  * real terminal. The wizard must detect existing projects (Maven or Gradle), pre-populate fields
  * from build files, apply sensible defaults, and collect all required configuration for {@link
  * InitConfig}.
+ *
+ * <p>The wizard prompts for intent (interceptable, intercepting, main class, kafka) rather than
+ * low-level feature toggles. Infrastructure, RPC policy, intercept bundles, and pal-client
+ * dependency are all derived from intent.
  */
 public class InitWizardTest {
 
@@ -62,15 +66,11 @@ public class InitWizardTest {
         StandardCharsets.UTF_8);
 
     TestPromptProvider provider = new TestPromptProvider();
-    // Prompts for: mainClass, deploymentMode, feature toggles
+    // Existing project prompts: interceptable, intercepting, mainClass, kafka
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.acme.Main"); // mainClass
-    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
-    provider.enqueueYesNo(true); // sampleApp
-    provider.enqueueYesNo(true); // loggingConfig
-    provider.enqueueYesNo(false); // rpcPolicy
-    provider.enqueueYesNo(false); // scopePolicy
-    provider.enqueueYesNo(false); // interceptBundle
-    provider.enqueueYesNo(false); // infra
+    provider.enqueueYesNo(false); // kafka
 
     // When: wizard runs
     InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
@@ -97,14 +97,11 @@ public class InitWizardTest {
         StandardCharsets.UTF_8);
 
     TestPromptProvider provider = new TestPromptProvider();
+    // Existing project prompts: interceptable, intercepting, mainClass, kafka
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.acme.App"); // mainClass
-    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
-    provider.enqueueYesNo(true); // sampleApp
-    provider.enqueueYesNo(true); // loggingConfig
-    provider.enqueueYesNo(false); // rpcPolicy
-    provider.enqueueYesNo(false); // scopePolicy
-    provider.enqueueYesNo(false); // interceptBundle
-    provider.enqueueYesNo(false); // infra
+    provider.enqueueYesNo(false); // kafka
 
     // When: wizard runs
     InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
@@ -125,18 +122,15 @@ public class InitWizardTest {
     Path dir = tempFolder.getRoot().toPath();
 
     TestPromptProvider provider = new TestPromptProvider();
+    // New project prompts: buildTool, groupId, artifactId, version, then intents
     provider.enqueueSelect(BuildTool.MAVEN); // buildTool
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
-    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
-    provider.enqueueYesNo(true); // sampleApp
-    provider.enqueueYesNo(true); // loggingConfig
-    provider.enqueueYesNo(false); // rpcPolicy
-    provider.enqueueYesNo(false); // scopePolicy
-    provider.enqueueYesNo(false); // interceptBundle
-    provider.enqueueYesNo(false); // infra
+    provider.enqueueYesNo(false); // kafka
 
     // When: wizard runs
     InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
@@ -161,14 +155,10 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
-    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
-    provider.enqueueYesNo(true); // sampleApp
-    provider.enqueueYesNo(true); // loggingConfig
-    provider.enqueueYesNo(false); // rpcPolicy
-    provider.enqueueYesNo(false); // scopePolicy
-    provider.enqueueYesNo(false); // interceptBundle
-    provider.enqueueYesNo(false); // infra
+    provider.enqueueYesNo(false); // kafka
 
     // When: wizard runs
     InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
@@ -180,7 +170,6 @@ public class InitWizardTest {
     assertThat(config.getProjectVersion(), is("1.0"));
     assertThat(config.getMainClass(), is("com.test.Main"));
     assertThat(config.getBuildTool(), is(BuildTool.MAVEN));
-    assertThat(config.getDeploymentMode(), is(DeploymentMode.LOCAL));
   }
 
   /**
@@ -204,7 +193,9 @@ public class InitWizardTest {
     assertThat(config.isSampleApp(), is(true));
     assertThat(config.isLoggingConfig(), is(true));
     assertThat(config.getBuildTool(), is(BuildTool.MAVEN));
-    assertThat(config.getDeploymentMode(), is(DeploymentMode.LOCAL));
+    assertThat(config.isInterceptable(), is(false));
+    assertThat(config.isIntercepting(), is(false));
+    assertThat(config.isKafka(), is(false));
   }
 
   /**
@@ -227,16 +218,11 @@ public class InitWizardTest {
         StandardCharsets.UTF_8);
 
     TestPromptProvider provider = new TestPromptProvider();
-    // Only enqueue non-identity prompts: mainClass, mode, feature toggles
-    // No buildTool, groupId, artifactId, version prompts for existing projects
+    // Only intent prompts — no buildTool, groupId, artifactId, version
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.acme.OrderMain"); // mainClass
-    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
-    provider.enqueueYesNo(true); // sampleApp
-    provider.enqueueYesNo(true); // loggingConfig
-    provider.enqueueYesNo(false); // rpcPolicy
-    provider.enqueueYesNo(false); // scopePolicy
-    provider.enqueueYesNo(false); // interceptBundle
-    provider.enqueueYesNo(false); // infra
+    provider.enqueueYesNo(false); // kafka
 
     // When: wizard runs
     InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
@@ -264,14 +250,10 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-gradle-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
-    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
-    provider.enqueueYesNo(true); // sampleApp
-    provider.enqueueYesNo(true); // loggingConfig
-    provider.enqueueYesNo(false); // rpcPolicy
-    provider.enqueueYesNo(false); // scopePolicy
-    provider.enqueueYesNo(false); // interceptBundle
-    provider.enqueueYesNo(false); // infra
+    provider.enqueueYesNo(false); // kafka
 
     // When: wizard runs
     InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
@@ -282,12 +264,11 @@ public class InitWizardTest {
   }
 
   /**
-   * Verifies that selecting DISTRIBUTED mode causes the infrastructure flag to be prompted and/or
-   * default to {@code true}.
+   * Verifies that selecting interceptable=true causes infra and needsEtcd to be derived as true.
    */
   @Test
-  public void testDistributedModeEnablesInfra() {
-    // Given: user selects mode=DISTRIBUTED
+  public void testInterceptableEnablesEtcdInfra() {
+    // Given: user answers interceptable=yes
     Path dir = tempFolder.getRoot().toPath();
 
     TestPromptProvider provider = new TestPromptProvider();
@@ -295,30 +276,29 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueYesNo(true); // interceptable
+    provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
-    provider.enqueueSelect(DeploymentMode.DISTRIBUTED); // deploymentMode
-    provider.enqueueYesNo(true); // sampleApp
-    provider.enqueueYesNo(true); // loggingConfig
-    provider.enqueueYesNo(false); // rpcPolicy
-    provider.enqueueYesNo(false); // scopePolicy
-    provider.enqueueYesNo(false); // interceptBundle
-    // infra: no answer enqueued, so it uses the default (true for distributed)
+    provider.enqueueYesNo(false); // kafka
 
     // When: wizard runs
     InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
     InitConfig config = wizard.run();
 
-    // Then: infra defaults to true for distributed mode
+    // Then: needsEtcd and isInfra are true, but no kafka
+    assertThat(config.isInterceptable(), is(true));
+    assertThat(config.needsEtcd(), is(true));
     assertThat(config.isInfra(), is(true));
-    assertThat(config.getDeploymentMode(), is(DeploymentMode.DISTRIBUTED));
+    assertThat(config.needsKafka(), is(false));
   }
 
   /**
-   * Verifies that selecting LOCAL mode causes the infrastructure flag to default to {@code false}.
+   * Verifies that selecting intercepting=true causes rpcPolicy, interceptBundle, isPalClient, and
+   * needsEtcd to be derived as true.
    */
   @Test
-  public void testLocalModeDisablesInfraByDefault() {
-    // Given: user selects mode=LOCAL
+  public void testInterceptingEnablesDerivedFlags() {
+    // Given: user answers intercepting=yes
     Path dir = tempFolder.getRoot().toPath();
 
     TestPromptProvider provider = new TestPromptProvider();
@@ -326,21 +306,50 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(true); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
-    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
-    provider.enqueueYesNo(true); // sampleApp
-    provider.enqueueYesNo(true); // loggingConfig
-    provider.enqueueYesNo(false); // rpcPolicy
-    provider.enqueueYesNo(false); // scopePolicy
-    provider.enqueueYesNo(false); // interceptBundle
-    // infra: no answer enqueued, so it uses the default (false for local)
+    provider.enqueueYesNo(false); // kafka
 
     // When: wizard runs
     InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
     InitConfig config = wizard.run();
 
-    // Then: infra defaults to false for local mode
+    // Then: derived flags are all true
+    assertThat(config.isIntercepting(), is(true));
+    assertThat(config.isRpcPolicy(), is(true));
+    assertThat(config.isInterceptBundle(), is(true));
+    assertThat(config.isPalClient(), is(true));
+    assertThat(config.needsEtcd(), is(true));
+    assertThat(config.isInfra(), is(true));
+  }
+
+  /**
+   * Verifies that a plain local project (no intercepts, no kafka) has no infrastructure generated.
+   */
+  @Test
+  public void testPlainLocalDisablesInfra() {
+    // Given: user answers no to all intent questions
+    Path dir = tempFolder.getRoot().toPath();
+
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.MAVEN); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-app"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
+    provider.enqueueText("com.test.Main"); // mainClass
+    provider.enqueueYesNo(false); // kafka
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: no infra
     assertThat(config.isInfra(), is(false));
+    assertThat(config.needsEtcd(), is(false));
+    assertThat(config.needsKafka(), is(false));
   }
 
   /**
@@ -382,14 +391,11 @@ public class InitWizardTest {
         StandardCharsets.UTF_8);
 
     TestPromptProvider provider = new TestPromptProvider();
+    // Intent prompts only
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.acme.Main"); // mainClass
-    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
-    provider.enqueueYesNo(true); // sampleApp
-    provider.enqueueYesNo(true); // loggingConfig
-    provider.enqueueYesNo(false); // rpcPolicy
-    provider.enqueueYesNo(false); // scopePolicy
-    provider.enqueueYesNo(false); // interceptBundle
-    provider.enqueueYesNo(false); // infra
+    provider.enqueueYesNo(false); // kafka
 
     // When: wizard detects existing project
     InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
@@ -413,14 +419,11 @@ public class InitWizardTest {
         StandardCharsets.UTF_8);
 
     TestPromptProvider provider = new TestPromptProvider();
+    // Intent prompts only
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.acme.Main"); // mainClass
-    provider.enqueueSelect(DeploymentMode.LOCAL); // deploymentMode
-    provider.enqueueYesNo(true); // sampleApp
-    provider.enqueueYesNo(true); // loggingConfig
-    provider.enqueueYesNo(false); // rpcPolicy
-    provider.enqueueYesNo(false); // scopePolicy
-    provider.enqueueYesNo(false); // interceptBundle
-    provider.enqueueYesNo(false); // infra
+    provider.enqueueYesNo(false); // kafka
 
     // When: wizard detects existing project
     InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
@@ -428,5 +431,31 @@ public class InitWizardTest {
 
     // Then: pre-populates groupId="com.acme" in InitConfig
     assertThat(config.getGroupId(), is("com.acme"));
+  }
+
+  /** Verifies that selecting kafka=true without intercepts generates kafka-only infra (no etcd). */
+  @Test
+  public void testKafkaWithoutInterceptsNoEtcd() {
+    // Given: user answers kafka=yes, no intercepts
+    Path dir = tempFolder.getRoot().toPath();
+
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.MAVEN); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-app"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
+    provider.enqueueText("com.test.Main"); // mainClass
+    provider.enqueueYesNo(true); // kafka
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: kafka infra but no etcd
+    assertThat(config.needsKafka(), is(true));
+    assertThat(config.needsEtcd(), is(false));
+    assertThat(config.isInfra(), is(true));
   }
 }

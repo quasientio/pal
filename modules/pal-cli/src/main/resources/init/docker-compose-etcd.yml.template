@@ -1,0 +1,25 @@
+# Docker Compose — etcd for PAL (intercepts / peer discovery)
+#
+# Usage:
+#   cd infra && docker compose up -d
+#   cd infra && docker compose stop
+
+networks:
+  pal:
+    driver: bridge
+
+services:
+  etcd:
+    image: gcr.io/etcd-development/etcd:v3.5.21
+    networks: [pal]
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    command:
+      - etcd
+      - --name=default
+      - --initial-advertise-peer-urls=http://etcd:2380
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --advertise-client-urls=http://etcd:2379
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --initial-cluster=default=http://etcd:2380

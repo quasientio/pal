@@ -31,6 +31,16 @@ import java.nio.file.Path;
  *     .build();
  * }</pre>
  *
+ * <p>Several accessors are derived from intent flags rather than stored directly:
+ *
+ * <ul>
+ *   <li>{@link #isRpcPolicy()} and {@link #isInterceptBundle()} are derived from {@link
+ *       #isIntercepting()}
+ *   <li>{@link #isInfra()} is derived from {@link #needsEtcd()} or {@link #needsKafka()}
+ *   <li>{@link #isAsService()} is derived from {@link #isIntercepting()} and absence of {@link
+ *       #getMainClass()}
+ * </ul>
+ *
  * @since 1.0.0
  */
 public final class InitConfig {
@@ -44,7 +54,7 @@ public final class InitConfig {
   /** Project version string (e.g., {@code "1.0-SNAPSHOT"}). */
   private final String projectVersion;
 
-  /** Fully-qualified main class name. */
+  /** Fully-qualified main class name, or {@code null} for as-service mode. */
   private final String mainClass;
 
   /** Explicit Java package name, or {@code null} to infer from groupId. */
@@ -52,9 +62,6 @@ public final class InitConfig {
 
   /** Selected build tool (Maven or Gradle). */
   private final BuildTool buildTool;
-
-  /** Deployment mode (local, distributed, or both). */
-  private final DeploymentMode deploymentMode;
 
   /** PAL version string for generated build files. */
   private final String palVersion;
@@ -68,23 +75,23 @@ public final class InitConfig {
   /** Path to an existing build file, or {@code null} for a new project. */
   private final Path existingBuildFile;
 
+  /** Whether this app can be intercepted by other peers. */
+  private final boolean interceptable;
+
+  /** Whether this app intercepts other peers via callbacks. */
+  private final boolean intercepting;
+
+  /** Whether this app uses Kafka for WAL. */
+  private final boolean kafka;
+
   /** Whether to generate sample application code. */
   private final boolean sampleApp;
-
-  /** Whether to generate an RPC policy config file. */
-  private final boolean rpcPolicy;
 
   /** Whether to generate a recording scope config file. */
   private final boolean scopePolicy;
 
   /** Whether to generate a logging configuration file. */
   private final boolean loggingConfig;
-
-  /** Whether to generate an intercept bundle example. */
-  private final boolean interceptBundle;
-
-  /** Whether to generate Docker infrastructure files. */
-  private final boolean infra;
 
   /** Whether to overwrite existing files without prompting. */
   private final boolean force;
@@ -104,17 +111,16 @@ public final class InitConfig {
     this.mainClass = builder.mainClass;
     this.packageName = builder.packageName;
     this.buildTool = builder.buildTool;
-    this.deploymentMode = builder.deploymentMode;
     this.palVersion = builder.palVersion;
     this.aspectjVersion = builder.aspectjVersion;
     this.targetDir = builder.targetDir;
     this.existingBuildFile = builder.existingBuildFile;
+    this.interceptable = builder.interceptable;
+    this.intercepting = builder.intercepting;
+    this.kafka = builder.kafka;
     this.sampleApp = builder.sampleApp;
-    this.rpcPolicy = builder.rpcPolicy;
     this.scopePolicy = builder.scopePolicy;
     this.loggingConfig = builder.loggingConfig;
-    this.interceptBundle = builder.interceptBundle;
-    this.infra = builder.infra;
     this.force = builder.force;
     this.dryRun = builder.dryRun;
   }
@@ -156,9 +162,9 @@ public final class InitConfig {
   }
 
   /**
-   * Returns the fully-qualified main class name.
+   * Returns the fully-qualified main class name, or {@code null} for as-service mode.
    *
-   * @return the main class
+   * @return the main class, or {@code null}
    */
   public String getMainClass() {
     return mainClass;
@@ -184,15 +190,6 @@ public final class InitConfig {
    */
   public BuildTool getBuildTool() {
     return buildTool;
-  }
-
-  /**
-   * Returns the deployment mode.
-   *
-   * @return the deployment mode
-   */
-  public DeploymentMode getDeploymentMode() {
-    return deploymentMode;
   }
 
   /**
@@ -232,6 +229,33 @@ public final class InitConfig {
   }
 
   /**
+   * Returns whether this app can be intercepted by other peers.
+   *
+   * @return {@code true} if the app is interceptable
+   */
+  public boolean isInterceptable() {
+    return interceptable;
+  }
+
+  /**
+   * Returns whether this app intercepts other peers via callbacks.
+   *
+   * @return {@code true} if the app is intercepting
+   */
+  public boolean isIntercepting() {
+    return intercepting;
+  }
+
+  /**
+   * Returns whether this app uses Kafka for WAL.
+   *
+   * @return {@code true} if Kafka is used
+   */
+  public boolean isKafka() {
+    return kafka;
+  }
+
+  /**
    * Returns whether to generate sample application code.
    *
    * @return {@code true} to generate sample code
@@ -241,12 +265,12 @@ public final class InitConfig {
   }
 
   /**
-   * Returns whether to generate an RPC policy config file.
+   * Returns whether to generate an RPC policy config file. Derived from {@link #isIntercepting()}.
    *
    * @return {@code true} to generate RPC policy
    */
   public boolean isRpcPolicy() {
-    return rpcPolicy;
+    return intercepting;
   }
 
   /**
@@ -268,21 +292,62 @@ public final class InitConfig {
   }
 
   /**
-   * Returns whether to generate an intercept bundle example.
+   * Returns whether to generate an intercept bundle example. Derived from {@link
+   * #isIntercepting()}.
    *
    * @return {@code true} to generate intercept bundle
    */
   public boolean isInterceptBundle() {
-    return interceptBundle;
+    return intercepting;
   }
 
   /**
-   * Returns whether to generate Docker infrastructure files.
+   * Returns whether to generate Docker infrastructure files. Derived: {@code true} when either etcd
+   * or Kafka is needed.
    *
    * @return {@code true} to generate infrastructure files
    */
   public boolean isInfra() {
-    return infra;
+    return needsEtcd() || needsKafka();
+  }
+
+  /**
+   * Returns whether etcd infrastructure is needed. Etcd is required for intercept registration
+   * (both interceptable and intercepting roles).
+   *
+   * @return {@code true} if etcd is needed
+   */
+  public boolean needsEtcd() {
+    return interceptable || intercepting;
+  }
+
+  /**
+   * Returns whether Kafka infrastructure is needed.
+   *
+   * @return {@code true} if Kafka is needed
+   */
+  public boolean needsKafka() {
+    return kafka;
+  }
+
+  /**
+   * Returns whether the {@code pal-client} dependency should be added to the build file. Required
+   * for intercepting apps to implement callback handlers.
+   *
+   * @return {@code true} if pal-client is needed
+   */
+  public boolean isPalClient() {
+    return intercepting;
+  }
+
+  /**
+   * Returns whether this app runs in as-service mode (no main class). Derived from intercepting
+   * intent with no main class specified.
+   *
+   * @return {@code true} for as-service mode
+   */
+  public boolean isAsService() {
+    return intercepting && (mainClass == null || mainClass.isEmpty());
   }
 
   /**
@@ -313,21 +378,21 @@ public final class InitConfig {
   }
 
   /**
-   * Returns {@code true} if the deployment mode includes local configuration.
+   * Returns {@code true} if the project uses Kafka for distributed WAL.
    *
-   * @return whether the deployment mode is local
+   * @return whether the project uses Kafka
    */
-  public boolean isLocal() {
-    return deploymentMode.isLocal();
+  public boolean isDistributed() {
+    return kafka;
   }
 
   /**
-   * Returns {@code true} if the deployment mode includes distributed configuration.
+   * Returns {@code true} always. Every project can work in local mode.
    *
-   * @return whether the deployment mode is distributed
+   * @return {@code true}
    */
-  public boolean isDistributed() {
-    return deploymentMode.isDistributed();
+  public boolean isLocal() {
+    return true;
   }
 
   /**
@@ -340,6 +405,37 @@ public final class InitConfig {
    */
   public String getSourceDirectory() {
     return "src/main/java/" + getPackageName().replace('.', '/');
+  }
+
+  /**
+   * Builds a {@code pal run} command string with intent-aware flags.
+   *
+   * @param cpDir the classpath directory (e.g., {@code "target/classes"})
+   * @param mainClassFallback the main class to use when {@link #getMainClass()} is {@code null}
+   * @return the formatted run command
+   */
+  public String buildRunCommand(String cpDir, String mainClassFallback) {
+    StringBuilder cmd = new StringBuilder("pal run");
+    if (interceptable) {
+      cmd.append(" --interceptable");
+    }
+    if (intercepting) {
+      cmd.append(" --zmq-rpc auto");
+    }
+    if (needsEtcd()) {
+      cmd.append(" -d localhost:2379");
+    }
+    if (needsKafka()) {
+      cmd.append(" -k localhost:29092");
+    }
+    cmd.append(" -cp ").append(cpDir);
+    if (isAsService()) {
+      cmd.append(" --as-service");
+    } else {
+      String mc = mainClass != null ? mainClass : mainClassFallback;
+      cmd.append(' ').append(mc);
+    }
+    return cmd.toString();
   }
 
   /**
@@ -373,9 +469,6 @@ public final class InitConfig {
     /** Selected build tool. */
     private BuildTool buildTool = BuildTool.MAVEN;
 
-    /** Deployment mode. */
-    private DeploymentMode deploymentMode = DeploymentMode.LOCAL;
-
     /** PAL version string. */
     private String palVersion;
 
@@ -388,23 +481,23 @@ public final class InitConfig {
     /** Path to an existing build file. */
     private Path existingBuildFile;
 
+    /** Whether this app can be intercepted by other peers. */
+    private boolean interceptable;
+
+    /** Whether this app intercepts other peers via callbacks. */
+    private boolean intercepting;
+
+    /** Whether this app uses Kafka for WAL. */
+    private boolean kafka;
+
     /** Whether to generate sample application code. */
     private boolean sampleApp = true;
-
-    /** Whether to generate an RPC policy config. */
-    private boolean rpcPolicy;
 
     /** Whether to generate a recording scope config. */
     private boolean scopePolicy;
 
     /** Whether to generate a logging config. */
     private boolean loggingConfig = true;
-
-    /** Whether to generate an intercept bundle example. */
-    private boolean interceptBundle;
-
-    /** Whether to generate Docker infrastructure files. */
-    private boolean infra;
 
     /** Whether to force overwrite existing files. */
     private boolean force;
@@ -482,17 +575,6 @@ public final class InitConfig {
     }
 
     /**
-     * Sets the deployment mode.
-     *
-     * @param deploymentMode the deployment mode
-     * @return this builder
-     */
-    public Builder deploymentMode(DeploymentMode deploymentMode) {
-      this.deploymentMode = deploymentMode;
-      return this;
-    }
-
-    /**
      * Sets the PAL version string for generated build files.
      *
      * @param palVersion the PAL version
@@ -537,6 +619,39 @@ public final class InitConfig {
     }
 
     /**
+     * Sets whether this app can be intercepted by other peers.
+     *
+     * @param interceptable {@code true} if the app is interceptable
+     * @return this builder
+     */
+    public Builder interceptable(boolean interceptable) {
+      this.interceptable = interceptable;
+      return this;
+    }
+
+    /**
+     * Sets whether this app intercepts other peers via callbacks.
+     *
+     * @param intercepting {@code true} if the app is intercepting
+     * @return this builder
+     */
+    public Builder intercepting(boolean intercepting) {
+      this.intercepting = intercepting;
+      return this;
+    }
+
+    /**
+     * Sets whether this app uses Kafka for WAL.
+     *
+     * @param kafka {@code true} to use Kafka
+     * @return this builder
+     */
+    public Builder kafka(boolean kafka) {
+      this.kafka = kafka;
+      return this;
+    }
+
+    /**
      * Sets whether to generate sample application code.
      *
      * @param sampleApp {@code true} to generate sample code
@@ -544,17 +659,6 @@ public final class InitConfig {
      */
     public Builder sampleApp(boolean sampleApp) {
       this.sampleApp = sampleApp;
-      return this;
-    }
-
-    /**
-     * Sets whether to generate an RPC policy config.
-     *
-     * @param rpcPolicy {@code true} to generate RPC policy
-     * @return this builder
-     */
-    public Builder rpcPolicy(boolean rpcPolicy) {
-      this.rpcPolicy = rpcPolicy;
       return this;
     }
 
@@ -581,28 +685,6 @@ public final class InitConfig {
     }
 
     /**
-     * Sets whether to generate an intercept bundle example.
-     *
-     * @param interceptBundle {@code true} to generate intercept bundle
-     * @return this builder
-     */
-    public Builder interceptBundle(boolean interceptBundle) {
-      this.interceptBundle = interceptBundle;
-      return this;
-    }
-
-    /**
-     * Sets whether to generate Docker infrastructure files.
-     *
-     * @param infra {@code true} to generate infrastructure
-     * @return this builder
-     */
-    public Builder infra(boolean infra) {
-      this.infra = infra;
-      return this;
-    }
-
-    /**
      * Sets whether to overwrite existing files without prompting.
      *
      * @param force {@code true} to force overwrite
@@ -622,16 +704,6 @@ public final class InitConfig {
     public Builder dryRun(boolean dryRun) {
       this.dryRun = dryRun;
       return this;
-    }
-
-    /**
-     * Returns the current deployment mode without building. Used by the wizard to conditionally
-     * adjust defaults based on the mode already set.
-     *
-     * @return the current deployment mode
-     */
-    public DeploymentMode peekDeploymentMode() {
-      return deploymentMode;
     }
 
     /**

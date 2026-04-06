@@ -72,6 +72,10 @@ public final class GradleGenerator {
             .replace("{{palVersion}}", safe(config.getPalVersion()))
             .replace("{{aspectjVersion}}", safe(config.getAspectjVersion()));
 
+    if (config.isPalClient()) {
+      buildContent = insertPalClientDependency(buildContent, safe(config.getPalVersion()));
+    }
+
     String settingsContent = loadTemplate("settings.gradle.template");
     settingsContent = settingsContent.replace("{{artifactId}}", safe(config.getArtifactId()));
 
@@ -81,6 +85,27 @@ public final class GradleGenerator {
       Files.writeString(
           outputDir.resolve("settings.gradle"), settingsContent, StandardCharsets.UTF_8);
     }
+  }
+
+  /**
+   * Inserts a {@code pal-client} implementation dependency after the aspectjrt line.
+   *
+   * @param content the build.gradle content
+   * @param palVersion the PAL version string
+   * @return the modified content
+   */
+  private static String insertPalClientDependency(String content, String palVersion) {
+    String marker = "implementation 'org.aspectj:aspectjrt:";
+    int markerIdx = content.indexOf(marker);
+    if (markerIdx < 0) {
+      return content;
+    }
+    int eol = content.indexOf('\n', markerIdx);
+    if (eol < 0) {
+      eol = content.length();
+    }
+    String clientDep = "\n    implementation 'io.quasient.pal:pal-client:" + palVersion + "'";
+    return content.substring(0, eol) + clientDep + content.substring(eol);
   }
 
   /**

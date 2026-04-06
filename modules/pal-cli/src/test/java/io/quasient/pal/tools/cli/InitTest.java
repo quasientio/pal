@@ -192,8 +192,6 @@ public class InitTest {
             "my-app",
             "--main-class",
             "com.test.Main",
-            "--mode",
-            "local",
             "--build-tool",
             "maven",
             dir.toString());
@@ -592,10 +590,8 @@ public class InitTest {
             "com.test.Main",
             "--sample-app",
             "--logging-config",
-            "--rpc-policy",
+            "--intercepting",
             "--scope-policy",
-            "--intercept-bundle",
-            "--infra",
             dir.toString());
     assertThat(exitCode, is(0));
     String output = outWriter.toString();
@@ -624,7 +620,7 @@ public class InitTest {
     assertThat("Help should show --non-interactive", help, containsString("--non-interactive"));
     assertThat("Help should show --group-id", help, containsString("--group-id"));
     assertThat("Help should show --build-tool", help, containsString("--build-tool"));
-    assertThat("Help should show --mode", help, containsString("--mode"));
+    assertThat("Help should show interceptable option", help, containsString("interceptable"));
     assertThat("Help should show --force", help, containsString("--force"));
     assertThat("Help should show sample-app option", help, containsString("sample-app"));
   }

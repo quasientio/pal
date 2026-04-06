@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Start PAL infrastructure (etcd + Kafka)
+# Start PAL infrastructure services.
+# Usage: ./start.sh [etcd|kafka]   (no argument starts all services)
 set -euo pipefail
 cd "$(dirname "$0")"
-docker compose up -d
-echo "PAL infrastructure started."
-echo "  etcd:  localhost:2379"
-echo "  Kafka: localhost:29092"
+if [ $# -eq 0 ]; then
+  docker compose up -d
+  echo "PAL infrastructure started."
+else
+  docker compose up -d "$1"
+  echo "$1 started."
+fi

@@ -149,8 +149,8 @@ public class InitEndToEndTest {
    * Verifies full Maven project generation end-to-end.
    *
    * <p>Given an empty temp directory, when {@code pal init --non-interactive -y --group-id com.test
-   * --artifact-id test-app --main-class com.test.Main --mode local --build-tool maven} is executed
-   * via CommandLine, then: pom.xml exists and is valid XML with pal-weave dependency and AspectJ
+   * --artifact-id test-app --main-class com.test.Main --build-tool maven} is executed via
+   * CommandLine, then: pom.xml exists and is valid XML with pal-weave dependency and AspectJ
    * plugin; src/main/java/com/test/Main.java exists; config/peer-logging.xml exists; .env.pal
    * exists; exit code is 0.
    */
@@ -166,8 +166,6 @@ public class InitEndToEndTest {
             "test-app",
             "--main-class",
             "com.test.Main",
-            "--mode",
-            "local",
             "--build-tool",
             "maven",
             dir.toString());
@@ -216,8 +214,6 @@ public class InitEndToEndTest {
             "test-app",
             "--main-class",
             "com.test.Main",
-            "--mode",
-            "local",
             "--build-tool",
             "gradle",
             dir.toString());
@@ -307,16 +303,15 @@ public class InitEndToEndTest {
   // ---------------------------------------------------------------------------
 
   /**
-   * Verifies that distributed mode generates infrastructure files.
+   * Verifies that interceptable intent generates infrastructure files.
    *
-   * <p>Given an empty temp directory, when {@code pal init --non-interactive -y --group-id com.test
-   * --artifact-id test-app --main-class com.test.Main --mode distributed --infra --build-tool
-   * maven} is executed, then: infra/docker-compose.yml, infra/.env, infra/start.sh, infra/stop.sh
-   * all exist.
+   * <p>Given an empty temp directory, when {@code pal init --non-interactive --interceptable} is
+   * executed, then: infra/docker-compose.yml, infra/.env, infra/start.sh, infra/stop.sh all exist
+   * with etcd configuration.
    */
   @Test
-  public void testDistributedModeGeneratesInfra() throws IOException {
-    Path dir = tempFolder.newFolder("distributed").toPath();
+  public void testInterceptableGeneratesInfra() throws IOException {
+    Path dir = tempFolder.newFolder("interceptable").toPath();
     int exitCode =
         executeInit(
             "--non-interactive",
@@ -326,9 +321,7 @@ public class InitEndToEndTest {
             "test-app",
             "--main-class",
             "com.test.Main",
-            "--mode",
-            "distributed",
-            "--infra",
+            "--interceptable",
             "--build-tool",
             "maven",
             dir.toString());
@@ -375,11 +368,12 @@ public class InitEndToEndTest {
   }
 
   /**
-   * Verifies that all config files are generated when all config flags are enabled.
+   * Verifies that all config files are generated when intercepting with scope-policy enabled.
    *
-   * <p>Given an empty temp directory, when {@code --rpc-policy --scope-policy --logging-config
-   * --intercept-bundle} are all enabled, then: config/rpc-policy.yaml, config/recording-scope.yaml,
-   * config/peer-logging.xml, config/intercept-bundle.yaml all exist.
+   * <p>Given an empty temp directory, when {@code --intercepting --scope-policy --logging-config}
+   * are set, then: config/rpc-policy.yaml, config/recording-scope.yaml, config/peer-logging.xml,
+   * config/intercept-bundle.yaml all exist (rpc-policy and intercept-bundle are derived from
+   * intercepting).
    */
   @Test
   public void testAllConfigsEnabled() throws IOException {
@@ -393,10 +387,9 @@ public class InitEndToEndTest {
             "test-app",
             "--main-class",
             "com.test.Main",
-            "--rpc-policy",
+            "--intercepting",
             "--scope-policy",
             "--logging-config",
-            "--intercept-bundle",
             "--build-tool",
             "maven",
             dir.toString());
@@ -411,6 +404,400 @@ public class InitEndToEndTest {
     assertTrue(
         "intercept-bundle.yaml should exist",
         Files.exists(dir.resolve("config/intercept-bundle.yaml")));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Intent-driven flag combinations (derivation table coverage)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Verifies that {@code --intercepting} with a main class generates etcd infra, rpc-policy,
+   * intercept-bundle, pal-client dependency, and callback handler source.
+   */
+  @Test
+  public void testInterceptingWithMainClass() throws Exception {
+    Path dir = tempFolder.newFolder("intercepting-main").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-app",
+            "--main-class",
+            "com.test.Main",
+            "--intercepting",
+            "--build-tool",
+            "maven",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // Etcd infra generated (no kafka)
+    Path composeFile = dir.resolve("infra/docker-compose.yml");
+    assertTrue("docker-compose.yml should exist", Files.exists(composeFile));
+    String compose = Files.readString(composeFile, StandardCharsets.UTF_8);
+    assertThat("Compose should have etcd", compose, containsString("etcd"));
+    assertThat("Compose should NOT have kafka", compose, not(containsString("kafka")));
+
+    // RPC policy and intercept bundle derived from intercepting
+    assertTrue("rpc-policy.yaml should exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
+    assertTrue(
+        "intercept-bundle.yaml should exist",
+        Files.exists(dir.resolve("config/intercept-bundle.yaml")));
+
+    // pal-client dependency in pom.xml
+    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("pom.xml should have pal-client", pomContent, containsString("pal-client"));
+
+    // Callback handler generated
+    assertTrue(
+        "SampleCallbacks.java should exist",
+        Files.exists(dir.resolve("src/main/java/com/test/SampleCallbacks.java")));
+
+    // Main.java also generated (not as-service)
+    assertTrue(
+        "Main.java should exist", Files.exists(dir.resolve("src/main/java/com/test/Main.java")));
+  }
+
+  /**
+   * Verifies that {@code --intercepting --as-service} generates callback handler and
+   * SampleService.java but no Main.java.
+   */
+  @Test
+  public void testInterceptingAsService() throws Exception {
+    Path dir = tempFolder.newFolder("intercepting-service").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-app",
+            "--intercepting",
+            "--as-service",
+            "--build-tool",
+            "maven",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // No Main.java in as-service mode
+    assertFalse(
+        "Main.java should NOT exist in as-service mode",
+        Files.exists(dir.resolve("src/main/java/com/test/Main.java")));
+
+    // SampleService.java still generated
+    assertTrue(
+        "SampleService.java should exist",
+        Files.exists(dir.resolve("src/main/java/com/test/SampleService.java")));
+
+    // Callback handler generated
+    assertTrue(
+        "SampleCallbacks.java should exist",
+        Files.exists(dir.resolve("src/main/java/com/test/SampleCallbacks.java")));
+
+    // pal-client dependency
+    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("pom.xml should have pal-client", pomContent, containsString("pal-client"));
+
+    // RPC policy and intercept bundle
+    assertTrue("rpc-policy.yaml should exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
+    assertTrue(
+        "intercept-bundle.yaml should exist",
+        Files.exists(dir.resolve("config/intercept-bundle.yaml")));
+
+    // Run command in next-steps should include --as-service
+    String output = outWriter.toString();
+    assertThat("Output should mention --as-service", output, containsString("--as-service"));
+  }
+
+  /**
+   * Verifies that {@code --kafka} without intercepts generates kafka-only infra (no etcd) and no
+   * intercept-related configs.
+   */
+  @Test
+  public void testKafkaOnlyNoIntercepts() throws IOException {
+    Path dir = tempFolder.newFolder("kafka-only").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-app",
+            "--main-class",
+            "com.test.Main",
+            "--kafka",
+            "--build-tool",
+            "maven",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // Kafka-only infra (no etcd)
+    Path composeFile = dir.resolve("infra/docker-compose.yml");
+    assertTrue("docker-compose.yml should exist", Files.exists(composeFile));
+    String compose = Files.readString(composeFile, StandardCharsets.UTF_8);
+    assertThat("Compose should have kafka", compose, containsString("kafka"));
+    assertThat("Compose should NOT have etcd", compose, not(containsString("etcd")));
+
+    // No intercept-related configs
+    assertFalse(
+        "rpc-policy.yaml should NOT exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
+    assertFalse(
+        "intercept-bundle.yaml should NOT exist",
+        Files.exists(dir.resolve("config/intercept-bundle.yaml")));
+
+    // No pal-client dependency
+    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("pom.xml should NOT have pal-client", pomContent, not(containsString("pal-client")));
+
+    // No callback handler
+    assertFalse(
+        "SampleCallbacks.java should NOT exist",
+        Files.exists(dir.resolve("src/main/java/com/test/SampleCallbacks.java")));
+
+    // .env.pal should have kafka but not etcd
+    String envContent = Files.readString(dir.resolve(".env.pal"), StandardCharsets.UTF_8);
+    assertThat(
+        "env should have PAL_KAFKA_SERVERS", envContent, containsString("PAL_KAFKA_SERVERS"));
+    assertThat(
+        "env should NOT have PAL_DIRECTORY", envContent, not(containsString("PAL_DIRECTORY")));
+  }
+
+  /**
+   * Verifies that {@code --interceptable --kafka} generates full infra (etcd + kafka) but no
+   * intercept-related configs (interceptable does not need rpc-policy or callback handler).
+   */
+  @Test
+  public void testInterceptableWithKafka() throws IOException {
+    Path dir = tempFolder.newFolder("interceptable-kafka").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-app",
+            "--main-class",
+            "com.test.Main",
+            "--interceptable",
+            "--kafka",
+            "--build-tool",
+            "maven",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // Full infra (etcd + kafka)
+    Path composeFile = dir.resolve("infra/docker-compose.yml");
+    assertTrue("docker-compose.yml should exist", Files.exists(composeFile));
+    String compose = Files.readString(composeFile, StandardCharsets.UTF_8);
+    assertThat("Compose should have etcd", compose, containsString("etcd"));
+    assertThat("Compose should have kafka", compose, containsString("kafka"));
+
+    // No intercept-related configs (interceptable ≠ intercepting)
+    assertFalse(
+        "rpc-policy.yaml should NOT exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
+    assertFalse(
+        "intercept-bundle.yaml should NOT exist",
+        Files.exists(dir.resolve("config/intercept-bundle.yaml")));
+
+    // No pal-client dependency
+    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("pom.xml should NOT have pal-client", pomContent, not(containsString("pal-client")));
+
+    // .env.pal should have both etcd and kafka sections
+    String envContent = Files.readString(dir.resolve(".env.pal"), StandardCharsets.UTF_8);
+    assertThat("env should have PAL_DIRECTORY", envContent, containsString("PAL_DIRECTORY"));
+    assertThat(
+        "env should have PAL_KAFKA_SERVERS", envContent, containsString("PAL_KAFKA_SERVERS"));
+  }
+
+  /**
+   * Verifies that {@code --intercepting --kafka} generates full infra and all intercepting outputs.
+   */
+  @Test
+  public void testInterceptingWithKafka() throws Exception {
+    Path dir = tempFolder.newFolder("intercepting-kafka").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-app",
+            "--main-class",
+            "com.test.Main",
+            "--intercepting",
+            "--kafka",
+            "--build-tool",
+            "maven",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // Full infra (etcd + kafka)
+    Path composeFile = dir.resolve("infra/docker-compose.yml");
+    String compose = Files.readString(composeFile, StandardCharsets.UTF_8);
+    assertThat("Compose should have etcd", compose, containsString("etcd"));
+    assertThat("Compose should have kafka", compose, containsString("kafka"));
+
+    // All intercepting outputs
+    assertTrue("rpc-policy.yaml should exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
+    assertTrue(
+        "intercept-bundle.yaml should exist",
+        Files.exists(dir.resolve("config/intercept-bundle.yaml")));
+    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("pom.xml should have pal-client", pomContent, containsString("pal-client"));
+    assertTrue(
+        "SampleCallbacks.java should exist",
+        Files.exists(dir.resolve("src/main/java/com/test/SampleCallbacks.java")));
+  }
+
+  /**
+   * Verifies that a plain local project (no intercepts, no kafka) generates no infra, no
+   * rpc-policy, no intercept-bundle, and no pal-client dependency.
+   */
+  @Test
+  public void testPlainLocalNoInfra() throws IOException {
+    Path dir = tempFolder.newFolder("plain-local").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-app",
+            "--main-class",
+            "com.test.Main",
+            "--build-tool",
+            "maven",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // No infra
+    assertFalse("infra/ should NOT exist", Files.exists(dir.resolve("infra/docker-compose.yml")));
+
+    // No intercept-related configs
+    assertFalse(
+        "rpc-policy.yaml should NOT exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
+    assertFalse(
+        "intercept-bundle.yaml should NOT exist",
+        Files.exists(dir.resolve("config/intercept-bundle.yaml")));
+
+    // No pal-client dependency
+    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("pom.xml should NOT have pal-client", pomContent, not(containsString("pal-client")));
+
+    // No callback handler
+    assertFalse(
+        "SampleCallbacks.java should NOT exist",
+        Files.exists(dir.resolve("src/main/java/com/test/SampleCallbacks.java")));
+
+    // .env.pal should have only WAL section (no etcd, no kafka)
+    String envContent = Files.readString(dir.resolve(".env.pal"), StandardCharsets.UTF_8);
+    assertThat("env should have PAL_WAL", envContent, containsString("PAL_WAL"));
+    assertThat(
+        "env should NOT have PAL_DIRECTORY", envContent, not(containsString("PAL_DIRECTORY")));
+    assertThat(
+        "env should NOT have PAL_KAFKA_SERVERS",
+        envContent,
+        not(containsString("PAL_KAFKA_SERVERS")));
+  }
+
+  /**
+   * Verifies that {@code --intercepting} with Gradle generates pal-client dependency and callback
+   * handler in the Gradle project.
+   */
+  @Test
+  public void testInterceptingGradleProject() throws IOException {
+    Path dir = tempFolder.newFolder("intercepting-gradle").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-app",
+            "--main-class",
+            "com.test.Main",
+            "--intercepting",
+            "--build-tool",
+            "gradle",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // pal-client in build.gradle
+    String gradleContent = Files.readString(dir.resolve("build.gradle"), StandardCharsets.UTF_8);
+    assertThat("build.gradle should have pal-client", gradleContent, containsString("pal-client"));
+
+    // Callback handler generated
+    assertTrue(
+        "SampleCallbacks.java should exist",
+        Files.exists(dir.resolve("src/main/java/com/test/SampleCallbacks.java")));
+
+    // RPC policy and intercept bundle
+    assertTrue("rpc-policy.yaml should exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
+    assertTrue(
+        "intercept-bundle.yaml should exist",
+        Files.exists(dir.resolve("config/intercept-bundle.yaml")));
+  }
+
+  /**
+   * Verifies that patching an existing Maven project with {@code --intercepting} adds pal-client
+   * dependency alongside pal-weave.
+   */
+  @Test
+  public void testPatchExistingMavenWithIntercepting() throws Exception {
+    Path dir = tempFolder.newFolder("patch-intercepting").toPath();
+    Files.writeString(dir.resolve("pom.xml"), minimalPomXml(), StandardCharsets.UTF_8);
+
+    int exitCode =
+        executeInit(
+            "--non-interactive", "--main-class", "com.acme.Main", "--intercepting", dir.toString());
+    assertThat(exitCode, is(0));
+
+    // Patched pom has both pal-weave and pal-client
+    String patchedPom = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("Should have pal-weave", patchedPom, containsString("pal-weave"));
+    assertThat("Should have pal-client", patchedPom, containsString("pal-client"));
+
+    // Verify it's valid XML
+    DocumentBuilderFactory.newInstance()
+        .newDocumentBuilder()
+        .parse(new ByteArrayInputStream(patchedPom.getBytes(StandardCharsets.UTF_8)));
+  }
+
+  /**
+   * Verifies that README content reflects intent flags: interceptable app shows {@code
+   * --interceptable} in run examples, intercepting shows {@code --zmq-rpc auto}.
+   */
+  @Test
+  public void testReadmeReflectsIntentFlags() throws IOException {
+    Path dir = tempFolder.newFolder("readme-intents").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-app",
+            "--main-class",
+            "com.test.Main",
+            "--interceptable",
+            "--intercepting",
+            "--kafka",
+            "--build-tool",
+            "maven",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    Path readmePath = dir.resolve("README.md");
+    assertTrue("README.md should exist", Files.exists(readmePath));
+    String readme = Files.readString(readmePath, StandardCharsets.UTF_8);
+    assertThat("README should mention --interceptable", readme, containsString("--interceptable"));
+    assertThat("README should mention --zmq-rpc", readme, containsString("--zmq-rpc"));
+    assertThat(
+        "README should mention -d localhost:2379", readme, containsString("-d localhost:2379"));
+    assertThat(
+        "README should mention -k localhost:29092", readme, containsString("-k localhost:29092"));
   }
 
   // ---------------------------------------------------------------------------

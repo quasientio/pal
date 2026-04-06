@@ -81,7 +81,7 @@ public class ConfigGeneratorTest {
         InitConfig.builder()
             .groupId("com.example")
             .packageName("com.example")
-            .rpcPolicy(true)
+            .intercepting(true)
             .loggingConfig(false)
             .build();
     ConfigGenerator generator = new ConfigGenerator(config);
@@ -139,8 +139,9 @@ public class ConfigGeneratorTest {
         InitConfig.builder()
             .groupId("com.example")
             .packageName("com.example")
+            .artifactId("my-app")
             .mainClass("com.example.Main")
-            .interceptBundle(true)
+            .intercepting(true)
             .loggingConfig(false)
             .build();
     ConfigGenerator generator = new ConfigGenerator(config);
@@ -152,7 +153,8 @@ public class ConfigGeneratorTest {
     Path bundleFile = tempDir.getRoot().toPath().resolve("config/intercept-bundle.yaml");
     assertTrue("intercept-bundle.yaml should exist", Files.exists(bundleFile));
     String content = Files.readString(bundleFile);
-    assertThat(content, containsString("com.example.Main"));
+    assertThat(content, containsString("com.example.SampleService.processOrder"));
+    assertThat(content, containsString("com.example.SampleCallbacks"));
   }
 
   /**
@@ -163,13 +165,7 @@ public class ConfigGeneratorTest {
   public void testSkipsDisabledConfigs() throws Exception {
     // Given
     InitConfig config =
-        InitConfig.builder()
-            .groupId("com.example")
-            .loggingConfig(false)
-            .rpcPolicy(false)
-            .scopePolicy(false)
-            .interceptBundle(false)
-            .build();
+        InitConfig.builder().groupId("com.example").loggingConfig(false).scopePolicy(false).build();
     ConfigGenerator generator = new ConfigGenerator(config);
 
     // When
@@ -222,9 +218,8 @@ public class ConfigGeneratorTest {
             .groupId("com.example")
             .packageName("com.example")
             .loggingConfig(true)
-            .rpcPolicy(true)
+            .intercepting(true)
             .scopePolicy(true)
-            .interceptBundle(true)
             .mainClass("com.example.Main")
             .dryRun(true)
             .build();

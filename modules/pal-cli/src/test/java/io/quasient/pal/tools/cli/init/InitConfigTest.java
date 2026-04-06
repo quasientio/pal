@@ -26,10 +26,11 @@ import org.junit.Test;
  * through the generation pipeline.
  *
  * <p>InitConfig holds project identity (groupId, artifactId, version, mainClass, packageName),
- * deployment mode, feature toggles (sampleApp, rpcPolicy, scopePolicy, loggingConfig,
- * interceptBundle, infra), build tool selection, PAL version, and optional existing build file
- * path. These tests verify default values, derived properties (package name inference, source
- * directory layout, new-vs-existing project detection), and enum convenience methods.
+ * intent flags (interceptable, intercepting, kafka), feature toggles (sampleApp, scopePolicy,
+ * loggingConfig), build tool selection, PAL version, and optional existing build file path. These
+ * tests verify default values, derived properties (package name inference, source directory layout,
+ * new-vs-existing project detection, needsEtcd, needsKafka, isInfra, isPalClient, isAsService), and
+ * enum convenience methods.
  */
 public class InitConfigTest {
 
@@ -37,9 +38,9 @@ public class InitConfigTest {
    * Verifies that an {@code InitConfig} built with only the required fields (groupId, artifactId,
    * mainClass) has correct default values for all optional fields.
    *
-   * <p>Expected defaults: version is {@code "1.0-SNAPSHOT"}, mode is {@code LOCAL}, sampleApp is
-   * {@code true}, rpcPolicy is {@code false}, scopePolicy is {@code false}, loggingConfig is {@code
-   * true}, interceptBundle is {@code false}, infra is {@code false}, buildTool is {@code MAVEN}.
+   * <p>Expected defaults: version is {@code "1.0-SNAPSHOT"}, sampleApp is {@code true},
+   * interceptable is {@code false}, intercepting is {@code false}, kafka is {@code false},
+   * scopePolicy is {@code false}, loggingConfig is {@code true}, buildTool is {@code MAVEN}.
    */
   @Test
   public void testDefaultValues() {
@@ -53,8 +54,10 @@ public class InitConfigTest {
 
     // Then: default values are correct
     assertThat(config.getProjectVersion(), is("1.0-SNAPSHOT"));
-    assertThat(config.getDeploymentMode(), is(DeploymentMode.LOCAL));
     assertThat(config.isSampleApp(), is(true));
+    assertThat(config.isInterceptable(), is(false));
+    assertThat(config.isIntercepting(), is(false));
+    assertThat(config.isKafka(), is(false));
     assertThat(config.isRpcPolicy(), is(false));
     assertThat(config.isScopePolicy(), is(false));
     assertThat(config.isLoggingConfig(), is(true));
@@ -68,9 +71,6 @@ public class InitConfigTest {
   /**
    * Verifies that when no explicit package name is provided, {@code getPackageName()} returns the
    * groupId as the inferred package name.
-   *
-   * <p>Uses an {@code InitConfig} with {@code groupId="com.example"} and no explicit package name
-   * set.
    */
   @Test
   public void testPackageNameInferredFromGroupId() {
@@ -88,9 +88,6 @@ public class InitConfigTest {
 
   /**
    * Verifies that an explicitly set package name takes precedence over the groupId-based inference.
-   *
-   * <p>Uses an {@code InitConfig} with {@code groupId="com.example"} and explicit {@code
-   * packageName="com.example.app"}.
    */
   @Test
   public void testExplicitPackageOverridesGroupId() {
@@ -127,7 +124,7 @@ public class InitConfigTest {
 
   /**
    * Verifies that {@code isNewProject()} returns {@code false} when an existing build file path is
-   * set (i.e., {@code existingBuildFile} points to a {@code Path}).
+   * set.
    */
   @Test
   public void testIsExistingProject() {
@@ -157,32 +154,112 @@ public class InitConfigTest {
   }
 
   /**
-   * Verifies that the {@code DeploymentMode} enum convenience methods work correctly: {@code
-   * LOCAL.isLocal()} returns {@code true}, {@code DISTRIBUTED.isDistributed()} returns {@code
-   * true}, and {@code BOTH} returns {@code true} for both {@code isLocal()} and {@code
-   * isDistributed()}.
+   * Verifies that {@code needsEtcd()} returns {@code true} when interceptable or intercepting is
+   * set, and {@code false} otherwise. Kafka alone does not require etcd.
    */
   @Test
-  public void testModeEnum() {
-    // LOCAL
-    assertThat(DeploymentMode.LOCAL.isLocal(), is(true));
-    assertThat(DeploymentMode.LOCAL.isDistributed(), is(false));
+  public void testNeedsEtcd() {
+    // interceptable only
+    InitConfig interceptableConfig =
+        InitConfig.builder().groupId("com.example").interceptable(true).build();
+    assertThat(interceptableConfig.needsEtcd(), is(true));
 
-    // DISTRIBUTED
-    assertThat(DeploymentMode.DISTRIBUTED.isLocal(), is(false));
-    assertThat(DeploymentMode.DISTRIBUTED.isDistributed(), is(true));
+    // intercepting only
+    InitConfig interceptingConfig =
+        InitConfig.builder().groupId("com.example").intercepting(true).build();
+    assertThat(interceptingConfig.needsEtcd(), is(true));
 
-    // BOTH
-    assertThat(DeploymentMode.BOTH.isLocal(), is(true));
-    assertThat(DeploymentMode.BOTH.isDistributed(), is(true));
+    // kafka only — no etcd
+    InitConfig kafkaConfig = InitConfig.builder().groupId("com.example").kafka(true).build();
+    assertThat(kafkaConfig.needsEtcd(), is(false));
+
+    // plain local — no etcd
+    InitConfig plainConfig = InitConfig.builder().groupId("com.example").build();
+    assertThat(plainConfig.needsEtcd(), is(false));
+  }
+
+  /** Verifies that {@code needsKafka()} returns {@code true} only when kafka is set. */
+  @Test
+  public void testNeedsKafka() {
+    InitConfig kafkaConfig = InitConfig.builder().groupId("com.example").kafka(true).build();
+    assertThat(kafkaConfig.needsKafka(), is(true));
+
+    InitConfig noKafkaConfig = InitConfig.builder().groupId("com.example").build();
+    assertThat(noKafkaConfig.needsKafka(), is(false));
+  }
+
+  /** Verifies that {@code isInfra()} returns {@code true} when etcd or kafka is needed. */
+  @Test
+  public void testIsInfraDerived() {
+    // interceptable → etcd → infra
+    InitConfig interceptableConfig =
+        InitConfig.builder().groupId("com.example").interceptable(true).build();
+    assertThat(interceptableConfig.isInfra(), is(true));
+
+    // kafka → infra
+    InitConfig kafkaConfig = InitConfig.builder().groupId("com.example").kafka(true).build();
+    assertThat(kafkaConfig.isInfra(), is(true));
+
+    // plain → no infra
+    InitConfig plainConfig = InitConfig.builder().groupId("com.example").build();
+    assertThat(plainConfig.isInfra(), is(false));
+  }
+
+  /** Verifies that {@code isPalClient()} returns {@code true} only when intercepting. */
+  @Test
+  public void testIsPalClient() {
+    InitConfig interceptingConfig =
+        InitConfig.builder().groupId("com.example").intercepting(true).build();
+    assertThat(interceptingConfig.isPalClient(), is(true));
+
+    InitConfig interceptableConfig =
+        InitConfig.builder().groupId("com.example").interceptable(true).build();
+    assertThat(interceptableConfig.isPalClient(), is(false));
+  }
+
+  /**
+   * Verifies that {@code isAsService()} returns {@code true} when intercepting with no main class.
+   */
+  @Test
+  public void testIsAsService() {
+    // intercepting with no main class → as-service
+    InitConfig asServiceConfig =
+        InitConfig.builder().groupId("com.example").intercepting(true).build();
+    assertThat(asServiceConfig.isAsService(), is(true));
+
+    // intercepting with main class → not as-service
+    InitConfig withMainConfig =
+        InitConfig.builder()
+            .groupId("com.example")
+            .intercepting(true)
+            .mainClass("com.example.Main")
+            .build();
+    assertThat(withMainConfig.isAsService(), is(false));
+
+    // not intercepting, no main class → not as-service
+    InitConfig plainConfig = InitConfig.builder().groupId("com.example").build();
+    assertThat(plainConfig.isAsService(), is(false));
+  }
+
+  /**
+   * Verifies that {@code isRpcPolicy()} and {@code isInterceptBundle()} are derived from
+   * intercepting.
+   */
+  @Test
+  public void testDerivedFromIntercepting() {
+    InitConfig interceptingConfig =
+        InitConfig.builder().groupId("com.example").intercepting(true).build();
+    assertThat(interceptingConfig.isRpcPolicy(), is(true));
+    assertThat(interceptingConfig.isInterceptBundle(), is(true));
+
+    InitConfig plainConfig = InitConfig.builder().groupId("com.example").build();
+    assertThat(plainConfig.isRpcPolicy(), is(false));
+    assertThat(plainConfig.isInterceptBundle(), is(false));
   }
 
   /**
    * Verifies that {@code getSourceDirectory()} converts the package name into the correct Maven/
    * Gradle source directory layout by replacing dots with path separators.
-   *
-   * <p>Uses an {@code InitConfig} with {@code packageName="com.example.app"} and expects the result
-   * {@code "src/main/java/com/example/app"}.
    */
   @Test
   public void testSourceDirectoryLayout() {
@@ -202,8 +279,6 @@ public class InitConfigTest {
   /**
    * Verifies that {@code getPalVersion()} returns the PAL version string that was set on the
    * config.
-   *
-   * <p>Uses an {@code InitConfig} with {@code palVersion="1.0.0"}.
    */
   @Test
   public void testPalVersionFromRuntime() {

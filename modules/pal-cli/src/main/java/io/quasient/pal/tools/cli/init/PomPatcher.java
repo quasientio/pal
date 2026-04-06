@@ -138,7 +138,8 @@ public final class PomPatcher {
   }
 
   /**
-   * Adds the {@code pal-weave} dependency if not already present.
+   * Adds the {@code pal-weave} dependency (and {@code pal-client} when intercepting) if not already
+   * present.
    *
    * @param doc the XML document
    * @param project the project root element
@@ -151,15 +152,27 @@ public final class PomPatcher {
 
     if (findDependency(dependencies, PAL_GROUP_ID, PAL_WEAVE_ARTIFACT) != null) {
       result.skip("pal-weave dependency already present");
-      return;
+    } else {
+      Element dep = doc.createElement("dependency");
+      appendChildElement(doc, dep, "groupId", PAL_GROUP_ID);
+      appendChildElement(doc, dep, "artifactId", PAL_WEAVE_ARTIFACT);
+      appendChildElement(doc, dep, "version", config.getPalVersion());
+      dependencies.appendChild(dep);
+      result.addition("Added pal-weave dependency");
     }
 
-    Element dep = doc.createElement("dependency");
-    appendChildElement(doc, dep, "groupId", PAL_GROUP_ID);
-    appendChildElement(doc, dep, "artifactId", PAL_WEAVE_ARTIFACT);
-    appendChildElement(doc, dep, "version", config.getPalVersion());
-    dependencies.appendChild(dep);
-    result.addition("Added pal-weave dependency");
+    if (config.isPalClient()) {
+      if (findDependency(dependencies, PAL_GROUP_ID, "pal-client") != null) {
+        result.skip("pal-client dependency already present");
+      } else {
+        Element clientDep = doc.createElement("dependency");
+        appendChildElement(doc, clientDep, "groupId", PAL_GROUP_ID);
+        appendChildElement(doc, clientDep, "artifactId", "pal-client");
+        appendChildElement(doc, clientDep, "version", config.getPalVersion());
+        dependencies.appendChild(clientDep);
+        result.addition("Added pal-client dependency");
+      }
+    }
   }
 
   /**

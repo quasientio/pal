@@ -37,8 +37,7 @@ import java.util.regex.Pattern;
  *   <li>Detect existing project via {@link BuildToolStrategy#detect(Path)}
  *   <li>For existing projects: parse groupId/artifactId/version from the build file
  *   <li>For new projects: prompt for build tool and project coordinates
- *   <li>Prompt for main class, deployment mode
- *   <li>Prompt for feature toggles (sample app, configs, infra)
+ *   <li>Prompt for intent (interceptable, intercepting, main class, Kafka)
  *   <li>Set PAL version from runtime
  *   <li>Build and return {@link InitConfig}
  * </ol>
@@ -134,9 +133,7 @@ public final class InitWizard {
       groupId = configureNewProject(builder);
     }
 
-    promptMainClass(builder, groupId);
-    promptDeploymentMode(builder);
-    promptFeatureToggles(builder);
+    promptIntents(builder, groupId);
     setPalVersion(builder);
 
     return builder.build();
@@ -207,58 +204,37 @@ public final class InitWizard {
   }
 
   /**
-   * Prompts for the main class name, defaulting to {@code <groupId>.Main}.
+   * Prompts for intent-based configuration: interceptable, intercepting, main class, and Kafka.
+   *
+   * <p>Replaces the previous deployment mode, main class, and feature toggle prompts with a
+   * streamlined set of intent questions that drive all downstream generation.
    *
    * @param builder the config builder
    * @param groupId the project group ID, or {@code null} if unknown
    */
-  private void promptMainClass(InitConfig.Builder builder, String groupId) {
+  private void promptIntents(InitConfig.Builder builder, String groupId) {
+    boolean interceptable =
+        promptProvider.promptYesNo("Will this app be interceptable by other peers?", false);
+    builder.interceptable(interceptable);
+
+    boolean intercepting =
+        promptProvider.promptYesNo("Will this app intercept other peers?", false);
+    builder.intercepting(intercepting);
+
     String defaultMainClass =
         (groupId != null ? groupId : DEFAULT_GROUP_ID) + "." + DEFAULT_MAIN_CLASS_SIMPLE;
-    String mainClass = promptProvider.promptText("Main class (for pal run)", defaultMainClass);
-    builder.mainClass(mainClass);
-  }
+    String prompt =
+        intercepting
+            ? "Main class (for pal run, leave blank for --as-service)"
+            : "Main class (for pal run)";
+    String mainClass = promptProvider.promptText(prompt, defaultMainClass);
+    if (mainClass != null && !mainClass.isBlank()) {
+      builder.mainClass(mainClass);
+    }
 
-  /**
-   * Prompts for the deployment mode.
-   *
-   * @param builder the config builder
-   */
-  private void promptDeploymentMode(InitConfig.Builder builder) {
-    List<DeploymentMode> modes = Arrays.asList(DeploymentMode.values());
-    DeploymentMode mode =
-        promptProvider.promptSelect("Deployment mode", modes, DeploymentMode.LOCAL);
-    builder.deploymentMode(mode);
-  }
-
-  /**
-   * Prompts for feature toggles (sample app, configs, infra).
-   *
-   * @param builder the config builder
-   */
-  private void promptFeatureToggles(InitConfig.Builder builder) {
-    boolean sampleApp = promptProvider.promptYesNo("Generate sample application code?", true);
-    builder.sampleApp(sampleApp);
-
-    boolean loggingConfig = promptProvider.promptYesNo("Generate logging config?", true);
-    builder.loggingConfig(loggingConfig);
-
-    boolean rpcPolicy = promptProvider.promptYesNo("Generate RPC policy config?", false);
-    builder.rpcPolicy(rpcPolicy);
-
-    boolean scopePolicy = promptProvider.promptYesNo("Generate recording scope config?", false);
-    builder.scopePolicy(scopePolicy);
-
-    boolean interceptBundle =
-        promptProvider.promptYesNo("Generate intercept bundle example?", false);
-    builder.interceptBundle(interceptBundle);
-
-    // For distributed or both modes, default infra to true
-    DeploymentMode mode = builder.peekDeploymentMode();
-    boolean infraDefault = mode != null && mode.isDistributed();
-    boolean infra =
-        promptProvider.promptYesNo("Generate Docker infrastructure files?", infraDefault);
-    builder.infra(infra);
+    boolean kafka =
+        promptProvider.promptYesNo("Will you use Kafka for WAL (write-ahead log)?", false);
+    builder.kafka(kafka);
   }
 
   /**

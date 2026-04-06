@@ -22,33 +22,31 @@ This guide shows you how to develop PAL applications locally without setting up 
 
 ## Quick Setup with `pal init`
 
-The fastest way to set up a local PAL project is with `pal init --mode local`:
+The fastest way to set up a local PAL project is with `pal init`:
 
 **Maven:**
 
 ```bash
-pal init my-local-app --mode local
+pal init my-local-app
 cd my-local-app
-source .env.pal
-mvn compile
-pal run --wal file:./wal -cp target/classes com.example.Main
+mvn package
+pal run -cp target/classes com.example.Main
 ```
 
 **Gradle:**
 
 ```bash
-pal init my-local-app --mode local --build-tool gradle
+pal init my-local-app --build-tool gradle
 cd my-local-app
-source .env.pal
 gradle build
-pal run --wal file:./wal -cp build/classes/java/main com.example.Main
+pal run -cp build/classes/java/main com.example.Main
 ```
 
 For an existing project, run `pal init` in the project directory to patch your build file:
 
 ```bash
 cd my-existing-project
-pal init --mode local
+pal init
 ```
 
 This adds the `pal-weave` dependency and AspectJ weaving plugin to your `pom.xml` or `build.gradle` automatically (a backup is created before patching). Use `--dry-run` to preview the changes first.
@@ -560,7 +558,7 @@ Build with `mvn clean install` (Maven) or `gradle build` (Gradle). Your applicat
 
 ```bash
 # 1. Create project with pal init
-pal init my-pal-app --mode local
+pal init my-pal-app
 cd my-pal-app
 source .env.pal
 

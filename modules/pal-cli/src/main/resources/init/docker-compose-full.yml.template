@@ -1,7 +1,9 @@
 # Docker Compose — etcd + Kafka for PAL
 #
 # Usage:
-#   cd infra && docker compose up -d
+#   cd infra && docker compose up -d          # start all
+#   cd infra && docker compose up -d etcd     # start etcd only
+#   cd infra && docker compose up -d kafka    # start kafka only
 #   cd infra && docker compose stop
 
 networks:
@@ -10,25 +12,19 @@ networks:
 
 services:
   etcd:
-    image: etcd:latest
+    image: gcr.io/etcd-development/etcd:v3.5.21
     networks: [pal]
     ports:
       - "2379:2379"
       - "2380:2380"
     command:
-      - ./etcd
-      - -name
-      - default
-      - -initial-advertise-peer-urls
-      - "http://etcd:2380"
-      - -listen-peer-urls
-      - "http://0.0.0.0:2380"
-      - -advertise-client-urls
-      - "http://etcd:2379"
-      - -listen-client-urls
-      - "http://0.0.0.0:2379"
-      - -initial-cluster
-      - "default=http://etcd:2380"
+      - etcd
+      - --name=default
+      - --initial-advertise-peer-urls=http://etcd:2380
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --advertise-client-urls=http://etcd:2379
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --initial-cluster=default=http://etcd:2380
 
   kafka:
     image: apache/kafka:3.8.0

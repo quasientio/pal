@@ -1,0 +1,29 @@
+package ${package};
+
+import io.quasient.pal.common.lang.intercept.InterceptCallback;
+import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
+import io.quasient.pal.common.lang.intercept.InterceptContext;
+
+/**
+ * Sample intercept callback handler.
+ *
+ * <p>This class is invoked when intercepts registered via the intercept bundle fire on target peers.
+ * Implement {@link InterceptCallback#handle(InterceptContext)} to inspect or modify intercepted
+ * operations.
+ *
+ * @see InterceptContext
+ * @see InterceptCallbackResponse
+ */
+public class SampleCallbacks implements InterceptCallback {
+
+  @Override
+  public InterceptCallbackResponse handle(InterceptContext ctx) {
+    System.out.println(
+        "[intercept] "
+            + ctx.getLocalMetadata().className()
+            + "."
+            + ctx.getLocalMetadata().methodName()
+            + " called");
+    return new InterceptCallbackResponse();
+  }
+}

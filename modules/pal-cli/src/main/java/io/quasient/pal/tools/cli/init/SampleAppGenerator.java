@@ -71,16 +71,21 @@ public final class SampleAppGenerator {
     List<Path> generated = new ArrayList<>();
     String packageName = config.getPackageName();
     String sourceDir = config.getSourceDirectory();
-    String mainClassName = extractSimpleClassName(config.getMainClass());
-
     Path sourceDirPath = targetDir.resolve(sourceDir);
 
-    // Generate Main.java
-    String mainContent = loadTemplate("Main.java.template");
-    mainContent = mainContent.replace("${package}", packageName);
-    mainContent = mainContent.replace("${mainClassName}", mainClassName);
-    Path mainFile = sourceDirPath.resolve(mainClassName + ".java");
-    generated.add(mainFile);
+    // Generate Main.java (skip for as-service mode)
+    if (!config.isAsService()) {
+      String mainClassName = extractSimpleClassName(config.getMainClass());
+      String mainContent = loadTemplate("Main.java.template");
+      mainContent = mainContent.replace("${package}", packageName);
+      mainContent = mainContent.replace("${mainClassName}", mainClassName);
+      Path mainFile = sourceDirPath.resolve(mainClassName + ".java");
+      generated.add(mainFile);
+      if (!config.isDryRun()) {
+        Files.createDirectories(sourceDirPath);
+        Files.writeString(mainFile, mainContent, StandardCharsets.UTF_8);
+      }
+    }
 
     // Generate SampleService.java
     String serviceContent = loadTemplate("SampleService.java.template");
@@ -88,9 +93,20 @@ public final class SampleAppGenerator {
     Path serviceFile = sourceDirPath.resolve("SampleService.java");
     generated.add(serviceFile);
 
+    // Generate SampleCallbacks.java when intercepting
+    if (config.isIntercepting()) {
+      String callbackContent = loadTemplate("CallbackHandler.java.template");
+      callbackContent = callbackContent.replace("${package}", packageName);
+      Path callbackFile = sourceDirPath.resolve("SampleCallbacks.java");
+      generated.add(callbackFile);
+      if (!config.isDryRun()) {
+        Files.createDirectories(sourceDirPath);
+        Files.writeString(callbackFile, callbackContent, StandardCharsets.UTF_8);
+      }
+    }
+
     if (!config.isDryRun()) {
       Files.createDirectories(sourceDirPath);
-      Files.writeString(mainFile, mainContent, StandardCharsets.UTF_8);
       Files.writeString(serviceFile, serviceContent, StandardCharsets.UTF_8);
     }
 

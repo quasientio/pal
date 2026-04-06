@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# Stop PAL infrastructure
+# Stop PAL infrastructure services.
+# Usage: ./stop.sh [etcd|kafka]   (no argument stops all services)
 set -euo pipefail
 cd "$(dirname "$0")"
-docker compose stop
-echo "PAL infrastructure stopped."
+if [ $# -eq 0 ]; then
+  docker compose stop
+  echo "PAL infrastructure stopped."
+else
+  docker compose stop "$1"
+  echo "$1 stopped."
+fi

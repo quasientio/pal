@@ -72,10 +72,45 @@ public final class PomGenerator {
             .replace("{{palVersion}}", safe(config.getPalVersion()))
             .replace("{{aspectjVersion}}", safe(config.getAspectjVersion()));
 
+    if (config.isPalClient()) {
+      content = insertPalClientDependency(content, safe(config.getPalVersion()));
+    }
+
     if (!config.isDryRun()) {
       Files.createDirectories(outputDir);
       Files.writeString(outputDir.resolve("pom.xml"), content, StandardCharsets.UTF_8);
     }
+  }
+
+  /**
+   * Inserts a {@code pal-client} dependency block after the {@code pal-weave} dependency.
+   *
+   * @param content the pom.xml content
+   * @param palVersion the PAL version string
+   * @return the modified content
+   */
+  private static String insertPalClientDependency(String content, String palVersion) {
+    String marker = "<artifactId>pal-weave</artifactId>";
+    int markerIdx = content.indexOf(marker);
+    if (markerIdx < 0) {
+      return content;
+    }
+    // Find the closing </dependency> after the marker
+    String closingTag = "</dependency>";
+    int closeIdx = content.indexOf(closingTag, markerIdx);
+    if (closeIdx < 0) {
+      return content;
+    }
+    int insertPoint = closeIdx + closingTag.length();
+    String clientDep =
+        "\n        <dependency>\n"
+            + "            <groupId>io.quasient.pal</groupId>\n"
+            + "            <artifactId>pal-client</artifactId>\n"
+            + "            <version>"
+            + palVersion
+            + "</version>\n"
+            + "        </dependency>";
+    return content.substring(0, insertPoint) + clientDep + content.substring(insertPoint);
   }
 
   /**

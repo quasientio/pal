@@ -16,6 +16,7 @@
 package io.quasient.pal.tools.cli.init;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -37,14 +38,19 @@ public class EnvFileGeneratorTest {
   @Rule public TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
-   * Verifies that the generated {@code .env.pal} contains all variables commented out with local,
-   * distributed, and logging sections.
+   * Verifies that the generated {@code .env.pal} always contains the WAL section and includes etcd
+   * and kafka sections based on intent flags.
    */
   @Test
-  public void testGeneratesEnvPalWithAllVarsCommentedOut() throws Exception {
-    // Given
+  public void testGeneratesEnvPalWithAllSections() throws Exception {
+    // Given: interceptable + kafka → all sections present
     InitConfig config =
-        InitConfig.builder().groupId("com.example").deploymentMode(DeploymentMode.LOCAL).build();
+        InitConfig.builder()
+            .groupId("com.example")
+            .interceptable(true)
+            .kafka(true)
+            .loggingConfig(true)
+            .build();
     EnvFileGenerator generator = new EnvFileGenerator(config);
 
     // When
@@ -61,12 +67,39 @@ public class EnvFileGeneratorTest {
     assertThat(content, containsString("# export PAL_CLI_LOGGING_CONFIG="));
   }
 
+  /**
+   * Verifies that a plain local config (no intercepts, no kafka) only includes WAL and logging
+   * sections.
+   */
+  @Test
+  public void testPlainLocalOmitsEtcdAndKafka() throws Exception {
+    // Given: no intercepts, no kafka
+    InitConfig config = InitConfig.builder().groupId("com.example").loggingConfig(true).build();
+    EnvFileGenerator generator = new EnvFileGenerator(config);
+
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path envFile = tempDir.getRoot().toPath().resolve(".env.pal");
+    String content = Files.readString(envFile);
+    assertThat(content, containsString("# export PAL_WAL=\"file:./wal\""));
+    assertThat(content, not(containsString("PAL_DIRECTORY")));
+    assertThat(content, not(containsString("PAL_KAFKA_SERVERS")));
+    assertThat(content, containsString("# export PAL_PEER_LOGGING_CONFIG="));
+  }
+
   /** Verifies that all variable assignments use {@code export VAR=value} syntax. */
   @Test
   public void testEnvFileIsSourceable() throws Exception {
     // Given
     InitConfig config =
-        InitConfig.builder().groupId("com.example").deploymentMode(DeploymentMode.LOCAL).build();
+        InitConfig.builder()
+            .groupId("com.example")
+            .interceptable(true)
+            .kafka(true)
+            .loggingConfig(true)
+            .build();
     EnvFileGenerator generator = new EnvFileGenerator(config);
 
     // When
@@ -91,12 +124,7 @@ public class EnvFileGeneratorTest {
   @Test
   public void testDryRunDoesNotWriteFile() throws Exception {
     // Given
-    InitConfig config =
-        InitConfig.builder()
-            .groupId("com.example")
-            .deploymentMode(DeploymentMode.LOCAL)
-            .dryRun(true)
-            .build();
+    InitConfig config = InitConfig.builder().groupId("com.example").dryRun(true).build();
     EnvFileGenerator generator = new EnvFileGenerator(config);
 
     // When

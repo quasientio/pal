@@ -25,17 +25,17 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Generates Docker infrastructure files when {@code infra=true}.
+ * Generates Docker infrastructure files based on the project's intent flags.
  *
- * <p>Creates simplified, self-contained versions of PAL's own {@code infra/docker/} templates
- * including:
+ * <p>Selects between three compose templates depending on which infrastructure is needed:
  *
  * <ul>
- *   <li>{@code infra/docker-compose.yml} — etcd + Kafka compose
- *   <li>{@code infra/.env} — port configuration
- *   <li>{@code infra/start.sh} — Docker compose up wrapper
- *   <li>{@code infra/stop.sh} — Docker compose stop wrapper
+ *   <li>etcd only — for intercepts without Kafka
+ *   <li>Kafka only — for WAL without intercepts
+ *   <li>etcd + Kafka — for intercepts with Kafka WAL
  * </ul>
+ *
+ * <p>Also generates service-aware start/stop scripts that accept an optional service argument.
  *
  * <p>Respects {@link InitConfig#isDryRun()}: when true, computes and reports what would be
  * generated but does not write files.
@@ -62,8 +62,8 @@ public final class InfraGenerator {
   /**
    * Generates Docker infrastructure files.
    *
-   * <p>When {@code infra=false}, returns an empty list. When {@code dryRun=true}, returns the list
-   * of files that would be generated without writing them.
+   * <p>When no infrastructure is needed, returns an empty list. When {@code dryRun=true}, returns
+   * the list of files that would be generated without writing them.
    *
    * @param targetDir the project root directory
    * @return the list of generated (or would-be-generated) file paths
@@ -77,14 +77,14 @@ public final class InfraGenerator {
     Path infraDir = targetDir.resolve("infra");
     List<Path> generated = new ArrayList<>();
 
-    // docker-compose.yml
+    // docker-compose.yml — selected based on intent
     Path composeFile = infraDir.resolve("docker-compose.yml");
-    String composeContent = loadTemplate("docker-compose.yml.template");
+    String composeContent = loadTemplate(selectComposeTemplate());
     generated.add(composeFile);
 
-    // .env
+    // .env — built inline based on what services are present
     Path envFile = infraDir.resolve(".env");
-    String envContent = loadTemplate("docker-env.template");
+    String envContent = buildEnvContent();
     generated.add(envFile);
 
     // start.sh
@@ -108,6 +108,41 @@ public final class InfraGenerator {
     }
 
     return Collections.unmodifiableList(generated);
+  }
+
+  /**
+   * Selects the compose template based on which infrastructure is needed.
+   *
+   * @return the template file name
+   */
+  private String selectComposeTemplate() {
+    if (config.needsEtcd() && config.needsKafka()) {
+      return "docker-compose-full.yml.template";
+    } else if (config.needsEtcd()) {
+      return "docker-compose-etcd.yml.template";
+    } else {
+      return "docker-compose-kafka.yml.template";
+    }
+  }
+
+  /**
+   * Builds the {@code .env} content with port configuration for the active services.
+   *
+   * @return the env file content
+   */
+  private String buildEnvContent() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("# Docker environment for PAL infrastructure\n");
+    if (config.needsEtcd()) {
+      sb.append("ETCD_CLIENT_PORT=2379\n");
+      sb.append("ETCD_PEER_PORT=2380\n");
+    }
+    if (config.needsKafka()) {
+      sb.append("KAFKA_PORT=9092\n");
+      sb.append("KAFKA_HOST_PORT=29092\n");
+      sb.append("KAFKA_CONTROLLER_PORT=9093\n");
+    }
+    return sb.toString();
   }
 
   /**

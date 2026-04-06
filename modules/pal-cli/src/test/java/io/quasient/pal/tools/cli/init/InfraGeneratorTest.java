@@ -16,6 +16,7 @@
 package io.quasient.pal.tools.cli.init;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -37,13 +38,56 @@ public class InfraGeneratorTest {
   @Rule public TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
-   * Verifies that when {@code infra=true}, the generator creates a {@code infra/docker-compose.yml}
-   * file containing service definitions for etcd and Kafka.
+   * Verifies that when only etcd is needed (interceptable, no kafka), the generator creates a
+   * compose file with etcd but not kafka.
    */
   @Test
-  public void testGeneratesDockerCompose() throws Exception {
+  public void testGeneratesEtcdOnlyCompose() throws Exception {
     // Given
-    InitConfig config = InitConfig.builder().groupId("com.example").infra(true).build();
+    InitConfig config = InitConfig.builder().groupId("com.example").interceptable(true).build();
+    InfraGenerator generator = new InfraGenerator(config);
+
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path composeFile = tempDir.getRoot().toPath().resolve("infra/docker-compose.yml");
+    assertTrue("docker-compose.yml should exist", Files.exists(composeFile));
+    String content = Files.readString(composeFile);
+    assertThat(content, containsString("etcd"));
+    assertThat(content, not(containsString("kafka")));
+  }
+
+  /**
+   * Verifies that when only kafka is needed, the generator creates a compose file with kafka but
+   * not etcd.
+   */
+  @Test
+  public void testGeneratesKafkaOnlyCompose() throws Exception {
+    // Given
+    InitConfig config = InitConfig.builder().groupId("com.example").kafka(true).build();
+    InfraGenerator generator = new InfraGenerator(config);
+
+    // When
+    generator.generate(tempDir.getRoot().toPath());
+
+    // Then
+    Path composeFile = tempDir.getRoot().toPath().resolve("infra/docker-compose.yml");
+    assertTrue("docker-compose.yml should exist", Files.exists(composeFile));
+    String content = Files.readString(composeFile);
+    assertThat(content, containsString("kafka"));
+    assertThat(content, not(containsString("etcd")));
+  }
+
+  /**
+   * Verifies that when both etcd and kafka are needed, the generator creates a compose file with
+   * both services.
+   */
+  @Test
+  public void testGeneratesFullCompose() throws Exception {
+    // Given
+    InitConfig config =
+        InitConfig.builder().groupId("com.example").interceptable(true).kafka(true).build();
     InfraGenerator generator = new InfraGenerator(config);
 
     // When
@@ -57,32 +101,11 @@ public class InfraGeneratorTest {
     assertThat(content, containsString("kafka"));
   }
 
-  /**
-   * Verifies that when {@code infra=true}, the generator creates an {@code infra/.env} file
-   * containing port configurations.
-   */
-  @Test
-  public void testGeneratesDockerEnv() throws Exception {
-    // Given
-    InitConfig config = InitConfig.builder().groupId("com.example").infra(true).build();
-    InfraGenerator generator = new InfraGenerator(config);
-
-    // When
-    generator.generate(tempDir.getRoot().toPath());
-
-    // Then
-    Path envFile = tempDir.getRoot().toPath().resolve("infra/.env");
-    assertTrue("infra/.env should exist", Files.exists(envFile));
-    String content = Files.readString(envFile);
-    assertThat(content, containsString("KAFKA_PORT"));
-    assertThat(content, containsString("ETCD_CLIENT_PORT"));
-  }
-
-  /** Verifies that when {@code infra=true}, the generator creates start.sh and stop.sh scripts. */
+  /** Verifies that when infra is needed, the generator creates start.sh and stop.sh scripts. */
   @Test
   public void testGeneratesStartStopScripts() throws Exception {
     // Given
-    InitConfig config = InitConfig.builder().groupId("com.example").infra(true).build();
+    InitConfig config = InitConfig.builder().groupId("com.example").interceptable(true).build();
     InfraGenerator generator = new InfraGenerator(config);
 
     // When
@@ -98,12 +121,13 @@ public class InfraGeneratorTest {
   }
 
   /**
-   * Verifies that when {@code infra=false}, the generator does not create any infrastructure files.
+   * Verifies that when no intercepts and no kafka are configured, the generator does not create any
+   * infrastructure files.
    */
   @Test
   public void testSkipsWhenDisabled() throws Exception {
     // Given
-    InitConfig config = InitConfig.builder().groupId("com.example").infra(false).build();
+    InitConfig config = InitConfig.builder().groupId("com.example").build();
     InfraGenerator generator = new InfraGenerator(config);
 
     // When
@@ -116,14 +140,14 @@ public class InfraGeneratorTest {
   }
 
   /**
-   * Verifies that when {@code dryRun=true}, the generator does not write any files even when {@code
-   * infra=true}.
+   * Verifies that when {@code dryRun=true}, the generator does not write any files even when infra
+   * is needed.
    */
   @Test
   public void testDryRunDoesNotWriteFiles() throws Exception {
     // Given
     InitConfig config =
-        InitConfig.builder().groupId("com.example").infra(true).dryRun(true).build();
+        InitConfig.builder().groupId("com.example").interceptable(true).dryRun(true).build();
     InfraGenerator generator = new InfraGenerator(config);
 
     // When

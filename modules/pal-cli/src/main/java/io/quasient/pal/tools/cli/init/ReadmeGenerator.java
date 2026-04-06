@@ -146,16 +146,37 @@ public final class ReadmeGenerator {
   private void appendRunSection(StringBuilder sb, String mainClass) {
     String cpDir =
         config.getBuildTool() == BuildTool.GRADLE ? "build/classes/java/main" : "target/classes";
+
+    String runCmd = buildRunCommand(cpDir, mainClass);
     sb.append("```sh\n");
-    sb.append("pal run -cp ").append(cpDir).append(' ').append(mainClass).append('\n');
+    sb.append(runCmd).append('\n');
     sb.append("```\n\n");
+
     sb.append("To enable the write-ahead log (message recording, replay, event sourcing):\n\n");
     sb.append("```sh\n");
-    sb.append("pal run --wal file:./wal -cp ").append(cpDir).append(' ').append(mainClass);
-    sb.append('\n');
+    sb.append(runCmd.replace("pal run", "pal run --wal file:./wal")).append('\n');
     sb.append("```\n\n");
-    sb.append("Optionally, source `.env.pal` before running to set environment variables\n");
-    sb.append("(directory, Kafka, logging, etc.). See `pal run --help` for all available flags.\n");
+
+    if (config.isInfra()) {
+      sb.append("Before running, start the infrastructure:\n\n");
+      sb.append("```sh\n");
+      sb.append("cd infra && ./start.sh\n");
+      sb.append("```\n\n");
+    }
+
+    sb.append("Optionally, source `.env.pal` before running to set environment variables.\n");
+    sb.append("See `pal run --help` for all available flags.\n");
+  }
+
+  /**
+   * Builds the {@code pal run} command string with intent-aware flags.
+   *
+   * @param cpDir the classpath directory
+   * @param mainClass the main class name fallback
+   * @return the formatted run command
+   */
+  private String buildRunCommand(String cpDir, String mainClass) {
+    return config.buildRunCommand(cpDir, mainClass);
   }
 
   /**
