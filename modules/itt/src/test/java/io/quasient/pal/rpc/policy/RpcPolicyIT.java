@@ -747,6 +747,54 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
     }
   }
 
+  /**
+   * Verifies that the YAML file's {@code defaultAction: ALLOW} is honored when the CLI flag {@code
+   * --rpc-default-action} is not provided.
+   *
+   * <p>This is a regression test for a bug where the CLI's default value ({@code DENY}) was
+   * unconditionally set as a property, causing {@link
+   * io.quasient.pal.core.rpc.policy.RpcPolicyParser#fromOptions} to always override the YAML's
+   * default action with the CLI default.
+   *
+   * <p>The test uses a YAML policy with {@code defaultAction: ALLOW} and the {@code deny-unsafe}
+   * preset. A public, non-unsafe method not matched by any explicit rule should fall through to the
+   * default action and be allowed.
+   */
+  @Test
+  public void shouldHonorYamlDefaultActionWhenCliDefaultOmitted() throws Exception {
+    UUID peerId = UUID.randomUUID();
+    PeerProcess peer = null;
+    ThinPeer thinPeer = null;
+    PalDirectory directory = null;
+
+    try {
+      File policyFile = writePolicyFile("yaml-default-allow", yamlDefaultAllowPolicy());
+      // Note: NO --rpc-default-action flag — the YAML's defaultAction: ALLOW should take effect
+      peer = launchPolicyPeer(peerId, "--rpc-policy", policyFile.getAbsolutePath(), "--as-service");
+
+      directory = new PalDirectory(getPalDirectoryUrl(), null, true);
+      PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
+      thinPeer = createThinPeer(peerInfo);
+
+      // Call a public method not matched by any deny preset — should be ALLOWED by the YAML default
+      Object result =
+          callStaticMethodAndAssertAllowed(
+              thinPeer,
+              METHODS_CLASS,
+              "testNonVoidStatic",
+              new String[] {"java.lang.String"},
+              new Object[] {"hello"});
+      assertNotNull("Method should return a value under YAML default ALLOW", result);
+
+      logger.info(
+          "shouldHonorYamlDefaultActionWhenCliDefaultOmitted [{}]: YAML defaultAction ALLOW"
+              + " honored",
+          rpcType);
+    } finally {
+      cleanup(thinPeer, peer, peerId, directory);
+    }
+  }
+
   // ===========================================================================================
   // Mandatory deny-pal-internals enforcement tests
   // ===========================================================================================
@@ -1006,6 +1054,21 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
             visibility:
               - PACKAGE_PRIVATE
             action: ALLOW
+        """;
+  }
+
+  /**
+   * Policy with {@code defaultAction: ALLOW} and {@code deny-unsafe} preset. Used to test that the
+   * YAML's default action is honored when the CLI flag is omitted.
+   *
+   * @return YAML policy content
+   */
+  private String yamlDefaultAllowPolicy() {
+    return """
+        version: 1
+        defaultAction: ALLOW
+        presets:
+          deny-unsafe: true
         """;
   }
 

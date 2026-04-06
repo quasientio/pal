@@ -345,6 +345,33 @@ public class RpcPolicyParserTest {
   }
 
   /**
+   * Verifies that {@code fromOptions} with a YAML file specifying {@code defaultAction: ALLOW} and
+   * no CLI default action preserves the YAML's default action. This is the production scenario when
+   * a user passes {@code --rpc-policy config/rpc-policy.yaml} without {@code --rpc-default-action}.
+   */
+  @Test
+  public void shouldPreserveYamlDefaultActionWhenCliDefaultIsNull() throws IOException {
+    String yaml =
+        """
+        version: 1
+        defaultAction: ALLOW
+        presets:
+          deny-unsafe: true
+        """;
+
+    Path tempFile = Files.createTempFile("rpc-policy-test", ".yaml");
+    try {
+      Files.writeString(tempFile, yaml);
+
+      RpcPolicy policy = RpcPolicyParser.fromOptions(tempFile.toString(), null, null);
+
+      assertThat(policy.getDefaultAction(), is(RpcPolicyAction.ALLOW));
+    } finally {
+      Files.deleteIfExists(tempFile);
+    }
+  }
+
+  /**
    * Verifies that YAML without a {@code version} field parses successfully, defaulting to version
    * 1.
    */

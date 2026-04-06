@@ -646,11 +646,10 @@ public class Main implements Callable<Integer> {
   @Option(
       names = {"--rpc-default-action"},
       order = 76,
-      defaultValue = "DENY",
       description =
-          "default RPC action when no rule matches: ALLOW or DENY (default: ${DEFAULT-VALUE})"
+          "default RPC action when no rule matches: ALLOW or DENY (default: DENY)"
               + " [env: PAL_RPC_DEFAULT_ACTION]")
-  private String rpcDefaultAction = "DENY"; // corresponding ENV var: PAL_RPC_DEFAULT_ACTION
+  private String rpcDefaultAction; // corresponding ENV var: PAL_RPC_DEFAULT_ACTION
 
   /**
    * Poll interval in milliseconds for the RPC policy file watcher. When set, the peer watches the
@@ -1799,7 +1798,9 @@ public class Main implements Callable<Integer> {
     if (rpcPolicyPresets != null) {
       properties.setProperty("rpc.policy.presets", rpcPolicyPresets);
     }
-    properties.setProperty("rpc.default_action", rpcDefaultAction);
+    if (rpcDefaultAction != null) {
+      properties.setProperty("rpc.default_action", rpcDefaultAction);
+    }
     if (rpcPolicyWatchInterval != null) {
       properties.setProperty(
           "rpc.policy.watch.interval.ms", String.valueOf(rpcPolicyWatchInterval));
