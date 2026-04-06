@@ -47,7 +47,7 @@ check_var() {
 
 # Check if the 'pal' network exists; create it if it doesn't
 createPalNetwork() {
-	if docker network ls | grep -q pal; then
+	if docker network inspect pal >/dev/null 2>&1; then
 		log '`pal` network already exists - skipping creation'
 	else
 		docker network create pal --driver bridge >/dev/null
