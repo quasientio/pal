@@ -381,7 +381,8 @@ pal replay --wal file:/tmp/service-wal --threading unordered \
 | Scenario | Input Thread | What Gets Injected |
 |----------|-------------|---------------------|
 | PAL RPC service | `rpc-worker-N` | Incoming ZMQ/JSON-RPC method calls |
-| Web app | `http-worker-N` | HTTP request handler invocations |
+| Web app (CDI) | `executor-thread-N` | HTTP request handler invocations (use `--service-thread` for CDI context) |
+| Web app (other) | `http-worker-N` | HTTP request handler invocations |
 | Swing app | `AWT-EventQueue-0` | UI event handler calls |
 | Timer-based | `scheduler-N` | Scheduled task invocations |
 | JavaFX app | `JavaFX Application Thread` | Button handlers, event callbacks |
@@ -421,6 +422,40 @@ JavaFX applications heavily use lambdas for event handlers. Lambda class names a
 **Non-public access:**
 
 Replay injections can access private fields and methods because they re-execute operations that originally ran inside the JVM with full access. RPC access control (handled by RPC policy) does not apply to replay injections.
+
+### Service/Web Applications
+
+Web frameworks (Quarkus, Vert.x, etc.) dispatch HTTP requests on named executor threads (e.g., `executor-thread-0`, `executor-thread-1`). The `--service-thread` flag tells PAL which threads carry service requests, using a regex pattern:
+
+**Recording a web service:**
+
+```bash
+pal run --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
+  -jar target/quarkus-app.jar
+```
+
+**Replaying a web service:**
+
+```bash
+pal replay --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
+  -jar target/quarkus-app.jar
+```
+
+Without `--service-thread`, entry points on executor threads are still replayed (multi-threaded replay handles that), but they will not have CDI request context or transactional boundaries — `@RequestScoped` beans will fail to inject, and `@Transactional` methods will run outside a transaction.
+
+**How it works:**
+
+1. During recording, entry points on threads matching the pattern are marked with `threadAffinity = "service-request"` in the WAL.
+2. During replay, the `ThreadAffinityDispatcher` routes these entry points through `CdiRequestContextExecutor`, which activates a CDI request context (via `RequestContextController`) and optionally begins a JTA transaction (via `UserTransaction`).
+3. The request handler executes within the activated context, producing the same nested operations as during recording.
+
+**CDI container compatibility:**
+
+`CdiRequestContextExecutor` works with any CDI 2.0+ container (Quarkus ArC, Weld, OpenWebBeans). It accesses CDI classes via reflection to avoid a compile-time dependency. If CDI is not on the classpath during replay, the executor is silently skipped and entry points execute without request context wrapping.
+
+**Combining with `--fx-thread`:**
+
+Both flags can be used together if the application has both JavaFX UI threads and service executor threads. Each flag registers its own pattern with `ThreadAffinityDispatcher`; the first matching pattern wins.
 
 ## Side-Effect Shielding (Replay Policy)
 

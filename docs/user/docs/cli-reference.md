@@ -284,24 +284,31 @@ pal init -y --group-id com.example   # Non-interactive mode with flags
 | `--main-class <CLASS>` | Fully qualified main class name (e.g., `com.example.Main`) |
 | `--package <PACKAGE>` | Java package name (inferred from group ID if omitted) |
 
-#### Build and Mode
+#### Build
 
 | Option | Description |
 |--------|-------------|
 | `--build-tool <maven\|gradle>` | Build tool selection (default: auto-detect from existing project, or `maven` for new projects) |
-| `--mode <local\|distributed\|both>` | Deployment mode (default: `local`). `local` uses Chronicle Queue (no infrastructure needed), `distributed` uses etcd + Kafka, `both` generates configs for both |
 | `-y, --non-interactive` | Skip interactive prompts, use defaults and flag values |
+
+#### Intent Flags
+
+These flags declare what your application needs. Everything else — infrastructure files, RPC policy, intercept bundle, pal-client dependency, callback handler code — is derived automatically.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--interceptable` / `--no-interceptable` | `false` | This app can be intercepted by other peers (requires etcd) |
+| `--intercepting` / `--no-intercepting` | `false` | This app intercepts other peers via callbacks (requires etcd; adds `pal-client` dependency, RPC policy, intercept bundle, callback handler) |
+| `--kafka` / `--no-kafka` | `false` | Use Kafka for WAL (write-ahead log). Does not require etcd — peers can use Kafka WAL unregistered |
+| `--as-service` | -- | No main class; peer runs with `pal run --as-service` (only meaningful with `--intercepting`) |
 
 #### Feature Toggles
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--sample-app` / `--no-sample-app` | `true` | Generate sample application code |
-| `--rpc-policy` / `--no-rpc-policy` | `false` | Generate RPC policy config |
 | `--scope-policy` / `--no-scope-policy` | `false` | Generate recording scope config |
 | `--logging-config` / `--no-logging-config` | `true` | Generate PAL runtime logging configuration (`peer-logging.xml`, `cli-logging.xml`) |
-| `--intercept-bundle` / `--no-intercept-bundle` | `false` | Generate intercept bundle example |
-| `--infra` / `--no-infra` | `false` | Generate Docker infrastructure files (etcd + Kafka) |
 
 #### Safety
 
@@ -315,6 +322,17 @@ pal init -y --group-id com.example   # Non-interactive mode with flags
 **New project:** When the target directory does not contain a `pom.xml` or `build.gradle`, `pal init` creates a complete project structure including the build file, source directories, sample code (if enabled), and configuration files.
 
 **Existing project:** When a `pom.xml` or `build.gradle` is detected, `pal init` patches the existing build file to add PAL weaving. A backup is created (`pom.xml.backup` or `build.gradle.backup`) before modification. The patcher is idempotent — running it twice produces no duplicate elements.
+
+**Derived outputs:** Infrastructure, config files, and dependencies are derived from intent flags:
+
+| Intent | etcd infra | kafka infra | RPC policy | intercept bundle | pal-client dep | callback handler |
+|--------|-----------|-------------|------------|-----------------|---------------|-----------------|
+| _(plain local)_ | — | — | — | — | — | — |
+| `--interceptable` | yes | — | — | — | — | — |
+| `--intercepting` | yes | — | yes | yes | yes | yes |
+| `--kafka` | — | yes | — | — | — | — |
+| `--interceptable --kafka` | yes | yes | — | — | — | — |
+| `--intercepting --kafka` | yes | yes | yes | yes | yes | yes |
 
 **Dry run:** With `--dry-run`, no files are written to disk. Instead, the command shows what would be generated or patched, allowing you to review the changes before committing.
 
@@ -358,16 +376,52 @@ pal init
 pal init --build-tool gradle
 ```
 
-#### Distributed Mode
+#### Interceptable App (etcd infrastructure)
 
 ```bash
-# New project with etcd + Kafka infrastructure files
-pal init my-distributed-app -y \
+# App that can be intercepted by other peers
+pal init my-app -y \
   --group-id com.example \
-  --artifact-id my-distributed-app \
+  --artifact-id my-app \
   --main-class com.example.Main \
-  --mode distributed \
-  --infra
+  --interceptable
+```
+
+#### Intercepting App (callback host)
+
+```bash
+# App that intercepts other peers — adds pal-client, RPC policy, intercept bundle, callback handler
+pal init my-callbacks -y \
+  --group-id com.example \
+  --artifact-id my-callbacks \
+  --main-class com.example.Main \
+  --intercepting
+
+# As a service (no main class — peer hosts RPC endpoints only)
+pal init my-service -y \
+  --group-id com.example \
+  --artifact-id my-service \
+  --intercepting \
+  --as-service
+```
+
+#### Kafka WAL
+
+```bash
+# Kafka WAL without intercepts (no etcd needed)
+pal init my-app -y \
+  --group-id com.example \
+  --artifact-id my-app \
+  --main-class com.example.Main \
+  --kafka
+
+# Interceptable with Kafka (etcd + Kafka infrastructure)
+pal init my-app -y \
+  --group-id com.example \
+  --artifact-id my-app \
+  --main-class com.example.Main \
+  --interceptable \
+  --kafka
 ```
 
 #### Preview Changes (Dry Run)
@@ -1429,6 +1483,7 @@ pal replay [OPTIONS] class [args...]
 | `-cp, --classpath <CLASSPATH>` | Classpath for the application (required when replaying a class) |
 | `-jar <jarFile>` | JAR file to replay (Main-Class from manifest). Alternative to specifying a main class |
 | `--fx-thread` | Enable JavaFX Application Thread execution. Required for replaying JavaFX applications (default: `false`) |
+| `--service-thread <pattern>` | Regex pattern for service request handler thread names (e.g., `executor-thread-.*`). Entry points on matching threads are tagged with `service-request` affinity during recording, and wrapped in a CDI request context during replay. See [Service/Web Applications](#service-web-applications) |
 | `--scope <patterns>` | Ant-style class patterns for recording scope (must match the flags used during recording). See [Recording Scope](concepts/recording-scope.md) |
 | `--scope-exclude <patterns>` | Ant-style class patterns to exclude from recording scope (must match recording) |
 | `--scope-io` | Include built-in I/O boundary rules in recording scope (must match recording) |
@@ -1562,6 +1617,26 @@ pal replay --wal file:/tmp/service-wal --threading unordered \
 
 See the [Deterministic Replay Guide](guides/deterministic-replay.md#multi-threaded-replay) for a complete walkthrough.
 
+### Service/Web Applications
+
+Web frameworks like Quarkus and Vert.x dispatch HTTP requests on named executor threads (e.g., `executor-thread-0`, `executor-thread-1`). Use `--service-thread` with a regex pattern matching those thread names to enable correct recording and replay:
+
+```bash
+# Record a Quarkus service
+pal run --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
+  -jar target/quarkus-app.jar
+
+# Replay it
+pal replay --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
+  -jar target/quarkus-app.jar
+```
+
+During recording, entry points on threads matching the pattern are tagged with `threadAffinity = "service-request"` in the WAL. During replay, the `ThreadAffinityDispatcher` wraps each tagged entry point in a CDI request context (and JTA transaction, if available), so that `@RequestScoped` beans and transactional boundaries work correctly.
+
+The `--service-thread` flag must match during both recording and replay (like `--fx-thread`). Without it during recording, the entry points will not be tagged; without it during replay, the CDI context will not be activated.
+
+See the [Deterministic Replay Guide](guides/deterministic-replay.md#serviceweb-applications) for details on how thread affinity works.
+
 ### Side-Effect Shielding
 
 By default, all operations are re-executed during replay. Side-effect shielding allows operations to be **stubbed** — returning WAL-recorded values without executing — for I/O, databases, time, randomness, and other non-deterministic or unavailable resources.
@@ -1617,6 +1692,7 @@ pal replay --wal file:/tmp/my-wal --policy policy.yaml --force-stub \
 - The application must be compiled with the same AspectJ weaving as during recording. Class version mismatches will surface as operation mismatches.
 - **Multi-threaded replay** is supported for applications that receive input on multiple threads (RPC services, web apps, Swing applications). Entry-point operations must be captured in the WAL during recording (`--wal-incoming-rpc`, enabled by default).
 - **JavaFX applications** require `--fx-thread` during both recording and replay. This routes UI event handlers to the real JavaFX Application Thread.
+- **Service/web applications** that dispatch requests on named executor threads (e.g., Quarkus, Vert.x) can use `--service-thread <pattern>` to tag those entry points with `service-request` affinity. During replay, tagged entry points are wrapped in a CDI request context and transaction.
 - When recording a WAL intended for replay, use `--no-wal-incoming-cli` if you want the WAL to contain only the hot-path operations (excluding the bootstrap `main()` wrapper). This is often the right choice for cleaner replay matching.
 
 ---
@@ -1911,6 +1987,7 @@ These variables control how the JVM is launched for peer processes. See the [JVM
 | `PAL_RPC_DEFAULT_ACTION` | `--rpc-default-action` | `DENY` | Default action when no policy rule matches (`ALLOW` or `DENY`) |
 | `PAL_RPC_POLICY_WATCH_INTERVAL` | `--rpc-policy-watch-interval` | `2000` | Policy file watch interval in ms. `0` to disable |
 | `PAL_FX_THREAD` | `--fx-thread` | `false` | Route RPC calls with `fx-thread` affinity to the JavaFX Application Thread |
+| `PAL_SERVICE_THREAD` | `--service-thread` | _(unset)_ | Regex pattern for service request handler threads. Tags matching entry points with `service-request` affinity |
 
 ### Interception
 
