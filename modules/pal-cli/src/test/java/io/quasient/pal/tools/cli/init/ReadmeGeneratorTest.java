@@ -60,8 +60,8 @@ public class ReadmeGeneratorTest {
     assertFalse(generated.isEmpty());
     String content = Files.readString(generated.get(0), StandardCharsets.UTF_8);
     assertThat(content, containsString("# my-app"));
-    assertThat(content, containsString("mvn test"));
-    assertThat(content, containsString("mvn package"));
+    assertThat(content, containsString("./mvnw test"));
+    assertThat(content, containsString("./mvnw package"));
     assertThat(content, containsString("prepare-package"));
     assertThat(content, containsString("unwoven"));
     assertThat(content, containsString("target/classes"));
@@ -86,8 +86,8 @@ public class ReadmeGeneratorTest {
 
     // Then
     String content = Files.readString(generated.get(0), StandardCharsets.UTF_8);
-    assertThat(content, containsString("gradle test"));
-    assertThat(content, containsString("gradle build"));
+    assertThat(content, containsString("./gradlew test"));
+    assertThat(content, containsString("./gradlew build"));
     assertThat(content, containsString("weaveClasses"));
     assertThat(content, containsString("unwoven"));
     assertThat(content, containsString("build/classes/java/main"));

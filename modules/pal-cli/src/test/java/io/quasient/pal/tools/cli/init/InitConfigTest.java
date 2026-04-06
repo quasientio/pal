@@ -218,7 +218,8 @@ public class InitConfigTest {
   }
 
   /**
-   * Verifies that {@code isAsService()} returns {@code true} when intercepting with no main class.
+   * Verifies that {@code isAsService()} returns {@code true} when intercepting or jsonRpc with no
+   * main class.
    */
   @Test
   public void testIsAsService() {
@@ -236,14 +237,27 @@ public class InitConfigTest {
             .build();
     assertThat(withMainConfig.isAsService(), is(false));
 
-    // not intercepting, no main class → not as-service
+    // not intercepting, no main class, no jsonRpc → not as-service
     InitConfig plainConfig = InitConfig.builder().groupId("com.example").build();
     assertThat(plainConfig.isAsService(), is(false));
+
+    // jsonRpc with no main class → as-service
+    InitConfig rpcServiceConfig = InitConfig.builder().groupId("com.example").jsonRpc(true).build();
+    assertThat(rpcServiceConfig.isAsService(), is(true));
+
+    // jsonRpc with main class → not as-service
+    InitConfig rpcWithMainConfig =
+        InitConfig.builder()
+            .groupId("com.example")
+            .jsonRpc(true)
+            .mainClass("com.example.Main")
+            .build();
+    assertThat(rpcWithMainConfig.isAsService(), is(false));
   }
 
   /**
-   * Verifies that {@code isRpcPolicy()} and {@code isInterceptBundle()} are derived from
-   * intercepting.
+   * Verifies that {@code isRpcPolicy()} is derived from intercepting or jsonRpc, and {@code
+   * isInterceptBundle()} is derived from intercepting only.
    */
   @Test
   public void testDerivedFromIntercepting() {
@@ -255,6 +269,28 @@ public class InitConfigTest {
     InitConfig plainConfig = InitConfig.builder().groupId("com.example").build();
     assertThat(plainConfig.isRpcPolicy(), is(false));
     assertThat(plainConfig.isInterceptBundle(), is(false));
+
+    // jsonRpc enables rpc policy but not intercept bundle
+    InitConfig jsonRpcConfig = InitConfig.builder().groupId("com.example").jsonRpc(true).build();
+    assertThat(jsonRpcConfig.isRpcPolicy(), is(true));
+    assertThat(jsonRpcConfig.isInterceptBundle(), is(false));
+  }
+
+  /** Verifies that {@code needsWeaving()} defaults to true and can be disabled. */
+  @Test
+  public void testNeedsWeaving() {
+    // Default: weaving enabled
+    InitConfig defaultConfig = InitConfig.builder().groupId("com.example").build();
+    assertThat(defaultConfig.needsWeaving(), is(true));
+
+    // Explicitly disabled (RPC gateway only)
+    InitConfig noWeavingConfig =
+        InitConfig.builder().groupId("com.example").jsonRpc(true).weaving(false).build();
+    assertThat(noWeavingConfig.needsWeaving(), is(false));
+
+    // JSON-RPC with weaving (pipeline mode)
+    InitConfig pipelineConfig = InitConfig.builder().groupId("com.example").jsonRpc(true).build();
+    assertThat(pipelineConfig.needsWeaving(), is(true));
   }
 
   /**

@@ -193,6 +193,18 @@ public class InitEndToEndTest {
 
     // Env file generated
     assertTrue(".env.pal should exist", Files.exists(dir.resolve(".env.pal")));
+
+    // Maven wrapper generated
+    assertTrue("mvnw should exist", Files.exists(dir.resolve("mvnw")));
+    assertTrue("mvnw.cmd should exist", Files.exists(dir.resolve("mvnw.cmd")));
+    assertTrue(
+        "maven-wrapper.properties should exist",
+        Files.exists(dir.resolve(".mvn/wrapper/maven-wrapper.properties")));
+    assertTrue("mvnw should be executable", Files.isExecutable(dir.resolve("mvnw")));
+
+    // README should use wrapper commands
+    String readmeContent = Files.readString(dir.resolve("README.md"), StandardCharsets.UTF_8);
+    assertThat("README should use ./mvnw", readmeContent, containsString("./mvnw"));
   }
 
   /**
@@ -232,6 +244,17 @@ public class InitEndToEndTest {
     // Sample source files exist
     assertTrue(
         "Main.java should exist", Files.exists(dir.resolve("src/main/java/com/test/Main.java")));
+
+    // Gradle wrapper generated
+    assertTrue("gradlew should exist", Files.exists(dir.resolve("gradlew")));
+    assertTrue("gradlew.bat should exist", Files.exists(dir.resolve("gradlew.bat")));
+    assertTrue(
+        "gradle-wrapper.properties should exist",
+        Files.exists(dir.resolve("gradle/wrapper/gradle-wrapper.properties")));
+    assertTrue(
+        "gradle-wrapper.jar should exist",
+        Files.exists(dir.resolve("gradle/wrapper/gradle-wrapper.jar")));
+    assertTrue("gradlew should be executable", Files.isExecutable(dir.resolve("gradlew")));
   }
 
   // ---------------------------------------------------------------------------
@@ -268,6 +291,9 @@ public class InitEndToEndTest {
 
     // Original dependency preserved
     assertThat("Should preserve slf4j", patchedPom, containsString("slf4j-api"));
+
+    // Wrapper files should NOT be generated for existing projects
+    assertFalse("mvnw should not exist for patched project", Files.exists(dir.resolve("mvnw")));
   }
 
   /**
@@ -296,6 +322,10 @@ public class InitEndToEndTest {
     String patched = Files.readString(dir.resolve("build.gradle"), StandardCharsets.UTF_8);
     assertThat("Should have pal-weave", patched, containsString("pal-weave"));
     assertThat("Should have aspectj plugin", patched, containsString("aspectj"));
+
+    // Wrapper files should NOT be generated for existing projects
+    assertFalse(
+        "gradlew should not exist for patched project", Files.exists(dir.resolve("gradlew")));
   }
 
   // ---------------------------------------------------------------------------
@@ -485,9 +515,9 @@ public class InitEndToEndTest {
         "Main.java should NOT exist in as-service mode",
         Files.exists(dir.resolve("src/main/java/com/test/Main.java")));
 
-    // SampleService.java still generated
-    assertTrue(
-        "SampleService.java should exist",
+    // SampleService.java NOT generated (only intercepting, not interceptable)
+    assertFalse(
+        "SampleService.java should NOT exist (not interceptable)",
         Files.exists(dir.resolve("src/main/java/com/test/SampleService.java")));
 
     // Callback handler generated
@@ -505,9 +535,21 @@ public class InitEndToEndTest {
         "intercept-bundle.yaml should exist",
         Files.exists(dir.resolve("config/intercept-bundle.yaml")));
 
-    // Run command in next-steps should include --as-service
+    // Intercept bundle should have peer matching artifact ID
+    String bundleContent =
+        Files.readString(dir.resolve("config/intercept-bundle.yaml"), StandardCharsets.UTF_8);
+    assertThat(
+        "intercept-bundle peer should match artifact ID",
+        bundleContent,
+        containsString("peer: \"test-app\""));
+
+    // Run command in next-steps should include -n with artifact ID and no main class
     String output = outWriter.toString();
-    assertThat("Output should mention --as-service", output, containsString("--as-service"));
+    assertThat("Output should include -n with artifact ID", output, containsString("-n test-app"));
+    assertThat(
+        "Output should end pal run command with -cp, no main class",
+        output,
+        containsString("-cp target/classes\n"));
   }
 
   /**
@@ -795,6 +837,10 @@ public class InitEndToEndTest {
     assertThat("README should mention --interceptable", readme, containsString("--interceptable"));
     assertThat("README should mention --zmq-rpc", readme, containsString("--zmq-rpc"));
     assertThat(
+        "README should mention --rpc-policy",
+        readme,
+        containsString("--rpc-policy config/rpc-policy.yaml"));
+    assertThat(
         "README should mention -d localhost:2379", readme, containsString("-d localhost:2379"));
     assertThat(
         "README should mention -k localhost:29092", readme, containsString("-k localhost:29092"));
@@ -914,11 +960,11 @@ public class InitEndToEndTest {
   }
 
   /**
-   * Verifies that Maven project init output includes next steps with mvn package and pal run
+   * Verifies that Maven project init output includes next steps with ./mvnw package and pal run
    * instructions.
    *
    * <p>Given a new Maven project init, when stdout is captured, then: output contains "Next steps"
-   * with mvn package and pal run instructions.
+   * with ./mvnw package and pal run instructions.
    */
   @Test
   public void testOutputIncludesNextStepsMaven() throws IOException {
@@ -939,15 +985,15 @@ public class InitEndToEndTest {
 
     String output = outWriter.toString();
     assertThat("Should show Next steps", output, containsString("Next steps"));
-    assertThat("Should mention mvn package", output, containsString("mvn package"));
+    assertThat("Should mention ./mvnw package", output, containsString("./mvnw package"));
     assertThat("Should mention pal run", output, containsString("pal run"));
   }
 
   /**
-   * Verifies that Gradle project init output includes next steps with gradle build instructions.
+   * Verifies that Gradle project init output includes next steps with ./gradlew build instructions.
    *
    * <p>Given a new Gradle project init, when stdout is captured, then: output contains "Next steps"
-   * with gradle build instructions.
+   * with ./gradlew build instructions.
    */
   @Test
   public void testOutputIncludesNextStepsGradle() throws IOException {
@@ -968,7 +1014,7 @@ public class InitEndToEndTest {
 
     String output = outWriter.toString();
     assertThat("Should show Next steps", output, containsString("Next steps"));
-    assertThat("Should mention gradle build", output, containsString("gradle build"));
+    assertThat("Should mention ./gradlew build", output, containsString("./gradlew build"));
     assertThat("Should mention pal run", output, containsString("pal run"));
   }
 
@@ -1324,6 +1370,204 @@ public class InitEndToEndTest {
 
     // No backup for invalid input
     assertFalse("No backup for invalid input", Files.exists(dir.resolve("build.gradle.backup")));
+  }
+
+  // ---------------------------------------------------------------------------
+  // JSON-RPC and weaving
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Verifies that {@code --json-rpc --no-weaving} generates a plain build (no AspectJ), RPC policy,
+   * and {@code --json-rpc 7070} in the run command.
+   */
+  @Test
+  public void testJsonRpcGatewayOnlyMaven() throws Exception {
+    Path dir = tempFolder.newFolder("rpc-gateway-maven").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-api",
+            "--main-class",
+            "com.test.Main",
+            "--json-rpc",
+            "--no-weaving",
+            "--build-tool",
+            "maven",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // Plain pom.xml — no pal-weave, no aspectj
+    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("pom.xml should NOT have pal-weave", pomContent, not(containsString("pal-weave")));
+    assertThat(
+        "pom.xml should NOT have aspectj", pomContent, not(containsString("aspectj-maven-plugin")));
+
+    // Valid XML
+    DocumentBuilderFactory.newInstance()
+        .newDocumentBuilder()
+        .parse(new ByteArrayInputStream(pomContent.getBytes(StandardCharsets.UTF_8)));
+
+    // RPC policy generated
+    assertTrue("rpc-policy.yaml should exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
+
+    // Sample API class generated
+    assertTrue(
+        "Api.java should exist", Files.exists(dir.resolve("src/main/java/com/test/Api.java")));
+
+    // README has pal peer call instructions
+    String readme = Files.readString(dir.resolve("README.md"), StandardCharsets.UTF_8);
+    assertThat("README should mention pal peer call", readme, containsString("pal peer call"));
+
+    // Next steps mention --json-rpc 7070 and --rpc-policy
+    String output = outWriter.toString();
+    assertThat("Should mention --json-rpc 7070", output, containsString("--json-rpc 7070"));
+    assertThat(
+        "Should mention --rpc-policy",
+        output,
+        containsString("--rpc-policy config/rpc-policy.yaml"));
+
+    // Build hint should NOT mention weaving
+    assertThat(
+        "Should NOT mention AspectJ weaving", output, not(containsString("AspectJ weaving")));
+  }
+
+  /** Verifies that {@code --json-rpc --no-weaving} with Gradle generates a plain build. */
+  @Test
+  public void testJsonRpcGatewayOnlyGradle() throws IOException {
+    Path dir = tempFolder.newFolder("rpc-gateway-gradle").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-api",
+            "--main-class",
+            "com.test.Main",
+            "--json-rpc",
+            "--no-weaving",
+            "--build-tool",
+            "gradle",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // Plain build.gradle — no pal-weave, no aspectj
+    String gradleContent = Files.readString(dir.resolve("build.gradle"), StandardCharsets.UTF_8);
+    assertThat(
+        "build.gradle should NOT have pal-weave", gradleContent, not(containsString("pal-weave")));
+    assertThat(
+        "build.gradle should NOT have aspectj", gradleContent, not(containsString("aspectj")));
+    assertThat(
+        "build.gradle should NOT have weaveClasses",
+        gradleContent,
+        not(containsString("weaveClasses")));
+  }
+
+  /**
+   * Verifies that {@code --json-rpc} (with weaving) generates a full build with JSON-RPC in the run
+   * command and RPC policy.
+   */
+  @Test
+  public void testJsonRpcWithPipeline() throws IOException {
+    Path dir = tempFolder.newFolder("rpc-pipeline").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-app",
+            "--main-class",
+            "com.test.Main",
+            "--json-rpc",
+            "--build-tool",
+            "maven",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // Full pom.xml — has pal-weave and aspectj
+    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("pom.xml should have pal-weave", pomContent, containsString("pal-weave"));
+    assertThat(
+        "pom.xml should have aspectj plugin", pomContent, containsString("aspectj-maven-plugin"));
+
+    // RPC policy generated
+    assertTrue("rpc-policy.yaml should exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
+
+    // Sample API class generated
+    assertTrue(
+        "Api.java should exist", Files.exists(dir.resolve("src/main/java/com/test/Api.java")));
+
+    // Next steps mention --json-rpc 7070 and --rpc-policy
+    String output = outWriter.toString();
+    assertThat("Should mention --json-rpc 7070", output, containsString("--json-rpc 7070"));
+    assertThat(
+        "Should mention --rpc-policy",
+        output,
+        containsString("--rpc-policy config/rpc-policy.yaml"));
+
+    // Build hint should mention weaving
+    assertThat("Should mention AspectJ weaving", output, containsString("AspectJ weaving"));
+  }
+
+  /** Verifies that {@code --no-weaving} without {@code --json-rpc} issues a warning. */
+  @Test
+  public void testNoWeavingWithoutJsonRpcShowsWarning() throws IOException {
+    Path dir = tempFolder.newFolder("no-weaving-warn").toPath();
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--group-id",
+            "com.test",
+            "--artifact-id",
+            "test-app",
+            "--main-class",
+            "com.test.Main",
+            "--no-weaving",
+            "--build-tool",
+            "maven",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    String output = outWriter.toString();
+    assertThat(
+        "Should warn about --no-weaving without --json-rpc",
+        output,
+        containsString("--no-weaving without --json-rpc"));
+  }
+
+  /**
+   * Verifies that patching an existing project with {@code --json-rpc --no-weaving} skips build
+   * file patching and only generates config files.
+   */
+  @Test
+  public void testPatchExistingWithJsonRpcNoWeaving() throws IOException {
+    Path dir = tempFolder.newFolder("patch-rpc-only").toPath();
+    String originalPom = minimalPomXml();
+    Files.writeString(dir.resolve("pom.xml"), originalPom, StandardCharsets.UTF_8);
+
+    int exitCode =
+        executeInit(
+            "--non-interactive",
+            "--main-class",
+            "com.acme.Main",
+            "--json-rpc",
+            "--no-weaving",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    // pom.xml should NOT be patched (no weaving needed)
+    String afterPom = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("pom.xml should be unchanged", afterPom, is(originalPom));
+
+    // No backup since no patching
+    assertFalse("No backup without patching", Files.exists(dir.resolve("pom.xml.backup")));
+
+    // RPC policy generated
+    assertTrue("rpc-policy.yaml should exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
   }
 
   // ---------------------------------------------------------------------------

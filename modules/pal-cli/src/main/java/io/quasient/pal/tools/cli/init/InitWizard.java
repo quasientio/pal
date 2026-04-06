@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
  *   <li>Detect existing project via {@link BuildToolStrategy#detect(Path)}
  *   <li>For existing projects: parse groupId/artifactId/version from the build file
  *   <li>For new projects: prompt for build tool and project coordinates
- *   <li>Prompt for intent (interceptable, intercepting, main class, Kafka)
+ *   <li>Prompt for intent (JSON-RPC, interceptable, intercepting, main class, Kafka)
  *   <li>Set PAL version from runtime
  *   <li>Build and return {@link InitConfig}
  * </ol>
@@ -204,37 +204,66 @@ public final class InitWizard {
   }
 
   /**
-   * Prompts for intent-based configuration: interceptable, intercepting, main class, and Kafka.
+   * Prompts for intent-based configuration: JSON-RPC, interceptable, intercepting, main class, and
+   * Kafka.
    *
-   * <p>Replaces the previous deployment mode, main class, and feature toggle prompts with a
-   * streamlined set of intent questions that drive all downstream generation.
+   * <p>The JSON-RPC question is asked first. When the user selects "gateway only", the
+   * interceptable/intercepting/Kafka questions are skipped (they are irrelevant for RPC-only mode)
+   * and weaving is disabled.
    *
    * @param builder the config builder
    * @param groupId the project group ID, or {@code null} if unknown
    */
   private void promptIntents(InitConfig.Builder builder, String groupId) {
-    boolean interceptable =
-        promptProvider.promptYesNo("Will this app be interceptable by other peers?", false);
-    builder.interceptable(interceptable);
+    // 1. RPC question
+    String noRpc = "No";
+    String gatewayOnly = "Yes, as RPC gateway (no weaving needed)";
+    String withPipeline = "Yes, alongside message pipeline";
+    List<String> rpcOptions = Arrays.asList(noRpc, gatewayOnly, withPipeline);
+    String rpcChoice =
+        promptProvider.promptSelect("Will you expose methods via JSON-RPC?", rpcOptions, noRpc);
 
-    boolean intercepting =
-        promptProvider.promptYesNo("Will this app intercept other peers?", false);
-    builder.intercepting(intercepting);
-
-    String defaultMainClass =
-        (groupId != null ? groupId : DEFAULT_GROUP_ID) + "." + DEFAULT_MAIN_CLASS_SIMPLE;
-    String prompt =
-        intercepting
-            ? "Main class (for pal run, leave blank for --as-service)"
-            : "Main class (for pal run)";
-    String mainClass = promptProvider.promptText(prompt, defaultMainClass);
-    if (mainClass != null && !mainClass.isBlank()) {
-      builder.mainClass(mainClass);
+    boolean jsonRpc = !noRpc.equals(rpcChoice);
+    boolean rpcGatewayOnly = gatewayOnly.equals(rpcChoice);
+    builder.jsonRpc(jsonRpc);
+    if (rpcGatewayOnly) {
+      builder.weaving(false);
     }
 
-    boolean kafka =
-        promptProvider.promptYesNo("Will you use Kafka for WAL (write-ahead log)?", false);
-    builder.kafka(kafka);
+    // 2. Intercept questions (skip for gateway-only)
+    boolean intercepting = false;
+    if (!rpcGatewayOnly) {
+      boolean interceptable =
+          promptProvider.promptYesNo("Will this app be interceptable by other peers?", false);
+      builder.interceptable(interceptable);
+
+      intercepting = promptProvider.promptYesNo("Will this app intercept other peers?", false);
+      builder.intercepting(intercepting);
+    }
+
+    // 3. Main class
+    String defaultMainClass =
+        (groupId != null ? groupId : DEFAULT_GROUP_ID) + "." + DEFAULT_MAIN_CLASS_SIMPLE;
+    if (intercepting || rpcGatewayOnly) {
+      String asServiceOption = "Run as service (no main class)";
+      List<String> options = Arrays.asList(asServiceOption, defaultMainClass);
+      String selected = promptProvider.promptSelect("Run mode", options, asServiceOption);
+      if (!asServiceOption.equals(selected)) {
+        builder.mainClass(selected);
+      }
+    } else {
+      String mainClass = promptProvider.promptText("Main class (for pal run)", defaultMainClass);
+      if (mainClass != null && !mainClass.isBlank()) {
+        builder.mainClass(mainClass);
+      }
+    }
+
+    // 4. Kafka (skip for gateway-only)
+    if (!rpcGatewayOnly) {
+      boolean kafka =
+          promptProvider.promptYesNo("Will you use Kafka for WAL (write-ahead log)?", false);
+      builder.kafka(kafka);
+    }
   }
 
   /**

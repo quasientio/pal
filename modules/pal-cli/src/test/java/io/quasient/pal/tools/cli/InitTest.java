@@ -621,6 +621,8 @@ public class InitTest {
     assertThat("Help should show --group-id", help, containsString("--group-id"));
     assertThat("Help should show --build-tool", help, containsString("--build-tool"));
     assertThat("Help should show interceptable option", help, containsString("interceptable"));
+    assertThat("Help should show json-rpc option", help, containsString("json-rpc"));
+    assertThat("Help should show weaving option", help, containsString("weaving"));
     assertThat("Help should show --force", help, containsString("--force"));
     assertThat("Help should show sample-app option", help, containsString("sample-app"));
   }

@@ -25,13 +25,9 @@ import java.nio.file.Path;
  * Generates new Gradle build files ({@code build.gradle} and {@code settings.gradle}) for fresh PAL
  * projects.
  *
- * <p>Loads templates from the classpath and substitutes runtime variables such as group ID,
- * artifact ID, project version, PAL version, and AspectJ version.
- *
- * <p>The generated {@code build.gradle} uses a manual {@code weaveClasses} task (backed by {@code
- * org.aspectj.tools.ajc.Main}) that runs after tests so unit tests always execute against unwoven
- * classes. The {@code jar} task depends on {@code weaveClasses} so the packaged artifact contains
- * woven bytecode.
+ * <p>Loads templates from the classpath and substitutes runtime variables. When {@link
+ * InitConfig#needsWeaving()} is true, uses the full template with AspectJ weaving configuration;
+ * otherwise uses a plain template with only Java 17 setup.
  *
  * <p>Respects {@link InitConfig#isDryRun()}: when true, computes what would be generated but does
  * not write files.
@@ -64,7 +60,9 @@ public final class GradleGenerator {
    * @throws IOException if an I/O error occurs during file writing or template loading
    */
   public void generate(Path outputDir) throws IOException {
-    String buildContent = loadTemplate("build.gradle.template");
+    String buildTemplateName =
+        config.needsWeaving() ? "build.gradle.template" : "build-plain.gradle.template";
+    String buildContent = loadTemplate(buildTemplateName);
     buildContent =
         buildContent
             .replace("{{groupId}}", safe(config.getGroupId()))

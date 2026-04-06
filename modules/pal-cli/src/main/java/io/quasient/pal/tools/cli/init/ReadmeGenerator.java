@@ -113,13 +113,21 @@ public final class ReadmeGenerator {
    * @param sb the string builder
    */
   private void appendMavenBuild(StringBuilder sb) {
+    String mvn = config.isNewProject() ? "./mvnw" : "mvn";
     sb.append("```sh\n");
-    sb.append("mvn test                  # compile and test (unwoven classes)\n");
-    sb.append("mvn package               # compile, test, weave, and package\n");
-    sb.append("mvn package -DskipTests   # weave and package without tests\n");
-    sb.append("```\n\n");
-    sb.append("AspectJ weaving runs at the `prepare-package` phase, after tests.\n");
-    sb.append("Unit tests always execute against **unwoven** classes.\n");
+    if (config.needsWeaving()) {
+      sb.append(mvn).append(" test                  # compile and test (unwoven classes)\n");
+      sb.append(mvn).append(" package               # compile, test, weave, and package\n");
+      sb.append(mvn).append(" package -DskipTests   # weave and package without tests\n");
+      sb.append("```\n\n");
+      sb.append("AspectJ weaving runs at the `prepare-package` phase, after tests.\n");
+      sb.append("Unit tests always execute against **unwoven** classes.\n");
+    } else {
+      sb.append(mvn).append(" test                  # compile and test\n");
+      sb.append(mvn).append(" package               # compile, test, and package\n");
+      sb.append(mvn).append(" package -DskipTests   # package without tests\n");
+      sb.append("```\n");
+    }
   }
 
   /**
@@ -128,13 +136,20 @@ public final class ReadmeGenerator {
    * @param sb the string builder
    */
   private void appendGradleBuild(StringBuilder sb) {
+    String gradle = config.isNewProject() ? "./gradlew" : "gradle";
     sb.append("```sh\n");
-    sb.append("gradle test               # compile and test (unwoven classes)\n");
-    sb.append("gradle build              # compile, test, weave, and package\n");
-    sb.append("gradle build -x weaveClasses  # build without weaving\n");
-    sb.append("```\n\n");
-    sb.append("The `weaveClasses` task runs after tests and before `jar`.\n");
-    sb.append("Unit tests always execute against **unwoven** classes.\n");
+    if (config.needsWeaving()) {
+      sb.append(gradle).append(" test               # compile and test (unwoven classes)\n");
+      sb.append(gradle).append(" build              # compile, test, weave, and package\n");
+      sb.append(gradle).append(" build -x weaveClasses  # build without weaving\n");
+      sb.append("```\n\n");
+      sb.append("The `weaveClasses` task runs after tests and before `jar`.\n");
+      sb.append("Unit tests always execute against **unwoven** classes.\n");
+    } else {
+      sb.append(gradle).append(" test               # compile and test\n");
+      sb.append(gradle).append(" build              # compile, test, and package\n");
+      sb.append("```\n");
+    }
   }
 
   /**
@@ -152,20 +167,49 @@ public final class ReadmeGenerator {
     sb.append(runCmd).append('\n');
     sb.append("```\n\n");
 
+    if (config.isJsonRpc()) {
+      appendJsonRpcCallSection(sb);
+    }
+
     sb.append("To enable the write-ahead log (message recording, replay, event sourcing):\n\n");
     sb.append("```sh\n");
+    sb.append("# Chronicle (local, no Kafka needed)\n");
     sb.append(runCmd.replace("pal run", "pal run --wal file:./wal")).append('\n');
+    if (config.needsKafka()) {
+      sb.append("\n# Kafka\n");
+      String kafkaCmd = runCmd.replace("pal run", "pal run --wal my-wal -k localhost:29092");
+      sb.append(kafkaCmd).append('\n');
+    }
     sb.append("```\n\n");
 
     if (config.isInfra()) {
       sb.append("Before running, start the infrastructure:\n\n");
       sb.append("```sh\n");
-      sb.append("cd infra && ./start.sh\n");
+      sb.append("infra/start.sh\n");
       sb.append("```\n\n");
     }
 
     sb.append("Optionally, source `.env.pal` before running to set environment variables.\n");
     sb.append("See `pal run --help` for all available flags.\n");
+  }
+
+  /**
+   * Appends a section showing how to call JSON-RPC methods from the CLI.
+   *
+   * <p>Demonstrates piping JSON-RPC requests to {@code pal peer call} via stdin.
+   *
+   * @param sb the string builder
+   */
+  private void appendJsonRpcCallSection(StringBuilder sb) {
+    String pkg = safe(config.getPackageName());
+    sb.append("Once the peer is running, call methods from the CLI:\n\n");
+    sb.append("```sh\n");
+    sb.append("echo '{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"call\",");
+    sb.append("\"params\":{\"type\":\"").append(pkg).append(".Api\",");
+    sb.append("\"method\":\"greet\",");
+    sb.append("\"args\":[{\"type\":\"java.lang.String\",\"value\":\"World\"}]}}' | \\\n");
+    sb.append("  pal peer call ws://localhost:7070\n");
+    sb.append("```\n\n");
   }
 
   /**

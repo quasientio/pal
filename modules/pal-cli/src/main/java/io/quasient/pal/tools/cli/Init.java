@@ -30,6 +30,7 @@ import io.quasient.pal.tools.cli.init.JLinePromptProvider;
 import io.quasient.pal.tools.cli.init.PalWeaveResolver;
 import io.quasient.pal.tools.cli.init.ReadmeGenerator;
 import io.quasient.pal.tools.cli.init.SampleAppGenerator;
+import io.quasient.pal.tools.cli.init.WrapperGenerator;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -177,6 +178,24 @@ public class Init extends AbstractPalSubcommand {
       fallbackValue = "true",
       description = "App intercepts other peers via callbacks (default: ${DEFAULT-VALUE})")
   private boolean intercepting;
+
+  /** Whether to expose methods via JSON-RPC. */
+  @Option(
+      names = {"--json-rpc"},
+      negatable = true,
+      defaultValue = "false",
+      fallbackValue = "true",
+      description = "Expose methods via JSON-RPC (default: ${DEFAULT-VALUE})")
+  private boolean jsonRpc;
+
+  /** Whether AspectJ weaving is needed. */
+  @Option(
+      names = {"--weaving"},
+      negatable = true,
+      defaultValue = "true",
+      fallbackValue = "true",
+      description = "Enable AspectJ weaving (default: ${DEFAULT-VALUE})")
+  private boolean weaving;
 
   /** Whether this app uses Kafka for WAL. */
   @Option(
@@ -357,6 +376,13 @@ public class Init extends AbstractPalSubcommand {
       config = applyFlagsToWizardConfig(config);
     }
 
+    if (!config.needsWeaving() && !config.isJsonRpc()) {
+      out.println(
+          "Warning: --no-weaving without --json-rpc means PAL won't transform or expose your"
+              + " code. Did you mean --json-rpc --no-weaving?");
+      out.println();
+    }
+
     if (config.isDryRun()) {
       out.println("Dry run \u2014 no files will be written.");
       out.println();
@@ -396,7 +422,15 @@ public class Init extends AbstractPalSubcommand {
       actions.add(new FileAction("[CREATE]", f));
     }
 
-    // Step 6: README
+    // Step 6: Build-tool wrapper (new projects only)
+    if (config.isNewProject()) {
+      List<Path> wrapperFiles = new WrapperGenerator(config).generate(effectiveDir);
+      for (Path f : wrapperFiles) {
+        actions.add(new FileAction("[CREATE]", f));
+      }
+    }
+
+    // Step 7: README
     List<Path> readmeFiles = new ReadmeGenerator(config).generate(effectiveDir);
     for (Path f : readmeFiles) {
       actions.add(new FileAction("[CREATE]", f));
@@ -443,6 +477,8 @@ public class Init extends AbstractPalSubcommand {
             .targetDir(effectiveDir)
             .interceptable(interceptable)
             .intercepting(intercepting)
+            .jsonRpc(jsonRpc)
+            .weaving(weaving)
             .kafka(kafka)
             .sampleApp(sampleApp)
             .scopePolicy(scopePolicy)
@@ -609,6 +645,8 @@ public class Init extends AbstractPalSubcommand {
         .existingBuildFile(wizardConfig.getExistingBuildFile())
         .interceptable(wizardConfig.isInterceptable())
         .intercepting(wizardConfig.isIntercepting())
+        .jsonRpc(wizardConfig.isJsonRpc())
+        .weaving(wizardConfig.needsWeaving())
         .kafka(wizardConfig.isKafka())
         .sampleApp(wizardConfig.isSampleApp())
         .scopePolicy(wizardConfig.isScopePolicy())
@@ -637,7 +675,7 @@ public class Init extends AbstractPalSubcommand {
         actions.add(
             new FileAction("[CREATE]", effectiveDir.resolve(strategy.getSettingsFileName())));
       }
-    } else {
+    } else if (config.needsWeaving()) {
       Path buildFile = config.getExistingBuildFile();
       strategy.patch(config, buildFile);
       actions.add(new FileAction("[PATCH]", buildFile));
@@ -714,14 +752,18 @@ public class Init extends AbstractPalSubcommand {
 
     if (config.isInfra()) {
       String infraHint = buildInfraHint(config);
-      out.println("  " + step + ". cd infra && ./start.sh   # " + infraHint);
-      step++;
-      out.println("  " + step + ". cd ..");
+      out.println("  " + step + ". infra/start.sh            # " + infraHint);
       step++;
     }
 
-    String compileCmd = config.getBuildTool() == BuildTool.GRADLE ? "gradle build" : "mvn package";
-    out.println("  " + step + ". " + compileCmd + "              # Build with AspectJ weaving");
+    String compileCmd;
+    if (config.isNewProject()) {
+      compileCmd = config.getBuildTool() == BuildTool.GRADLE ? "./gradlew build" : "./mvnw package";
+    } else {
+      compileCmd = config.getBuildTool() == BuildTool.GRADLE ? "gradle build" : "mvn package";
+    }
+    String buildHint = config.needsWeaving() ? "Build with AspectJ weaving" : "Build";
+    out.println("  " + step + ". " + compileCmd + "              # " + buildHint);
     step++;
 
     out.println("  " + step + ". " + buildRunCommand(config));

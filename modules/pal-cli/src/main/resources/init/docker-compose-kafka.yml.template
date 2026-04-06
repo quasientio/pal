@@ -4,14 +4,9 @@
 #   cd infra && docker compose up -d
 #   cd infra && docker compose stop
 
-networks:
-  pal:
-    driver: bridge
-
 services:
   kafka:
     image: apache/kafka:3.8.0
-    networks: [pal]
     ports:
       - "9092:9092"
       - "29092:29092"

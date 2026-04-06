@@ -1,0 +1,49 @@
+package ${package};
+
+/**
+ * Sample API methods exposed via JSON-RPC.
+ *
+ * <p>These public static methods can be called remotely by any JSON-RPC
+ * client. PAL maps incoming RPC requests to method invocations automatically
+ * — no annotations or framework imports needed.
+ *
+ * <p>Example call (curl):
+ * <pre>{@code
+ * curl -X POST http://localhost:<port>/jsonrpc \
+ *   -H 'Content-Type: application/json' \
+ *   -d '{"jsonrpc":"2.0","method":"${package}.Api.greet","params":["World"],"id":1}'
+ * }</pre>
+ */
+public class Api {
+
+  /**
+   * Returns a greeting message.
+   *
+   * @param name the name to greet
+   * @return a greeting string
+   */
+  public static String greet(String name) {
+    return "Hello, " + name + "!";
+  }
+
+  /**
+   * Adds two integers.
+   *
+   * @param a the first operand
+   * @param b the second operand
+   * @return the sum
+   */
+  public static int add(int a, int b) {
+    return a + b;
+  }
+
+  /**
+   * Converts a string to uppercase.
+   *
+   * @param text the input text
+   * @return the uppercased text
+   */
+  public static String toUpperCase(String text) {
+    return text.toUpperCase();
+  }
+}

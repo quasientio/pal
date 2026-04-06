@@ -111,7 +111,7 @@ public final class ConfigGenerator {
       String content = loadTemplate("intercept-bundle.yaml.template");
       content = content.replace("${package}", packageName != null ? packageName : "");
       content = content.replace("${mainClass}", mainClass != null ? mainClass : "");
-      content = content.replace("${artifactId}", artifactId != null ? artifactId : "app");
+      content = content.replace("{{artifactId}}", artifactId != null ? artifactId : "app");
       generated.add(file);
       writeIfAllowed(file, content);
     }

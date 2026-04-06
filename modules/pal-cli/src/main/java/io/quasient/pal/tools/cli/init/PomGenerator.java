@@ -24,13 +24,10 @@ import java.nio.file.Path;
 /**
  * Generates a new Maven {@code pom.xml} for fresh PAL projects.
  *
- * <p>Loads {@code pom.xml.template} from the classpath (pre-filtered by Maven resource filtering
- * for build-time constants like the AspectJ plugin version) and substitutes runtime variables such
- * as group ID, artifact ID, project version, PAL version, and AspectJ version.
- *
- * <p>The generated {@code pom.xml} includes Java 17 compiler properties, the {@code pal-weave}
- * dependency, the {@code aspectjrt} runtime dependency, and the {@code aspectj-maven-plugin} with
- * {@code pal-weave} configured as an aspect library.
+ * <p>Loads a template from the classpath and substitutes runtime variables such as group ID,
+ * artifact ID, project version, PAL version, and AspectJ version. When {@link
+ * InitConfig#needsWeaving()} is true, uses the full template with AspectJ weaving configuration;
+ * otherwise uses a plain template with only Java 17 compiler properties.
  *
  * <p>Respects {@link InitConfig#isDryRun()}: when true, computes what would be generated but does
  * not write files.
@@ -63,7 +60,8 @@ public final class PomGenerator {
    * @throws IOException if an I/O error occurs during file writing or template loading
    */
   public void generate(Path outputDir) throws IOException {
-    String content = loadTemplate("pom.xml.template");
+    String templateName = config.needsWeaving() ? "pom.xml.template" : "pom-plain.xml.template";
+    String content = loadTemplate(templateName);
     content =
         content
             .replace("{{groupId}}", safe(config.getGroupId()))

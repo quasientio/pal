@@ -66,7 +66,8 @@ public class InitWizardTest {
         StandardCharsets.UTF_8);
 
     TestPromptProvider provider = new TestPromptProvider();
-    // Existing project prompts: interceptable, intercepting, mainClass, kafka
+    // Existing project prompts: rpc, interceptable, intercepting, mainClass, kafka
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.acme.Main"); // mainClass
@@ -97,7 +98,8 @@ public class InitWizardTest {
         StandardCharsets.UTF_8);
 
     TestPromptProvider provider = new TestPromptProvider();
-    // Existing project prompts: interceptable, intercepting, mainClass, kafka
+    // Existing project prompts: rpc, interceptable, intercepting, mainClass, kafka
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.acme.App"); // mainClass
@@ -127,6 +129,7 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
@@ -155,6 +158,7 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
@@ -219,6 +223,7 @@ public class InitWizardTest {
 
     TestPromptProvider provider = new TestPromptProvider();
     // Only intent prompts — no buildTool, groupId, artifactId, version
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.acme.OrderMain"); // mainClass
@@ -250,6 +255,7 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-gradle-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
@@ -276,6 +282,7 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(true); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
@@ -306,9 +313,10 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(true); // intercepting
-    provider.enqueueText("com.test.Main"); // mainClass
+    provider.enqueueSelect("com.test.Main"); // run mode select
     provider.enqueueYesNo(false); // kafka
 
     // When: wizard runs
@@ -317,11 +325,42 @@ public class InitWizardTest {
 
     // Then: derived flags are all true
     assertThat(config.isIntercepting(), is(true));
+    assertThat(config.getMainClass(), is("com.test.Main"));
     assertThat(config.isRpcPolicy(), is(true));
     assertThat(config.isInterceptBundle(), is(true));
     assertThat(config.isPalClient(), is(true));
     assertThat(config.needsEtcd(), is(true));
     assertThat(config.isInfra(), is(true));
+  }
+
+  /**
+   * Verifies that selecting --as-service in the run mode prompt results in no main class and
+   * as-service mode.
+   */
+  @Test
+  public void testInterceptingAsServiceViaSelect() {
+    // Given: user answers intercepting=yes and selects --as-service
+    Path dir = tempFolder.getRoot().toPath();
+
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.MAVEN); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-app"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("No"); // rpc
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(true); // intercepting
+    provider.enqueueSelect("Run as service (no main class)"); // run mode select
+    provider.enqueueYesNo(false); // kafka
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: no main class, as-service mode
+    assertThat(config.getMainClass(), is(nullValue()));
+    assertThat(config.isAsService(), is(true));
+    assertThat(config.isIntercepting(), is(true));
   }
 
   /**
@@ -337,6 +376,7 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
@@ -392,6 +432,7 @@ public class InitWizardTest {
 
     TestPromptProvider provider = new TestPromptProvider();
     // Intent prompts only
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.acme.Main"); // mainClass
@@ -420,6 +461,7 @@ public class InitWizardTest {
 
     TestPromptProvider provider = new TestPromptProvider();
     // Intent prompts only
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.acme.Main"); // mainClass
@@ -444,6 +486,7 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-app"); // artifactId
     provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
     provider.enqueueText("com.test.Main"); // mainClass
@@ -457,5 +500,97 @@ public class InitWizardTest {
     assertThat(config.needsKafka(), is(true));
     assertThat(config.needsEtcd(), is(false));
     assertThat(config.isInfra(), is(true));
+  }
+
+  /**
+   * Verifies that selecting "RPC gateway only" enables JSON-RPC, disables weaving, skips
+   * interceptable/intercepting/kafka prompts, and defaults to as-service mode.
+   */
+  @Test
+  public void testRpcGatewayOnlySetsJsonRpcAndDisablesWeaving() {
+    // Given: user selects RPC gateway only
+    Path dir = tempFolder.getRoot().toPath();
+
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.MAVEN); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-api"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("Yes, as RPC gateway (no weaving needed)"); // rpc
+    provider.enqueueSelect("Run as service (no main class)"); // run mode
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: JSON-RPC enabled, weaving disabled, as-service, no intercepts, no kafka
+    assertThat(config.isJsonRpc(), is(true));
+    assertThat(config.needsWeaving(), is(false));
+    assertThat(config.isAsService(), is(true));
+    assertThat(config.isRpcPolicy(), is(true));
+    assertThat(config.isInterceptable(), is(false));
+    assertThat(config.isIntercepting(), is(false));
+    assertThat(config.isKafka(), is(false));
+    assertThat(config.isInfra(), is(false));
+  }
+
+  /**
+   * Verifies that selecting "RPC gateway only" with a main class sets the main class and disables
+   * as-service mode.
+   */
+  @Test
+  public void testRpcGatewayOnlyWithMainClass() {
+    // Given: user selects RPC gateway only with a main class
+    Path dir = tempFolder.getRoot().toPath();
+
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.MAVEN); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-api"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("Yes, as RPC gateway (no weaving needed)"); // rpc
+    provider.enqueueSelect("com.test.Main"); // run mode — select main class
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: JSON-RPC enabled, has main class, not as-service
+    assertThat(config.isJsonRpc(), is(true));
+    assertThat(config.needsWeaving(), is(false));
+    assertThat(config.getMainClass(), is("com.test.Main"));
+    assertThat(config.isAsService(), is(false));
+  }
+
+  /**
+   * Verifies that selecting "RPC alongside message pipeline" enables JSON-RPC but keeps weaving
+   * enabled, and continues with the full intent flow.
+   */
+  @Test
+  public void testRpcWithPipelineKeepsWeaving() {
+    // Given: user selects RPC with pipeline, then interceptable=yes
+    Path dir = tempFolder.getRoot().toPath();
+
+    TestPromptProvider provider = new TestPromptProvider();
+    provider.enqueueSelect(BuildTool.MAVEN); // buildTool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("my-app"); // artifactId
+    provider.enqueueText("1.0"); // version
+    provider.enqueueSelect("Yes, alongside message pipeline"); // rpc
+    provider.enqueueYesNo(true); // interceptable
+    provider.enqueueYesNo(false); // intercepting
+    provider.enqueueText("com.test.Main"); // mainClass
+    provider.enqueueYesNo(false); // kafka
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: JSON-RPC enabled, weaving still on, interceptable set
+    assertThat(config.isJsonRpc(), is(true));
+    assertThat(config.needsWeaving(), is(true));
+    assertThat(config.isInterceptable(), is(true));
+    assertThat(config.isRpcPolicy(), is(true));
+    assertThat(config.needsEtcd(), is(true));
   }
 }

@@ -6,7 +6,10 @@
 #   pal intercept apply  -d localhost:2379 config/intercept-bundle.yaml
 #   pal intercept rm     -d localhost:2379 -f config/intercept-bundle.yaml
 
-bundle: "${artifactId}-intercepts"
+bundle: "{{artifactId}}-intercepts"
+
+defaults:
+  peer: "{{artifactId}}"
 
 intercepts:
   # Example: intercept every call to SampleService.processOrder

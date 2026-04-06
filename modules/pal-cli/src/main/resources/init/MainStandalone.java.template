@@ -1,0 +1,46 @@
+package ${package};
+
+/**
+ * Application entry point.
+ *
+ * <p>PAL transparently intercepts method calls via AspectJ weaving,
+ * so no PAL imports or annotations are needed in your code.
+ */
+public class ${mainClassName} {
+
+  /** Running order count. */
+  private int orderCount = 0;
+
+  /** Running revenue total. */
+  private double totalRevenue = 0.0;
+
+  /**
+   * Starts the application.
+   *
+   * @param args command-line arguments
+   */
+  public static void main(String[] args) {
+    ${mainClassName} app = new ${mainClassName}();
+
+    app.processOrder("Laptop", 1, 999.99);
+    app.processOrder("Mouse", 5, 29.99);
+    app.processOrder("Keyboard", 2, 79.99);
+
+    System.out.println("Orders processed: " + app.orderCount);
+    System.out.println("Total revenue: $" + String.format("%.2f", app.totalRevenue));
+  }
+
+  /**
+   * Processes an order and updates running totals.
+   *
+   * @param product  the product name
+   * @param quantity the quantity ordered
+   * @param price    the unit price
+   */
+  public void processOrder(String product, int quantity, double price) {
+    orderCount++;
+    double total = quantity * price;
+    totalRevenue += total;
+    System.out.println("Processing order: " + quantity + "x " + product + " @ $" + price);
+  }
+}

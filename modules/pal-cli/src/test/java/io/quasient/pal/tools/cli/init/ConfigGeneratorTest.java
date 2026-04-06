@@ -155,6 +155,7 @@ public class ConfigGeneratorTest {
     String content = Files.readString(bundleFile);
     assertThat(content, containsString("com.example.SampleService.processOrder"));
     assertThat(content, containsString("com.example.SampleCallbacks"));
+    assertThat("peer should match artifactId", content, containsString("peer: \"my-app\""));
   }
 
   /**

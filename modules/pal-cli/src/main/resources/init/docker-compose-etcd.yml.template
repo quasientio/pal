@@ -4,14 +4,9 @@
 #   cd infra && docker compose up -d
 #   cd infra && docker compose stop
 
-networks:
-  pal:
-    driver: bridge
-
 services:
   etcd:
     image: gcr.io/etcd-development/etcd:v3.5.21
-    networks: [pal]
     ports:
       - "2379:2379"
       - "2380:2380"

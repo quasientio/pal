@@ -76,7 +76,9 @@ public final class SampleAppGenerator {
     // Generate Main.java (skip for as-service mode)
     if (!config.isAsService()) {
       String mainClassName = extractSimpleClassName(config.getMainClass());
-      String mainContent = loadTemplate("Main.java.template");
+      String mainTemplate =
+          config.isInterceptable() ? "Main.java.template" : "MainStandalone.java.template";
+      String mainContent = loadTemplate(mainTemplate);
       mainContent = mainContent.replace("${package}", packageName);
       mainContent = mainContent.replace("${mainClassName}", mainClassName);
       Path mainFile = sourceDirPath.resolve(mainClassName + ".java");
@@ -87,11 +89,17 @@ public final class SampleAppGenerator {
       }
     }
 
-    // Generate SampleService.java
-    String serviceContent = loadTemplate("SampleService.java.template");
-    serviceContent = serviceContent.replace("${package}", packageName);
-    Path serviceFile = sourceDirPath.resolve("SampleService.java");
-    generated.add(serviceFile);
+    // Generate SampleService.java when interceptable
+    if (config.isInterceptable()) {
+      String serviceContent = loadTemplate("SampleService.java.template");
+      serviceContent = serviceContent.replace("${package}", packageName);
+      Path serviceFile = sourceDirPath.resolve("SampleService.java");
+      generated.add(serviceFile);
+      if (!config.isDryRun()) {
+        Files.createDirectories(sourceDirPath);
+        Files.writeString(serviceFile, serviceContent, StandardCharsets.UTF_8);
+      }
+    }
 
     // Generate SampleCallbacks.java when intercepting
     if (config.isIntercepting()) {
@@ -105,9 +113,16 @@ public final class SampleAppGenerator {
       }
     }
 
-    if (!config.isDryRun()) {
-      Files.createDirectories(sourceDirPath);
-      Files.writeString(serviceFile, serviceContent, StandardCharsets.UTF_8);
+    // Generate Api.java when JSON-RPC is enabled (gives users something to call)
+    if (config.isJsonRpc()) {
+      String apiContent = loadTemplate("Api.java.template");
+      apiContent = apiContent.replace("${package}", packageName);
+      Path apiFile = sourceDirPath.resolve("Api.java");
+      generated.add(apiFile);
+      if (!config.isDryRun()) {
+        Files.createDirectories(sourceDirPath);
+        Files.writeString(apiFile, apiContent, StandardCharsets.UTF_8);
+      }
     }
 
     return Collections.unmodifiableList(generated);

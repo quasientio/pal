@@ -371,6 +371,30 @@
                 <directory>src/main/resources/init</directory>
                 <filtering>true</filtering>
                 <targetPath>init</targetPath>
+                <excludes>
+                    <exclude>mvnw</exclude>
+                    <exclude>mvnw.cmd</exclude>
+                    <exclude>maven-wrapper.properties</exclude>
+                    <exclude>gradlew</exclude>
+                    <exclude>gradlew.bat</exclude>
+                    <exclude>gradle-wrapper.properties</exclude>
+                    <exclude>gradle-wrapper.jar</exclude>
+                </excludes>
+            </resource>
+            <!-- Wrapper files: no filtering (binary JAR + no ${} substitution needed) -->
+            <resource>
+                <directory>src/main/resources/init</directory>
+                <filtering>false</filtering>
+                <targetPath>init</targetPath>
+                <includes>
+                    <include>mvnw</include>
+                    <include>mvnw.cmd</include>
+                    <include>maven-wrapper.properties</include>
+                    <include>gradlew</include>
+                    <include>gradlew.bat</include>
+                    <include>gradle-wrapper.properties</include>
+                    <include>gradle-wrapper.jar</include>
+                </includes>
             </resource>
         </resources>
     </build>

@@ -77,6 +77,7 @@ public class SampleAppGeneratorTest {
             .groupId("com.example")
             .mainClass("com.example.Main")
             .packageName("com.example")
+            .interceptable(true)
             .sampleApp(true)
             .build();
     SampleAppGenerator generator = new SampleAppGenerator(config);
@@ -128,6 +129,7 @@ public class SampleAppGeneratorTest {
             .groupId("com.acme")
             .mainClass("com.acme.orders.Main")
             .packageName("com.acme.orders")
+            .interceptable(true)
             .sampleApp(true)
             .build();
     SampleAppGenerator generator = new SampleAppGenerator(config);
@@ -155,6 +157,7 @@ public class SampleAppGeneratorTest {
             .groupId("com.example")
             .mainClass("com.example.Main")
             .packageName("com.example")
+            .interceptable(true)
             .sampleApp(true)
             .build();
     SampleAppGenerator generator = new SampleAppGenerator(config);

@@ -34,11 +34,13 @@ import java.nio.file.Path;
  * <p>Several accessors are derived from intent flags rather than stored directly:
  *
  * <ul>
- *   <li>{@link #isRpcPolicy()} and {@link #isInterceptBundle()} are derived from {@link
- *       #isIntercepting()}
+ *   <li>{@link #isRpcPolicy()} is derived from {@link #isIntercepting()} or {@link #isJsonRpc()}
+ *   <li>{@link #isInterceptBundle()} is derived from {@link #isIntercepting()}
  *   <li>{@link #isInfra()} is derived from {@link #needsEtcd()} or {@link #needsKafka()}
- *   <li>{@link #isAsService()} is derived from {@link #isIntercepting()} and absence of {@link
- *       #getMainClass()}
+ *   <li>{@link #isAsService()} is derived from {@link #isIntercepting()} or {@link #isJsonRpc()}
+ *       and absence of {@link #getMainClass()}
+ *   <li>{@link #needsWeaving()} returns the {@code weaving} flag (default {@code true}, {@code
+ *       false} for RPC-gateway-only mode)
  * </ul>
  *
  * @since 1.0.0
@@ -81,6 +83,12 @@ public final class InitConfig {
   /** Whether this app intercepts other peers via callbacks. */
   private final boolean intercepting;
 
+  /** Whether to expose methods via JSON-RPC. */
+  private final boolean jsonRpc;
+
+  /** Whether AspectJ weaving is needed (false for RPC-gateway-only). */
+  private final boolean weaving;
+
   /** Whether this app uses Kafka for WAL. */
   private final boolean kafka;
 
@@ -117,6 +125,8 @@ public final class InitConfig {
     this.existingBuildFile = builder.existingBuildFile;
     this.interceptable = builder.interceptable;
     this.intercepting = builder.intercepting;
+    this.jsonRpc = builder.jsonRpc;
+    this.weaving = builder.weaving;
     this.kafka = builder.kafka;
     this.sampleApp = builder.sampleApp;
     this.scopePolicy = builder.scopePolicy;
@@ -247,6 +257,25 @@ public final class InitConfig {
   }
 
   /**
+   * Returns whether to expose methods via JSON-RPC.
+   *
+   * @return {@code true} if JSON-RPC is enabled
+   */
+  public boolean isJsonRpc() {
+    return jsonRpc;
+  }
+
+  /**
+   * Returns whether AspectJ weaving is needed. Defaults to {@code true}; only {@code false} for
+   * RPC-gateway-only mode where PAL's message pipeline is not used.
+   *
+   * @return {@code true} if weaving is needed
+   */
+  public boolean needsWeaving() {
+    return weaving;
+  }
+
+  /**
    * Returns whether this app uses Kafka for WAL.
    *
    * @return {@code true} if Kafka is used
@@ -265,12 +294,13 @@ public final class InitConfig {
   }
 
   /**
-   * Returns whether to generate an RPC policy config file. Derived from {@link #isIntercepting()}.
+   * Returns whether to generate an RPC policy config file. Derived from {@link #isIntercepting()}
+   * or {@link #isJsonRpc()}.
    *
    * @return {@code true} to generate RPC policy
    */
   public boolean isRpcPolicy() {
-    return intercepting;
+    return intercepting || jsonRpc;
   }
 
   /**
@@ -341,13 +371,13 @@ public final class InitConfig {
   }
 
   /**
-   * Returns whether this app runs in as-service mode (no main class). Derived from intercepting
-   * intent with no main class specified.
+   * Returns whether this app runs in as-service mode (no main class). Derived from intercepting or
+   * JSON-RPC intent with no main class specified.
    *
    * @return {@code true} for as-service mode
    */
   public boolean isAsService() {
-    return intercepting && (mainClass == null || mainClass.isEmpty());
+    return (intercepting || jsonRpc) && (mainClass == null || mainClass.isEmpty());
   }
 
   /**
@@ -420,18 +450,20 @@ public final class InitConfig {
       cmd.append(" --interceptable");
     }
     if (intercepting) {
+      cmd.append(" -n ").append(artifactId != null ? artifactId : "my-app");
       cmd.append(" --zmq-rpc auto");
+    }
+    if (jsonRpc) {
+      cmd.append(" --json-rpc 7070");
+    }
+    if (isRpcPolicy()) {
+      cmd.append(" --rpc-policy config/rpc-policy.yaml");
     }
     if (needsEtcd()) {
       cmd.append(" -d localhost:2379");
     }
-    if (needsKafka()) {
-      cmd.append(" -k localhost:29092");
-    }
     cmd.append(" -cp ").append(cpDir);
-    if (isAsService()) {
-      cmd.append(" --as-service");
-    } else {
+    if (!isAsService()) {
       String mc = mainClass != null ? mainClass : mainClassFallback;
       cmd.append(' ').append(mc);
     }
@@ -486,6 +518,12 @@ public final class InitConfig {
 
     /** Whether this app intercepts other peers via callbacks. */
     private boolean intercepting;
+
+    /** Whether to expose methods via JSON-RPC. */
+    private boolean jsonRpc;
+
+    /** Whether AspectJ weaving is needed. */
+    private boolean weaving = true;
 
     /** Whether this app uses Kafka for WAL. */
     private boolean kafka;
@@ -637,6 +675,29 @@ public final class InitConfig {
      */
     public Builder intercepting(boolean intercepting) {
       this.intercepting = intercepting;
+      return this;
+    }
+
+    /**
+     * Sets whether to expose methods via JSON-RPC.
+     *
+     * @param jsonRpc {@code true} to enable JSON-RPC
+     * @return this builder
+     */
+    public Builder jsonRpc(boolean jsonRpc) {
+      this.jsonRpc = jsonRpc;
+      return this;
+    }
+
+    /**
+     * Sets whether AspectJ weaving is needed.
+     *
+     * @param weaving {@code true} if weaving is needed (default), {@code false} for
+     *     RPC-gateway-only
+     * @return this builder
+     */
+    public Builder weaving(boolean weaving) {
+      this.weaving = weaving;
       return this;
     }
 
