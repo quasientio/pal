@@ -625,6 +625,7 @@ public class InitTest {
     assertThat("Help should show weaving option", help, containsString("weaving"));
     assertThat("Help should show --force", help, containsString("--force"));
     assertThat("Help should show sample-app option", help, containsString("sample-app"));
+    assertThat("Help should show --all option", help, containsString("--all"));
   }
 
   // ---------------------------------------------------------------------------

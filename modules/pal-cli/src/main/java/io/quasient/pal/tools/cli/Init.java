@@ -197,6 +197,12 @@ public class Init extends AbstractPalSubcommand {
       description = "Enable AspectJ weaving (default: ${DEFAULT-VALUE})")
   private boolean weaving;
 
+  /** Enable all features (interceptable, intercepting, JSON-RPC, Kafka, scope policy). */
+  @Option(
+      names = {"--all"},
+      description = "Enable all PAL features")
+  private boolean all;
+
   /** Whether this app uses Kafka for WAL. */
   @Option(
       names = {"--kafka"},
@@ -295,6 +301,11 @@ public class Init extends AbstractPalSubcommand {
       }
     }
 
+    if (all) {
+      nonInteractive = true;
+      applyAllDefaults();
+    }
+
     if (nonInteractive) {
       validateNonInteractiveFlags();
     }
@@ -324,6 +335,24 @@ public class Init extends AbstractPalSubcommand {
             "Missing required option '--main-class' for non-interactive mode on new projects"
                 + " (or use --as-service).");
       }
+    }
+  }
+
+  /**
+   * Applies sensible defaults for fields not explicitly set when {@code --all} is used. Derives
+   * artifact ID from the target directory name, group ID defaults to {@code "com.example"}, and
+   * main class defaults to {@code groupId + ".Main"}.
+   */
+  private void applyAllDefaults() {
+    if (artifactId == null) {
+      Path dir = resolveTargetDir();
+      artifactId = dir.getFileName().toString();
+    }
+    if (groupId == null) {
+      groupId = "com.example";
+    }
+    if (mainClass == null && !asService) {
+      mainClass = groupId + ".Main";
     }
   }
 
@@ -464,6 +493,14 @@ public class Init extends AbstractPalSubcommand {
    * @return the constructed config
    */
   InitConfig buildConfigFromFlags() {
+    if (all) {
+      interceptable = true;
+      intercepting = true;
+      jsonRpc = true;
+      kafka = true;
+      scopePolicy = true;
+    }
+
     Path effectiveDir = resolveTargetDir();
     BuildTool buildTool = resolveBuildTool();
 

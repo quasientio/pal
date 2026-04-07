@@ -1571,6 +1571,112 @@ public class InitEndToEndTest {
   }
 
   // ---------------------------------------------------------------------------
+  // --all flag tests
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Verifies that {@code --all} implies non-interactive, derives defaults from the directory name,
+   * and enables every PAL feature. The generated project should include all config files, infra
+   * (etcd + Kafka), sample sources (Main, SampleService, SampleCallbacks, Api), and a README
+   * covering all capabilities — without requiring explicit group-id, artifact-id, or main-class.
+   */
+  @Test
+  public void testAllFlagEnablesEverything() throws Exception {
+    Path dir = tempFolder.getRoot().toPath().resolve("my-app");
+    int exitCode = executeInit("--all", dir.toString());
+    assertThat(exitCode, is(0));
+
+    // Defaults derived from directory name
+    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("artifactId from dir name", pomContent, containsString("<artifactId>my-app"));
+    assertThat("default groupId", pomContent, containsString("<groupId>com.example"));
+
+    // Build file: full pom with pal-weave, aspectj, and pal-client
+    assertThat("pom.xml should have pal-weave", pomContent, containsString("pal-weave"));
+    assertThat(
+        "pom.xml should have aspectj plugin", pomContent, containsString("aspectj-maven-plugin"));
+    assertThat("pom.xml should have pal-client", pomContent, containsString("pal-client"));
+
+    // All sample sources generated (package com.example)
+    Path srcDir = dir.resolve("src/main/java/com/example");
+    assertTrue("Main.java should exist", Files.exists(srcDir.resolve("Main.java")));
+    assertTrue(
+        "SampleService.java should exist", Files.exists(srcDir.resolve("SampleService.java")));
+    assertTrue(
+        "SampleCallbacks.java should exist", Files.exists(srcDir.resolve("SampleCallbacks.java")));
+    assertTrue("Api.java should exist", Files.exists(srcDir.resolve("Api.java")));
+
+    // All config files
+    assertTrue("rpc-policy.yaml should exist", Files.exists(dir.resolve("config/rpc-policy.yaml")));
+    assertTrue(
+        "intercept-bundle.yaml should exist",
+        Files.exists(dir.resolve("config/intercept-bundle.yaml")));
+    assertTrue(
+        "recording-scope.yaml should exist",
+        Files.exists(dir.resolve("config/recording-scope.yaml")));
+    assertTrue(
+        "peer-logging.xml should exist", Files.exists(dir.resolve("config/peer-logging.xml")));
+
+    // Infra: etcd + Kafka
+    Path composeFile = dir.resolve("infra/docker-compose.yml");
+    assertTrue("docker-compose.yml should exist", Files.exists(composeFile));
+    String compose = Files.readString(composeFile, StandardCharsets.UTF_8);
+    assertThat("Compose should have etcd", compose, containsString("etcd"));
+    assertThat("Compose should have kafka", compose, containsString("kafka"));
+
+    // .env.pal includes all sections
+    String envContent = Files.readString(dir.resolve(".env.pal"), StandardCharsets.UTF_8);
+    assertThat("env should have WAL section", envContent, containsString("PAL_WAL"));
+    assertThat("env should have etcd section", envContent, containsString("PAL_DIRECTORY"));
+    assertThat("env should have Kafka section", envContent, containsString("PAL_KAFKA_SERVERS"));
+    assertThat("env should have logging section", envContent, containsString("PAL_PEER_LOGGING"));
+
+    // README covers all capabilities
+    String readme = Files.readString(dir.resolve("README.md"), StandardCharsets.UTF_8);
+    assertThat("README should mention pal peer call", readme, containsString("pal peer call"));
+    assertThat("README should mention Kafka WAL", readme, containsString("Kafka"));
+    assertThat("README should mention infra", readme, containsString("infra/start.sh"));
+
+    // Next steps should include all flags
+    String output = outWriter.toString();
+    assertThat("Should mention --interceptable", output, containsString("--interceptable"));
+    assertThat("Should mention --json-rpc 7070", output, containsString("--json-rpc 7070"));
+    assertThat(
+        "Should mention --rpc-policy",
+        output,
+        containsString("--rpc-policy config/rpc-policy.yaml"));
+    assertThat("Should mention infra/start.sh", output, containsString("infra/start.sh"));
+    assertThat("Should mention etcd + Kafka", output, containsString("etcd + Kafka"));
+  }
+
+  /**
+   * Verifies that {@code --all} with explicit overrides uses the provided values instead of
+   * defaults.
+   */
+  @Test
+  public void testAllFlagWithExplicitOverrides() throws Exception {
+    Path dir = tempFolder.newFolder("custom-all").toPath();
+    int exitCode =
+        executeInit(
+            "--all",
+            "--group-id",
+            "com.acme",
+            "--artifact-id",
+            "acme-app",
+            "--main-class",
+            "com.acme.App",
+            dir.toString());
+    assertThat(exitCode, is(0));
+
+    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
+    assertThat("explicit groupId used", pomContent, containsString("<groupId>com.acme"));
+    assertThat("explicit artifactId used", pomContent, containsString("<artifactId>acme-app"));
+
+    Path srcDir = dir.resolve("src/main/java/com/acme");
+    assertTrue("App.java from explicit main-class", Files.exists(srcDir.resolve("App.java")));
+  }
+
+  // ---------------------------------------------------------------------------
   // Utility methods
   // ---------------------------------------------------------------------------
 
