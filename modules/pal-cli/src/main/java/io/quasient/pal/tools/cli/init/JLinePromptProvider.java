@@ -61,6 +61,9 @@ public final class JLinePromptProvider implements PromptProvider {
   /** ANSI escape: move cursor to beginning of line. */
   private static final String CARRIAGE_RETURN = "\r";
 
+  /** Ctrl+C / ETX character. */
+  private static final int CTRL_C = 3;
+
   /** Escape character (0x1B). */
   private static final int ESC = 27;
 
@@ -194,7 +197,8 @@ public final class JLinePromptProvider implements PromptProvider {
     try {
       return lineReader.readLine(prompt);
     } catch (UserInterruptException e) {
-      return null;
+      abort();
+      return null; // unreachable
     } catch (EndOfFileException e) {
       return null;
     }
@@ -234,6 +238,11 @@ public final class JLinePromptProvider implements PromptProvider {
         }
         if (ch == NonBlockingReader.EOF) {
           break;
+        }
+
+        if (ch == CTRL_C) {
+          terminal.setAttributes(savedAttributes);
+          abort();
         }
 
         if (ch == ENTER_CR || ch == ENTER_LF) {
@@ -355,6 +364,16 @@ public final class JLinePromptProvider implements PromptProvider {
       }
     }
     return options.get(defaultIndex);
+  }
+
+  /**
+   * Aborts the wizard on Ctrl+C by throwing {@link UserAbortException}.
+   *
+   * @throws UserAbortException always
+   */
+  private void abort() {
+    out.println();
+    throw new UserAbortException();
   }
 
   /**

@@ -346,7 +346,8 @@ public class Init extends AbstractPalSubcommand {
   private void applyAllDefaults() {
     if (artifactId == null) {
       Path dir = resolveTargetDir();
-      artifactId = dir.getFileName().toString();
+      Path dirName = dir.getFileName();
+      artifactId = dirName != null ? dirName.toString() : "my-pal-app";
     }
     if (groupId == null) {
       groupId = "com.example";
