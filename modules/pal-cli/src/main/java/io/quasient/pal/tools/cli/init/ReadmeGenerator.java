@@ -153,7 +153,7 @@ public final class ReadmeGenerator {
   }
 
   /**
-   * Appends the run section with a {@code pal run} command.
+   * Appends the run section with progressive {@code pal run} examples, from basic to full-featured.
    *
    * @param sb the string builder
    * @param mainClass the resolved main class name
@@ -161,29 +161,69 @@ public final class ReadmeGenerator {
   private void appendRunSection(StringBuilder sb, String mainClass) {
     String cpDir =
         config.getBuildTool() == BuildTool.GRADLE ? "build/classes/java/main" : "target/classes";
+    String cpOnly = " -cp " + cpDir;
+    String tail = cpOnly;
+    if (mainClass != null && !config.isAsService()) {
+      tail += " " + mainClass;
+    }
 
-    String runCmd = buildRunCommand(cpDir, mainClass);
+    // 1. Basic
     sb.append("```sh\n");
-    sb.append(runCmd).append('\n');
-    sb.append("```\n\n");
+    sb.append("pal run").append(tail).append('\n');
+    sb.append("```\n");
 
+    // 2. WAL examples (always shown — fundamental PAL feature)
+    sb.append("\n### Write-ahead log\n\n");
+    sb.append("Record every operation for replay, debugging, and event sourcing:\n\n");
+    sb.append("```sh\n");
+    sb.append("# Chronicle (local, no infrastructure needed)\n");
+    sb.append("pal run --wal file:./wal").append(tail).append('\n');
+    sb.append('\n');
+    sb.append("# Kafka (distributed)\n");
+    sb.append("pal run --wal my-wal -k localhost:29092").append(tail).append('\n');
+    sb.append("```\n");
+
+    // 3. JSON-RPC
     if (config.isJsonRpc()) {
+      sb.append("\n### JSON-RPC\n\n");
+      sb.append("Expose methods via JSON-RPC:\n\n");
+      sb.append("```sh\n");
+      sb.append("pal run --json-rpc 7070 --rpc-policy config/rpc-policy.yaml")
+          .append(cpOnly)
+          .append('\n');
+      sb.append("```\n\n");
       appendJsonRpcCallSection(sb);
     }
 
-    sb.append("To enable the write-ahead log (message recording, replay, event sourcing):\n\n");
-    sb.append("```sh\n");
-    sb.append("# Chronicle (local, no Kafka needed)\n");
-    sb.append(runCmd.replace("pal run", "pal run --wal file:./wal")).append('\n');
-    if (config.needsKafka()) {
-      sb.append("\n# Kafka\n");
-      String kafkaCmd = runCmd.replace("pal run", "pal run --wal my-wal -k localhost:29092");
-      sb.append(kafkaCmd).append('\n');
+    // 4. Interception
+    if (config.isInterceptable() && config.isIntercepting()) {
+      appendInterceptionWorkflow(sb, cpOnly);
+    } else {
+      if (config.isInterceptable()) {
+        sb.append("\n### Interceptable peer\n\n");
+        sb.append("Allow other peers to intercept this app's operations at runtime:\n\n");
+        sb.append("```sh\n");
+        sb.append("pal run --interceptable -d localhost:2379").append(tail).append('\n');
+        sb.append("```\n");
+      }
+      if (config.isIntercepting()) {
+        String name = safe(config.getArtifactId());
+        if (name.isEmpty()) {
+          name = "my-app";
+        }
+        sb.append("\n### Intercepting peer\n\n");
+        sb.append("Intercept other peers' operations (ZMQ-RPC required for callbacks):\n\n");
+        sb.append("```sh\n");
+        sb.append("pal run -n ").append(name);
+        sb.append(" --zmq-rpc auto --rpc-policy config/rpc-policy.yaml");
+        sb.append(" -d localhost:2379").append(tail).append('\n');
+        sb.append("```\n");
+      }
     }
-    sb.append("```\n\n");
 
+    // Infrastructure note
     if (config.isInfra()) {
-      sb.append("Before running, start the infrastructure:\n\n");
+      sb.append("\nBefore using etcd or Kafka, start the infrastructure:\n\n");
       sb.append("```sh\n");
       sb.append("infra/start.sh\n");
       sb.append("```\n\n");
@@ -202,25 +242,72 @@ public final class ReadmeGenerator {
    */
   private void appendJsonRpcCallSection(StringBuilder sb) {
     String pkg = safe(config.getPackageName());
-    sb.append("Once the peer is running, call methods from the CLI:\n\n");
+    sb.append("Call a method from the CLI:\n\n");
     sb.append("```sh\n");
     sb.append("echo '{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"call\",");
     sb.append("\"params\":{\"type\":\"").append(pkg).append(".Api\",");
     sb.append("\"method\":\"greet\",");
     sb.append("\"args\":[{\"type\":\"java.lang.String\",\"value\":\"World\"}]}}' | \\\n");
     sb.append("  pal peer call ws://localhost:7070\n");
-    sb.append("```\n\n");
+    sb.append("```\n");
   }
 
   /**
-   * Builds the {@code pal run} command string with intent-aware flags.
+   * Appends a full interception workflow showing how to start two peers, apply an intercept bundle,
+   * and verify the callback fires.
    *
-   * @param cpDir the classpath directory
-   * @param mainClass the main class name fallback
-   * @return the formatted run command
+   * <p>This is used when both {@code interceptable} and {@code intercepting} are enabled, giving
+   * the user a complete runnable example with three terminals.
+   *
+   * @param sb the string builder
+   * @param cpOnly the classpath flag (e.g., {@code " -cp target/classes"})
    */
-  private String buildRunCommand(String cpDir, String mainClass) {
-    return config.buildRunCommand(cpDir, mainClass);
+  private void appendInterceptionWorkflow(StringBuilder sb, String cpOnly) {
+    String name = safe(config.getArtifactId());
+    if (name.isEmpty()) {
+      name = "my-app";
+    }
+    String pkg = safe(config.getPackageName());
+
+    sb.append("\n### Interception\n\n");
+    sb.append("Intercept operations at runtime. This example registers a BEFORE\n");
+    sb.append("intercept on `processOrder` — the callback fires before each call.\n\n");
+
+    // Terminal 1: target peer
+    sb.append("**Terminal 1** — start the target peer (interceptable):\n\n");
+    sb.append("```sh\n");
+    sb.append("pal run --interceptable --json-rpc 7070 \\\n");
+    sb.append("  --rpc-policy config/rpc-policy.yaml -d localhost:2379")
+        .append(cpOnly)
+        .append('\n');
+    sb.append("```\n\n");
+
+    // Terminal 2: callback peer
+    sb.append("**Terminal 2** — start the callback peer:\n\n");
+    sb.append("```sh\n");
+    sb.append("pal run -n ").append(name);
+    sb.append(" --zmq-rpc auto --rpc-policy config/rpc-policy.yaml \\\n");
+    sb.append("  -d localhost:2379").append(cpOnly).append('\n');
+    sb.append("```\n\n");
+
+    // Terminal 3: apply + call
+    sb.append("**Terminal 3** — apply the intercept bundle, then call the method:\n\n");
+    sb.append("```sh\n");
+    sb.append("pal -d localhost:2379 intercept apply config/intercept-bundle.yaml\n\n");
+    sb.append("echo '{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"call\",");
+    sb.append("\"params\":{\"type\":\"").append(pkg).append(".SampleService\",");
+    sb.append("\"method\":\"processOrder\",");
+    sb.append("\"args\":[{\"type\":\"java.lang.String\",\"value\":\"Laptop\"},");
+    sb.append("{\"type\":\"int\",\"value\":\"1\"},");
+    sb.append("{\"type\":\"double\",\"value\":\"999.99\"}]}}' | \\\n");
+    sb.append("  pal peer call ws://localhost:7070\n");
+    sb.append("```\n\n");
+
+    // Expected output
+    sb.append("Terminal 2 shows the callback:\n\n");
+    sb.append("```\n");
+    sb.append("[intercept] BEFORE callback, args=[Laptop, 1, 999.99]\n");
+    sb.append("```\n");
   }
 
   /**

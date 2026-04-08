@@ -154,8 +154,8 @@ public class Init extends AbstractPalSubcommand {
   /** Build tool selection. */
   @Option(
       names = {"--build-tool"},
-      paramLabel = "maven|gradle",
-      description = "Build tool: maven or gradle (default: auto-detect or maven)")
+      paramLabel = "gradle|maven",
+      description = "Build tool: gradle or maven (default: auto-detect or gradle)")
   private String buildToolStr;
 
   /** Skip interactive prompts and use flags/defaults. */
@@ -589,7 +589,7 @@ public class Init extends AbstractPalSubcommand {
     if (detectedBuildTool != null) {
       return detectedBuildTool;
     }
-    return BuildTool.MAVEN;
+    return BuildTool.GRADLE;
   }
 
   /**
@@ -870,12 +870,6 @@ public class Init extends AbstractPalSubcommand {
       step++;
     }
 
-    if (config.isInfra()) {
-      String infraHint = buildInfraHint(config);
-      out.println("  " + step + ". infra/start.sh            # " + infraHint);
-      step++;
-    }
-
     String compileCmd;
     if (config.isNewProject()) {
       compileCmd = config.getBuildTool() == BuildTool.GRADLE ? "./gradlew build" : "./mvnw package";
@@ -890,27 +884,11 @@ public class Init extends AbstractPalSubcommand {
     step++;
 
     out.println();
-    out.println("See README.md for more options (WAL, interception, etc.).");
+    out.println("See README.md for WAL, interception, JSON-RPC examples, and more.");
   }
 
   /**
-   * Builds a hint string describing what infrastructure will be started.
-   *
-   * @param config the init configuration
-   * @return the hint string
-   */
-  private String buildInfraHint(InitConfig config) {
-    if (config.needsEtcd() && config.needsKafka()) {
-      return "Start etcd + Kafka";
-    } else if (config.needsEtcd()) {
-      return "Start etcd";
-    } else {
-      return "Start Kafka";
-    }
-  }
-
-  /**
-   * Builds the {@code pal run} command string with flags matching the user's intent.
+   * Builds the basic {@code pal run} command string.
    *
    * @param config the init configuration
    * @return the formatted run command

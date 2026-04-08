@@ -438,7 +438,7 @@ public final class InitConfig {
   }
 
   /**
-   * Builds a {@code pal run} command string with intent-aware flags.
+   * Builds the basic {@code pal run} command: just the classpath and main class.
    *
    * @param cpDir the classpath directory (e.g., {@code "target/classes"})
    * @param mainClassFallback the main class to use when {@link #getMainClass()} is {@code null}
@@ -446,22 +446,6 @@ public final class InitConfig {
    */
   public String buildRunCommand(String cpDir, String mainClassFallback) {
     StringBuilder cmd = new StringBuilder("pal run");
-    if (interceptable) {
-      cmd.append(" --interceptable");
-    }
-    if (intercepting) {
-      cmd.append(" -n ").append(artifactId != null ? artifactId : "my-app");
-      cmd.append(" --zmq-rpc auto");
-    }
-    if (jsonRpc) {
-      cmd.append(" --json-rpc 7070");
-    }
-    if (isRpcPolicy()) {
-      cmd.append(" --rpc-policy config/rpc-policy.yaml");
-    }
-    if (needsEtcd()) {
-      cmd.append(" -d localhost:2379");
-    }
     cmd.append(" -cp ").append(cpDir);
     if (!isAsService()) {
       String mc = mainClass != null ? mainClass : mainClassFallback;

@@ -24,23 +24,14 @@ This guide shows you how to develop PAL applications locally without setting up 
 
 The fastest way to set up a local PAL project is with `pal init`:
 
-**Maven:**
-
 ```bash
 pal init my-local-app
 cd my-local-app
-mvn package
-pal run -cp target/classes com.example.Main
-```
-
-**Gradle:**
-
-```bash
-pal init my-local-app --build-tool gradle
-cd my-local-app
-gradle build
+./gradlew build
 pal run -cp build/classes/java/main com.example.Main
 ```
+
+For Maven, use `pal init my-local-app --build-tool maven`, then `./mvnw package` and `-cp target/classes`.
 
 For an existing project, run `pal init` in the project directory to patch your build file:
 
@@ -58,7 +49,7 @@ For full control over the build configuration, see the [Manual Setup](#manual-se
 **Required**:
 
 - JDK 17 or later (set `JAVA_HOME`)
-- Maven 3.x or Gradle
+- Gradle or Maven 3.x
 - PAL installed and on PATH
 
 **Not required**:

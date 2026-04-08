@@ -276,7 +276,7 @@ public class InitTest {
             dir.toString());
     assertThat(exitCode, is(0));
     assertTrue("Directory should be created", Files.isDirectory(dir));
-    assertTrue("pom.xml should be generated", Files.exists(dir.resolve("pom.xml")));
+    assertTrue("build.gradle should be generated", Files.exists(dir.resolve("build.gradle")));
   }
 
   // ---------------------------------------------------------------------------

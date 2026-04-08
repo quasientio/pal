@@ -543,13 +543,10 @@ public class InitEndToEndTest {
         bundleContent,
         containsString("peer: \"test-app\""));
 
-    // Run command in next-steps should include -n with artifact ID and no main class
-    String output = outWriter.toString();
-    assertThat("Output should include -n with artifact ID", output, containsString("-n test-app"));
-    assertThat(
-        "Output should end pal run command with -cp, no main class",
-        output,
-        containsString("-cp target/classes\n"));
+    // README intercepting example should include -n with artifact ID
+    String readme = Files.readString(dir.resolve("README.md"), StandardCharsets.UTF_8);
+    assertThat("README should include -n with artifact ID", readme, containsString("-n test-app"));
+    assertThat("README should mention --zmq-rpc auto", readme, containsString("--zmq-rpc auto"));
   }
 
   /**
@@ -956,7 +953,7 @@ public class InitEndToEndTest {
     assertThat(exitCode, is(0));
 
     assertTrue("Directory should be created", Files.isDirectory(dir));
-    assertTrue("pom.xml should exist in new dir", Files.exists(dir.resolve("pom.xml")));
+    assertTrue("build.gradle should exist in new dir", Files.exists(dir.resolve("build.gradle")));
   }
 
   /**
@@ -1421,15 +1418,11 @@ public class InitEndToEndTest {
     String readme = Files.readString(dir.resolve("README.md"), StandardCharsets.UTF_8);
     assertThat("README should mention pal peer call", readme, containsString("pal peer call"));
 
-    // Next steps mention --json-rpc 7070 and --rpc-policy
-    String output = outWriter.toString();
-    assertThat("Should mention --json-rpc 7070", output, containsString("--json-rpc 7070"));
-    assertThat(
-        "Should mention --rpc-policy",
-        output,
-        containsString("--rpc-policy config/rpc-policy.yaml"));
+    // README should contain JSON-RPC example
+    assertThat("README should mention --json-rpc 7070", readme, containsString("--json-rpc 7070"));
 
     // Build hint should NOT mention weaving
+    String output = outWriter.toString();
     assertThat(
         "Should NOT mention AspectJ weaving", output, not(containsString("AspectJ weaving")));
   }
@@ -1501,15 +1494,12 @@ public class InitEndToEndTest {
     assertTrue(
         "Api.java should exist", Files.exists(dir.resolve("src/main/java/com/test/Api.java")));
 
-    // Next steps mention --json-rpc 7070 and --rpc-policy
-    String output = outWriter.toString();
-    assertThat("Should mention --json-rpc 7070", output, containsString("--json-rpc 7070"));
-    assertThat(
-        "Should mention --rpc-policy",
-        output,
-        containsString("--rpc-policy config/rpc-policy.yaml"));
+    // README contains JSON-RPC example and RPC policy
+    String readme = Files.readString(dir.resolve("README.md"), StandardCharsets.UTF_8);
+    assertThat("README should mention --json-rpc 7070", readme, containsString("--json-rpc 7070"));
 
     // Build hint should mention weaving
+    String output = outWriter.toString();
     assertThat("Should mention AspectJ weaving", output, containsString("AspectJ weaving"));
   }
 
@@ -1587,15 +1577,14 @@ public class InitEndToEndTest {
     assertThat(exitCode, is(0));
 
     // Defaults derived from directory name
-    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
-    assertThat("artifactId from dir name", pomContent, containsString("<artifactId>my-app"));
-    assertThat("default groupId", pomContent, containsString("<groupId>com.example"));
+    String buildContent = Files.readString(dir.resolve("build.gradle"), StandardCharsets.UTF_8);
+    assertThat("default group", buildContent, containsString("com.example"));
 
-    // Build file: full pom with pal-weave, aspectj, and pal-client
-    assertThat("pom.xml should have pal-weave", pomContent, containsString("pal-weave"));
+    // Build file: full build.gradle with pal-weave, aspectj, and pal-client
+    assertThat("build.gradle should have pal-weave", buildContent, containsString("pal-weave"));
     assertThat(
-        "pom.xml should have aspectj plugin", pomContent, containsString("aspectj-maven-plugin"));
-    assertThat("pom.xml should have pal-client", pomContent, containsString("pal-client"));
+        "build.gradle should have aspectj weaving", buildContent, containsString("aspectjtools"));
+    assertThat("build.gradle should have pal-client", buildContent, containsString("pal-client"));
 
     // All sample sources generated (package com.example)
     Path srcDir = dir.resolve("src/main/java/com/example");
@@ -1637,16 +1626,23 @@ public class InitEndToEndTest {
     assertThat("README should mention Kafka WAL", readme, containsString("Kafka"));
     assertThat("README should mention infra", readme, containsString("infra/start.sh"));
 
-    // Next steps should include all flags
-    String output = outWriter.toString();
-    assertThat("Should mention --interceptable", output, containsString("--interceptable"));
-    assertThat("Should mention --json-rpc 7070", output, containsString("--json-rpc 7070"));
+    // README should contain progressive examples for all features
+    assertThat("README should mention --interceptable", readme, containsString("--interceptable"));
+    assertThat("README should mention --json-rpc 7070", readme, containsString("--json-rpc 7070"));
     assertThat(
-        "Should mention --rpc-policy",
-        output,
+        "README should mention --rpc-policy",
+        readme,
         containsString("--rpc-policy config/rpc-policy.yaml"));
-    assertThat("Should mention infra/start.sh", output, containsString("infra/start.sh"));
-    assertThat("Should mention etcd + Kafka", output, containsString("etcd + Kafka"));
+    assertThat("README should mention --zmq-rpc auto", readme, containsString("--zmq-rpc auto"));
+    assertThat("README should mention infra/start.sh", readme, containsString("infra/start.sh"));
+
+    // Interception workflow: multi-terminal walkthrough
+    assertThat(
+        "README should show intercept apply command", readme, containsString("intercept apply"));
+    assertThat(
+        "README should show expected callback output",
+        readme,
+        containsString("[intercept] BEFORE callback"));
   }
 
   /**
@@ -1668,9 +1664,8 @@ public class InitEndToEndTest {
             dir.toString());
     assertThat(exitCode, is(0));
 
-    String pomContent = Files.readString(dir.resolve("pom.xml"), StandardCharsets.UTF_8);
-    assertThat("explicit groupId used", pomContent, containsString("<groupId>com.acme"));
-    assertThat("explicit artifactId used", pomContent, containsString("<artifactId>acme-app"));
+    String buildContent = Files.readString(dir.resolve("build.gradle"), StandardCharsets.UTF_8);
+    assertThat("explicit group used", buildContent, containsString("com.acme"));
 
     Path srcDir = dir.resolve("src/main/java/com/acme");
     assertTrue("App.java from explicit main-class", Files.exists(srcDir.resolve("App.java")));

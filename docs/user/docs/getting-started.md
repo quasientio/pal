@@ -88,8 +88,8 @@ The interactive wizard guides you through the setup:
 Welcome to PAL! Let's set up your project.
 
 ? Build tool:
-  ❯ Maven
-    Gradle
+  ❯ Gradle
+    Maven
 
 ? Project group ID: [com.example]
 ? Project artifact ID: [pal-tutorial]
@@ -99,7 +99,8 @@ Welcome to PAL! Let's set up your project.
 ? Main class (for pal run): [com.example.Main]
 ? Will you use Kafka for WAL (write-ahead log)? [y/N]
 
-  ✓ Created pom.xml with AspectJ weaving
+  ✓ Created build.gradle with AspectJ weaving
+  ✓ Created settings.gradle
   ✓ Created src/main/java/com/example/Main.java
   ✓ Created src/main/java/com/example/SampleService.java
   ✓ Created config/peer-logging.xml
@@ -109,8 +110,8 @@ Welcome to PAL! Let's set up your project.
 
 Next steps:
   1. cd pal-tutorial
-  2. mvn package
-  3. pal run -cp target/classes com.example.Main
+  2. ./gradlew build
+  3. pal run -cp build/classes/java/main com.example.Main
 ```
 
 For scripted or CI environments, use non-interactive mode:
@@ -132,10 +133,10 @@ pal init pal-tutorial --dry-run
 
 ```bash
 cd pal-tutorial
-mvn clean compile
+./gradlew build
 
 # Verify AspectJ weaving worked
-javap -c target/classes/com/example/SampleService.class | grep aspectOf
+javap -c build/classes/java/main/com/example/SampleService.class | grep aspectOf
 
 # You should see references to PAL aspects
 ```
@@ -147,7 +148,7 @@ Let's start simple: run with Chronicle Queue (no Kafka/etcd needed).
 ```bash
 # Run the application with PAL
 pal run --wal file:/tmp/tutorial-wal --json-rpc auto \
-  -cp target/classes \
+  -cp build/classes/java/main \
   com.example.Main
 ```
 
@@ -239,7 +240,7 @@ You can replay the execution from the log:
 
 ```bash
 # Replay from the log (no Main.main() args needed)
-pal run --source-log file:/tmp/tutorial-wal -cp target/classes
+pal run --source-log file:/tmp/tutorial-wal -cp build/classes/java/main
 ```
 
 You'll see the same output as before, but this time it's being replayed from messages, not executed from Main.main().
@@ -276,11 +277,11 @@ A backup of your original build file is created automatically (`pom.xml.backup` 
 pal init --dry-run
 ```
 
-For Gradle projects, the same flow applies:
+For Gradle projects, the same flow applies — `pal init` auto-detects `build.gradle`:
 
 ```bash
 cd my-gradle-project
-pal init --build-tool gradle
+pal init
 ```
 
 ## Manual Setup (Alternative)
@@ -685,11 +686,11 @@ pal run --wal file:/tmp/tutorial-wal -cp app.jar Main
 ### AspectJ Weaving Not Working
 
 ```bash
-# Verify weaving
-javap -c target/classes/tutorial/OrderService.class | grep aspectOf
+# Verify weaving (adjust path for your build tool)
+javap -c build/classes/java/main/tutorial/OrderService.class | grep aspectOf
 
-# If nothing found, check pom.xml has aspectj-maven-plugin
-# And pal-weave in aspectLibraries
+# If nothing found, check your build file includes pal-weave
+# and the AspectJ weaving configuration
 ```
 
 ### Interception Not Working

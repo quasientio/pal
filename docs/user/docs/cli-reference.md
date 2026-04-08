@@ -288,7 +288,7 @@ pal init -y --group-id com.example   # Non-interactive mode with flags
 
 | Option | Description |
 |--------|-------------|
-| `--build-tool <maven\|gradle>` | Build tool selection (default: auto-detect from existing project, or `maven` for new projects) |
+| `--build-tool <gradle\|maven>` | Build tool selection (default: auto-detect from existing project, or `gradle` for new projects) |
 | `-y, --non-interactive` | Skip interactive prompts, use defaults and flag values |
 
 #### Intent Flags
@@ -338,7 +338,7 @@ These flags declare what your application needs. Everything else — infrastruct
 
 ### Examples
 
-#### New Maven Project
+#### New Project (Gradle, default)
 
 ```bash
 # Interactive wizard
@@ -351,15 +351,15 @@ pal init my-pal-app -y \
   --main-class com.example.Main
 ```
 
-#### New Gradle Project
+#### New Maven Project
 
 ```bash
-# Interactive wizard with Gradle
-pal init my-pal-app --build-tool gradle
+# Interactive wizard with Maven
+pal init my-pal-app --build-tool maven
 
 # Non-interactive
 pal init my-pal-app -y \
-  --build-tool gradle \
+  --build-tool maven \
   --group-id com.example \
   --artifact-id my-pal-app \
   --main-class com.example.Main
@@ -368,12 +368,9 @@ pal init my-pal-app -y \
 #### Existing Project
 
 ```bash
-# Patch an existing Maven project in the current directory
+# Patch an existing project in the current directory (auto-detects build tool)
 cd my-existing-project
 pal init
-
-# Patch an existing Gradle project
-pal init --build-tool gradle
 ```
 
 #### Interceptable App (etcd infrastructure)

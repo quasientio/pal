@@ -11,6 +11,7 @@ java {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -37,8 +38,8 @@ tasks.register('weaveClasses', JavaExec) {
         '-aspectpath', configurations.aspect.asPath,
         '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
         '-classpath', sourceSets.main.compileClasspath.asPath,
-        '-source', sourceCompatibility.toString(),
-        '-target', targetCompatibility.toString(),
+        '-source', java.sourceCompatibility.toString(),
+        '-target', java.targetCompatibility.toString(),
     ]
 }
 
