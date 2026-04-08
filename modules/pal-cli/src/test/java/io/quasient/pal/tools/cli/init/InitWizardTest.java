@@ -593,4 +593,102 @@ public class InitWizardTest {
     assertThat(config.isRpcPolicy(), is(true));
     assertThat(config.needsEtcd(), is(true));
   }
+
+  // ---------------------------------------------------------------------------
+  // CLI flag override tests
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Verifies that CLI flag overrides skip the corresponding wizard prompts. When {@code --group-id}
+   * and {@code --interceptable} are provided, the wizard should not prompt for them.
+   */
+  @Test
+  public void testOverridesSkipPrompts() throws IOException {
+    Path dir = tempFolder.newFolder("overrides").toPath();
+    TestPromptProvider provider = new TestPromptProvider();
+
+    // Only enqueue answers for prompts that are NOT overridden:
+    // build tool, artifactId, version, rpc, intercepting, mainClass, kafka
+    provider.enqueueSelect(BuildTool.MAVEN); // build tool (not overridden)
+    provider.enqueueText("my-app"); // artifactId (not overridden)
+    provider.enqueueText("1.0-SNAPSHOT"); // version (not overridden)
+    provider.enqueueSelect("No"); // rpc (not overridden)
+    // interceptable is overridden — no prompt
+    provider.enqueueYesNo(false); // intercepting (not overridden)
+    provider.enqueueText("org.cometera.Main"); // mainClass (not overridden)
+    provider.enqueueYesNo(false); // kafka (not overridden)
+
+    WizardOverrides overrides =
+        WizardOverrides.builder().groupId("org.cometera").interceptable(true).build();
+
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0", overrides);
+    InitConfig config = wizard.run();
+
+    assertThat(config.getGroupId(), is("org.cometera"));
+    assertThat(config.isInterceptable(), is(true));
+    assertThat(config.getArtifactId(), is("my-app"));
+  }
+
+  /**
+   * Verifies that overriding {@code --main-class} skips both the text prompt and the select prompt
+   * for run mode.
+   */
+  @Test
+  public void testMainClassOverrideSkipsPrompt() throws IOException {
+    Path dir = tempFolder.newFolder("main-override").toPath();
+    TestPromptProvider provider = new TestPromptProvider();
+
+    // Only enqueue non-overridden prompts
+    provider.enqueueSelect(BuildTool.MAVEN); // build tool
+    provider.enqueueText("com.example"); // groupId
+    provider.enqueueText("my-app"); // artifactId
+    provider.enqueueText("1.0-SNAPSHOT"); // version
+    provider.enqueueSelect("No"); // rpc
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
+    // mainClass is overridden — no prompt
+    provider.enqueueYesNo(false); // kafka
+
+    WizardOverrides overrides = WizardOverrides.builder().mainClass("com.example.App").build();
+
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0", overrides);
+    InitConfig config = wizard.run();
+
+    assertThat(config.getMainClass(), is("com.example.App"));
+  }
+
+  /**
+   * Verifies that overriding all intent flags skips all intent prompts, requiring only identity
+   * prompts.
+   */
+  @Test
+  public void testAllIntentOverridesSkipAllIntentPrompts() throws IOException {
+    Path dir = tempFolder.newFolder("all-intents").toPath();
+    TestPromptProvider provider = new TestPromptProvider();
+
+    // Only identity prompts remain (no intent prompts)
+    provider.enqueueSelect(BuildTool.GRADLE); // build tool
+    provider.enqueueText("com.test"); // groupId
+    provider.enqueueText("test-app"); // artifactId
+    provider.enqueueText("2.0.0"); // version
+
+    WizardOverrides overrides =
+        WizardOverrides.builder()
+            .jsonRpc(true)
+            .interceptable(true)
+            .intercepting(true)
+            .kafka(true)
+            .mainClass("com.test.Main")
+            .build();
+
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0", overrides);
+    InitConfig config = wizard.run();
+
+    assertThat(config.isJsonRpc(), is(true));
+    assertThat(config.isInterceptable(), is(true));
+    assertThat(config.isIntercepting(), is(true));
+    assertThat(config.isKafka(), is(true));
+    assertThat(config.getMainClass(), is("com.test.Main"));
+    assertThat(config.getBuildTool(), is(BuildTool.GRADLE));
+  }
 }

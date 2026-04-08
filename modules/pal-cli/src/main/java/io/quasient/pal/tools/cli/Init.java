@@ -30,6 +30,8 @@ import io.quasient.pal.tools.cli.init.JLinePromptProvider;
 import io.quasient.pal.tools.cli.init.PalWeaveResolver;
 import io.quasient.pal.tools.cli.init.ReadmeGenerator;
 import io.quasient.pal.tools.cli.init.SampleAppGenerator;
+import io.quasient.pal.tools.cli.init.UserAbortException;
+import io.quasient.pal.tools.cli.init.WizardOverrides;
 import io.quasient.pal.tools.cli.init.WrapperGenerator;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -45,6 +47,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.ParseResult;
 import picocli.CommandLine.Spec;
 
 /**
@@ -400,9 +403,15 @@ public class Init extends AbstractPalSubcommand {
     if (nonInteractive) {
       config = buildConfigFromFlags();
     } else {
-      InitWizard wizard = new InitWizard(new JLinePromptProvider(out), resolveTargetDir());
-      config = wizard.run();
-      // Apply dry-run and force from CLI flags even in interactive mode
+      WizardOverrides overrides = buildWizardOverrides();
+      InitWizard wizard =
+          new InitWizard(new JLinePromptProvider(out), resolveTargetDir(), overrides);
+      try {
+        config = wizard.run();
+      } catch (UserAbortException e) {
+        out.println("Aborted.");
+        return 1;
+      }
       config = applyFlagsToWizardConfig(config);
     }
 
@@ -661,37 +670,110 @@ public class Init extends AbstractPalSubcommand {
   }
 
   /**
-   * Applies dry-run and force flags to a wizard-produced config.
+   * Builds {@link WizardOverrides} from CLI flags that were explicitly provided by the user. Uses
+   * picocli's {@link ParseResult} to distinguish "user passed this flag" from "default value".
+   *
+   * @return the overrides for the wizard
+   */
+  private WizardOverrides buildWizardOverrides() {
+    ParseResult pr = spec.commandLine().getParseResult();
+    WizardOverrides.Builder b = WizardOverrides.builder();
+    if (pr.hasMatchedOption("--group-id")) {
+      b.groupId(groupId);
+    }
+    if (pr.hasMatchedOption("--artifact-id")) {
+      b.artifactId(artifactId);
+    }
+    if (pr.hasMatchedOption("--version")) {
+      b.projectVersion(projectVersion);
+    }
+    if (pr.hasMatchedOption("--build-tool")) {
+      b.buildTool(resolveBuildTool());
+    }
+    if (pr.hasMatchedOption("--main-class")) {
+      b.mainClass(mainClass);
+    }
+    if (pr.hasMatchedOption("--interceptable")) {
+      b.interceptable(interceptable);
+    }
+    if (pr.hasMatchedOption("--intercepting")) {
+      b.intercepting(intercepting);
+    }
+    if (pr.hasMatchedOption("--json-rpc")) {
+      b.jsonRpc(jsonRpc);
+    }
+    if (pr.hasMatchedOption("--kafka")) {
+      b.kafka(kafka);
+    }
+    if (pr.hasMatchedOption("--as-service")) {
+      b.asService(true);
+    }
+    return b.build();
+  }
+
+  /**
+   * Merges explicitly-provided CLI flags into a wizard-produced config. Handles both prompted flags
+   * (already merged via overrides) and non-prompted flags (weaving, sampleApp, scopePolicy,
+   * loggingConfig, packageName, force, dryRun).
    *
    * @param wizardConfig the config from the wizard
    * @return the config with flags applied
    */
   private InitConfig applyFlagsToWizardConfig(InitConfig wizardConfig) {
-    if (!dryRun && !force) {
+    ParseResult pr = spec.commandLine().getParseResult();
+    boolean hasOverrides =
+        dryRun
+            || force
+            || packageName != null
+            || pr.hasMatchedOption("--weaving")
+            || pr.hasMatchedOption("--sample-app")
+            || pr.hasMatchedOption("--scope-policy")
+            || pr.hasMatchedOption("--logging-config");
+
+    if (!hasOverrides) {
       return wizardConfig;
     }
-    return InitConfig.builder()
-        .groupId(wizardConfig.getGroupId())
-        .artifactId(wizardConfig.getArtifactId())
-        .projectVersion(wizardConfig.getProjectVersion())
-        .mainClass(wizardConfig.getMainClass())
-        .packageName(wizardConfig.getPackageName())
-        .buildTool(wizardConfig.getBuildTool())
-        .palVersion(wizardConfig.getPalVersion())
-        .aspectjVersion(wizardConfig.getAspectjVersion())
-        .targetDir(wizardConfig.getTargetDir())
-        .existingBuildFile(wizardConfig.getExistingBuildFile())
-        .interceptable(wizardConfig.isInterceptable())
-        .intercepting(wizardConfig.isIntercepting())
-        .jsonRpc(wizardConfig.isJsonRpc())
-        .weaving(wizardConfig.needsWeaving())
-        .kafka(wizardConfig.isKafka())
-        .sampleApp(wizardConfig.isSampleApp())
-        .scopePolicy(wizardConfig.isScopePolicy())
-        .loggingConfig(wizardConfig.isLoggingConfig())
-        .force(force)
-        .dryRun(dryRun)
-        .build();
+
+    InitConfig.Builder b =
+        InitConfig.builder()
+            .groupId(wizardConfig.getGroupId())
+            .artifactId(wizardConfig.getArtifactId())
+            .projectVersion(wizardConfig.getProjectVersion())
+            .mainClass(wizardConfig.getMainClass())
+            .packageName(wizardConfig.getPackageName())
+            .buildTool(wizardConfig.getBuildTool())
+            .palVersion(wizardConfig.getPalVersion())
+            .aspectjVersion(wizardConfig.getAspectjVersion())
+            .targetDir(wizardConfig.getTargetDir())
+            .existingBuildFile(wizardConfig.getExistingBuildFile())
+            .interceptable(wizardConfig.isInterceptable())
+            .intercepting(wizardConfig.isIntercepting())
+            .jsonRpc(wizardConfig.isJsonRpc())
+            .weaving(wizardConfig.needsWeaving())
+            .kafka(wizardConfig.isKafka())
+            .sampleApp(wizardConfig.isSampleApp())
+            .scopePolicy(wizardConfig.isScopePolicy())
+            .loggingConfig(wizardConfig.isLoggingConfig())
+            .force(force)
+            .dryRun(dryRun);
+
+    if (packageName != null) {
+      b.packageName(packageName);
+    }
+    if (pr.hasMatchedOption("--weaving")) {
+      b.weaving(weaving);
+    }
+    if (pr.hasMatchedOption("--sample-app")) {
+      b.sampleApp(sampleApp);
+    }
+    if (pr.hasMatchedOption("--scope-policy")) {
+      b.scopePolicy(scopePolicy);
+    }
+    if (pr.hasMatchedOption("--logging-config")) {
+      b.loggingConfig(loggingConfig);
+    }
+
+    return b.build();
   }
 
   /**

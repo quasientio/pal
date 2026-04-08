@@ -89,6 +89,9 @@ public final class InitWizard {
   /** Override for PAL version (used in testing). */
   private final String palVersionOverride;
 
+  /** CLI flag overrides that skip prompts for already-provided values. */
+  private final WizardOverrides overrides;
+
   /**
    * Creates a wizard with the given prompt provider and target directory.
    *
@@ -96,23 +99,53 @@ public final class InitWizard {
    * @param targetDir the target directory for initialization
    */
   public InitWizard(PromptProvider promptProvider, Path targetDir) {
-    this(promptProvider, targetDir, null);
+    this(promptProvider, targetDir, null, WizardOverrides.none());
   }
 
   /**
-   * Creates a wizard with the given prompt provider, target directory, and optional PAL version
-   * override.
+   * Creates a wizard with the given prompt provider, target directory, and CLI flag overrides.
    *
-   * <p>Package-private to allow tests to inject a specific PAL version.
+   * @param promptProvider the provider for interactive prompts
+   * @param targetDir the target directory for initialization
+   * @param overrides CLI flag overrides that skip prompts
+   */
+  public InitWizard(PromptProvider promptProvider, Path targetDir, WizardOverrides overrides) {
+    this(promptProvider, targetDir, null, overrides);
+  }
+
+  /**
+   * Creates a wizard with the given prompt provider, target directory, and PAL version override.
+   *
+   * <p>Package-private to allow tests to inject a specific PAL version without overrides.
    *
    * @param promptProvider the provider for interactive prompts
    * @param targetDir the target directory for initialization
    * @param palVersionOverride override for the PAL version, or {@code null} to resolve from runtime
    */
   InitWizard(PromptProvider promptProvider, Path targetDir, String palVersionOverride) {
+    this(promptProvider, targetDir, palVersionOverride, WizardOverrides.none());
+  }
+
+  /**
+   * Creates a wizard with the given prompt provider, target directory, optional PAL version
+   * override, and CLI flag overrides.
+   *
+   * <p>Package-private to allow tests to inject a specific PAL version.
+   *
+   * @param promptProvider the provider for interactive prompts
+   * @param targetDir the target directory for initialization
+   * @param palVersionOverride override for the PAL version, or {@code null} to resolve from runtime
+   * @param overrides CLI flag overrides that skip prompts
+   */
+  InitWizard(
+      PromptProvider promptProvider,
+      Path targetDir,
+      String palVersionOverride,
+      WizardOverrides overrides) {
     this.promptProvider = promptProvider;
     this.targetDir = targetDir;
     this.palVersionOverride = palVersionOverride;
+    this.overrides = overrides;
   }
 
   /**
@@ -155,14 +188,21 @@ public final class InitWizard {
 
     ProjectIdentity identity = parseBuildFile(buildFile, detectedBuildTool);
 
-    if (identity.groupId != null) {
-      builder.groupId(identity.groupId);
+    // CLI flags override parsed identity
+    String groupId = overrides.getGroupId() != null ? overrides.getGroupId() : identity.groupId;
+    String artifactId =
+        overrides.getArtifactId() != null ? overrides.getArtifactId() : identity.artifactId;
+    String version =
+        overrides.getProjectVersion() != null ? overrides.getProjectVersion() : identity.version;
+
+    if (groupId != null) {
+      builder.groupId(groupId);
     }
-    if (identity.artifactId != null) {
-      builder.artifactId(identity.artifactId);
+    if (artifactId != null) {
+      builder.artifactId(artifactId);
     }
-    if (identity.version != null) {
-      builder.projectVersion(identity.version);
+    if (version != null) {
+      builder.projectVersion(version);
     }
 
     String desc =
@@ -174,7 +214,7 @@ public final class InitWizard {
             + (identity.version != null ? " (" + identity.version + ")" : "");
     promptProvider.println(desc);
 
-    return identity.groupId;
+    return groupId;
   }
 
   /**
@@ -187,17 +227,37 @@ public final class InitWizard {
     promptProvider.println("Welcome to PAL! Let's set up your project.");
     promptProvider.println("");
 
-    List<BuildTool> buildTools = Arrays.asList(BuildTool.values());
-    BuildTool buildTool = promptProvider.promptSelect("Build tool", buildTools, BuildTool.MAVEN);
+    BuildTool buildTool;
+    if (overrides.getBuildTool() != null) {
+      buildTool = overrides.getBuildTool();
+    } else {
+      List<BuildTool> buildTools = Arrays.asList(BuildTool.values());
+      buildTool = promptProvider.promptSelect("Build tool", buildTools, BuildTool.MAVEN);
+    }
     builder.buildTool(buildTool);
 
-    String groupId = promptProvider.promptText("Project group ID", DEFAULT_GROUP_ID);
+    String groupId;
+    if (overrides.getGroupId() != null) {
+      groupId = overrides.getGroupId();
+    } else {
+      groupId = promptProvider.promptText("Project group ID", DEFAULT_GROUP_ID);
+    }
     builder.groupId(groupId);
 
-    String artifactId = promptProvider.promptText("Project artifact ID", DEFAULT_ARTIFACT_ID);
+    String artifactId;
+    if (overrides.getArtifactId() != null) {
+      artifactId = overrides.getArtifactId();
+    } else {
+      artifactId = promptProvider.promptText("Project artifact ID", DEFAULT_ARTIFACT_ID);
+    }
     builder.artifactId(artifactId);
 
-    String version = promptProvider.promptText("Project version", DEFAULT_VERSION);
+    String version;
+    if (overrides.getProjectVersion() != null) {
+      version = overrides.getProjectVersion();
+    } else {
+      version = promptProvider.promptText("Project version", DEFAULT_VERSION);
+    }
     builder.projectVersion(version);
 
     return groupId;
@@ -216,52 +276,78 @@ public final class InitWizard {
    */
   private void promptIntents(InitConfig.Builder builder, String groupId) {
     // 1. RPC question
-    String noRpc = "No";
-    String gatewayOnly = "Yes, as RPC gateway (no weaving needed)";
-    String withPipeline = "Yes, alongside message pipeline";
-    List<String> rpcOptions = Arrays.asList(noRpc, gatewayOnly, withPipeline);
-    String rpcChoice =
-        promptProvider.promptSelect("Will you expose methods via JSON-RPC?", rpcOptions, noRpc);
+    boolean jsonRpc;
+    boolean rpcGatewayOnly = false;
+    if (overrides.getJsonRpc() != null) {
+      jsonRpc = overrides.getJsonRpc();
+      builder.jsonRpc(jsonRpc);
+    } else {
+      String noRpc = "No";
+      String gatewayOnly = "Yes, as RPC gateway (no weaving needed)";
+      String withPipeline = "Yes, alongside message pipeline";
+      List<String> rpcOptions = Arrays.asList(noRpc, gatewayOnly, withPipeline);
+      String rpcChoice =
+          promptProvider.promptSelect("Will you expose methods via JSON-RPC?", rpcOptions, noRpc);
 
-    boolean jsonRpc = !noRpc.equals(rpcChoice);
-    boolean rpcGatewayOnly = gatewayOnly.equals(rpcChoice);
-    builder.jsonRpc(jsonRpc);
-    if (rpcGatewayOnly) {
-      builder.weaving(false);
+      jsonRpc = !noRpc.equals(rpcChoice);
+      rpcGatewayOnly = gatewayOnly.equals(rpcChoice);
+      builder.jsonRpc(jsonRpc);
+      if (rpcGatewayOnly) {
+        builder.weaving(false);
+      }
     }
 
     // 2. Intercept questions (skip for gateway-only)
     boolean intercepting = false;
     if (!rpcGatewayOnly) {
-      boolean interceptable =
-          promptProvider.promptYesNo("Will this app be interceptable by other peers?", false);
+      boolean interceptable;
+      if (overrides.getInterceptable() != null) {
+        interceptable = overrides.getInterceptable();
+      } else {
+        interceptable =
+            promptProvider.promptYesNo("Will this app be interceptable by other peers?", false);
+      }
       builder.interceptable(interceptable);
 
-      intercepting = promptProvider.promptYesNo("Will this app intercept other peers?", false);
+      if (overrides.getIntercepting() != null) {
+        intercepting = overrides.getIntercepting();
+      } else {
+        intercepting = promptProvider.promptYesNo("Will this app intercept other peers?", false);
+      }
       builder.intercepting(intercepting);
     }
 
     // 3. Main class
-    String defaultMainClass =
-        (groupId != null ? groupId : DEFAULT_GROUP_ID) + "." + DEFAULT_MAIN_CLASS_SIMPLE;
-    if (intercepting || rpcGatewayOnly) {
-      String asServiceOption = "Run as service (no main class)";
-      List<String> options = Arrays.asList(asServiceOption, defaultMainClass);
-      String selected = promptProvider.promptSelect("Run mode", options, asServiceOption);
-      if (!asServiceOption.equals(selected)) {
-        builder.mainClass(selected);
-      }
+    if (overrides.isAsService()) {
+      // --as-service: no main class, skip prompt
+    } else if (overrides.getMainClass() != null) {
+      builder.mainClass(overrides.getMainClass());
     } else {
-      String mainClass = promptProvider.promptText("Main class (for pal run)", defaultMainClass);
-      if (mainClass != null && !mainClass.isBlank()) {
-        builder.mainClass(mainClass);
+      String defaultMainClass =
+          (groupId != null ? groupId : DEFAULT_GROUP_ID) + "." + DEFAULT_MAIN_CLASS_SIMPLE;
+      if (intercepting || rpcGatewayOnly) {
+        String asServiceOption = "Run as service (no main class)";
+        List<String> options = Arrays.asList(asServiceOption, defaultMainClass);
+        String selected = promptProvider.promptSelect("Run mode", options, asServiceOption);
+        if (!asServiceOption.equals(selected)) {
+          builder.mainClass(selected);
+        }
+      } else {
+        String mainClass = promptProvider.promptText("Main class (for pal run)", defaultMainClass);
+        if (mainClass != null && !mainClass.isBlank()) {
+          builder.mainClass(mainClass);
+        }
       }
     }
 
     // 4. Kafka (skip for gateway-only)
     if (!rpcGatewayOnly) {
-      boolean kafka =
-          promptProvider.promptYesNo("Will you use Kafka for WAL (write-ahead log)?", false);
+      boolean kafka;
+      if (overrides.getKafka() != null) {
+        kafka = overrides.getKafka();
+      } else {
+        kafka = promptProvider.promptYesNo("Will you use Kafka for WAL (write-ahead log)?", false);
+      }
       builder.kafka(kafka);
     }
   }
