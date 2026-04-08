@@ -42,7 +42,7 @@
 
   <fileSets>
 
-    <!-- top-level metadata, config, helper scripts -->
+    <!-- top-level metadata and config -->
     <fileSet>
       <directory>..</directory>
       <includes>
@@ -51,24 +51,27 @@
         <include>LICENSE</include>
         <include>THIRD_PARTY.md</include>
         <include>licenses/</include>
-
-        <!-- sample config files -->
         <include>config/</include>
-
-        <!-- export env variables for running on host -->
-        <include>export-env.sh</include>
       </includes>
-
-      <!-- exclude build-time files inside licenses/ -->
       <excludes>
-        <!-- exclude config files ending in .xml (not .xml.example) -->
         <exclude>config/**/*.xml</exclude>
-
-        <!-- License stuff to exclude -->
+        <exclude>config/.gitignore</exclude>
+        <exclude>config/kafka/**</exclude>
         <exclude>licenses/APACHE_HEADER.txt</exclude>
         <exclude>licenses/THIRD_PARTY.ftl</exclude>
         <exclude>licenses/url-fixes.xml</exclude>
       </excludes>
+    </fileSet>
+
+    <!-- install script and env file -->
+    <fileSet>
+      <directory>src/dist</directory>
+      <outputDirectory></outputDirectory>
+      <includes>
+        <include>install.sh</include>
+        <include>.env.pal</include>
+      </includes>
+      <fileMode>0755</fileMode>
     </fileSet>
 
     <!-- unix launcher (executable) -->
@@ -89,6 +92,13 @@
         <include>pal.bat</include>
       </includes>
       <lineEnding>crlf</lineEnding>
+    </fileSet>
+
+    <!-- quick-start docker infrastructure -->
+    <fileSet>
+      <directory>src/dist/infra</directory>
+      <outputDirectory>infra</outputDirectory>
+      <fileMode>0755</fileMode>
     </fileSet>
 
   </fileSets>

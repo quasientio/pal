@@ -79,13 +79,33 @@ Because operations are messages, they can be:
 ### Prerequisites
 
 - Java 17 or higher
-- Maven 3
-- Docker (for etcd and Kafka, or use Chronicle for local-only development)
+- Docker (optional; needed for intercepts and Kafka logs)
 
-### Build from Source
+### Option 1: Download Binary Distribution
+
+Download the latest release from [GitHub Releases](https://github.com/quasientio/pal/releases/latest), then:
 
 ```bash
-# Clone and build
+tar xzf pal-*.tar.gz
+cd pal-*/
+
+# Install to /usr/local (may need sudo)
+./install.sh
+
+# Or install to a custom directory
+./install.sh --prefix=~/.local
+```
+
+Verify the installation:
+
+```bash
+pal help
+```
+
+### Option 2: Build from Source
+
+```bash
+# Clone and build (requires Maven 3)
 git clone https://github.com/quasientio/pal.git
 cd pal
 mvn install -DskipITs

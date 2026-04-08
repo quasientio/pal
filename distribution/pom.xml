@@ -53,6 +53,8 @@
               <goal>single</goal>
             </goals>
             <configuration>
+              <finalName>pal-${project.version}</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
               <descriptors>
                 <descriptor>src/maven/assembly/pal-package.xml</descriptor>
               </descriptors>
