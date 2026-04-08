@@ -71,6 +71,9 @@ public final class SampleAppGenerator {
     List<Path> generated = new ArrayList<>();
     String packageName = config.getPackageName();
     String sourceDir = config.getSourceDirectory();
+    if (packageName == null || sourceDir == null) {
+      return Collections.emptyList();
+    }
     Path sourceDirPath = targetDir.resolve(sourceDir);
 
     // Generate Main.java (skip for as-service mode)

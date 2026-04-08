@@ -182,15 +182,26 @@ public final class InitConfig {
 
   /**
    * Returns the Java package name. If no explicit package name was set, this returns the group ID
-   * as the inferred package name.
+   * as the inferred package name. If the group ID is also unset, infers the package from the main
+   * class (e.g., {@code "com.example.Main"} yields {@code "com.example"}).
    *
-   * @return the package name (explicit or inferred from groupId)
+   * @return the package name (explicit, inferred from groupId, or inferred from mainClass), or
+   *     {@code null} if none can be determined
    */
   public String getPackageName() {
     if (packageName != null) {
       return packageName;
     }
-    return groupId;
+    if (groupId != null) {
+      return groupId;
+    }
+    if (mainClass != null) {
+      int lastDot = mainClass.lastIndexOf('.');
+      if (lastDot > 0) {
+        return mainClass.substring(0, lastDot);
+      }
+    }
+    return null;
   }
 
   /**
@@ -434,7 +445,11 @@ public final class InitConfig {
    * @return the source directory path string
    */
   public String getSourceDirectory() {
-    return "src/main/java/" + getPackageName().replace('.', '/');
+    String pkg = getPackageName();
+    if (pkg == null) {
+      return null;
+    }
+    return "src/main/java/" + pkg.replace('.', '/');
   }
 
   /**

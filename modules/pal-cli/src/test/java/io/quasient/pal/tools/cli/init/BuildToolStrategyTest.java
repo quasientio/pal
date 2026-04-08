@@ -17,10 +17,15 @@ package io.quasient.pal.tools.cli.init;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -160,5 +165,130 @@ public class BuildToolStrategyTest {
 
     // Then: returns MAVEN (Maven takes precedence)
     assertThat(detected, is(BuildTool.MAVEN));
+  }
+
+  /**
+   * Verifies that {@code BuildToolStrategy.detect(dir)} returns {@code BuildTool.GRADLE} when the
+   * directory contains a {@code settings.gradle} file but no build file at root. This is common for
+   * multi-module Gradle projects.
+   */
+  @Test
+  public void testDetectGradleFromSettingsFile() throws IOException {
+    // Given: temp directory containing only settings.gradle
+    tempFolder.newFile("settings.gradle");
+
+    // When: BuildToolStrategy.detect(dir) called
+    BuildTool detected = BuildToolStrategy.detect(tempFolder.getRoot().toPath());
+
+    // Then: returns GRADLE
+    assertThat(detected, is(BuildTool.GRADLE));
+  }
+
+  /**
+   * Verifies that {@code BuildToolStrategy.detect(dir)} returns {@code BuildTool.GRADLE} when the
+   * directory contains a {@code settings.gradle.kts} file (Kotlin DSL variant) but no build file at
+   * root. This matches the default layout produced by {@code gradle init}.
+   */
+  @Test
+  public void testDetectGradleFromSettingsKtsFile() throws IOException {
+    // Given: temp directory containing only settings.gradle.kts
+    tempFolder.newFile("settings.gradle.kts");
+
+    // When: BuildToolStrategy.detect(dir) called
+    BuildTool detected = BuildToolStrategy.detect(tempFolder.getRoot().toPath());
+
+    // Then: returns GRADLE
+    assertThat(detected, is(BuildTool.GRADLE));
+  }
+
+  /**
+   * Verifies that {@code findBuildFile} locates a build file in a subproject directory when the
+   * root has only a settings file with an {@code include} directive.
+   */
+  @Test
+  public void testFindBuildFileInSubproject() throws IOException {
+    // Given: multi-module Gradle layout with settings.gradle.kts and app/build.gradle.kts
+    Path root = tempFolder.getRoot().toPath();
+    Files.writeString(
+        root.resolve("settings.gradle.kts"),
+        "rootProject.name = \"myapp\"\ninclude(\"app\")\n",
+        StandardCharsets.UTF_8);
+    File appDir = tempFolder.newFolder("app");
+    Files.writeString(appDir.toPath().resolve("build.gradle.kts"), "plugins { }\n");
+
+    // When: findBuildFile called
+    Path buildFile = BuildToolStrategy.findBuildFile(root, BuildTool.GRADLE);
+
+    // Then: returns app/build.gradle.kts
+    assertThat(buildFile, is(notNullValue()));
+    assertThat(buildFile.getFileName().toString(), is("build.gradle.kts"));
+    assertThat(buildFile.getParent().getFileName().toString(), is("app"));
+  }
+
+  /**
+   * Verifies that {@code findBuildFile} returns the root-level build file when one exists, even if
+   * a settings file is also present.
+   */
+  @Test
+  public void testFindBuildFileAtRoot() throws IOException {
+    // Given: Gradle project with root build.gradle.kts
+    tempFolder.newFile("build.gradle.kts");
+    tempFolder.newFile("settings.gradle.kts");
+
+    // When: findBuildFile called
+    Path buildFile =
+        BuildToolStrategy.findBuildFile(tempFolder.getRoot().toPath(), BuildTool.GRADLE);
+
+    // Then: returns root build.gradle.kts
+    assertThat(buildFile, is(notNullValue()));
+    assertThat(buildFile.getParent().toRealPath(), is(tempFolder.getRoot().toPath().toRealPath()));
+  }
+
+  /** Verifies that {@code findBuildFile} returns pom.xml for Maven projects. */
+  @Test
+  public void testFindBuildFileReturnsMaven() throws IOException {
+    // Given: directory with pom.xml
+    tempFolder.newFile("pom.xml");
+
+    // When: findBuildFile called
+    Path buildFile =
+        BuildToolStrategy.findBuildFile(tempFolder.getRoot().toPath(), BuildTool.MAVEN);
+
+    // Then: returns pom.xml
+    assertThat(buildFile, is(notNullValue()));
+    assertThat(buildFile.getFileName().toString(), is("pom.xml"));
+  }
+
+  /** Verifies that {@code findBuildFile} returns null when no build file exists anywhere. */
+  @Test
+  public void testFindBuildFileReturnsNullWhenNoBuildFile() {
+    // Given: empty directory
+    // When: findBuildFile called
+    Path buildFile =
+        BuildToolStrategy.findBuildFile(tempFolder.getRoot().toPath(), BuildTool.GRADLE);
+
+    // Then: returns null
+    assertThat(buildFile, is(nullValue()));
+  }
+
+  /** Verifies that {@code findBuildFile} handles Groovy DSL settings with multi-value include. */
+  @Test
+  public void testFindBuildFileGroovyMultiInclude() throws IOException {
+    // Given: settings.gradle with include 'app', 'lib'
+    Path root = tempFolder.getRoot().toPath();
+    Files.writeString(
+        root.resolve("settings.gradle"),
+        "rootProject.name = 'myapp'\ninclude 'app', 'lib'\n",
+        StandardCharsets.UTF_8);
+    File appDir = tempFolder.newFolder("app");
+    Files.writeString(appDir.toPath().resolve("build.gradle"), "apply plugin: 'java'\n");
+
+    // When: findBuildFile called
+    Path buildFile = BuildToolStrategy.findBuildFile(root, BuildTool.GRADLE);
+
+    // Then: returns app/build.gradle (first match)
+    assertThat(buildFile, is(notNullValue()));
+    assertThat(buildFile.getFileName().toString(), is("build.gradle"));
+    assertThat(buildFile.getParent().getFileName().toString(), is("app"));
   }
 }

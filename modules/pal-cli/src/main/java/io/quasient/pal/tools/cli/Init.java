@@ -113,6 +113,16 @@ public class Init extends AbstractPalSubcommand {
   private static final Pattern GRADLE_VERSION_PATTERN =
       Pattern.compile("^\\s*version\\s*=\\s*['\"]([^'\"]+)['\"]", Pattern.MULTILINE);
 
+  /** Regex for Gradle mainClass in the application block. */
+  private static final Pattern GRADLE_MAIN_CLASS =
+      Pattern.compile(
+          "mainClass(?:Name)?\\s*(?:=\\s*|\\.set\\s*\\(\\s*)['\"]([^'\"]+)['\"]",
+          Pattern.MULTILINE);
+
+  /** Regex for Maven {@code <mainClass>} in plugin configurations. */
+  private static final Pattern POM_MAIN_CLASS =
+      Pattern.compile("<mainClass>\\s*([^<]+?)\\s*</mainClass>");
+
   /** Picocli command spec, injected by the framework. */
   @Spec private CommandSpec spec;
 
@@ -547,15 +557,8 @@ public class Init extends AbstractPalSubcommand {
 
     // Detect existing project and parse identity from build file
     if (detectedBuildTool != null) {
-      BuildToolStrategy strategy = BuildToolStrategy.forType(detectedBuildTool);
-      Path buildFile = effectiveDir.resolve(strategy.getBuildFileName());
-      if (!Files.exists(buildFile) && detectedBuildTool == BuildTool.GRADLE) {
-        Path ktsFile = effectiveDir.resolve("build.gradle.kts");
-        if (Files.exists(ktsFile)) {
-          buildFile = ktsFile;
-        }
-      }
-      if (Files.exists(buildFile)) {
+      Path buildFile = BuildToolStrategy.findBuildFile(effectiveDir, detectedBuildTool);
+      if (buildFile != null && Files.exists(buildFile)) {
         builder.existingBuildFile(buildFile);
         populateFromBuildFile(builder, buildFile, detectedBuildTool);
       }
@@ -622,6 +625,19 @@ public class Init extends AbstractPalSubcommand {
         if (projectVersion == null && parsedVersion != null) {
           builder.projectVersion(parsedVersion);
         }
+        if (mainClass == null) {
+          String parsedMainClass = firstMatch(POM_MAIN_CLASS, content);
+          if (parsedMainClass == null) {
+            Path buildDir = buildFile.getParent();
+            if (buildDir != null) {
+              parsedMainClass =
+                  InitWizard.scanSourcesForMainClass(buildDir.resolve("src/main/java"));
+            }
+          }
+          if (parsedMainClass != null) {
+            builder.mainClass(parsedMainClass);
+          }
+        }
       } else {
         String parsedGroupId = firstMatch(GRADLE_GROUP, content);
         String parsedVersion = firstMatch(GRADLE_VERSION_PATTERN, content);
@@ -631,6 +647,19 @@ public class Init extends AbstractPalSubcommand {
         }
         if (projectVersion == null && parsedVersion != null) {
           builder.projectVersion(parsedVersion);
+        }
+        if (mainClass == null) {
+          String parsedMainClass = firstMatch(GRADLE_MAIN_CLASS, content);
+          if (parsedMainClass == null) {
+            Path buildDir = buildFile.getParent();
+            if (buildDir != null) {
+              parsedMainClass =
+                  InitWizard.scanSourcesForMainClass(buildDir.resolve("src/main/java"));
+            }
+          }
+          if (parsedMainClass != null) {
+            builder.mainClass(parsedMainClass);
+          }
         }
       }
     } catch (IOException e) {

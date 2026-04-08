@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * Orchestrates the interactive prompt flow for {@code pal init}.
@@ -80,6 +81,20 @@ public final class InitWizard {
   private static final Pattern GRADLE_VERSION =
       Pattern.compile("^\\s*version\\s*=\\s*['\"]([^'\"]+)['\"]", Pattern.MULTILINE);
 
+  /**
+   * Regex for Gradle main class in the {@code application} block. Matches Kotlin DSL ({@code
+   * mainClass = "..."} or {@code mainClass.set("...")}), Groovy DSL ({@code mainClass = '...'}),
+   * and the legacy {@code mainClassName} property.
+   */
+  private static final Pattern GRADLE_MAIN_CLASS =
+      Pattern.compile(
+          "mainClass(?:Name)?\\s*(?:=\\s*|\\.set\\s*\\(\\s*)['\"]([^'\"]+)['\"]",
+          Pattern.MULTILINE);
+
+  /** Regex for Maven {@code <mainClass>} element in plugin configurations. */
+  private static final Pattern POM_MAIN_CLASS =
+      Pattern.compile("<mainClass>\\s*([^<]+?)\\s*</mainClass>");
+
   /** The prompt provider for user interaction. */
   private final PromptProvider promptProvider;
 
@@ -91,6 +106,9 @@ public final class InitWizard {
 
   /** CLI flag overrides that skip prompts for already-provided values. */
   private final WizardOverrides overrides;
+
+  /** Main class detected from the existing build file or source tree, set during configuration. */
+  private String detectedMainClass;
 
   /**
    * Creates a wizard with the given prompt provider and target directory.
@@ -160,13 +178,15 @@ public final class InitWizard {
     boolean isExistingProject = detectedBuildTool != null;
 
     String groupId;
+    String detectedMainClass = null;
     if (isExistingProject) {
       groupId = configureExistingProject(builder, detectedBuildTool);
+      detectedMainClass = this.detectedMainClass;
     } else {
       groupId = configureNewProject(builder);
     }
 
-    promptIntents(builder, groupId);
+    promptIntents(builder, groupId, detectedMainClass);
     setPalVersion(builder);
 
     return builder.build();
@@ -204,6 +224,16 @@ public final class InitWizard {
     if (version != null) {
       builder.projectVersion(version);
     }
+
+    // Detect main class: build file first, then source scan
+    String mainClass = identity.mainClass;
+    if (mainClass == null) {
+      Path buildDir = buildFile.getParent();
+      if (buildDir != null) {
+        mainClass = scanSourcesForMainClass(buildDir.resolve("src/main/java"));
+      }
+    }
+    this.detectedMainClass = mainClass;
 
     String desc =
         "Detected existing "
@@ -273,8 +303,10 @@ public final class InitWizard {
    *
    * @param builder the config builder
    * @param groupId the project group ID, or {@code null} if unknown
+   * @param detectedMainClass the main class detected from the build file or sources, or {@code
+   *     null}
    */
-  private void promptIntents(InitConfig.Builder builder, String groupId) {
+  private void promptIntents(InitConfig.Builder builder, String groupId, String detectedMainClass) {
     // 1. RPC question
     boolean jsonRpc;
     boolean rpcGatewayOnly = false;
@@ -283,9 +315,9 @@ public final class InitWizard {
       builder.jsonRpc(jsonRpc);
     } else {
       String noRpc = "No";
-      String gatewayOnly = "Yes, as RPC gateway (no weaving needed)";
+      String gatewayOnly = "Yes, RPC only (no weaving needed)";
       String withPipeline = "Yes, alongside message pipeline";
-      List<String> rpcOptions = Arrays.asList(noRpc, gatewayOnly, withPipeline);
+      List<String> rpcOptions = Arrays.asList(noRpc, withPipeline, gatewayOnly);
       String rpcChoice =
           promptProvider.promptSelect("Will you expose methods via JSON-RPC?", rpcOptions, noRpc);
 
@@ -323,8 +355,13 @@ public final class InitWizard {
     } else if (overrides.getMainClass() != null) {
       builder.mainClass(overrides.getMainClass());
     } else {
-      String defaultMainClass =
-          (groupId != null ? groupId : DEFAULT_GROUP_ID) + "." + DEFAULT_MAIN_CLASS_SIMPLE;
+      String defaultMainClass;
+      if (detectedMainClass != null) {
+        defaultMainClass = detectedMainClass;
+      } else {
+        defaultMainClass =
+            (groupId != null ? groupId : DEFAULT_GROUP_ID) + "." + DEFAULT_MAIN_CLASS_SIMPLE;
+      }
       if (intercepting || rpcGatewayOnly) {
         String asServiceOption = "Run as service (no main class)";
         List<String> options = Arrays.asList(asServiceOption, defaultMainClass);
@@ -381,25 +418,21 @@ public final class InitWizard {
   }
 
   /**
-   * Resolves the path to the build file for the detected build tool.
+   * Resolves the path to the build file for the detected build tool. Delegates to {@link
+   * BuildToolStrategy#findBuildFile(Path, BuildTool)} which handles both root-level and
+   * multi-module Gradle project layouts.
    *
    * @param buildTool the detected build tool
    * @return the path to the build file
    */
   private Path resolveBuildFile(BuildTool buildTool) {
+    Path found = BuildToolStrategy.findBuildFile(targetDir, buildTool);
+    if (found != null) {
+      return found;
+    }
+    // Fallback: return expected root-level path for downstream handling
     BuildToolStrategy strategy = BuildToolStrategy.forType(buildTool);
-    Path buildFile = targetDir.resolve(strategy.getBuildFileName());
-    if (Files.exists(buildFile)) {
-      return buildFile;
-    }
-    // For Gradle, also check .kts variant
-    if (buildTool == BuildTool.GRADLE) {
-      Path ktsFile = targetDir.resolve("build.gradle.kts");
-      if (Files.exists(ktsFile)) {
-        return ktsFile;
-      }
-    }
-    return buildFile;
+    return targetDir.resolve(strategy.getBuildFileName());
   }
 
   /**
@@ -418,7 +451,7 @@ public final class InitWizard {
         return parseGradleBuild(content);
       }
     } catch (IOException e) {
-      return new ProjectIdentity(null, null, null);
+      return new ProjectIdentity(null, null, null, null);
     }
   }
 
@@ -442,7 +475,9 @@ public final class InitWizard {
     String groupId = firstMatch(POM_GROUP_ID, stripped);
     String artifactId = firstMatch(POM_ARTIFACT_ID, stripped);
     String version = firstMatch(POM_VERSION, stripped);
-    return new ProjectIdentity(groupId, artifactId, version);
+    // mainClass lives inside <build>, so search the full content
+    String mainClass = firstMatch(POM_MAIN_CLASS, content);
+    return new ProjectIdentity(groupId, artifactId, version, mainClass);
   }
 
   /**
@@ -454,7 +489,58 @@ public final class InitWizard {
   static ProjectIdentity parseGradleBuild(String content) {
     String groupId = firstMatch(GRADLE_GROUP, content);
     String version = firstMatch(GRADLE_VERSION, content);
-    return new ProjectIdentity(groupId, null, version);
+    String mainClass = firstMatch(GRADLE_MAIN_CLASS, content);
+    return new ProjectIdentity(groupId, null, version, mainClass);
+  }
+
+  /**
+   * Scans a source root directory for Java files containing a {@code public static void main}
+   * method and returns the fully-qualified class name of the first match.
+   *
+   * @param sourceRoot the source root directory (e.g., {@code src/main/java})
+   * @return the FQCN of the first class with a main method, or {@code null} if none found
+   */
+  public static String scanSourcesForMainClass(Path sourceRoot) {
+    if (!Files.isDirectory(sourceRoot)) {
+      return null;
+    }
+    try (Stream<Path> files = Files.walk(sourceRoot)) {
+      return files
+          .filter(p -> p.toString().endsWith(".java"))
+          .filter(InitWizard::containsMainMethod)
+          .findFirst()
+          .map(p -> javaFileToFqcn(sourceRoot, p))
+          .orElse(null);
+    } catch (IOException e) {
+      return null;
+    }
+  }
+
+  /**
+   * Checks whether a Java source file contains a {@code public static void main} declaration.
+   *
+   * @param javaFile the path to the Java file
+   * @return {@code true} if the file contains a main method signature
+   */
+  private static boolean containsMainMethod(Path javaFile) {
+    try {
+      String content = Files.readString(javaFile, StandardCharsets.UTF_8);
+      return content.contains("public static void main");
+    } catch (IOException e) {
+      return false;
+    }
+  }
+
+  /**
+   * Converts a Java source file path to a fully-qualified class name relative to the source root.
+   *
+   * @param sourceRoot the source root directory
+   * @param javaFile the path to the Java file
+   * @return the fully-qualified class name
+   */
+  private static String javaFileToFqcn(Path sourceRoot, Path javaFile) {
+    String relative = sourceRoot.relativize(javaFile).toString();
+    return relative.substring(0, relative.length() - ".java".length()).replace('/', '.');
   }
 
   /**
@@ -462,7 +548,7 @@ public final class InitWizard {
    *
    * @param pattern the regex pattern with at least one capture group
    * @param text the text to search
-   * @return the captured string, or {@code null} if no match
+   * @return the captured string, or {@code null} if none found
    */
   private static String firstMatch(Pattern pattern, String text) {
     Matcher matcher = pattern.matcher(text);
@@ -488,17 +574,22 @@ public final class InitWizard {
     /** The project version, or {@code null} if not found. */
     final String version;
 
+    /** The main class, or {@code null} if not found in the build file. */
+    final String mainClass;
+
     /**
      * Constructs a project identity.
      *
      * @param groupId the group ID
      * @param artifactId the artifact ID
      * @param version the version
+     * @param mainClass the main class
      */
-    ProjectIdentity(String groupId, String artifactId, String version) {
+    ProjectIdentity(String groupId, String artifactId, String version, String mainClass) {
       this.groupId = groupId;
       this.artifactId = artifactId;
       this.version = version;
+      this.mainClass = mainClass;
     }
   }
 }

@@ -503,12 +503,12 @@ public class InitWizardTest {
   }
 
   /**
-   * Verifies that selecting "RPC gateway only" enables JSON-RPC, disables weaving, skips
+   * Verifies that selecting "RPC only" enables JSON-RPC, disables weaving, skips
    * interceptable/intercepting/kafka prompts, and defaults to as-service mode.
    */
   @Test
   public void testRpcGatewayOnlySetsJsonRpcAndDisablesWeaving() {
-    // Given: user selects RPC gateway only
+    // Given: user selects RPC only
     Path dir = tempFolder.getRoot().toPath();
 
     TestPromptProvider provider = new TestPromptProvider();
@@ -516,7 +516,7 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-api"); // artifactId
     provider.enqueueText("1.0"); // version
-    provider.enqueueSelect("Yes, as RPC gateway (no weaving needed)"); // rpc
+    provider.enqueueSelect("Yes, RPC only (no weaving needed)"); // rpc
     provider.enqueueSelect("Run as service (no main class)"); // run mode
 
     // When: wizard runs
@@ -535,12 +535,12 @@ public class InitWizardTest {
   }
 
   /**
-   * Verifies that selecting "RPC gateway only" with a main class sets the main class and disables
+   * Verifies that selecting "RPC only" with a main class sets the main class and disables
    * as-service mode.
    */
   @Test
   public void testRpcGatewayOnlyWithMainClass() {
-    // Given: user selects RPC gateway only with a main class
+    // Given: user selects RPC only with a main class
     Path dir = tempFolder.getRoot().toPath();
 
     TestPromptProvider provider = new TestPromptProvider();
@@ -548,7 +548,7 @@ public class InitWizardTest {
     provider.enqueueText("com.test"); // groupId
     provider.enqueueText("my-api"); // artifactId
     provider.enqueueText("1.0"); // version
-    provider.enqueueSelect("Yes, as RPC gateway (no weaving needed)"); // rpc
+    provider.enqueueSelect("Yes, RPC only (no weaving needed)"); // rpc
     provider.enqueueSelect("com.test.Main"); // run mode — select main class
 
     // When: wizard runs
@@ -592,6 +592,45 @@ public class InitWizardTest {
     assertThat(config.isInterceptable(), is(true));
     assertThat(config.isRpcPolicy(), is(true));
     assertThat(config.needsEtcd(), is(true));
+  }
+
+  /**
+   * Verifies that the wizard detects an existing multi-module Gradle project (with
+   * settings.gradle.kts and a subproject build.gradle.kts) and sets the build tool to GRADLE in the
+   * resulting config.
+   */
+  @Test
+  public void testDetectsExistingMultiModuleGradleProject() throws IOException {
+    // Given: multi-module Gradle layout (settings.gradle.kts at root, app/build.gradle.kts)
+    Path dir = tempFolder.getRoot().toPath();
+    Files.writeString(
+        dir.resolve("settings.gradle.kts"),
+        "rootProject.name = \"grapp\"\ninclude(\"app\")\n",
+        StandardCharsets.UTF_8);
+    Path appDir = Files.createDirectories(dir.resolve("app"));
+    Files.writeString(
+        appDir.resolve("build.gradle.kts"),
+        "group = \"org.example\"\nversion = \"1.0.0\"\n",
+        StandardCharsets.UTF_8);
+
+    TestPromptProvider provider = new TestPromptProvider();
+    // Existing project prompts: rpc, interceptable, intercepting, mainClass, kafka
+    provider.enqueueSelect("No"); // rpc
+    provider.enqueueYesNo(false); // interceptable
+    provider.enqueueYesNo(false); // intercepting
+    provider.enqueueText("org.example.Main"); // mainClass
+    provider.enqueueYesNo(false); // kafka
+
+    // When: wizard runs
+    InitWizard wizard = new InitWizard(provider, dir, "1.0.0");
+    InitConfig config = wizard.run();
+
+    // Then: detected as existing GRADLE project with identity parsed from subproject build file
+    assertThat(config.isNewProject(), is(false));
+    assertThat(config.getBuildTool(), is(BuildTool.GRADLE));
+    assertThat(config.getGroupId(), is("org.example"));
+    assertThat(config.getExistingBuildFile(), is(notNullValue()));
+    assertThat(config.getExistingBuildFile().getFileName().toString(), is("build.gradle.kts"));
   }
 
   // ---------------------------------------------------------------------------
