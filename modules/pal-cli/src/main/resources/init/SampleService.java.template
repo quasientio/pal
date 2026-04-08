@@ -9,8 +9,8 @@ package ${package};
  */
 public class SampleService {
 
-  private int orderCount = 0;
-  private double totalRevenue = 0.0;
+  private static int orderCount = 0;
+  private static double totalRevenue = 0.0;
 
   /**
    * Processes an order and updates running totals.
@@ -19,7 +19,7 @@ public class SampleService {
    * @param quantity the quantity ordered
    * @param price    the unit price
    */
-  public void processOrder(String product, int quantity, double price) {
+  public static void processOrder(String product, int quantity, double price) {
     orderCount++;
     double total = quantity * price;
     totalRevenue += total;
@@ -39,7 +39,7 @@ public class SampleService {
    * @param discount the discount rate (0.0 to 1.0)
    * @return the discounted amount
    */
-  private double applyDiscount(double amount, double discount) {
+  private static double applyDiscount(double amount, double discount) {
     return amount * (1.0 - discount);
   }
 
@@ -48,7 +48,7 @@ public class SampleService {
    *
    * @return the order count
    */
-  public int getOrderCount() {
+  public static int getOrderCount() {
     return orderCount;
   }
 
@@ -57,7 +57,7 @@ public class SampleService {
    *
    * @return the total revenue
    */
-  public double getTotalRevenue() {
+  public static double getTotalRevenue() {
     return totalRevenue;
   }
 }

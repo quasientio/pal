@@ -2,6 +2,7 @@ package ${package};
 
 import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
 import io.quasient.pal.common.lang.intercept.InterceptContext;
+import java.util.Arrays;
 
 /**
  * Sample intercept callback handler.
@@ -16,18 +17,14 @@ import io.quasient.pal.common.lang.intercept.InterceptContext;
 public class SampleCallbacks {
 
   /**
-   * Handles an intercepted operation by printing the class and method name.
+   * Handles an intercepted operation by printing the intercept type and arguments.
    *
    * @param ctx the intercept context
    * @return a default callback response
    */
   public static InterceptCallbackResponse handle(InterceptContext ctx) {
     System.out.println(
-        "[intercept] "
-            + ctx.getLocalMetadata().className()
-            + "."
-            + ctx.getLocalMetadata().methodName()
-            + " called");
+        "[intercept] " + ctx.getInterceptType() + " callback, args=" + Arrays.toString(ctx.getArgs()));
     return new InterceptCallbackResponse();
   }
 }

@@ -14,13 +14,11 @@ public class ${mainClassName} {
    * @param args command-line arguments
    */
   public static void main(String[] args) {
-    SampleService service = new SampleService();
+    SampleService.processOrder("Laptop", 1, 999.99);
+    SampleService.processOrder("Mouse", 5, 29.99);
+    SampleService.processOrder("Keyboard", 2, 79.99);
 
-    service.processOrder("Laptop", 1, 999.99);
-    service.processOrder("Mouse", 5, 29.99);
-    service.processOrder("Keyboard", 2, 79.99);
-
-    System.out.println("Orders processed: " + service.getOrderCount());
-    System.out.println("Total revenue: $" + String.format("%.2f", service.getTotalRevenue()));
+    System.out.println("Orders processed: " + SampleService.getOrderCount());
+    System.out.println("Total revenue: $" + String.format("%.2f", SampleService.getTotalRevenue()));
   }
 }
