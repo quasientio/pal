@@ -599,5 +599,5 @@ Use binary RPC for Java-to-Java communication where performance matters. Use JSO
 
 - [Remote Procedure Calls](rpc.md) -- RPC overview, formats, and JSON-RPC API reference
 - [RPC Policy](rpc-policy.md) -- Access control for RPC operations
-- [Object References](../../developer/docs/architecture/object-references.md) -- How PAL manages remote object lifecycle
+- [Object References](rpc.md#object-references) -- How PAL manages remote object lifecycle
 - [Peers and Logs](peers-and-logs.md) -- Understanding peers and ThinPeer

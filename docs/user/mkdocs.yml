@@ -10,6 +10,8 @@ nav:
     - Remote Procedure Calls: concepts/rpc.md
     - Interception: concepts/interception.md
     - RPC Policy: concepts/rpc-policy.md
+    - Binary Protocol: concepts/rpc-binary.md
+    - RpcChain DSL: concepts/rpc-chain.md
     - Recording Scope: concepts/recording-scope.md
     - Log Backends: concepts/logs.md
   - Guides:

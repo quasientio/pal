@@ -211,7 +211,7 @@ pal run --wal file:/tmp/my-wal --no-wal-incoming-cli -cp app.jar com.example.Mai
 | `--wal-incoming-cli` | On | The `main()` bootstrap call |
 | `--wal-all-incoming-rpc` | Off | Extends RPC logging to include source log replay |
 
-See the [CLI Reference](../cli-reference.md#pal-run---wal-options) for full details and examples.
+See the [CLI Reference](../cli-reference.md#pal-run-wal-options) for full details and examples.
 
 ## Source Logs vs WALs
 

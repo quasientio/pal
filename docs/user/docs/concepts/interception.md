@@ -1115,7 +1115,7 @@ When a bundle is applied, PAL stores lightweight metadata in etcd recording the 
 - **`pal intercept rm --bundle <name>`** --- remove all intercepts by bundle name without needing the original YAML file
 - **`pal intercept status --bundle <name>`** --- check the status of a previously applied bundle
 
-For full CLI reference details, see the [CLI Reference](../cli-reference.md#pal-intercept-apply---apply-intercept-bundle).
+For full CLI reference details, see the [CLI Reference](../cli-reference.md#pal-intercept-apply-apply-intercept-bundle).
 
 ### Programmatic API
 
@@ -1235,7 +1235,7 @@ Anyone with directory access can register intercepts on any peer. To restrict:
 
 - [Peers and Logs](peers-and-logs.md) - Understanding peers
 - [RPC](rpc.md) - How callbacks are delivered
-- [CLI Reference: Intercept Commands](../cli-reference.md#pal-intercept-apply---apply-intercept-bundle) - Full reference for bundle CLI commands
+- [CLI Reference: Intercept Commands](../cli-reference.md#pal-intercept-apply-apply-intercept-bundle) - Full reference for bundle CLI commands
 - [Writing Callback Handlers](../guides/writing-callback-handlers.md) - Implementing callback logic with practical examples
 - [Testing Guide](../guides/testing-with-interception.md) - Practical testing patterns
 - [Local Development](../guides/local-development.md) - Setting up for interception

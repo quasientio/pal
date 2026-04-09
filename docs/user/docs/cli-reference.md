@@ -1480,7 +1480,7 @@ pal replay [OPTIONS] class [args...]
 | `-cp, --classpath <CLASSPATH>` | Classpath for the application (required when replaying a class) |
 | `-jar <jarFile>` | JAR file to replay (Main-Class from manifest). Alternative to specifying a main class |
 | `--fx-thread` | Enable JavaFX Application Thread execution. Required for replaying JavaFX applications (default: `false`) |
-| `--service-thread <pattern>` | Regex pattern for service request handler thread names (e.g., `executor-thread-.*`). Entry points on matching threads are tagged with `service-request` affinity during recording, and wrapped in a CDI request context during replay. See [Service/Web Applications](#service-web-applications) |
+| `--service-thread <pattern>` | Regex pattern for service request handler thread names (e.g., `executor-thread-.*`). Entry points on matching threads are tagged with `service-request` affinity during recording, and wrapped in a CDI request context during replay. See [Service/Web Applications](#serviceweb-applications) |
 | `--scope <patterns>` | Ant-style class patterns for recording scope (must match the flags used during recording). See [Recording Scope](concepts/recording-scope.md) |
 | `--scope-exclude <patterns>` | Ant-style class patterns to exclude from recording scope (must match recording) |
 | `--scope-io` | Include built-in I/O boundary rules in recording scope (must match recording) |
