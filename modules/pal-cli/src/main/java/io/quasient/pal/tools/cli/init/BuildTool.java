@@ -21,9 +21,9 @@ package io.quasient.pal.tools.cli.init;
  * @since 1.0.0
  */
 public enum BuildTool {
-  /** Apache Maven build tool. */
-  MAVEN,
-
   /** Gradle build tool (Groovy or Kotlin DSL). */
-  GRADLE
+  GRADLE,
+
+  /** Apache Maven build tool. */
+  MAVEN
 }

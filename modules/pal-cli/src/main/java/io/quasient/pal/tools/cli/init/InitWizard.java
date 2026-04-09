@@ -262,7 +262,7 @@ public final class InitWizard {
       buildTool = overrides.getBuildTool();
     } else {
       List<BuildTool> buildTools = Arrays.asList(BuildTool.values());
-      buildTool = promptProvider.promptSelect("Build tool", buildTools, BuildTool.MAVEN);
+      buildTool = promptProvider.promptSelect("Build tool", buildTools, BuildTool.GRADLE);
     }
     builder.buildTool(buildTool);
 

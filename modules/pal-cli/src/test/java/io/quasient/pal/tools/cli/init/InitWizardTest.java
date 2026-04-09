@@ -196,7 +196,7 @@ public class InitWizardTest {
     assertThat(config.getProjectVersion(), is("1.0-SNAPSHOT"));
     assertThat(config.isSampleApp(), is(true));
     assertThat(config.isLoggingConfig(), is(true));
-    assertThat(config.getBuildTool(), is(BuildTool.MAVEN));
+    assertThat(config.getBuildTool(), is(BuildTool.GRADLE));
     assertThat(config.isInterceptable(), is(false));
     assertThat(config.isIntercepting(), is(false));
     assertThat(config.isKafka(), is(false));
