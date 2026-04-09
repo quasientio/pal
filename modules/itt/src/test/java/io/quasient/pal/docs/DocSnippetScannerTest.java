@@ -15,10 +15,20 @@
  */
 package io.quasient.pal.docs;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
-import org.junit.Ignore;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
  * Unit test specifications for {@code DocSnippetScanner}, the markdown parser that discovers all
@@ -28,64 +38,97 @@ import org.junit.Test;
  * the actual docs directory. Each test defines expected behavior for a specific parsing edge case
  * found in the real documentation: line continuations, pipes, heredocs, env prefixes, comments,
  * non-bash blocks, and more.
- *
- * <p>All tests are stubs awaiting implementation in issue #1431.
  */
 public class DocSnippetScannerTest {
+
+  @Rule public TemporaryFolder tempFolder = new TemporaryFolder();
 
   /**
    * Verifies that a single {@code pal} command inside a {@code ```bash} block is extracted with
    * correct metadata.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldExtractPalCommandFromSimpleBashBlock() {
-    // Given: markdown with a single ```bash block containing "pal peer ls -d localhost:2379"
-    // When: scanned
-    // Then: returns one DocCommand with correct sourceFile, lineNumber, rawText, and type PEER_LS
+  public void shouldExtractPalCommandFromSimpleBashBlock() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            Some text
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+            ```bash
+            pal peer ls -d localhost:2379
+            ```
+            """);
+
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(1));
+    DocCommand cmd = commands.get(0);
+    assertThat(cmd.getType(), is(DocCommandType.PEER_LS));
+    assertThat(cmd.getNormalizedText(), is("pal peer ls -d localhost:2379"));
+    assertThat(cmd.getSourceFile(), is(file));
+    assertThat(cmd.getLineNumber(), is(4));
   }
 
   /** Verifies that backslash-newline continuations are joined into a single normalized command. */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldJoinLineContinuations() {
-    // Given: ```bash block with "pal run -d localhost:2379 \\\n  --wal my-wal \\\n  -cp app.jar
-    //        com.example.Main"
-    // When: scanned
-    // Then: returns one DocCommand with normalizedText joining all continuation lines into a
-    //       single command
+  public void shouldJoinLineContinuations() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            pal run -d localhost:2379 \\
+              --wal my-wal \\
+              -cp app.jar com.example.Main
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(1));
+    DocCommand cmd = commands.get(0);
+    assertThat(
+        cmd.getNormalizedText(),
+        is("pal run -d localhost:2379 --wal my-wal -cp app.jar com.example.Main"));
+    assertThat(cmd.getType(), is(DocCommandType.RUN));
+    assertThat(cmd.getLineNumber(), is(2));
   }
 
   /**
    * Verifies that compound commands separated by {@code &&} are split into separate DocCommands.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldSplitCompoundCommandsOnAmpersand() {
-    // Given: "pal peer ls -d localhost:2379 && pal log ls -d localhost:2379"
-    // When: scanned
-    // Then: returns two DocCommands (PEER_LS and LOG_LS)
+  public void shouldSplitCompoundCommandsOnAmpersand() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            pal peer ls -d localhost:2379 && pal log ls -d localhost:2379
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(2));
+    assertThat(commands.get(0).getType(), is(DocCommandType.PEER_LS));
+    assertThat(commands.get(1).getType(), is(DocCommandType.LOG_LS));
   }
 
   /** Verifies that compound commands separated by {@code ;} are split into separate DocCommands. */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldSplitCompoundCommandsOnSemicolon() {
-    // Given: "pal peer ls; pal log ls"
-    // When: scanned
-    // Then: returns two DocCommands
+  public void shouldSplitCompoundCommandsOnSemicolon() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            pal peer ls; pal log ls
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(2));
+    assertThat(commands.get(0).getType(), is(DocCommandType.PEER_LS));
+    assertThat(commands.get(1).getType(), is(DocCommandType.LOG_LS));
   }
 
   /**
@@ -93,15 +136,23 @@ public class DocSnippetScannerTest {
    * command.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldKeepPipeChainIntact() {
-    // Given: "echo '{\"jsonrpc\":...}' | pal peer call ..."
-    // When: scanned
-    // Then: returns one DocCommand with the full pipe chain preserved in rawText, classified as
-    //       PEER_CALL
+  public void shouldKeepPipeChainIntact() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            echo '{"jsonrpc":"2.0"}' | pal peer call -d localhost:2379 -p some-uuid
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(1));
+    DocCommand cmd = commands.get(0);
+    assertThat(cmd.getType(), is(DocCommandType.PEER_CALL));
+    assertTrue(
+        "rawText should contain full pipe chain",
+        cmd.getRawText().contains("echo") && cmd.getRawText().contains("pal peer call"));
   }
 
   /**
@@ -109,38 +160,61 @@ public class DocSnippetScannerTest {
    * based on the pal portion.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldExtractPalFromPipeChain() {
-    // Given: "pal peer ls -d localhost:2379 | grep callback"
-    // When: scanned
-    // Then: returns one DocCommand classified as PEER_LS, with the pipe chain in rawText
+  public void shouldExtractPalFromPipeChain() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            pal peer ls -d localhost:2379 | grep callback
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(1));
+    DocCommand cmd = commands.get(0);
+    assertThat(cmd.getType(), is(DocCommandType.PEER_LS));
+    assertTrue("rawText should contain pipe chain", cmd.getRawText().contains("| grep"));
   }
 
   /** Verifies that heredoc input piped into a {@code pal} command is tracked correctly. */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldHandleHeredocInput() {
-    // Given: "cat <<EOF | pal peer call ...\n{\"jsonrpc\":...}\nEOF"
-    // When: scanned
-    // Then: returns one DocCommand of type PEER_CALL with heredoc body tracked
+  public void shouldHandleHeredocInput() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            cat <<EOF | pal peer call -d localhost:2379 -p some-uuid
+            {"jsonrpc":"2.0","method":"add","params":[2,3],"id":1}
+            EOF
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(1));
+    DocCommand cmd = commands.get(0);
+    assertThat(cmd.getType(), is(DocCommandType.PEER_CALL));
+    assertNotNull("heredocBody should be tracked", cmd.getHeredocBody());
+    assertTrue("heredocBody should contain the JSON", cmd.getHeredocBody().contains("\"jsonrpc\""));
   }
 
   /** Verifies that a leading {@code $} prompt marker is stripped from the normalized text. */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldStripLeadingDollarSign() {
-    // Given: "$ pal help"
-    // When: scanned
-    // Then: returns DocCommand with normalizedText "pal help"
+  public void shouldStripLeadingDollarSign() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            $ pal help
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(1));
+    assertThat(commands.get(0).getNormalizedText(), is("pal help"));
+    assertThat(commands.get(0).getType(), is(DocCommandType.HELP));
   }
 
   /**
@@ -148,26 +222,42 @@ public class DocSnippetScannerTest {
    * classification purposes.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldStripEnvVarPrefix() {
-    // Given: "JAVA_TOOL_OPTIONS=\"-agentlib:...\" pal replay ..."
-    // When: scanned
-    // Then: returns DocCommand with normalizedText starting with "pal replay", type REPLAY
+  public void shouldStripEnvVarPrefix() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            JAVA_TOOL_OPTIONS="-agentlib:jdwp" pal replay --wal file:/tmp/my-wal
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(1));
+    DocCommand cmd = commands.get(0);
+    assertTrue(
+        "normalizedText should start with pal replay",
+        cmd.getNormalizedText().startsWith("pal replay"));
+    assertThat(cmd.getType(), is(DocCommandType.REPLAY));
   }
 
   /** Verifies that comment lines (starting with {@code #}) inside a bash block are skipped. */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldSkipCommentLines() {
-    // Given: bash block with "# This is a comment\npal help"
-    // When: scanned
-    // Then: returns only the "pal help" command, not the comment
+  public void shouldSkipCommentLines() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            # This is a comment
+            pal help
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(1));
+    assertThat(commands.get(0).getNormalizedText(), is("pal help"));
+    assertThat(commands.get(0).getType(), is(DocCommandType.HELP));
   }
 
   /**
@@ -175,39 +265,73 @@ public class DocSnippetScannerTest {
    * languages are ignored.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldSkipNonBashCodeBlocks() {
-    // Given: markdown with ```java, ```json, ```yaml, ```xml, ```groovy blocks and one ```bash
-    //        block
-    // When: scanned
-    // Then: only the bash block's commands are returned
+  public void shouldSkipNonBashCodeBlocks() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```java
+            calculator.add(2, 3);
+            ```
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+            ```json
+            {"key": "value"}
+            ```
+
+            ```yaml
+            key: value
+            ```
+
+            ```xml
+            <root/>
+            ```
+
+            ```groovy
+            println 'hello'
+            ```
+
+            ```bash
+            pal help
+            ```
+            """);
+
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(1));
+    assertThat(commands.get(0).getNormalizedText(), is("pal help"));
   }
 
   /** Verifies that {@code ```shell} is treated the same as {@code ```bash}. */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldHandleShellAnnotation() {
-    // Given: ```shell block with "pal help"
-    // When: scanned
-    // Then: returns the command (treats shell same as bash)
+  public void shouldHandleShellAnnotation() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```shell
+            pal help
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(1));
+    assertThat(commands.get(0).getNormalizedText(), is("pal help"));
+    assertThat(commands.get(0).getType(), is(DocCommandType.HELP));
   }
 
   /** Verifies that unlabeled code blocks (no language annotation) are not scanned. */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldHandleUnlabeledCodeBlocks() {
-    // Given: ``` (no language) block with "pal help"
-    // When: scanned
-    // Then: does NOT return the command (only bash/shell blocks are processed)
+  public void shouldHandleUnlabeledCodeBlocks() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```
+            pal help
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertTrue("unlabeled code blocks should not produce commands", commands.isEmpty());
   }
 
   /**
@@ -215,14 +339,22 @@ public class DocSnippetScannerTest {
    * within the markdown file.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldReturnCorrectLineNumbers() {
-    // Given: markdown with text, then a bash block starting at line 10
-    // When: scanned
-    // Then: the DocCommand's lineNumber points to the actual line of the command within the file
+  public void shouldReturnCorrectLineNumbers() throws IOException {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 1; i <= 9; i++) {
+      sb.append("Line ").append(i).append("\n");
+    }
+    sb.append("```bash\n"); // line 10
+    sb.append("pal help\n"); // line 11
+    sb.append("pal peer ls\n"); // line 12
+    sb.append("```\n"); // line 13
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    Path file = writeMarkdown(sb.toString());
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(2));
+    assertThat(commands.get(0).getLineNumber(), is(11));
+    assertThat(commands.get(1).getLineNumber(), is(12));
   }
 
   /**
@@ -230,26 +362,49 @@ public class DocSnippetScannerTest {
    * files.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldScanMultipleFilesRecursively() {
-    // Given: a temp directory with nested markdown files containing bash blocks
-    // When: scan(tempDir) is called
-    // Then: returns commands from all files
+  public void shouldScanMultipleFilesRecursively() throws IOException {
+    File root = tempFolder.getRoot();
+    File subDir = new File(root, "concepts");
+    assertTrue("subdir should be created", subDir.mkdirs());
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    Files.writeString(
+        new File(root, "guide.md").toPath(),
+        """
+        ```bash
+        pal help
+        ```
+        """);
+    Files.writeString(
+        new File(subDir, "rpc.md").toPath(),
+        """
+        ```bash
+        pal peer ls
+        pal peer call -d localhost:2379 -p uuid com.Foo
+        ```
+        """);
+
+    List<DocCommand> commands = DocSnippetScanner.scan(root.toPath());
+
+    assertTrue(
+        "should find commands from multiple files, found " + commands.size(), commands.size() >= 3);
   }
 
   /** Verifies that a bash block containing only whitespace and comments produces no commands. */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldHandleEmptyBashBlock() {
-    // Given: ```bash with only whitespace/comments
-    // When: scanned
-    // Then: returns no commands
+  public void shouldHandleEmptyBashBlock() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+            # Just a comment
+               \s
+            ```
+            """);
+
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertTrue("empty/comment-only bash block should produce no commands", commands.isEmpty());
   }
 
   /**
@@ -257,14 +412,27 @@ public class DocSnippetScannerTest {
    * separate DocCommands.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldHandleMultiplePalCommandsInOneBlock() {
-    // Given: bash block with 3 pal commands on separate lines
-    // When: scanned
-    // Then: returns 3 DocCommands with consecutive line numbers
+  public void shouldHandleMultiplePalCommandsInOneBlock() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            pal help
+            pal peer ls
+            pal log ls
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(3));
+    assertThat(commands.get(0).getType(), is(DocCommandType.HELP));
+    assertThat(commands.get(1).getType(), is(DocCommandType.PEER_LS));
+    assertThat(commands.get(2).getType(), is(DocCommandType.LOG_LS));
+    // Verify consecutive line numbers
+    assertThat(commands.get(0).getLineNumber(), is(2));
+    assertThat(commands.get(1).getLineNumber(), is(3));
+    assertThat(commands.get(2).getLineNumber(), is(4));
   }
 
   /**
@@ -272,26 +440,42 @@ public class DocSnippetScannerTest {
    * discarded.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldClassifyNonPalCommandsAsNonPal() {
-    // Given: bash block with "tar xzf pal.tar.gz\nmvn install\npal help"
-    // When: scanned
-    // Then: returns 3 commands: two NON_PAL and one HELP
+  public void shouldClassifyNonPalCommandsAsNonPal() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            tar xzf pal.tar.gz
+            mvn install
+            pal help
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(3));
+    assertThat(commands.get(0).getType(), is(DocCommandType.NON_PAL));
+    assertThat(commands.get(1).getType(), is(DocCommandType.NON_PAL));
+    assertThat(commands.get(2).getType(), is(DocCommandType.HELP));
   }
 
   /** Verifies that export statements are classified as {@code NON_PAL}. */
   @Test
-  @Ignore("Awaiting implementation in #1431")
-  public void shouldHandleExportStatements() {
-    // Given: "export PAL_HOME=/opt/pal\npal help"
-    // When: scanned
-    // Then: export is classified as NON_PAL and pal help as HELP
+  public void shouldHandleExportStatements() throws IOException {
+    Path file =
+        writeMarkdown(
+            """
+            ```bash
+            export PAL_HOME=/opt/pal
+            pal help
+            ```
+            """);
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scanFile(file);
+
+    assertThat(commands.size(), is(2));
+    assertThat(commands.get(0).getType(), is(DocCommandType.NON_PAL));
+    assertThat(commands.get(1).getType(), is(DocCommandType.HELP));
   }
 
   /**
@@ -299,13 +483,54 @@ public class DocSnippetScannerTest {
    * command count.
    */
   @Test
-  @Ignore("Awaiting implementation in #1431")
   public void shouldFindMinimumCommandCount() {
-    // Given: the actual docs/user/docs/ directory
-    // When: scanned
-    // Then: returns at least 50 pal commands total
+    Path docsRoot = findDocsRoot();
+    assumeTrue("docs/user/docs/ directory must exist", Files.isDirectory(docsRoot));
 
-    // TODO(#1431): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> commands = DocSnippetScanner.scan(docsRoot);
+
+    long palCount = commands.stream().filter(c -> c.getType() != DocCommandType.NON_PAL).count();
+    assertTrue("Expected at least 50 pal commands, found " + palCount, palCount >= 50);
+  }
+
+  /**
+   * Writes markdown content to a temporary file.
+   *
+   * @param content the markdown content
+   * @return the path to the temporary file
+   * @throws IOException if file creation fails
+   */
+  private Path writeMarkdown(String content) throws IOException {
+    File file = tempFolder.newFile("test-" + System.nanoTime() + ".md");
+    Files.writeString(file.toPath(), content);
+    return file.toPath();
+  }
+
+  /**
+   * Finds the docs/user/docs/ directory by checking PAL_HOME first, then relative paths.
+   *
+   * @return the path to the docs root
+   */
+  private static Path findDocsRoot() {
+    String palHome = System.getenv("PAL_HOME");
+    if (palHome != null) {
+      Path candidate = Path.of(palHome, "docs", "user", "docs");
+      if (Files.isDirectory(candidate)) {
+        return candidate;
+      }
+    }
+
+    // Try relative paths from current working directory
+    Path cwd = Path.of(System.getProperty("user.dir"));
+    Path candidate = cwd.resolve("docs/user/docs");
+    if (Files.isDirectory(candidate)) {
+      return candidate;
+    }
+    candidate = cwd.resolve("../../docs/user/docs").normalize();
+    if (Files.isDirectory(candidate)) {
+      return candidate;
+    }
+
+    return cwd.resolve("docs/user/docs");
   }
 }
