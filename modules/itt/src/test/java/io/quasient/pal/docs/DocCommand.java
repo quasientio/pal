@@ -46,8 +46,11 @@ public final class DocCommand {
   /** Classified command type. */
   private final DocCommandType type;
 
+  /** Heredoc body content, or {@code null} if not a heredoc command. */
+  private final String heredocBody;
+
   /**
-   * Constructs a new {@code DocCommand}.
+   * Constructs a new {@code DocCommand} without heredoc body.
    *
    * @param sourceFile relative path to the markdown file (must not be null)
    * @param lineNumber line number in the source file where the command starts
@@ -58,11 +61,33 @@ public final class DocCommand {
    */
   public DocCommand(
       Path sourceFile, int lineNumber, String rawText, String normalizedText, DocCommandType type) {
+    this(sourceFile, lineNumber, rawText, normalizedText, type, null);
+  }
+
+  /**
+   * Constructs a new {@code DocCommand} with an optional heredoc body.
+   *
+   * @param sourceFile relative path to the markdown file (must not be null)
+   * @param lineNumber line number in the source file where the command starts
+   * @param rawText original text from the markdown code block (must not be null)
+   * @param normalizedText normalized text after joining line continuations and trimming
+   * @param type classified command type (must not be null)
+   * @param heredocBody the heredoc body content, or {@code null} if not a heredoc command
+   * @throws NullPointerException if {@code sourceFile}, {@code rawText}, or {@code type} is null
+   */
+  public DocCommand(
+      Path sourceFile,
+      int lineNumber,
+      String rawText,
+      String normalizedText,
+      DocCommandType type,
+      String heredocBody) {
     this.sourceFile = Objects.requireNonNull(sourceFile, "sourceFile must not be null");
     this.lineNumber = lineNumber;
     this.rawText = Objects.requireNonNull(rawText, "rawText must not be null");
     this.normalizedText = normalizedText;
     this.type = Objects.requireNonNull(type, "type must not be null");
+    this.heredocBody = heredocBody;
   }
 
   /**
@@ -108,6 +133,15 @@ public final class DocCommand {
    */
   public DocCommandType getType() {
     return type;
+  }
+
+  /**
+   * Returns the heredoc body content, or {@code null} if this is not a heredoc command.
+   *
+   * @return the heredoc body, or null
+   */
+  public String getHeredocBody() {
+    return heredocBody;
   }
 
   /**
