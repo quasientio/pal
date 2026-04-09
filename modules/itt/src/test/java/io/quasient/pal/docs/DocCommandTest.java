@@ -15,9 +15,12 @@
  */
 package io.quasient.pal.docs;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.junit.Test;
 
 /**
@@ -27,72 +30,96 @@ import org.junit.Test;
  * of a CLI command extracted from a markdown code block. These tests define the contract for
  * construction, field access, null-safety, and toString formatting.
  */
-@Ignore("Awaiting implementation in #1429")
 public class DocCommandTest {
 
   /** Verifies that all fields provided at construction time are accessible via getters. */
   @Test
   public void shouldStoreAllFieldsCorrectly() {
     // Given: valid sourceFile, lineNumber, rawText, normalizedText, and type
-    // When: DocCommand is constructed with those values
-    // Then: all getters return the provided values
+    Path sourceFile = Paths.get("docs/user/docs/getting-started.md");
+    int lineNumber = 83;
+    String rawText = "pal init pal-tutorial";
+    String normalizedText = "pal init pal-tutorial";
+    DocCommandType type = DocCommandType.INIT;
 
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    // When: DocCommand is constructed with those values
+    DocCommand cmd = new DocCommand(sourceFile, lineNumber, rawText, normalizedText, type);
+
+    // Then: all getters return the provided values
+    assertThat(cmd.getSourceFile(), is(sourceFile));
+    assertThat(cmd.getLineNumber(), is(lineNumber));
+    assertThat(cmd.getRawText(), is(rawText));
+    assertThat(cmd.getNormalizedText(), is(normalizedText));
+    assertThat(cmd.getType(), is(type));
   }
 
   /** Verifies that constructing a DocCommand with a null sourceFile throws NullPointerException. */
-  @Test
+  @Test(expected = NullPointerException.class)
   public void shouldRejectNullSourceFile() {
     // Given: null sourceFile, with valid rawText, normalizedText, lineNumber, and type
     // When: DocCommand is constructed
     // Then: NullPointerException is thrown
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    new DocCommand(null, 1, "pal help", "pal help", DocCommandType.HELP);
   }
 
   /** Verifies that constructing a DocCommand with a null rawText throws NullPointerException. */
-  @Test
+  @Test(expected = NullPointerException.class)
   public void shouldRejectNullRawText() {
     // Given: null rawText, with valid sourceFile, normalizedText, lineNumber, and type
     // When: DocCommand is constructed
     // Then: NullPointerException is thrown
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    new DocCommand(Paths.get("test.md"), 1, null, "pal help", DocCommandType.HELP);
   }
 
   /** Verifies that constructing a DocCommand with a null type throws NullPointerException. */
-  @Test
+  @Test(expected = NullPointerException.class)
   public void shouldRejectNullType() {
     // Given: null type, with valid sourceFile, rawText, normalizedText, and lineNumber
     // When: DocCommand is constructed
     // Then: NullPointerException is thrown
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    new DocCommand(Paths.get("test.md"), 1, "pal help", "pal help", null);
   }
 
   /** Verifies that toString() formats as "filename:line -> command". */
   @Test
   public void shouldFormatToStringWithFileAndLine() {
     // Given: DocCommand from "getting-started.md" line 83 with rawText "pal init pal-tutorial"
-    // When: toString() is called
-    // Then: result matches pattern "getting-started.md:83 -> pal init pal-tutorial"
+    DocCommand cmd =
+        new DocCommand(
+            Paths.get("docs/user/docs/getting-started.md"),
+            83,
+            "pal init pal-tutorial",
+            "pal init pal-tutorial",
+            DocCommandType.INIT);
 
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    // When: toString() is called
+    String result = cmd.toString();
+
+    // Then: result matches pattern "getting-started.md:83 -> pal init pal-tutorial"
+    assertThat(result, is("getting-started.md:83 -> pal init pal-tutorial"));
   }
 
   /** Verifies that toString() truncates commands longer than 80 characters with an ellipsis. */
   @Test
   public void shouldTruncateLongCommandsInToString() {
-    // Given: DocCommand with a rawText longer than 80 characters
-    // When: toString() is called
-    // Then: the command portion is truncated with ellipsis
+    // Given: DocCommand with a normalizedText longer than 80 characters
+    String longCommand =
+        "pal run -d localhost:2379 -k localhost:29092 --wal my-very-long-wal-name"
+            + " -cp target/my-app.jar com.example.Main";
+    DocCommand cmd =
+        new DocCommand(Paths.get("test.md"), 10, longCommand, longCommand, DocCommandType.RUN);
 
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    // When: toString() is called
+    String result = cmd.toString();
+
+    // Then: the command portion is truncated with ellipsis
+    assertThat(result, containsString("..."));
+    // The format is "test.md:10 -> <truncated>..."
+    // "test.md:10 -> " is 15 chars, so total should be 15 + 80 + 3 = 98
+    String prefix = "test.md:10 -> ";
+    assertThat(result.startsWith(prefix), is(true));
+    String commandPortion = result.substring(prefix.length());
+    assertThat(commandPortion.length(), is(83)); // 80 chars + "..."
+    assertThat(commandPortion.endsWith("..."), is(true));
   }
 }

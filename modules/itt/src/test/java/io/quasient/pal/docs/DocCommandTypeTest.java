@@ -15,9 +15,9 @@
  */
 package io.quasient.pal.docs;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -28,7 +28,6 @@ import org.junit.Test;
  * define the contract for classification across all supported command types, including edge cases
  * like flags, aliases, and non-PAL commands.
  */
-@Ignore("Awaiting implementation in #1429")
 public class DocCommandTypeTest {
 
   /** Verifies that help-related commands are classified as HELP. */
@@ -37,9 +36,12 @@ public class DocCommandTypeTest {
     // Given: commands "pal help", "pal peer --help", "pal log print --help"
     // When: classify() is called on each
     // Then: all return HELP
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    assertThat(DocCommandType.classify("pal help"), is(DocCommandType.HELP));
+    assertThat(DocCommandType.classify("pal peer --help"), is(DocCommandType.HELP));
+    assertThat(DocCommandType.classify("pal log print --help"), is(DocCommandType.HELP));
+    assertThat(DocCommandType.classify("pal --help"), is(DocCommandType.HELP));
+    assertThat(DocCommandType.classify("pal -h"), is(DocCommandType.HELP));
+    assertThat(DocCommandType.classify("pal help peer"), is(DocCommandType.HELP));
   }
 
   /** Verifies that all peer subcommands are classified to their specific types. */
@@ -49,9 +51,19 @@ public class DocCommandTypeTest {
     //        "pal peer rm ...", "pal peer stats ..."
     // When: classify() is called on each
     // Then: returns PEER_LS, PEER_CALL, PEER_PRINT, PEER_RM, PEER_STATS respectively
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        DocCommandType.classify("pal peer ls -d localhost:2379"), is(DocCommandType.PEER_LS));
+    assertThat(
+        DocCommandType.classify("pal peer call -d localhost:2379 -p uuid com.example.Main"),
+        is(DocCommandType.PEER_CALL));
+    assertThat(
+        DocCommandType.classify("pal peer print -d localhost:2379 -p uuid"),
+        is(DocCommandType.PEER_PRINT));
+    assertThat(
+        DocCommandType.classify("pal peer rm -d localhost:2379 -p uuid"),
+        is(DocCommandType.PEER_RM));
+    assertThat(
+        DocCommandType.classify("pal peer stats -d localhost:2379"), is(DocCommandType.PEER_STATS));
   }
 
   /** Verifies that all log subcommands are classified to their specific types. */
@@ -60,9 +72,21 @@ public class DocCommandTypeTest {
     // Given: commands for log ls, log print, log call, log rm, log stats, log index
     // When: classify() is called on each
     // Then: returns LOG_LS, LOG_PRINT, LOG_CALL, LOG_RM, LOG_STATS, LOG_INDEX respectively
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    assertThat(DocCommandType.classify("pal log ls -d localhost:2379"), is(DocCommandType.LOG_LS));
+    assertThat(
+        DocCommandType.classify("pal log print -d localhost:2379 -l my-log"),
+        is(DocCommandType.LOG_PRINT));
+    assertThat(
+        DocCommandType.classify("pal log call -d localhost:2379 -l my-log com.example.Main"),
+        is(DocCommandType.LOG_CALL));
+    assertThat(
+        DocCommandType.classify("pal log rm -d localhost:2379 my-log"), is(DocCommandType.LOG_RM));
+    assertThat(
+        DocCommandType.classify("pal log stats -d localhost:2379 -l my-log"),
+        is(DocCommandType.LOG_STATS));
+    assertThat(
+        DocCommandType.classify("pal log index -d localhost:2379 -l my-log"),
+        is(DocCommandType.LOG_INDEX));
   }
 
   /** Verifies that all intercept subcommands are classified to their specific types. */
@@ -73,9 +97,21 @@ public class DocCommandTypeTest {
     // When: classify() is called on each
     // Then: returns INTERCEPT_LS, INTERCEPT_APPLY, INTERCEPT_RM,
     //       INTERCEPT_DIFF, INTERCEPT_STATUS respectively
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        DocCommandType.classify("pal intercept ls -d localhost:2379"),
+        is(DocCommandType.INTERCEPT_LS));
+    assertThat(
+        DocCommandType.classify("pal intercept apply -d localhost:2379 -f intercept.yaml"),
+        is(DocCommandType.INTERCEPT_APPLY));
+    assertThat(
+        DocCommandType.classify("pal intercept rm -d localhost:2379 intercept-uuid"),
+        is(DocCommandType.INTERCEPT_RM));
+    assertThat(
+        DocCommandType.classify("pal intercept diff -d localhost:2379 -f intercept.yaml"),
+        is(DocCommandType.INTERCEPT_DIFF));
+    assertThat(
+        DocCommandType.classify("pal intercept status -d localhost:2379"),
+        is(DocCommandType.INTERCEPT_STATUS));
   }
 
   /** Verifies that "pal run" commands are classified as RUN. */
@@ -84,9 +120,10 @@ public class DocCommandTypeTest {
     // Given: command "pal run -d localhost:2379 --wal my-log -cp app.jar com.example.Main"
     // When: classify() is called
     // Then: returns RUN
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        DocCommandType.classify(
+            "pal run -d localhost:2379 --wal my-log -cp app.jar com.example.Main"),
+        is(DocCommandType.RUN));
   }
 
   /** Verifies that "pal replay" commands are classified as REPLAY. */
@@ -95,9 +132,9 @@ public class DocCommandTypeTest {
     // Given: command "pal replay --wal file:/tmp/wal -cp app.jar com.example.Main"
     // When: classify() is called
     // Then: returns REPLAY
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    assertThat(
+        DocCommandType.classify("pal replay --wal file:/tmp/wal -cp app.jar com.example.Main"),
+        is(DocCommandType.REPLAY));
   }
 
   /** Verifies that "pal init" commands are classified as INIT. */
@@ -106,9 +143,7 @@ public class DocCommandTypeTest {
     // Given: command "pal init my-project"
     // When: classify() is called
     // Then: returns INIT
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    assertThat(DocCommandType.classify("pal init my-project"), is(DocCommandType.INIT));
   }
 
   /** Verifies that non-PAL commands are classified as NON_PAL. */
@@ -117,20 +152,29 @@ public class DocCommandTypeTest {
     // Given: commands "mvn install", "tar xzf pal.tar.gz", "docker ps", "curl http://localhost"
     // When: classify() is called on each
     // Then: all return NON_PAL
-
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    assertThat(DocCommandType.classify("mvn install"), is(DocCommandType.NON_PAL));
+    assertThat(DocCommandType.classify("tar xzf pal.tar.gz"), is(DocCommandType.NON_PAL));
+    assertThat(DocCommandType.classify("docker ps"), is(DocCommandType.NON_PAL));
+    assertThat(DocCommandType.classify("curl http://localhost"), is(DocCommandType.NON_PAL));
   }
 
   /** Verifies that classification works correctly when commands have flags interspersed. */
   @Test
   public void shouldClassifyCommandsWithFlags() {
-    // Given: command "pal -v peer ls -d localhost:2379 -l" (flags before subcommand)
+    // Given: command with flags before subcommand
     // When: classify() is called
-    // Then: returns PEER_LS (flags do not break classification)
+    // Then: returns correct type (flags do not break classification)
+    assertThat(
+        DocCommandType.classify("pal peer ls -d localhost:2379 -l"), is(DocCommandType.PEER_LS));
 
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    // With env var prefix
+    assertThat(
+        DocCommandType.classify("JAVA_TOOL_OPTIONS=\"-agentlib:jdwp\" pal run -cp app.jar"),
+        is(DocCommandType.RUN));
+
+    // With leading $ and whitespace
+    assertThat(
+        DocCommandType.classify("$ pal log ls -d localhost:2379"), is(DocCommandType.LOG_LS));
   }
 
   /** Verifies that documented command aliases are classified correctly. */
@@ -139,8 +183,13 @@ public class DocCommandTypeTest {
     // Given: commands "pal peers" and "pal logs" (if aliases are documented)
     // When: classify() is called on each
     // Then: "pal peers" maps to PEER_LS, "pal logs" maps to LOG_LS
+    assertThat(DocCommandType.classify("pal peers"), is(DocCommandType.PEER_LS));
+    assertThat(DocCommandType.classify("pal logs"), is(DocCommandType.LOG_LS));
+    assertThat(DocCommandType.classify("pal intercepts"), is(DocCommandType.INTERCEPT_LS));
 
-    // TODO(#1429): Implement test logic
-    fail("Not yet implemented");
+    // Aliases with flags
+    assertThat(
+        DocCommandType.classify("pal peers -d localhost:2379 -l"), is(DocCommandType.PEER_LS));
+    assertThat(DocCommandType.classify("pal logs -d localhost:2379 -l"), is(DocCommandType.LOG_LS));
   }
 }
