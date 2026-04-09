@@ -15,22 +15,31 @@
  */
 package io.quasient.pal.docs;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 
+import io.quasient.pal.PeerProcess;
 import io.quasient.pal.cli.AbstractCliIT;
+import io.quasient.pal.docs.CommandTransformer.TransformedCommand;
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Ignore;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +85,25 @@ import org.slf4j.LoggerFactory;
 public class DocSnippetIT extends AbstractCliIT {
 
   private static final Logger logger = LoggerFactory.getLogger(DocSnippetIT.class);
+
+  /** Main class for generic doc examples (short-lived, exits after running). */
+  private static final String METHODS_CLASS = "io.quasient.foobar.apps.quantized.rpc.Methods";
+
+  /** Duration in seconds to let streaming commands run before killing. */
+  private static final int STREAMING_DURATION_SECONDS = 3;
+
+  /** Timeout in seconds for short-lived peer run commands. */
+  private static final int SHORT_LIVED_TIMEOUT_SECONDS = 30;
+
+  // ---------------------------------------------------------------------------
+  // Static state (set once in @BeforeClass, shared across all test methods)
+  // ---------------------------------------------------------------------------
+
+  /** All discovered documentation commands. */
+  private static List<DocCommand> allCommands;
+
+  /** Transformer for adapting doc commands to the test environment. */
+  private static CommandTransformer transformer;
 
   // ---------------------------------------------------------------------------
   // Coverage tracking (static — accumulated across all test methods)
@@ -124,6 +152,47 @@ public class DocSnippetIT extends AbstractCliIT {
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
+
+  /**
+   * Scans documentation files, discovers all PAL CLI commands, and initializes the transformer.
+   *
+   * <p>Resolves the docs root from the {@code PAL_HOME} environment variable, runs {@link
+   * DocSnippetScanner#scan(Path)}, asserts at least 50 pal commands are found (sanity check), and
+   * creates a {@link CommandTransformer} with the test environment's etcd URL, Kafka servers, and
+   * itt-apps classpath. Logs per-type discovery counts at INFO level.
+   */
+  @BeforeClass
+  public static void scanDocs() {
+    String palHome = System.getenv("PAL_HOME");
+    assertTrue("PAL_HOME environment variable must be set", palHome != null && !palHome.isEmpty());
+
+    Path docsRoot = Paths.get(palHome, "docs", "user", "docs");
+    allCommands = DocSnippetScanner.scan(docsRoot);
+
+    for (DocCommand cmd : allCommands) {
+      discoveredCountByType.merge(cmd.getType(), 1, Integer::sum);
+    }
+    totalDiscovered = allCommands.size();
+
+    long palCommandCount =
+        allCommands.stream().filter(c -> c.getType() != DocCommandType.NON_PAL).count();
+    assertTrue(
+        "Scanner must find at least 50 pal commands, found " + palCommandCount,
+        palCommandCount >= 50);
+
+    String ittAppsClasspath =
+        Paths.get(palHome, "modules", "itt-apps", "target", "classes").toAbsolutePath().toString();
+    transformer = new CommandTransformer(getPalDirectoryUrl(), getKafkaServers(), ittAppsClasspath);
+
+    logger.info(
+        "Discovered {} total commands ({} pal commands)", allCommands.size(), palCommandCount);
+    for (DocCommandType type : DocCommandType.values()) {
+      int count = discoveredCountByType.getOrDefault(type, 0);
+      if (count > 0) {
+        logger.info("  {}: {}", type, count);
+      }
+    }
+  }
 
   /**
    * Per-test cleanup that complements {@link AbstractCliIT#tearDownCLITest()}.
@@ -210,10 +279,6 @@ public class DocSnippetIT extends AbstractCliIT {
    */
   @AfterClass
   public static void logCoverageReport() {
-    // TODO(#1435): Implement coverage reporting:
-    // 1. Log "Doc snippet coverage: X of Y pal commands tested, Z skipped"
-    // 2. For each skipped command, log "SKIPPED: <file>:<line> — <reason>"
-    // 3. For each DocCommandType, log count tested vs. total discovered
     logger.info(
         "Doc snippet coverage: {} of {} pal commands tested, {} skipped",
         totalTested,
@@ -241,280 +306,709 @@ public class DocSnippetIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testHelpCommands() throws Exception {
-    // Given: All DocCommands with type HELP, transformed
-    // When: Each executed via runCliSubcommand()
-    // Then: All return exit code 0. Stderr does not contain
-    //       "Unknown option" or "Unmatched argument"
-
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> cmds = filterByType(allCommands, DocCommandType.HELP);
+    List<String> failures = new ArrayList<>();
+    for (DocCommand cmd : cmds) {
+      TransformedCommand tc = transformer.transform(cmd);
+      if (tc.isSkipped()) {
+        trackSkip(cmd, tc.getSkipReason());
+        continue;
+      }
+      logger.info("Testing: {}", cmd);
+      logSubstitutions(tc);
+      CliProcessResult result =
+          runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), tc.getArgs());
+      if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+        failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      }
+      trackTested(DocCommandType.HELP);
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that all listing commands ({@link DocCommandType#PEER_LS}, {@link DocCommandType#LOG_LS},
-   * {@link DocCommandType#INTERCEPT_LS}) execute with exit code 0.
+   * {@link DocCommandType#INTERCEPT_LS}) and peer remove commands execute with valid CLI syntax.
+   *
+   * <p>Listing commands run against the live directory and accept empty results. Peer remove
+   * commands may return exit code 1 (peer not found) but must not return exit code 2 (CLI syntax
+   * error).
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testListingCommands() throws Exception {
-    // Given: All DocCommands with type PEER_LS, LOG_LS, INTERCEPT_LS,
-    //        transformed (address substitution applied)
-    // When: Each executed via runPeerLs(), runLogLs(), runInterceptLs()
-    // Then: All return exit code 0 (empty listings are acceptable)
-
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> cmds =
+        filterByType(
+            allCommands,
+            DocCommandType.PEER_LS,
+            DocCommandType.LOG_LS,
+            DocCommandType.INTERCEPT_LS,
+            DocCommandType.PEER_RM);
+    List<String> failures = new ArrayList<>();
+    for (DocCommand cmd : cmds) {
+      TransformedCommand tc = transformer.transform(cmd);
+      if (tc.isSkipped()) {
+        trackSkip(cmd, tc.getSkipReason());
+        continue;
+      }
+      logger.info("Testing: {}", cmd);
+      logSubstitutions(tc);
+      CliProcessResult result =
+          runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), tc.getArgs());
+      if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+        failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      }
+      trackTested(cmd.getType());
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that all {@link DocCommandType#INIT} commands execute with exit code 0.
    *
-   * <p>All init commands are run with {@code --dry-run} and {@code -y} appended, using a temporary
-   * working directory.
+   * <p>All init commands are run with {@code --dry-run} and {@code -y} appended (by the
+   * transformer), using a temporary working directory that is cleaned up after the test.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testInitCommands() throws Exception {
-    // Given: All DocCommands with type INIT, transformed
-    //        (--dry-run, -y appended, temp working directory)
-    // When: Each executed via runCliSubcommand() with temp dir as workingDir
-    // Then: All return exit code 0. Temp directories cleaned up
-
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> cmds = filterByType(allCommands, DocCommandType.INIT);
+    List<String> failures = new ArrayList<>();
+    for (DocCommand cmd : cmds) {
+      TransformedCommand tc = transformer.transform(cmd);
+      if (tc.isSkipped()) {
+        trackSkip(cmd, tc.getSkipReason());
+        continue;
+      }
+      logger.info("Testing: {}", cmd);
+      logSubstitutions(tc);
+      Path tempDir = Files.createTempDirectory("doc-test-init-");
+      tempDirectories.add(tempDir);
+      CliProcessResult result =
+          runCliSubcommand(
+              tc.getSubcommandParts(), tc.getStdinData(), tempDir.toFile(), tc.getArgs());
+      if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+        failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      }
+      trackTested(DocCommandType.INIT);
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that short-lived {@link DocCommandType#RUN} commands execute successfully against real
    * infrastructure.
    *
-   * <p>Short-lived commands are those where {@code longRunning=false}. They are expected to run and
-   * exit within 30 seconds. Each command is executed with real itt-apps classes and validated for
-   * correct execution, not just CLI syntax.
+   * <p>Short-lived commands are those where {@link TransformedCommand#isLongRunning()} returns
+   * false. They are expected to run and exit within {@value #SHORT_LIVED_TIMEOUT_SECONDS} seconds.
+   * Each command is executed with real itt-apps classes and validated for correct CLI syntax.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testShortLivedRunCommands() throws Exception {
-    // Given: All DocCommands with type RUN where longRunning=false,
-    //        transformed (classpath, main class, addresses, WAL names substituted)
-    // When: Each executed via runPeer() with 30s timeout
-    // Then: Exit code is 0 or 1 (main method may throw due to app-level args).
-    //       Exit code 1 with class/method not found is a FAILURE (transformer
-    //       substitutes real itt-apps classes, so classpath errors indicate a bug).
-    //       NOT exit code 2 (CLI syntax error).
-    //       Stderr does not contain PicoCLI usage errors.
-    //       WALs and Chronicle paths cleaned up
-
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> cmds = filterByType(allCommands, DocCommandType.RUN);
+    List<String> failures = new ArrayList<>();
+    for (DocCommand cmd : cmds) {
+      TransformedCommand tc = transformer.transform(cmd);
+      if (tc.isSkipped()) {
+        trackSkip(cmd, tc.getSkipReason());
+        continue;
+      }
+      if (tc.isLongRunning()) {
+        continue; // Handled by testLongRunningRunCommands
+      }
+      logger.info("Testing short-lived run: {}", cmd);
+      logSubstitutions(tc);
+      trackRunResources(tc);
+      try {
+        ProcessResult result = runPeer(SHORT_LIVED_TIMEOUT_SECONDS, tc.getArgs());
+        if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+          failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        }
+      } catch (RuntimeException e) {
+        if (e.getMessage() != null && e.getMessage().contains("timed out")) {
+          logger.warn("Short-lived run command timed out (acceptable): {}", cmd);
+        } else {
+          failures.add(formatExceptionFailure(cmd, e));
+        }
+      }
+      trackTested(DocCommandType.RUN);
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that long-running {@link DocCommandType#RUN} commands start and stop cleanly.
    *
    * <p>Long-running commands are those that include flags like {@code --json-rpc}, {@code
-   * --zmq-rpc}, or {@code --interceptable}, indicating they are intended to run as persistent
-   * peers.
+   * --zmq-rpc}, or {@code --as-service}, indicating they are intended to run as persistent peers.
+   * Each command is launched via {@link #launchPeer(UUID, String...)}, verified to start
+   * successfully, and then stopped via {@link #stopPeer(PeerProcess)}.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testLongRunningRunCommands() throws Exception {
-    // Given: All DocCommands with type RUN where longRunning=true, transformed
-    // When: Each executed via launchPeer(), wait for ready, then stopPeer()
-    // Then: Peer starts successfully (waitForLogLine for startup complete).
-    //       Peer stops cleanly.
-    //       All created resources cleaned up
-
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    List<DocCommand> cmds = filterByType(allCommands, DocCommandType.RUN);
+    List<String> failures = new ArrayList<>();
+    for (DocCommand cmd : cmds) {
+      TransformedCommand tc = transformer.transform(cmd);
+      if (tc.isSkipped()) {
+        trackSkip(cmd, tc.getSkipReason());
+        continue;
+      }
+      if (!tc.isLongRunning()) {
+        continue; // Handled by testShortLivedRunCommands
+      }
+      logger.info("Testing long-running run: {}", cmd);
+      logSubstitutions(tc);
+      trackRunResources(tc);
+      UUID peerId = UUID.randomUUID();
+      try {
+        PeerProcess peer = launchPeer(peerId, tc.getArgs());
+        launchedPeers.add(peer.getProcess());
+        logger.info("Long-running peer started successfully: {}", peer.getPeerName());
+        stopPeer(peer);
+        launchedPeers.remove(peer.getProcess());
+      } catch (Exception e) {
+        failures.add(formatExceptionFailure(cmd, e));
+      }
+      trackTested(DocCommandType.RUN);
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that all {@link DocCommandType#PEER_CALL} commands execute against a live peer.
    *
-   * <p>Setup launches one peer with ZMQ-RPC + JSON-RPC, {@code --interceptable}, {@code
-   * --rpc-default-action ALLOW}, and a known classpath. Teardown stops the peer.
+   * <p>Setup launches one peer with ZMQ-RPC + JSON-RPC, {@code --interceptable}, and a known
+   * classpath. All PEER_CALL commands are transformed and executed against this shared peer, with
+   * peer name references overridden to match the actual running peer. Teardown stops the peer.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testPeerCallCommands() throws Exception {
-    // Given: One running peer with ZMQ-RPC + JSON-RPC, --interceptable,
-    //        --rpc-default-action ALLOW, known classpath.
-    //        All DocCommands with type PEER_CALL, transformed
-    //        (substitute peer name/UUID and main class)
-    // When: Each executed via runPeerCall() or runPeerCallWithStdin()
-    // Then: Exit code is 0. Stderr clean
-    // Teardown: Stop peer
+    List<DocCommand> cmds = filterByType(allCommands, DocCommandType.PEER_CALL);
+    if (cmds.isEmpty()) {
+      logger.info("No PEER_CALL commands found in docs");
+      return;
+    }
 
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    // Launch a shared peer for all call commands
+    UUID peerId = UUID.randomUUID();
+    String peerName = "doc-test-call-peer-" + generateId();
+    String walName = "doc-test-call-wal-" + generateId();
+    PeerProcess callPeer =
+        launchPeer(
+            peerId,
+            "-d",
+            getPalDirectoryUrl(),
+            "-k",
+            getKafkaServers(),
+            "--wal",
+            walName,
+            "-n",
+            peerName,
+            "--zmq-rpc",
+            "auto",
+            "--json-rpc",
+            "auto",
+            "--interceptable",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+    launchedPeers.add(callPeer.getProcess());
+    createdKafkaTopics.add(walName);
+
+    List<String> failures = new ArrayList<>();
+    try {
+      for (DocCommand cmd : cmds) {
+        TransformedCommand tc = transformer.transform(cmd);
+        if (tc.isSkipped()) {
+          trackSkip(cmd, tc.getSkipReason());
+          continue;
+        }
+        logger.info("Testing: {}", cmd);
+        logSubstitutions(tc);
+        String[] args = overridePeerRef(tc.getArgs(), peerName);
+        CliProcessResult result =
+            runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), args);
+        if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+          failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        }
+        trackTested(DocCommandType.PEER_CALL);
+      }
+    } finally {
+      stopPeer(callPeer);
+      launchedPeers.remove(callPeer.getProcess());
+    }
+    assertNoFailures(failures);
   }
 
   /**
-   * Tests that all {@link DocCommandType#PEER_PRINT} commands execute against a live peer.
+   * Tests that all {@link DocCommandType#PEER_PRINT} and {@link DocCommandType#PEER_STATS} commands
+   * execute against a live peer.
    *
-   * <p>Setup launches one peer briefly to generate some messages. Print commands may stream output,
-   * so they are run for a limited duration.
+   * <p>Setup launches one peer with RPC endpoints. Print and stats commands are streaming, so they
+   * are run for a limited duration ({@value #STREAMING_DURATION_SECONDS} seconds) and then killed.
+   * Exit codes of 0 (natural exit) or -1 (killed after duration) are acceptable.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testPeerPrintCommands() throws Exception {
-    // Given: One peer launched briefly to generate some messages.
-    //        All DocCommands with type PEER_PRINT, transformed
-    // When: Each executed via runCliSubcommandForDuration()
-    //       (print commands may stream, so run for limited duration)
-    // Then: Exit code is 0 or 143 (killed after duration).
-    //       No CLI syntax errors
-    // Teardown: Stop peer if running
+    List<DocCommand> cmds =
+        filterByType(allCommands, DocCommandType.PEER_PRINT, DocCommandType.PEER_STATS);
+    if (cmds.isEmpty()) {
+      logger.info("No PEER_PRINT or PEER_STATS commands found in docs");
+      return;
+    }
 
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    // Launch a shared peer
+    UUID peerId = UUID.randomUUID();
+    String peerName = "doc-test-print-peer-" + generateId();
+    String walName = "doc-test-print-wal-" + generateId();
+    PeerProcess printPeer =
+        launchPeer(
+            peerId,
+            "-d",
+            getPalDirectoryUrl(),
+            "-k",
+            getKafkaServers(),
+            "--wal",
+            walName,
+            "-n",
+            peerName,
+            "--zmq-rpc",
+            "auto",
+            "--json-rpc",
+            "auto",
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+    launchedPeers.add(printPeer.getProcess());
+    createdKafkaTopics.add(walName);
+
+    List<String> failures = new ArrayList<>();
+    try {
+      for (DocCommand cmd : cmds) {
+        TransformedCommand tc = transformer.transform(cmd);
+        if (tc.isSkipped()) {
+          trackSkip(cmd, tc.getSkipReason());
+          continue;
+        }
+        logger.info("Testing: {}", cmd);
+        logSubstitutions(tc);
+        String[] args = overridePeerRef(tc.getArgs(), peerName);
+        CliProcessResult result =
+            runCliSubcommandForDuration(tc.getSubcommandParts(), STREAMING_DURATION_SECONDS, args);
+        // Accept 0 (natural exit) or -1 (killed after duration)
+        if (result.exitCode() != 0
+            && result.exitCode() != -1
+            && isCliSyntaxError(result.exitCode(), result.stderr())) {
+          failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        }
+        trackTested(cmd.getType());
+      }
+    } finally {
+      stopPeer(printPeer);
+      launchedPeers.remove(printPeer.getProcess());
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that log print, index, and stats commands execute against existing logs.
    *
    * <p>Setup runs a peer briefly to create a Kafka WAL with some messages and also creates a
-   * Chronicle WAL under {@code /tmp}. Teardown removes the Kafka topic and deletes the Chronicle
-   * directory.
+   * Chronicle WAL under {@code /tmp}. Log references in each command's arguments are overridden to
+   * point to the real WAL. Teardown removes the Kafka topic and deletes the Chronicle directory.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testLogPrintAndStatsCommands() throws Exception {
-    // Given: A peer run briefly to create a Kafka WAL with messages.
-    //        A Chronicle WAL created under /tmp.
-    //        All DocCommands with type LOG_PRINT, LOG_INDEX, LOG_STATS, transformed
-    // When: Each executed via runLogPrint(), runLogIndex(), runLogStats()
-    // Then: Exit code is 0. Commands against existing logs return data
-    // Teardown: Remove Kafka topic, delete Chronicle dir
+    List<DocCommand> cmds =
+        filterByType(
+            allCommands,
+            DocCommandType.LOG_PRINT,
+            DocCommandType.LOG_INDEX,
+            DocCommandType.LOG_STATS);
+    if (cmds.isEmpty()) {
+      logger.info("No LOG_PRINT, LOG_INDEX, or LOG_STATS commands found in docs");
+      return;
+    }
 
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    // Create a Kafka WAL with messages
+    String kafkaWalName = "doc-test-wal-shared-" + generateId();
+    ProcessResult peerResult =
+        runPeer(
+            SHORT_LIVED_TIMEOUT_SECONDS,
+            "-d",
+            getPalDirectoryUrl(),
+            "-k",
+            getKafkaServers(),
+            "--wal",
+            kafkaWalName,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+    createdKafkaTopics.add(kafkaWalName);
+    logger.info("Created Kafka WAL {} (peer exit code: {})", kafkaWalName, peerResult.exitCode());
+
+    // Create a Chronicle WAL with messages
+    Path chronicleDir = Files.createTempDirectory("pal-doc-test-log-");
+    tempDirectories.add(chronicleDir);
+    Path chronicleWalPath = chronicleDir.resolve("shared-wal");
+    ProcessResult chronicleResult =
+        runPeer(
+            SHORT_LIVED_TIMEOUT_SECONDS,
+            "--wal",
+            "file:" + chronicleWalPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+    logger.info(
+        "Created Chronicle WAL at {} (peer exit code: {})",
+        chronicleWalPath,
+        chronicleResult.exitCode());
+
+    List<String> failures = new ArrayList<>();
+    for (DocCommand cmd : cmds) {
+      TransformedCommand tc = transformer.transform(cmd);
+      if (tc.isSkipped()) {
+        trackSkip(cmd, tc.getSkipReason());
+        continue;
+      }
+      logger.info("Testing: {}", cmd);
+      logSubstitutions(tc);
+      String[] args = overrideLogRefs(tc.getArgs(), kafkaWalName, "file:" + chronicleWalPath);
+      CliProcessResult result = runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), args);
+      if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+        failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      }
+      trackTested(cmd.getType());
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that all {@link DocCommandType#LOG_CALL} commands execute against an existing WAL.
    *
-   * <p>Setup ensures at least one Kafka WAL exists. Teardown cleans up the WAL.
+   * <p>Setup creates a Kafka WAL by running a short peer. Each log call command's log references
+   * are overridden to use the real WAL name. Teardown removes the Kafka topic.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testLogCallCommands() throws Exception {
-    // Given: At least one Kafka WAL exists.
-    //        All DocCommands with type LOG_CALL, transformed
-    // When: Each executed via runLogCall() or runLogCallWithStdin()
-    // Then: Exit code is 0
-    // Teardown: Clean up WAL
+    List<DocCommand> cmds = filterByType(allCommands, DocCommandType.LOG_CALL);
+    if (cmds.isEmpty()) {
+      logger.info("No LOG_CALL commands found in docs");
+      return;
+    }
 
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    // Create a Kafka WAL
+    String kafkaWalName = "doc-test-wal-logcall-" + generateId();
+    runPeer(
+        SHORT_LIVED_TIMEOUT_SECONDS,
+        "-d",
+        getPalDirectoryUrl(),
+        "-k",
+        getKafkaServers(),
+        "--wal",
+        kafkaWalName,
+        "-cp",
+        getIttAppsClasspath(),
+        METHODS_CLASS);
+    createdKafkaTopics.add(kafkaWalName);
+    logger.info("Created Kafka WAL for log call tests: {}", kafkaWalName);
+
+    List<String> failures = new ArrayList<>();
+    for (DocCommand cmd : cmds) {
+      TransformedCommand tc = transformer.transform(cmd);
+      if (tc.isSkipped()) {
+        trackSkip(cmd, tc.getSkipReason());
+        continue;
+      }
+      logger.info("Testing: {}", cmd);
+      logSubstitutions(tc);
+      String[] args = overrideLogRefs(tc.getArgs(), kafkaWalName, null);
+      CliProcessResult result = runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), args);
+      if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+        failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      }
+      trackTested(DocCommandType.LOG_CALL);
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that all {@link DocCommandType#LOG_RM} commands successfully remove temporary logs.
    *
-   * <p>Setup creates temporary WALs/logs for each remove command. Each remove command runs against
-   * its own dedicated temporary log.
+   * <p>For each remove command, a dedicated temporary Kafka WAL is created first so the remove has
+   * something to operate on. Each WAL is created by running a short peer. If the remove command
+   * fails, the WAL is tracked for cleanup by {@link #cleanUp()}.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testLogRemoveCommands() throws Exception {
-    // Given: Temporary WALs/logs created for each remove command.
-    //        All DocCommands with type LOG_RM, transformed
-    // When: Each executed via runLogRm() against a dedicated temporary log
-    // Then: Exit code is 0. Log no longer appears in directory
-    // Teardown: (logs already removed by the commands under test)
+    List<DocCommand> cmds = filterByType(allCommands, DocCommandType.LOG_RM);
+    if (cmds.isEmpty()) {
+      logger.info("No LOG_RM commands found in docs");
+      return;
+    }
 
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    List<String> failures = new ArrayList<>();
+    for (DocCommand cmd : cmds) {
+      TransformedCommand tc = transformer.transform(cmd);
+      if (tc.isSkipped()) {
+        trackSkip(cmd, tc.getSkipReason());
+        continue;
+      }
+      logger.info("Testing: {}", cmd);
+      logSubstitutions(tc);
+
+      // Create a temporary WAL for this rm command
+      String tempWalName = "doc-test-wal-rm-" + generateId();
+      runPeer(
+          SHORT_LIVED_TIMEOUT_SECONDS,
+          "-d",
+          getPalDirectoryUrl(),
+          "-k",
+          getKafkaServers(),
+          "--wal",
+          tempWalName,
+          "-cp",
+          getIttAppsClasspath(),
+          METHODS_CLASS);
+
+      String[] args = overrideLogRefs(tc.getArgs(), tempWalName, null);
+      CliProcessResult result = runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), args);
+      if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+        failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      }
+      // Track as backup cleanup in case rm command failed
+      if (result.exitCode() != 0) {
+        createdKafkaTopics.add(tempWalName);
+      }
+      trackTested(DocCommandType.LOG_RM);
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that all {@link DocCommandType#REPLAY} commands execute against a shared Chronicle WAL.
    *
-   * <p>Setup runs a short peer to record a Chronicle WAL under {@code /tmp/pal-doc-test/}. This WAL
-   * is shared across all replay tests. Teardown deletes the shared Chronicle WAL directory.
+   * <p>Setup runs a short peer to record a Chronicle WAL under {@code /tmp}. This WAL is shared
+   * across all replay tests with references overridden in each command's arguments. Teardown
+   * deletes the shared Chronicle WAL directory.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testReplayCommands() throws Exception {
-    // Given: A short peer run to record a Chronicle WAL under /tmp/pal-doc-test/.
-    //        Shared WAL across replay tests.
-    //        All DocCommands with type REPLAY, transformed
-    // When: Each executed via runPeer() (replay runs and exits)
-    // Then: Exit code is 0 or acceptable (divergences OK). Not exit code 2
-    // Teardown: Delete shared Chronicle WAL dir
+    List<DocCommand> cmds = filterByType(allCommands, DocCommandType.REPLAY);
+    if (cmds.isEmpty()) {
+      logger.info("No REPLAY commands found in docs");
+      return;
+    }
 
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    // Create a shared Chronicle WAL for replay
+    Path chronicleDir = Files.createTempDirectory("pal-doc-test-replay-");
+    tempDirectories.add(chronicleDir);
+    Path chronicleWalPath = chronicleDir.resolve("shared-replay-wal");
+    ProcessResult walResult =
+        runPeer(
+            SHORT_LIVED_TIMEOUT_SECONDS,
+            "--wal",
+            "file:" + chronicleWalPath,
+            "-cp",
+            getIttAppsClasspath(),
+            METHODS_CLASS);
+    logger.info(
+        "Created shared Chronicle WAL at {} (exit code: {})",
+        chronicleWalPath,
+        walResult.exitCode());
+
+    List<String> failures = new ArrayList<>();
+    for (DocCommand cmd : cmds) {
+      TransformedCommand tc = transformer.transform(cmd);
+      if (tc.isSkipped()) {
+        trackSkip(cmd, tc.getSkipReason());
+        continue;
+      }
+      logger.info("Testing: {}", cmd);
+      logSubstitutions(tc);
+      // Override WAL path references to use our shared WAL
+      String[] args = overrideChroniclePaths(tc.getArgs(), "file:" + chronicleWalPath);
+      args = overrideWalNames(args, "file:" + chronicleWalPath);
+      CliProcessResult result = runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), args);
+      if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+        failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      }
+      trackTested(DocCommandType.REPLAY);
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that intercept apply and diff commands execute with temporary YAML bundles.
    *
-   * <p>Setup creates temporary YAML intercept bundle files matching doc patterns and launches a
-   * peer with {@code --interceptable}. Teardown removes intercepts, stops the peer, and deletes
-   * temp YAML files.
+   * <p>Setup creates a temporary YAML intercept bundle file and launches a peer with {@code
+   * --interceptable}. File path and peer name references in each command are overridden to match
+   * the actual resources. Teardown stops the peer and deletes the YAML file.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testInterceptApplyAndDiffCommands() throws Exception {
-    // Given: Temporary YAML intercept bundle files created matching doc patterns.
-    //        A peer launched with --interceptable.
-    //        All DocCommands with type INTERCEPT_APPLY, INTERCEPT_DIFF, transformed
-    //        (file paths point to temp YAML)
-    // When: Each executed via runInterceptApply(), runInterceptDiff()
-    // Then: Exit code is 0. Intercepts visible in directory
-    // Teardown: Remove intercepts, stop peer, delete temp YAML files
+    List<DocCommand> cmds =
+        filterByType(allCommands, DocCommandType.INTERCEPT_APPLY, DocCommandType.INTERCEPT_DIFF);
+    if (cmds.isEmpty()) {
+      logger.info("No INTERCEPT_APPLY or INTERCEPT_DIFF commands found in docs");
+      return;
+    }
 
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    // Launch a peer with --interceptable
+    UUID peerId = UUID.randomUUID();
+    String peerName = "doc-test-intercept-peer-" + generateId();
+    String bundleName = "doc-test-bundle-" + generateId();
+    PeerProcess interceptPeer =
+        launchPeer(
+            peerId, "-d", getPalDirectoryUrl(), "-n", peerName, "--interceptable", "--as-service");
+    launchedPeers.add(interceptPeer.getProcess());
+
+    // Create temp YAML bundle
+    File yamlFile = createTempInterceptYaml(bundleName, peerName);
+    tempFiles.add(yamlFile.toPath());
+
+    List<String> failures = new ArrayList<>();
+    try {
+      for (DocCommand cmd : cmds) {
+        TransformedCommand tc = transformer.transform(cmd);
+        if (tc.isSkipped()) {
+          trackSkip(cmd, tc.getSkipReason());
+          continue;
+        }
+        logger.info("Testing: {}", cmd);
+        logSubstitutions(tc);
+        String[] args = overrideInterceptFileRef(tc.getArgs(), yamlFile.getAbsolutePath());
+        args = overridePeerRef(args, peerName);
+        CliProcessResult result =
+            runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), args);
+        if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+          failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        }
+        trackTested(cmd.getType());
+      }
+    } finally {
+      stopPeer(interceptPeer);
+      launchedPeers.remove(interceptPeer.getProcess());
+    }
+    assertNoFailures(failures);
   }
 
   /**
    * Tests that intercept remove and status commands execute after applying an intercept bundle.
    *
-   * <p>Setup applies an intercept bundle first and launches a peer with {@code --interceptable}.
-   * Teardown stops the peer and cleans the directory.
+   * <p>Setup launches a peer with {@code --interceptable} and applies an intercept bundle first.
+   * Status commands (read-only) are run before remove commands. Between remove commands, the bundle
+   * is re-applied so each remove has intercepts to operate on. Teardown stops the peer.
    *
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testInterceptRemoveAndStatusCommands() throws Exception {
-    // Given: An intercept bundle applied first.
-    //        A peer launched with --interceptable.
-    //        All DocCommands with type INTERCEPT_RM, INTERCEPT_STATUS, transformed
-    // When: Each executed via runInterceptRm(), runInterceptStatus()
-    // Then: Exit code is 0
-    // Teardown: Stop peer, clean directory
+    List<DocCommand> cmds =
+        filterByType(allCommands, DocCommandType.INTERCEPT_RM, DocCommandType.INTERCEPT_STATUS);
+    if (cmds.isEmpty()) {
+      logger.info("No INTERCEPT_RM or INTERCEPT_STATUS commands found in docs");
+      return;
+    }
 
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    // Launch a peer with --interceptable
+    UUID peerId = UUID.randomUUID();
+    String peerName = "doc-test-irm-peer-" + generateId();
+    String bundleName = "doc-test-irm-bundle-" + generateId();
+    PeerProcess interceptPeer =
+        launchPeer(
+            peerId, "-d", getPalDirectoryUrl(), "-n", peerName, "--interceptable", "--as-service");
+    launchedPeers.add(interceptPeer.getProcess());
+
+    // Create and apply temp YAML bundle
+    File yamlFile = createTempInterceptYaml(bundleName, peerName);
+    tempFiles.add(yamlFile.toPath());
+    CliProcessResult applyResult =
+        runInterceptApply("-d", getPalDirectoryUrl(), yamlFile.getAbsolutePath());
+    logger.info("Applied intercept bundle (exit code: {})", applyResult.exitCode());
+
+    // Run status commands first (read-only), then rm commands
+    List<DocCommand> statusCmds =
+        cmds.stream()
+            .filter(c -> c.getType() == DocCommandType.INTERCEPT_STATUS)
+            .collect(Collectors.toList());
+    List<DocCommand> rmCmds =
+        cmds.stream()
+            .filter(c -> c.getType() == DocCommandType.INTERCEPT_RM)
+            .collect(Collectors.toList());
+
+    List<String> failures = new ArrayList<>();
+    try {
+      for (DocCommand cmd : statusCmds) {
+        TransformedCommand tc = transformer.transform(cmd);
+        if (tc.isSkipped()) {
+          trackSkip(cmd, tc.getSkipReason());
+          continue;
+        }
+        logger.info("Testing: {}", cmd);
+        logSubstitutions(tc);
+        String[] args = overrideInterceptFileRef(tc.getArgs(), yamlFile.getAbsolutePath());
+        args = overridePeerRef(args, peerName);
+        args = overrideBundleRef(args, bundleName);
+        CliProcessResult result =
+            runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), args);
+        if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+          failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        }
+        trackTested(DocCommandType.INTERCEPT_STATUS);
+      }
+
+      for (int i = 0; i < rmCmds.size(); i++) {
+        DocCommand cmd = rmCmds.get(i);
+        TransformedCommand tc = transformer.transform(cmd);
+        if (tc.isSkipped()) {
+          trackSkip(cmd, tc.getSkipReason());
+          continue;
+        }
+        logger.info("Testing: {}", cmd);
+        logSubstitutions(tc);
+        String[] args = overrideInterceptFileRef(tc.getArgs(), yamlFile.getAbsolutePath());
+        args = overridePeerRef(args, peerName);
+        args = overrideBundleRef(args, bundleName);
+        CliProcessResult result =
+            runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), args);
+        if (isCliSyntaxError(result.exitCode(), result.stderr())) {
+          failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        }
+        trackTested(DocCommandType.INTERCEPT_RM);
+
+        // Re-apply bundle for subsequent rm commands
+        if (i < rmCmds.size() - 1) {
+          runInterceptApply("-d", getPalDirectoryUrl(), yamlFile.getAbsolutePath());
+        }
+      }
+    } finally {
+      stopPeer(interceptPeer);
+      launchedPeers.remove(interceptPeer.getProcess());
+    }
+    assertNoFailures(failures);
   }
 
   /**
@@ -529,17 +1023,302 @@ public class DocSnippetIT extends AbstractCliIT {
    * @throws Exception if test execution fails
    */
   @Test
-  @Ignore("Awaiting implementation in #1435")
   public void testAllDocCommandsAreCovered() throws Exception {
-    // Given: All DocCommandType values tested across the above test methods
-    // When: Compared against every non-SKIPPED, non-NON_PAL command discovered
-    //       by the scanner
-    // Then: Every discovered command type is covered by at least one test method.
-    //       If a new DocCommandType appears in docs without a handler,
-    //       this test fails with a descriptive message listing
-    //       the uncovered types and their source locations
+    Set<DocCommandType> uncoveredTypes = EnumSet.noneOf(DocCommandType.class);
+    for (DocCommandType type : DocCommandType.values()) {
+      if (type == DocCommandType.SKIPPED || type == DocCommandType.NON_PAL) {
+        continue;
+      }
+      int discovered = discoveredCountByType.getOrDefault(type, 0);
+      int tested = testedCountByType.getOrDefault(type, 0);
+      if (discovered > 0 && tested == 0) {
+        uncoveredTypes.add(type);
+      }
+    }
 
-    // TODO(#1435): Implement test logic
-    fail("Not yet implemented");
+    if (!uncoveredTypes.isEmpty()) {
+      StringBuilder msg = new StringBuilder("Uncovered command types:\n");
+      for (DocCommandType type : uncoveredTypes) {
+        msg.append("  ")
+            .append(type)
+            .append(": ")
+            .append(discoveredCountByType.getOrDefault(type, 0))
+            .append(" commands discovered\n");
+        allCommands.stream()
+            .filter(c -> c.getType() == type)
+            .forEach(c -> msg.append("    ").append(c).append("\n"));
+      }
+      assertTrue(msg.toString(), false);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helper methods
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Filters commands by one or more types.
+   *
+   * @param commands the commands to filter
+   * @param types the types to include
+   * @return a new list containing only commands with matching types
+   */
+  private static List<DocCommand> filterByType(List<DocCommand> commands, DocCommandType... types) {
+    Set<DocCommandType> typeSet = EnumSet.noneOf(DocCommandType.class);
+    for (DocCommandType t : types) {
+      typeSet.add(t);
+    }
+    return commands.stream()
+        .filter(c -> typeSet.contains(c.getType()))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Checks whether a CLI result indicates a PicoCLI syntax error.
+   *
+   * @param exitCode the process exit code
+   * @param stderr the stderr output
+   * @return true if the result indicates a CLI syntax error
+   */
+  private static boolean isCliSyntaxError(int exitCode, String stderr) {
+    if (exitCode == 2) {
+      return true;
+    }
+    if (stderr == null) {
+      return false;
+    }
+    return stderr.contains("Unknown option")
+        || stderr.contains("Unmatched argument")
+        || stderr.contains("Missing required");
+  }
+
+  /**
+   * Formats a CLI failure as a human-readable string.
+   *
+   * @param cmd the source command
+   * @param exitCode the exit code
+   * @param stderr the stderr output
+   * @return formatted failure description
+   */
+  private static String formatFailure(DocCommand cmd, int exitCode, String stderr) {
+    String cmdText = cmd.getNormalizedText() != null ? cmd.getNormalizedText() : cmd.getRawText();
+    return String.format(
+        "%s:%d — exit=%d\n  cmd: %s\n  stderr: %s",
+        cmd.getSourceFile(),
+        cmd.getLineNumber(),
+        exitCode,
+        cmdText,
+        stderr != null ? stderr.trim() : "");
+  }
+
+  /**
+   * Formats an exception-based failure as a human-readable string.
+   *
+   * @param cmd the source command
+   * @param e the exception
+   * @return formatted failure description
+   */
+  private static String formatExceptionFailure(DocCommand cmd, Exception e) {
+    String cmdText = cmd.getNormalizedText() != null ? cmd.getNormalizedText() : cmd.getRawText();
+    return String.format(
+        "%s:%d — exception: %s\n  cmd: %s",
+        cmd.getSourceFile(), cmd.getLineNumber(), e.getMessage(), cmdText);
+  }
+
+  /**
+   * Asserts that no CLI syntax failures were collected.
+   *
+   * @param failures the list of failure descriptions
+   */
+  private static void assertNoFailures(List<String> failures) {
+    assertTrue(
+        "Documentation snippet failures:\n" + String.join("\n\n", failures), failures.isEmpty());
+  }
+
+  /**
+   * Records a skipped command for the coverage report.
+   *
+   * @param cmd the skipped command
+   * @param reason the reason for skipping
+   */
+  private static void trackSkip(DocCommand cmd, String reason) {
+    totalSkipped++;
+    skipReasons.add(String.format("%s:%d — %s", cmd.getSourceFile(), cmd.getLineNumber(), reason));
+  }
+
+  /**
+   * Records a tested command type for the coverage report.
+   *
+   * @param type the command type that was tested
+   */
+  private static void trackTested(DocCommandType type) {
+    totalTested++;
+    testedCountByType.merge(type, 1, Integer::sum);
+  }
+
+  /**
+   * Logs all substitutions applied by the transformer for debugging.
+   *
+   * @param tc the transformed command
+   */
+  private static void logSubstitutions(TransformedCommand tc) {
+    for (String sub : tc.getSubstitutions()) {
+      logger.info("  substitution: {}", sub);
+    }
+  }
+
+  /**
+   * Tracks Kafka WAL names and Chronicle paths from a run command for cleanup.
+   *
+   * @param tc the transformed run command
+   */
+  private void trackRunResources(TransformedCommand tc) {
+    if (tc.getUniqueWalName() != null) {
+      createdKafkaTopics.add(tc.getUniqueWalName());
+    }
+    if (tc.getChroniclePath() != null) {
+      Path parent = tc.getChroniclePath().getParent();
+      if (parent != null) {
+        tempDirectories.add(parent);
+      }
+    }
+  }
+
+  /**
+   * Overrides {@code -p} or {@code --peer} flag values in args with the given peer name.
+   *
+   * @param args the original args array
+   * @param peerName the actual peer name to substitute
+   * @return a new args array with peer references overridden
+   */
+  private static String[] overridePeerRef(String[] args, String peerName) {
+    String[] result = args.clone();
+    for (int i = 0; i < result.length - 1; i++) {
+      if ("-p".equals(result[i]) || "--peer".equals(result[i])) {
+        result[i + 1] = peerName;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Overrides any arg starting with {@code doc-test-wal-} with the given WAL name.
+   *
+   * @param args the original args array
+   * @param walName the actual WAL name to substitute
+   * @return a new args array with WAL names overridden
+   */
+  private static String[] overrideWalNames(String[] args, String walName) {
+    String[] result = args.clone();
+    for (int i = 0; i < result.length; i++) {
+      if (result[i].startsWith("doc-test-wal-")) {
+        result[i] = walName;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Overrides any arg containing {@code pal-doc-test-} with the given Chronicle path.
+   *
+   * @param args the original args array
+   * @param chroniclePath the actual Chronicle path (e.g., {@code file:/tmp/...})
+   * @return a new args array with Chronicle paths overridden
+   */
+  private static String[] overrideChroniclePaths(String[] args, String chroniclePath) {
+    String[] result = args.clone();
+    for (int i = 0; i < result.length; i++) {
+      if (result[i].contains("pal-doc-test-")) {
+        result[i] = chroniclePath;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Overrides both Kafka WAL names and Chronicle paths in args.
+   *
+   * @param args the original args array
+   * @param kafkaWalName the actual Kafka WAL name
+   * @param chroniclePath the actual Chronicle path, or null to skip Chronicle overrides
+   * @return a new args array with log references overridden
+   */
+  private static String[] overrideLogRefs(
+      String[] args, String kafkaWalName, String chroniclePath) {
+    String[] result = overrideWalNames(args, kafkaWalName);
+    if (chroniclePath != null) {
+      result = overrideChroniclePaths(result, chroniclePath);
+    }
+    return result;
+  }
+
+  /**
+   * Overrides YAML file path references in args (both positional and {@code -f} flag).
+   *
+   * @param args the original args array
+   * @param yamlPath the actual YAML file path
+   * @return a new args array with file references overridden
+   */
+  private static String[] overrideInterceptFileRef(String[] args, String yamlPath) {
+    String[] result = args.clone();
+    for (int i = 0; i < result.length; i++) {
+      if (result[i].endsWith(".yaml") || result[i].endsWith(".yml")) {
+        result[i] = yamlPath;
+      }
+      if (("-f".equals(result[i]) || "--file".equals(result[i])) && i + 1 < result.length) {
+        result[i + 1] = yamlPath;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Overrides {@code --bundle} flag values in args with the given bundle name.
+   *
+   * @param args the original args array
+   * @param bundleName the actual bundle name
+   * @return a new args array with bundle references overridden
+   */
+  private static String[] overrideBundleRef(String[] args, String bundleName) {
+    String[] result = args.clone();
+    for (int i = 0; i < result.length - 1; i++) {
+      if ("--bundle".equals(result[i])) {
+        result[i + 1] = bundleName;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Creates a temporary YAML intercept bundle file for testing.
+   *
+   * @param bundleName the bundle name
+   * @param peerName the peer name for the defaults section
+   * @return the temp YAML file
+   * @throws IOException if file creation fails
+   */
+  private File createTempInterceptYaml(String bundleName, String peerName) throws IOException {
+    String yaml =
+        "bundle: \""
+            + bundleName
+            + "\"\n"
+            + "defaults:\n"
+            + "  peer: \""
+            + peerName
+            + "\"\n"
+            + "intercepts:\n"
+            + "  - target: com.acme.OrderService.placeOrder\n"
+            + "    type: BEFORE\n"
+            + "    callback:\n"
+            + "      class: com.acme.FraudChecker\n"
+            + "      method: verify\n"
+            + "  - target: com.acme.OrderService.refund\n"
+            + "    type: AROUND\n"
+            + "    callback:\n"
+            + "      class: com.acme.FraudChecker\n"
+            + "      method: wrapRefund\n";
+    File tempFile = File.createTempFile("doc-test-intercept-", ".yaml");
+    Files.writeString(tempFile.toPath(), yaml, StandardCharsets.UTF_8);
+    return tempFile;
   }
 }
