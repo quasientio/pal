@@ -297,8 +297,10 @@ These flags declare what your application needs. Everything else — infrastruct
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `--all` | -- | Enable all PAL features (`--interceptable`, `--intercepting`, `--json-rpc`, `--kafka`, `--scope-policy`). Implies `-y` |
 | `--interceptable` / `--no-interceptable` | `false` | This app can be intercepted by other peers (requires etcd) |
 | `--intercepting` / `--no-intercepting` | `false` | This app intercepts other peers via callbacks (requires etcd; adds `pal-client` dependency, RPC policy, intercept bundle, callback handler) |
+| `--json-rpc` / `--no-json-rpc` | `false` | Expose methods via JSON-RPC |
 | `--kafka` / `--no-kafka` | `false` | Use Kafka for WAL (write-ahead log). Does not require etcd — peers can use Kafka WAL unregistered |
 | `--as-service` | -- | No main class; peer runs with `pal run --as-service` (only meaningful with `--intercepting`) |
 
@@ -306,6 +308,7 @@ These flags declare what your application needs. Everything else — infrastruct
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `--weaving` / `--no-weaving` | `true` | Enable AspectJ weaving in the build file |
 | `--sample-app` / `--no-sample-app` | `true` | Generate sample application code |
 | `--scope-policy` / `--no-scope-policy` | `false` | Generate recording scope config |
 | `--logging-config` / `--no-logging-config` | `true` | Generate PAL runtime logging configuration (`peer-logging.xml`, `cli-logging.xml`) |

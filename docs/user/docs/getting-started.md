@@ -124,6 +124,14 @@ pal init pal-tutorial -y \
   --main-class com.example.Main
 ```
 
+To enable all PAL features at once (interceptable, intercepting, JSON-RPC, Kafka, scope policy):
+
+```bash
+pal init pal-tutorial --all \
+  --group-id com.example \
+  --main-class com.example.Main
+```
+
 **Tip:** Use `--dry-run` to preview what `pal init` would generate without writing any files:
 
 ```bash
