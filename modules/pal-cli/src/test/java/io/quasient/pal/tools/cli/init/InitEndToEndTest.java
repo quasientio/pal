@@ -837,10 +837,15 @@ public class InitEndToEndTest {
         "README should mention --rpc-policy",
         readme,
         containsString("--rpc-policy config/rpc-policy.yaml"));
+    assertThat("README should mention source .env.pal", readme, containsString("source .env.pal"));
     assertThat(
-        "README should mention -d localhost:2379", readme, containsString("-d localhost:2379"));
+        "README should not inline -d when etcd is in .env.pal",
+        readme,
+        not(containsString("-d localhost:2379")));
     assertThat(
-        "README should mention -k localhost:29092", readme, containsString("-k localhost:29092"));
+        "README should not inline -k when kafka is in .env.pal",
+        readme,
+        not(containsString("-k localhost:29092")));
   }
 
   // ---------------------------------------------------------------------------

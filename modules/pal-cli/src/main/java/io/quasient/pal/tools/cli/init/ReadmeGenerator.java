@@ -172,7 +172,17 @@ public final class ReadmeGenerator {
     sb.append("pal run").append(tail).append('\n');
     sb.append("```\n");
 
-    // 2. WAL examples (always shown — fundamental PAL feature)
+    // 2. Infrastructure setup (when etcd or Kafka is generated)
+    if (config.isInfra()) {
+      sb.append("\n### Setup\n\n");
+      sb.append("Start the infrastructure and load environment variables:\n\n");
+      sb.append("```sh\n");
+      sb.append("infra/start.sh\n");
+      sb.append("source .env.pal\n");
+      sb.append("```\n");
+    }
+
+    // 3. WAL examples (always shown — fundamental PAL feature)
     sb.append("\n### Write-ahead log\n\n");
     sb.append("Record every operation for replay, debugging, and event sourcing:\n\n");
     sb.append("```sh\n");
@@ -180,7 +190,11 @@ public final class ReadmeGenerator {
     sb.append("pal run --wal file:./wal").append(tail).append('\n');
     sb.append('\n');
     sb.append("# Kafka (distributed)\n");
-    sb.append("pal run --wal my-wal -k localhost:29092").append(tail).append('\n');
+    if (config.needsKafka()) {
+      sb.append("pal run --wal my-wal").append(tail).append('\n');
+    } else {
+      sb.append("pal run --wal my-wal -k localhost:29092").append(tail).append('\n');
+    }
     sb.append("```\n");
 
     // 3. JSON-RPC
@@ -203,7 +217,7 @@ public final class ReadmeGenerator {
         sb.append("\n### Interceptable peer\n\n");
         sb.append("Allow other peers to intercept this app's operations at runtime:\n\n");
         sb.append("```sh\n");
-        sb.append("pal run --interceptable -d localhost:2379").append(tail).append('\n');
+        sb.append("pal run --interceptable").append(tail).append('\n');
         sb.append("```\n");
       }
       if (config.isIntercepting()) {
@@ -216,20 +230,14 @@ public final class ReadmeGenerator {
         sb.append("```sh\n");
         sb.append("pal run -n ").append(name);
         sb.append(" --zmq-rpc auto --rpc-policy config/rpc-policy.yaml");
-        sb.append(" -d localhost:2379").append(tail).append('\n');
+        sb.append(tail).append('\n');
         sb.append("```\n");
       }
     }
 
-    // Infrastructure note
-    if (config.isInfra()) {
-      sb.append("\nBefore using etcd or Kafka, start the infrastructure:\n\n");
-      sb.append("```sh\n");
-      sb.append("infra/start.sh\n");
-      sb.append("```\n\n");
+    if (!config.isInfra()) {
+      sb.append("\nOptionally, source `.env.pal` before running to set environment variables.\n");
     }
-
-    sb.append("Optionally, source `.env.pal` before running to set environment variables.\n");
     sb.append("See `pal run --help` for all available flags.\n");
   }
 
@@ -277,23 +285,20 @@ public final class ReadmeGenerator {
     sb.append("**Terminal 1** — start the target peer (interceptable):\n\n");
     sb.append("```sh\n");
     sb.append("pal run --interceptable --json-rpc 7070 \\\n");
-    sb.append("  --rpc-policy config/rpc-policy.yaml -d localhost:2379")
-        .append(cpOnly)
-        .append('\n');
+    sb.append("  --rpc-policy config/rpc-policy.yaml").append(cpOnly).append('\n');
     sb.append("```\n\n");
 
     // Terminal 2: callback peer
     sb.append("**Terminal 2** — start the callback peer:\n\n");
     sb.append("```sh\n");
     sb.append("pal run -n ").append(name);
-    sb.append(" --zmq-rpc auto --rpc-policy config/rpc-policy.yaml \\\n");
-    sb.append("  -d localhost:2379").append(cpOnly).append('\n');
+    sb.append(" --zmq-rpc auto --rpc-policy config/rpc-policy.yaml").append(cpOnly).append('\n');
     sb.append("```\n\n");
 
     // Terminal 3: apply + call
     sb.append("**Terminal 3** — apply the intercept bundle, then call the method:\n\n");
     sb.append("```sh\n");
-    sb.append("pal -d localhost:2379 intercept apply config/intercept-bundle.yaml\n\n");
+    sb.append("pal intercept apply config/intercept-bundle.yaml\n\n");
     sb.append("echo '{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"call\",");
     sb.append("\"params\":{\"type\":\"").append(pkg).append(".SampleService\",");
     sb.append("\"method\":\"processOrder\",");

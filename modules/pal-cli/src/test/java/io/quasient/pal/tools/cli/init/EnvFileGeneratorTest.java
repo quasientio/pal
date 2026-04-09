@@ -61,8 +61,8 @@ public class EnvFileGeneratorTest {
     assertTrue(".env.pal should exist", Files.exists(envFile));
     String content = Files.readString(envFile);
     assertThat(content, containsString("# export PAL_WAL=\"file:./wal\""));
-    assertThat(content, containsString("# export PAL_DIRECTORY=\"localhost:2379\""));
-    assertThat(content, containsString("# export PAL_KAFKA_SERVERS=\"localhost:29092\""));
+    assertThat(content, containsString("export PAL_DIRECTORY=\"localhost:2379\""));
+    assertThat(content, containsString("export PAL_KAFKA_SERVERS=\"localhost:29092\""));
     assertThat(content, containsString("# export PAL_PEER_LOGGING_CONFIG="));
     assertThat(content, containsString("# export PAL_CLI_LOGGING_CONFIG="));
   }

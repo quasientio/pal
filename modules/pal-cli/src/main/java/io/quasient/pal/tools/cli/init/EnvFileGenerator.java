@@ -28,9 +28,11 @@ import java.util.List;
  * exports for WAL, etcd (when intercepts are enabled), Kafka (when Kafka WAL is enabled), and
  * logging configuration.
  *
- * <p>All variables are commented out by default so users uncomment only what they need. Sections
- * are included based on the project's intent flags. A header line points to {@code pal run --help}
- * for the full list of flags and environment variables.
+ * <p>Infrastructure variables ({@code PAL_DIRECTORY}, {@code PAL_KAFKA_SERVERS}) are uncommented
+ * when their respective features are enabled, so that {@code source .env.pal} sets them and
+ * commands can omit the {@code -d}/{@code -k} flags. Other variables are commented out by default.
+ * Sections are included based on the project's intent flags. A header line points to {@code pal run
+ * --help} for the full list of flags and environment variables.
  *
  * <p>Respects {@link InitConfig#isDryRun()}: when true, computes and reports what would be
  * generated but does not write files.
@@ -118,23 +120,25 @@ public final class EnvFileGenerator {
   }
 
   /**
-   * Appends the etcd (directory) configuration section (commented out).
+   * Appends the etcd (directory) configuration section (uncommented so that {@code source .env.pal}
+   * sets the variable and commands can omit {@code -d}).
    *
    * @param sb the string builder
    */
   private void appendEtcdSection(StringBuilder sb) {
     sb.append("# PAL directory (etcd) — required for intercepts and peer discovery\n");
-    sb.append("# export PAL_DIRECTORY=\"localhost:2379\"\n");
+    sb.append("export PAL_DIRECTORY=\"localhost:2379\"\n");
   }
 
   /**
-   * Appends the Kafka configuration section (commented out).
+   * Appends the Kafka configuration section (uncommented so that {@code source .env.pal} sets the
+   * variable and commands can omit {@code -k}).
    *
    * @param sb the string builder
    */
   private void appendKafkaSection(StringBuilder sb) {
     sb.append("# Kafka WAL\n");
-    sb.append("# export PAL_KAFKA_SERVERS=\"localhost:29092\"\n");
+    sb.append("export PAL_KAFKA_SERVERS=\"localhost:29092\"\n");
   }
 
   /**

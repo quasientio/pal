@@ -909,6 +909,13 @@ public class Init extends AbstractPalSubcommand {
     out.println("  " + step + ". " + compileCmd + "              # " + buildHint);
     step++;
 
+    if (config.isInfra()) {
+      out.println("  " + step + ". infra/start.sh              # Start infrastructure");
+      step++;
+      out.println("  " + step + ". source .env.pal");
+      step++;
+    }
+
     out.println("  " + step + ". " + buildRunCommand(config));
     step++;
 
