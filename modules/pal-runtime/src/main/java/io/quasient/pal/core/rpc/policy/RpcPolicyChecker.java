@@ -130,7 +130,18 @@ public class RpcPolicyChecker {
       if (modifiers == 0) {
         modifiers = resolveModifiersViaReflection(className, memberName, category);
       }
-      visibility = MemberVisibility.fromModifiers(modifiers);
+      if (modifiers < 0) {
+        // Class not on classpath — skip visibility-based policy evaluation.
+        // Non-visibility rules (pattern-based deny-unsafe, deny-jdk-internals, etc.) still
+        // apply below. The dispatch layer will produce the real ClassNotFoundException.
+        logger.warn(
+            "Class not found on classpath during policy evaluation: {}.{} — "
+                + "skipping visibility check (deny-nonpublic will not apply)",
+            className,
+            memberName);
+      } else {
+        visibility = MemberVisibility.fromModifiers(modifiers);
+      }
     }
 
     RpcPolicyAction action =
@@ -211,7 +222,9 @@ public class RpcPolicyChecker {
    * @param memberName the method, constructor ({@code "<init>"}), or field name
    * @param category the member category determining whether to search methods, constructors, or
    *     fields
-   * @return the resolved modifiers, or {@code 0} if the class or member cannot be found
+   * @return the resolved modifiers, {@code 0} if the member cannot be found on an existing class,
+   *     or {@code -1} if the class itself cannot be loaded (signals the caller to skip
+   *     visibility-based policy evaluation)
    */
   private int resolveModifiersViaReflection(
       String className, String memberName, MemberCategory category) {
@@ -247,6 +260,7 @@ public class RpcPolicyChecker {
       }
     } catch (ClassNotFoundException e) {
       logger.debug("Cannot resolve modifiers for {}.{}: class not found", className, memberName);
+      return -1;
     }
     return 0;
   }

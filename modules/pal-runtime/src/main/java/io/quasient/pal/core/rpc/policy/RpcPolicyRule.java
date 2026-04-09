@@ -126,8 +126,9 @@ public class RpcPolicyRule {
    * @param classMethodPath the fully-qualified path in the form {@code "com.example.Foo.bar"}
    * @param channel the message channel the operation arrived on
    * @param memberCategory the category of the member being accessed
-   * @param visibility the visibility of the member being accessed, or {@code null} to skip the
-   *     visibility check
+   * @param visibility the visibility of the member being accessed, or {@code null} if unknown. When
+   *     {@code null} and this rule has visibility constraints, the rule does not match — a
+   *     visibility-restricted rule requires known visibility to fire.
    * @return {@code true} if the operation matches this rule
    */
   public boolean matches(
@@ -141,7 +142,7 @@ public class RpcPolicyRule {
     if (members != null && !members.contains(memberCategory)) {
       return false;
     }
-    if (visibility != null && visibilities != null && !visibilities.contains(visibility)) {
+    if (visibilities != null && (visibility == null || !visibilities.contains(visibility))) {
       return false;
     }
     return MATCHER.isMatch(fullPattern, classMethodPath);
@@ -221,8 +222,8 @@ public class RpcPolicyRule {
    *
    * @param classMethodPath the fully-qualified path in the form {@code "com.example.Foo.bar"}
    * @param memberCategory the category of the member being accessed
-   * @param visibility the visibility of the member being accessed, or {@code null} to skip the
-   *     visibility check
+   * @param visibility the visibility of the member being accessed, or {@code null} if unknown. When
+   *     {@code null} and this rule has visibility constraints, the rule does not match.
    * @return {@code true} if the operation matches this rule (ignoring channel)
    */
   public boolean matchesForMetadata(
@@ -230,7 +231,7 @@ public class RpcPolicyRule {
     if (members != null && !members.contains(memberCategory)) {
       return false;
     }
-    if (visibility != null && visibilities != null && !visibilities.contains(visibility)) {
+    if (visibilities != null && (visibility == null || !visibilities.contains(visibility))) {
       return false;
     }
     return MATCHER.isMatch(fullPattern, classMethodPath);

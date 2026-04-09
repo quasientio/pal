@@ -387,8 +387,10 @@ public class RpcPolicyCheckerTest {
   }
 
   /**
-   * Verifies that the {@code deny-nonpublic} preset denies a package-private constructor (modifiers
-   * = 0).
+   * Verifies that the {@code deny-nonpublic} preset denies a package-private constructor when
+   * modifiers are populated (non-zero value that maps to package-private visibility). Uses {@link
+   * java.lang.reflect.Modifier#FINAL} to set a non-zero modifier value that still maps to
+   * package-private visibility (no public/protected/private bits).
    */
   @Test
   public void shouldDenyPackagePrivateConstructorWhenDenyNonpublicPreset() {
@@ -396,13 +398,35 @@ public class RpcPolicyCheckerTest {
     RpcPolicy policy = new RpcPolicy(presetRules, RpcPolicyAction.ALLOW);
     RpcPolicyChecker checker = new RpcPolicyChecker(policy);
 
-    ExecMessage msg = createConstructorMessageWithModifiers("com.example.Foo", 0);
+    // Modifier.FINAL (0x0010) with no access bits → package-private visibility, but non-zero
+    // so the reflection fallback is not triggered.
+    ExecMessage msg = createConstructorMessageWithModifiers("com.example.Foo", Modifier.FINAL);
     try {
       checker.checkAccess(msg, MessageType.EXEC_CONSTRUCTOR, MessageChannelType.ZMQ_SOCKET_RPC);
       fail("Expected RpcAccessDeniedException");
     } catch (RpcAccessDeniedException e) {
       assertThat(e.getClassName(), is("com.example.Foo"));
     }
+  }
+
+  /**
+   * Verifies that when the {@code deny-nonpublic} preset is active and the target class cannot be
+   * loaded (ClassNotFoundException during modifier resolution), the operation is NOT falsely
+   * denied. This prevents the misleading "RPC access denied" error when the real problem is a wrong
+   * classpath — the dispatch layer will produce the real ClassNotFoundException.
+   */
+  @Test
+  public void shouldNotFalselyDenyWhenClassNotFoundWithDenyNonpublic() {
+    List<RpcPolicyRule> presetRules = RpcPolicyPresets.getDenyNonpublicRules();
+    RpcPolicy policy = new RpcPolicy(presetRules, RpcPolicyAction.ALLOW);
+    RpcPolicyChecker checker = new RpcPolicyChecker(policy);
+
+    // modifiers = 0 for a non-existent class: reflection fallback triggers CNFE,
+    // visibility is unknown, so deny-nonpublic should NOT match.
+    ExecMessage msg = createInstanceMethodMessage("com.nonexistent.on.classpath.Api", "greet");
+    checker.checkAccess(msg, MessageType.EXEC_INSTANCE_METHOD, MessageChannelType.WEBSOCKET_RPC);
+    // No exception: visibility is unknown, so deny-nonpublic does not fire.
+    // The dispatch layer will produce the proper ClassNotFoundException.
   }
 
   /**

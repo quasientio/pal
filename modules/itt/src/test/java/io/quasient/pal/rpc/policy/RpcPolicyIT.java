@@ -570,6 +570,90 @@ public class RpcPolicyIT extends AbstractIntegrationTest {
   }
 
   /**
+   * Verifies that when the {@code deny-nonpublic} preset is active and the target class is not on
+   * the peer's classpath, the RPC response surfaces the real error (class not found) instead of a
+   * misleading "RPC access denied" from the deny-nonpublic visibility check.
+   *
+   * <p>This reproduces the scenario where a user runs a peer with a wrong {@code -cp} path (e.g.
+   * {@code target/classes} for a Gradle project instead of {@code build/classes/java/main}). Before
+   * the fix, the modifier resolution fallback returned 0 on ClassNotFoundException, which mapped to
+   * PACKAGE_PRIVATE visibility and triggered a false denial by the deny-nonpublic preset.
+   */
+  @Test
+  public void shouldNotFalselyDenyWhenClassNotOnClasspath() throws Exception {
+    UUID peerId = UUID.randomUUID();
+    PeerProcess peer = null;
+    ThinPeer thinPeer = null;
+    PalDirectory directory = null;
+
+    try {
+      peer =
+          launchPolicyPeer(
+              peerId,
+              "--rpc-policy-preset",
+              "deny-nonpublic",
+              "--rpc-default-action",
+              "ALLOW",
+              "--as-service");
+
+      directory = new PalDirectory(getPalDirectoryUrl(), null, true);
+      PeerInfo peerInfo = waitForPeerInDirectory(directory, peerId);
+      thinPeer = createThinPeer(peerInfo);
+
+      // Call a method on a class that is NOT on the peer's classpath.
+      // The dispatch layer should produce a ClassNotFoundException, not a misleading
+      // RpcAccessDeniedException from the deny-nonpublic visibility check.
+      String missingClass = "com.nonexistent.on.classpath.Api";
+      String cnfe = "java.lang.ClassNotFoundException";
+
+      if (rpcType == RpcType.ZMQ_RPC) {
+        ExecMessage response =
+            callStaticMethod(
+                thinPeer,
+                missingClass,
+                "greet",
+                new String[] {"java.lang.String"},
+                new Object[] {"hello"});
+        assertThat(
+            "Response should have raised throwable",
+            response.getRaisedThrowable(),
+            is(not(nullValue())));
+        assertEquals(
+            "Throwable should be ClassNotFoundException, not RpcAccessDeniedException",
+            cnfe,
+            response.getRaisedThrowable().getThrowable().getType());
+      } else {
+        JsonRpcResponse response =
+            callStaticMethodJsonRpc(
+                thinPeer,
+                missingClass,
+                "greet",
+                new String[] {"java.lang.String"},
+                new Object[] {"hello"});
+        assertThat(
+            "JSON-RPC response should have error", response.getError(), is(not(nullValue())));
+        assertEquals(
+            "Error code should be METHOD_NOT_FOUND (CNFE maps to -32601)",
+            JsonRpcErrorCode.METHOD_NOT_FOUND.getCode(),
+            response.getError().getCode());
+        assertThat(
+            "Error data should not be null", response.getError().getData(), is(not(nullValue())));
+        assertEquals(
+            "Error data throwable type should be ClassNotFoundException",
+            cnfe,
+            response.getError().getData().getThrowableType());
+      }
+
+      logger.info(
+          "shouldNotFalselyDenyWhenClassNotOnClasspath [{}]: "
+              + "Class-not-found correctly reported instead of false denial",
+          rpcType);
+    } finally {
+      cleanup(thinPeer, peer, peerId, directory);
+    }
+  }
+
+  /**
    * Verifies that a YAML rule with {@code visibility: ALL} allows non-public methods even when the
    * default action is DENY.
    */

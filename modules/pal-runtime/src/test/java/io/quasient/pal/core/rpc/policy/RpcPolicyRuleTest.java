@@ -319,8 +319,13 @@ public class RpcPolicyRuleTest {
         is(true));
   }
 
+  /**
+   * Verifies that a rule with visibility constraints does NOT match when visibility is {@code null}
+   * (unknown). Visibility-restricted rules require known visibility to fire — this prevents false
+   * denials when the class cannot be loaded for modifier resolution.
+   */
   @Test
-  public void shouldMatchWithNullVisibilityParameter() {
+  public void shouldNotMatchWhenVisibilityNullAndRuleHasVisibilityConstraints() {
     RpcPolicyRule rule =
         new RpcPolicyRule(
             "com.example.**",
@@ -333,7 +338,7 @@ public class RpcPolicyRuleTest {
     assertThat(
         rule.matches(
             "com.example.Foo.bar", MessageChannelType.ZMQ_SOCKET_RPC, MemberCategory.METHOD, null),
-        is(true));
+        is(false));
   }
 
   @Test
