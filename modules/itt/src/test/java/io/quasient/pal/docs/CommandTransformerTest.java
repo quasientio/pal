@@ -15,9 +15,19 @@
  */
 package io.quasient.pal.docs;
 
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -31,42 +41,89 @@ import org.junit.Test;
  */
 public class CommandTransformerTest {
 
+  /** Test etcd directory URL. */
+  private static final String TEST_PAL_DIR = "localhost:12379";
+
+  /** Test Kafka bootstrap servers. */
+  private static final String TEST_KAFKA = "localhost:39092";
+
+  /** Test itt-apps classpath. */
+  private static final String TEST_CP = "/path/to/itt-apps/target/classes";
+
+  /** Source file path used for test commands. */
+  private static final Path TEST_FILE = Paths.get("docs/user/docs/test.md");
+
+  /** Transformer under test. */
+  private CommandTransformer transformer;
+
+  /** Sets up the transformer with test configuration before each test. */
+  @Before
+  public void setUp() {
+    transformer = new CommandTransformer(TEST_PAL_DIR, TEST_KAFKA, TEST_CP);
+  }
+
+  /**
+   * Creates a {@link DocCommand} from a normalized command string.
+   *
+   * @param normalizedText the command text
+   * @return a DocCommand with default test metadata
+   */
+  private static DocCommand cmd(String normalizedText) {
+    return new DocCommand(
+        TEST_FILE, 1, normalizedText, normalizedText, DocCommandType.classify(normalizedText));
+  }
+
+  /**
+   * Creates a {@link DocCommand} with a specific type override.
+   *
+   * @param normalizedText the command text
+   * @param type the command type to use
+   * @return a DocCommand with the given type
+   */
+  private static DocCommand cmd(String normalizedText, DocCommandType type) {
+    return new DocCommand(TEST_FILE, 1, normalizedText, normalizedText, type);
+  }
+
   /** Verifies that the etcd {@code -d} flag value is replaced with the test palDirectoryUrl. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSubstituteEtcdAddress() {
-    // Given: command "pal peer ls -d localhost:2379"
-    // When: transformed with palDirectoryUrl="localhost:12379"
-    // Then: -d argument becomes "localhost:12379"
+    DocCommand command = cmd("pal peer ls -d localhost:2379");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int dIdx = allArgs.indexOf("-d");
+    assertTrue("Expected -d flag in args", dIdx >= 0);
+    assertThat(allArgs.get(dIdx + 1), is(TEST_PAL_DIR));
   }
 
   /** Verifies that the Kafka {@code -k} flag value is replaced with the test kafkaServers. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSubstituteKafkaAddress() {
-    // Given: command "pal run -k localhost:29092 --wal my-wal"
-    // When: transformed with kafkaServers="localhost:39092"
-    // Then: -k argument becomes "localhost:39092"
+    DocCommand command =
+        cmd("pal run -k localhost:29092 --wal my-wal -cp app.jar com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int kIdx = allArgs.indexOf("-k");
+    assertTrue("Expected -k flag in args", kIdx >= 0);
+    assertThat(allArgs.get(kIdx + 1), is(TEST_KAFKA));
   }
 
   /**
    * Verifies that the Kafka bootstrap {@code -b} flag value is replaced with the test kafkaServers.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSubstituteKafkaBootstrapAddress() {
-    // Given: command "pal log stats -b localhost:29092"
-    // When: transformed with test kafkaServers
-    // Then: -b argument is substituted with the test kafka servers value
+    DocCommand command = cmd("pal log stats -b localhost:29092");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int bIdx = allArgs.indexOf("-b");
+    assertTrue("Expected -b flag in args", bIdx >= 0);
+    assertThat(allArgs.get(bIdx + 1), is(TEST_KAFKA));
   }
 
   /**
@@ -74,14 +131,15 @@ public class CommandTransformerTest {
    * coverage.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSubstituteNonLocalhostEtcdAddress() {
-    // Given: command "pal peer ls -d etcd:2379"
-    // When: transformed with test palDirectoryUrl
-    // Then: -d argument is replaced with the test palDirectoryUrl
+    DocCommand command = cmd("pal peer ls -d etcd:2379");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int dIdx = allArgs.indexOf("-d");
+    assertTrue("Expected -d flag in args", dIdx >= 0);
+    assertThat(allArgs.get(dIdx + 1), is(TEST_PAL_DIR));
   }
 
   /**
@@ -89,38 +147,41 @@ public class CommandTransformerTest {
    * coverage.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSubstituteNonLocalhostKafkaAddress() {
-    // Given: command "pal run -k kafka:9092 --wal my-wal -cp app.jar"
-    // When: transformed with test kafkaServers
-    // Then: -k argument is replaced with the test kafka servers value
+    DocCommand command = cmd("pal run -k kafka:9092 --wal my-wal -cp app.jar com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int kIdx = allArgs.indexOf("-k");
+    assertTrue("Expected -k flag in args", kIdx >= 0);
+    assertThat(allArgs.get(kIdx + 1), is(TEST_KAFKA));
   }
 
   /** Verifies that {@code -cp app.jar} is replaced with the itt-apps classpath. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSubstituteClasspath() {
-    // Given: command "pal run -cp app.jar com.example.Main"
-    // When: transformed with ittAppsClasspath
-    // Then: -cp argument becomes the itt-apps classpath
+    DocCommand command = cmd("pal run -cp app.jar com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int cpIdx = allArgs.indexOf("-cp");
+    assertTrue("Expected -cp flag in args", cpIdx >= 0);
+    assertThat(allArgs.get(cpIdx + 1), is(TEST_CP));
   }
 
   /** Verifies that {@code -cp target/classes} is replaced with the itt-apps classpath. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSubstituteTargetClassesClasspath() {
-    // Given: command with "-cp target/classes"
-    // When: transformed with ittAppsClasspath
-    // Then: -cp argument becomes the itt-apps classpath
+    DocCommand command = cmd("pal run -cp target/classes com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int cpIdx = allArgs.indexOf("-cp");
+    assertTrue("Expected -cp flag in args", cpIdx >= 0);
+    assertThat(allArgs.get(cpIdx + 1), is(TEST_CP));
   }
 
   /**
@@ -128,15 +189,20 @@ public class CommandTransformerTest {
    * classpath and main class appended if not already present.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSubstituteJarFlag() {
-    // Given: command with "-jar target/my-app.jar"
-    // When: transformed with ittAppsClasspath
-    // Then: -jar is replaced with -cp ittAppsClasspath and a main class is appended
-    //       if not already present in the command
+    DocCommand command = cmd("pal run -jar target/my-app.jar", DocCommandType.RUN);
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    // Should have -cp instead of -jar
+    int cpIdx = allArgs.indexOf("-cp");
+    assertTrue("Expected -cp flag in args after -jar substitution", cpIdx >= 0);
+    assertThat(allArgs.get(cpIdx + 1), is(TEST_CP));
+    // Should not contain -jar
+    assertFalse("Should not contain -jar flag", allArgs.contains("-jar"));
+    // Main class should be appended
+    assertThat(result.getSubstitutions().toString(), containsString("main class"));
   }
 
   /**
@@ -144,15 +210,16 @@ public class CommandTransformerTest {
    * itt-apps main class.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSubstituteMainClass() {
-    // Given: command with "com.example.Main" as positional argument
-    // When: transformed
-    // Then: main class is replaced with a known itt-apps main class
-    //       (e.g., io.quasient.foobar.apps.quantized.rpc.Methods)
+    DocCommand command = cmd("pal run -cp app.jar com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    assertTrue(
+        "Expected itt-apps main class in args",
+        allArgs.contains("io.quasient.foobar.apps.quantized.rpc.Methods"));
+    assertFalse("Should not contain placeholder main class", allArgs.contains("com.example.Main"));
   }
 
   /**
@@ -160,63 +227,89 @@ public class CommandTransformerTest {
    * itt-apps classes.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSubstituteVariousMainClasses() {
-    // Given: commands with "com.example.Calculator", "com.example.App",
-    //        "com.example.Service", "tutorial.CalculatorService" as positional arguments
-    // When: each is transformed
-    // Then: each is replaced with an appropriate itt-apps class
+    // Calculator classes
+    DocCommand calcCmd = cmd("pal run -cp app.jar com.example.Calculator");
+    CommandTransformer.TransformedCommand calcResult = transformer.transform(calcCmd);
+    List<String> calcArgs = Arrays.asList(calcResult.getArgs());
+    assertTrue(
+        "Calculator class should map to intercept.Calculator",
+        calcArgs.contains("io.quasient.foobar.apps.quantized.intercept.Calculator"));
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    // Service class
+    DocCommand svcCmd = cmd("pal run -cp app.jar com.example.Service");
+    CommandTransformer.TransformedCommand svcResult = transformer.transform(svcCmd);
+    List<String> svcArgs = Arrays.asList(svcResult.getArgs());
+    assertTrue(
+        "Service class should map to rpc.Methods",
+        svcArgs.contains("io.quasient.foobar.apps.quantized.rpc.Methods"));
+
+    // tutorial.CalculatorService
+    DocCommand tutCmd = cmd("pal run -cp app.jar tutorial.CalculatorService");
+    CommandTransformer.TransformedCommand tutResult = transformer.transform(tutCmd);
+    List<String> tutArgs = Arrays.asList(tutResult.getArgs());
+    assertTrue(
+        "tutorial.CalculatorService should map to intercept.Calculator",
+        tutArgs.contains("io.quasient.foobar.apps.quantized.intercept.Calculator"));
   }
 
   /** Verifies that {@code --wal} names are uniquified with a prefix or suffix. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldUniquifyWalNames() {
-    // Given: command with "--wal my-wal"
-    // When: transformed
-    // Then: wal name includes a unique prefix/suffix (e.g., doc-test-my-wal-<hash>)
+    DocCommand command = cmd("pal run --wal my-wal -cp app.jar com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    String walName = result.getUniqueWalName();
+    assertThat("WAL name should be tracked", walName, is(notNullValue()));
+    assertThat("WAL name should contain original", walName, containsString("my-wal"));
+    assertThat(
+        "WAL name should have doc-test-wal prefix", walName, containsString("doc-test-wal-"));
   }
 
   /** Verifies that Chronicle WAL paths are uniquified with a temp directory component. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldUniquifyChronicleWalPaths() {
-    // Given: command with "--wal file:/tmp/tutorial-wal"
-    // When: transformed
-    // Then: path includes a unique temp directory component
+    DocCommand command = cmd("pal run --wal file:/tmp/tutorial-wal -cp app.jar com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    Path chroniclePath = result.getChroniclePath();
+    assertThat("Chronicle path should be tracked", chroniclePath, is(notNullValue()));
+    assertThat(
+        "Chronicle path should contain unique component",
+        chroniclePath.toString(),
+        containsString("pal-doc-test-"));
+    assertThat(
+        "Chronicle path should preserve original name",
+        chroniclePath.toString(),
+        containsString("tutorial-wal"));
   }
 
   /** Verifies that peer names are uniquified with a doc-test prefix. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldUniquifyPeerNames() {
-    // Given: command with "-n calculator"
-    // When: transformed
-    // Then: peer name includes a doc-test prefix
+    DocCommand command = cmd("pal run -n calculator -cp app.jar com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    String peerName = result.getPeerName();
+    assertThat("Peer name should be tracked", peerName, is(notNullValue()));
+    assertThat("Peer name should have doc-test prefix", peerName, containsString("doc-test-"));
+    assertThat("Peer name should contain original", peerName, containsString("calculator"));
   }
 
   /** Verifies that {@code --rpc-default-action ALLOW} is appended to run commands that lack it. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldAppendRpcDefaultActionIfMissing() {
-    // Given: command "pal run -d localhost:2379 -cp app.jar Main" without --rpc-default-action
-    // When: transformed
-    // Then: "--rpc-default-action ALLOW" is appended to the arguments
+    DocCommand command = cmd("pal run -d localhost:2379 -cp app.jar com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    assertTrue("Should contain --rpc-default-action", allArgs.contains("--rpc-default-action"));
+    int rdaIdx = allArgs.indexOf("--rpc-default-action");
+    assertThat(allArgs.get(rdaIdx + 1), is("ALLOW"));
   }
 
   /**
@@ -224,38 +317,49 @@ public class CommandTransformerTest {
    * command.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldNotDuplicateRpcDefaultAction() {
-    // Given: command already containing "--rpc-default-action DENY"
-    // When: transformed
-    // Then: no additional --rpc-default-action flag is added
+    DocCommand command = cmd("pal run --rpc-default-action DENY -cp app.jar com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int count = 0;
+    for (String arg : allArgs) {
+      if ("--rpc-default-action".equals(arg)) {
+        count++;
+      }
+    }
+    assertThat("Should have exactly one --rpc-default-action", count, is(1));
+    int rdaIdx = allArgs.indexOf("--rpc-default-action");
+    assertThat("Original value should be preserved", allArgs.get(rdaIdx + 1), is("DENY"));
   }
 
   /** Verifies that {@code --dry-run} is appended to {@code pal init} commands. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldAppendDryRunToInitCommands() {
-    // Given: command "pal init my-project"
-    // When: transformed
-    // Then: "--dry-run" is appended to the arguments
+    DocCommand command = cmd("pal init my-project");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    assertTrue("Should contain --dry-run", allArgs.contains("--dry-run"));
   }
 
   /** Verifies that {@code --dry-run} is not duplicated when already present. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldNotDuplicateDryRunIfPresent() {
-    // Given: command "pal init my-project --dry-run"
-    // When: transformed
-    // Then: only one --dry-run flag is present in the result
+    DocCommand command = cmd("pal init my-project --dry-run");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int count = 0;
+    for (String arg : allArgs) {
+      if ("--dry-run".equals(arg)) {
+        count++;
+      }
+    }
+    assertThat("Should have exactly one --dry-run", count, is(1));
   }
 
   /**
@@ -263,14 +367,18 @@ public class CommandTransformerTest {
    * AbstractCliIT.runCliSubcommand()}.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldReturnSubcommandPartsAndArgs() {
-    // Given: command "pal peer ls -d localhost:2379 -l"
-    // When: transformed
-    // Then: result contains subcommandParts=["peer", "ls"] and args=["-d", "<url>", "-l"]
+    DocCommand command = cmd("pal peer ls -d localhost:2379 -l");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    assertArrayEquals(
+        "Subcommand parts should be [peer, ls]",
+        new String[] {"peer", "ls"},
+        result.getSubcommandParts());
+    List<String> args = Arrays.asList(result.getArgs());
+    assertTrue("Args should contain -d", args.contains("-d"));
+    assertTrue("Args should contain -l", args.contains("-l"));
   }
 
   /**
@@ -278,14 +386,19 @@ public class CommandTransformerTest {
    * logging.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldTrackAllSubstitutionsForLogging() {
-    // Given: a command with multiple substitutions needed (address, classpath, main class)
-    // When: transformed
-    // Then: result includes a list of human-readable substitution descriptions
+    DocCommand command =
+        cmd(
+            "pal run -d localhost:2379 -k localhost:29092 -cp app.jar com.example.Main --wal my-wal");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    List<String> subs = result.getSubstitutions();
+    assertFalse("Should have substitutions", subs.isEmpty());
+    // Should track address, classpath, main class, and WAL name substitutions
+    assertTrue(
+        "Should have at least 4 substitutions (address, kafka, cp, main class, wal)",
+        subs.size() >= 4);
   }
 
   /**
@@ -293,39 +406,41 @@ public class CommandTransformerTest {
    * result.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldPreserveStdinData() {
-    // Given: pipe command "echo '{\"jsonrpc\":...}' | pal peer call ..."
-    // When: transformed
-    // Then: result includes the stdin data extracted from the echo/heredoc portion
+    DocCommand command =
+        cmd("echo '{\"jsonrpc\":\"2.0\",\"method\":\"test\"}' | pal peer call -d localhost:2379");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    assertThat("Stdin data should be extracted", result.getStdinData(), is(notNullValue()));
+    assertThat(
+        "Stdin data should contain the JSON", result.getStdinData(), containsString("jsonrpc"));
   }
 
   /** Verifies that commands requiring no substitutions are returned unchanged. */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldHandleCommandsWithNoSubstitutionsNeeded() {
-    // Given: command "pal help"
-    // When: transformed
-    // Then: returned unchanged (except wrapping in result type)
+    DocCommand command = cmd("pal help");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertFalse(result.isSkipped());
+    assertArrayEquals(
+        "Subcommand parts should be [help]", new String[] {"help"}, result.getSubcommandParts());
+    assertTrue("Should have no substitutions or empty list", result.getSubstitutions().isEmpty());
   }
 
   /**
    * Verifies that truly untestable commands are marked as skipped with a meaningful reason string.
    */
   @Test
-  @Ignore("Awaiting implementation in #1433")
   public void shouldSkipTrulyUntestableCommands() {
-    // Given: a command requiring interactive input (no known pattern for automation)
-    // When: transformed
-    // Then: result is marked as skipped with a meaningful reason string
+    // A command with --fx-thread requires JavaFX runtime
+    DocCommand command = cmd("pal run --fx-thread -cp app.jar com.example.Main");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
 
-    // TODO(#1433): Implement test logic
-    fail("Not yet implemented");
+    assertTrue("Should be skipped", result.isSkipped());
+    assertThat("Skip reason should be meaningful", result.getSkipReason(), is(notNullValue()));
+    assertThat(
+        "Skip reason should mention JavaFX", result.getSkipReason(), containsString("JavaFX"));
   }
 }

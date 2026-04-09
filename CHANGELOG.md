@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- [Feature] Add CommandTransformer for adapting documentation CLI commands to the integration test environment — substitutes addresses, classpaths, main classes, uniquifies WAL/peer names, handles Chronicle paths, appends required flags, extracts stdin from pipe patterns, and classifies command lifecycle
 - [Breaking] Optimize colfer wire format for size reduction: UUID fields (`peerUuid`, `fromPeer`, `interceptedPeer`) changed from `text` to `binary` (16 bytes vs 36), `currentTime` changed from ISO-8601 `text` to epoch-nanos `uint64`, and redundant `clazz` removed from `StaticFieldPutDone`/`InstanceFieldPutDone` (read from `field.clazz` instead). Also fixes latent bug in `ExecMessageUtils.getStaticFieldPutDone().getClass()` which called `Object.getClass()` instead of the colfer `getClazz()`.
 - [Breaking] Remove `Parameter` wrapper type from colfer wire format — method/constructor arguments are now stored directly as `Obj[]` on call types, eliminating one level of indirection and ~4 bytes of overhead per argument
 - [Enhancement] Add `field=` filter key to `pal print --filter` for filtering by field name on field operations (get/put), and ensure `--with-return` correctly handles field ops via `PUT_STATIC_DONE`/`PUT_FIELD_DONE` completion messages
