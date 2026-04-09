@@ -124,7 +124,7 @@ fi
 # ---------------------------------------------------------------------------
 JAVA_OPTS="$CHRONICLE_EXPORTS"
 if [ "$COMMAND" = "run" ]; then
-  JAVA_OPTS="$JAVA_OPTS $PAL_HEAP_OPTS $PAL_GC_OPTS -XX:+IgnoreUnrecognizedVMOptions -Xverify:none $PAL_JMX_OPTS"
+  JAVA_OPTS="$JAVA_OPTS $PAL_HEAP_OPTS $PAL_GC_OPTS $PAL_JMX_OPTS"
 fi
 JAVA_OPTS="$JAVA_OPTS $AGENT_OPT $LOGGING_OPTS $PAL_VMOPTIONS $PAL_JAVA_OPTS"
 
