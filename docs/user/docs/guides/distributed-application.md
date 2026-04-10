@@ -116,7 +116,7 @@ mvn clean install
 ```bash
 pal run -d localhost:2379 -k localhost:29092 \
   --wal calculator-wal \
-  --json-rpc auto \
+  --zmq-rpc auto \
   --json-rpc auto \
   --interceptable \
   --in-flight-tracking \
@@ -130,7 +130,7 @@ pal run -d localhost:2379 -k localhost:29092 \
 - `-d localhost:2379`: Registers in etcd directory
 - `-k localhost:29092`: Uses Kafka for logs
 - `--wal calculator-wal`: Writes all operations to Kafka topic
-- `--json-rpc auto`: Enables binary RPC on random port
+- `--zmq-rpc auto`: Enables binary RPC on random port
 - `--json-rpc auto`: Enables JSON-RPC on random port
 - `--interceptable`: Allows dynamic interception
 - `--in-flight-tracking`: Waits for in-flight calls to complete before activating new intercepts (enabled by default, shown here for clarity)
