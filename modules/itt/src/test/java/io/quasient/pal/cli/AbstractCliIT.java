@@ -53,6 +53,12 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
 
   private static final Logger logger = LoggerFactory.getLogger(AbstractCliIT.class);
 
+  /**
+   * Exit code returned by {@link #runCliSubcommandForDuration} when the process is killed after the
+   * timeout expires rather than exiting on its own.
+   */
+  protected static final int EXIT_CODE_KILLED = -1;
+
   /** Counter for generating unique coverage file names for CLI processes. */
   private static final AtomicInteger cliInvocationCounter = new AtomicInteger(0);
 
@@ -550,7 +556,7 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     if (!completed) {
       process.destroy();
       process.waitFor(2, TimeUnit.SECONDS);
-      exitCode = -1;
+      exitCode = EXIT_CODE_KILLED;
     } else {
       exitCode = process.exitValue();
     }

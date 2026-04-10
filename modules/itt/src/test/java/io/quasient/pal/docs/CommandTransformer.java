@@ -82,7 +82,8 @@ public class CommandTransformer {
   private static final Pattern CLASSPATH_PLACEHOLDER_PATTERN =
       Pattern.compile(
           "(-cp\\s+)(app\\.jar|target/classes|target/test-classes"
-              + "|build/classes/java/main|service\\.jar|target/[^\\s]*\\.jar)");
+              + "|build/classes/java/main|service\\.jar|target/[^\\s]*\\.jar"
+              + "|[a-zA-Z][a-zA-Z0-9._-]*\\.jar)");
 
   /** Pattern matching {@code -jar <path>}. */
   private static final Pattern JAR_FLAG_PATTERN = Pattern.compile("-jar\\s+([^\\s]+)");
@@ -99,8 +100,8 @@ public class CommandTransformer {
   private static final Pattern CAT_PIPE_PATTERN =
       Pattern.compile("^cat\\s+[^|]*\\|\\s*(pal\\s+.*)$");
 
-  /** Pattern matching {@code file:/tmp/<name>} Chronicle paths. */
-  private static final Pattern CHRONICLE_PATH_PATTERN = Pattern.compile("file:/tmp/([^\\s]+)");
+  /** Pattern matching {@code file:<path>} Chronicle paths (e.g., file:/tmp/x, file:./x, file:x). */
+  private static final Pattern CHRONICLE_PATH_PATTERN = Pattern.compile("file:([^\\s]+)");
 
   /** Pattern matching {@code --wal <name>} where name doesn't start with {@code file:}. */
   private static final Pattern WAL_NAME_PATTERN = Pattern.compile("(--wal\\s+)((?!file:)[^\\s]+)");
@@ -112,7 +113,23 @@ public class CommandTransformer {
   private static final Pattern SYNOPSIS_PLACEHOLDER_PATTERN =
       Pattern.compile(
           "\\[OPTIONS\\]|\\[LOG\\.\\.\\.\\]|\\[PEER\\]|\\[LOG_NAME\\]|\\[DIRECTORY\\]"
-              + "|\\[args\\.\\.\\.\\]|\\[FILE\\]|\\bclass\\b(?!\\w)");
+              + "|\\[args\\.\\.\\.\\]|\\[FILE\\]|\\bclass\\b(?!\\w)"
+              + "|<[a-z][a-z0-9_-]*>");
+
+  /**
+   * Pattern matching ellipsis-truncated UUIDs like {@code abc12345-...} or {@code
+   * 550e8400-e29b...}.
+   */
+  private static final Pattern ELLIPSIS_UUID_PATTERN =
+      Pattern.compile("[0-9a-fA-F]{4,}-[0-9a-fA-F]*\\.\\.\\.?");
+
+  /**
+   * Pattern matching bare ellipsis ({@code ...}) as an argument. Matches standalone {@code ...}
+   * surrounded by whitespace or at end of line. Catches incomplete example commands like {@code pal
+   * run -n user-service ...}.
+   */
+  private static final Pattern BARE_ELLIPSIS_PATTERN =
+      Pattern.compile("(?:^|\\s)\\.\\.\\.(?:\\s|$)");
 
   /** Pattern matching {@code -n <name>} or {@code --name <name>} for peer names. */
   private static final Pattern PEER_NAME_PATTERN = Pattern.compile("(-n\\s+|--name\\s+)([^\\s]+)");
@@ -239,9 +256,6 @@ public class CommandTransformer {
     // Fix negated boolean flags (e.g., "--in-flight-tracking=false" -> skip the =false)
     palCommand = fixNegatedBooleanFlags(palCommand, substitutions);
 
-    // Remove duplicate consecutive flags (e.g., "--json-rpc auto --json-rpc auto")
-    palCommand = removeDuplicateFlags(palCommand, substitutions);
-
     // Fix obsolete/incorrect short flags from docs (e.g., -t -> --types for print commands)
     palCommand = fixObsoleteFlags(palCommand, effectiveType, substitutions);
 
@@ -271,11 +285,16 @@ public class CommandTransformer {
     boolean isRunCommand = effectiveType == DocCommandType.RUN;
     boolean isInitCommand = effectiveType == DocCommandType.INIT;
 
+    boolean isReplayCommand = effectiveType == DocCommandType.REPLAY;
+
     if (isRunCommand) {
       palCommand = appendRpcDefaultAction(palCommand, substitutions);
       palCommand = handleRpcPolicy(palCommand, substitutions);
       palCommand = ensureDirectoryFlag(palCommand, substitutions);
       palCommand = ensureKafkaFlag(palCommand, walResult, chronicleResult, substitutions);
+    }
+    if (isReplayCommand) {
+      palCommand = handleRpcPolicy(palCommand, substitutions);
     }
     if (isInitCommand) {
       palCommand = appendDryRun(palCommand, substitutions);
@@ -325,6 +344,24 @@ public class CommandTransformer {
     // Synopsis/usage lines contain meta-syntax placeholders that are not real arguments
     if (isSynopsisLine(text)) {
       return "Synopsis/usage line with meta-syntax placeholders";
+    }
+
+    // Ellipsis-truncated UUIDs (e.g., "abc12345-..." or "550e8400-e29b...") are placeholder
+    // examples, not real identifiers that can be looked up.
+    if (ELLIPSIS_UUID_PATTERN.matcher(text).find()) {
+      return "Contains ellipsis-truncated UUID placeholder";
+    }
+
+    // Direct WebSocket/HTTP connection URLs (ws://, http://) connect to specific endpoints
+    // that don't exist in the test environment.
+    if (text.contains("ws://") || text.contains("wss://")) {
+      return "Direct WebSocket connection URL (no test WS endpoint)";
+    }
+
+    // Commands with ellipsis as arguments (e.g., "pal run -n user-service ...") are
+    // incomplete examples that cannot be executed.
+    if (BARE_ELLIPSIS_PATTERN.matcher(text).find()) {
+      return "Contains bare ellipsis placeholder";
     }
 
     return null;
@@ -495,18 +532,21 @@ public class CommandTransformer {
     return new PeerNameResult(command, null);
   }
 
-  /** Handles Chronicle {@code file:/tmp/<name>} paths by redirecting to a unique temp path. */
+  /** Handles {@code file:<path>} Chronicle paths by redirecting to a unique temp path. */
   private ChronicleResult handleChroniclePath(
       String command, String originalText, List<String> substitutions) {
     Matcher m = CHRONICLE_PATH_PATTERN.matcher(command);
     if (m.find()) {
-      String originalName = m.group(1);
+      String originalPath = m.group(1);
+      // Extract the leaf name from the path for the redirected location
+      Path parsed = Paths.get(originalPath);
+      String leafName = parsed.getFileName().toString();
       String hash = shortHash(originalText);
       String uniqueDir = "pal-doc-test-" + hash;
-      Path chroniclePath = Paths.get("/tmp", uniqueDir, originalName);
+      Path chroniclePath = Paths.get("/tmp", uniqueDir, leafName);
       String newPath = "file:" + chroniclePath;
       command = m.replaceFirst(Matcher.quoteReplacement(newPath));
-      substitutions.add("Redirected Chronicle path file:/tmp/" + originalName + " to " + newPath);
+      substitutions.add("Redirected Chronicle path file:" + originalPath + " to " + newPath);
       return new ChronicleResult(command, chroniclePath);
     }
     return new ChronicleResult(command, null);
@@ -625,22 +665,6 @@ public class CommandTransformer {
   }
 
   /**
-   * Removes duplicate consecutive flag-value pairs. For example, {@code --json-rpc auto --json-rpc
-   * auto} is reduced to {@code --json-rpc auto}.
-   */
-  private static String removeDuplicateFlags(String command, List<String> substitutions) {
-    // Match patterns like "--flag value --flag value" where both are identical
-    Pattern dupPattern = Pattern.compile("(--[\\w-]+\\s+\\S+)\\s+\\1");
-    Matcher m = dupPattern.matcher(command);
-    if (m.find()) {
-      String duplicate = m.group(1);
-      command = m.replaceAll("$1");
-      substitutions.add("Removed duplicate flag: " + duplicate);
-    }
-    return command;
-  }
-
-  /**
    * Fixes obsolete or incorrect short flags that appear in documentation but are not valid for the
    * actual CLI subcommand.
    *
@@ -677,16 +701,29 @@ public class CommandTransformer {
    * referenced file does not exist as a real file.
    */
   private String handleRpcPolicy(String command, List<String> substitutions) {
-    // Replace non-existent rpc-policy file references with a temp file path
-    Pattern policyPattern = Pattern.compile("--rpc-policy\\s+([^\\s]+\\.yaml)");
+    // Replace non-existent policy file references with temp file paths.
+    // Handles --rpc-policy (run), --policy (replay), and --scope-policy (run).
+    command = replacePolicyFlag(command, "--rpc-policy", substitutions);
+    command = replacePolicyFlag(command, "--policy", substitutions);
+    command = replacePolicyFlag(command, "--scope-policy", substitutions);
+    return command;
+  }
+
+  /**
+   * Replaces a policy flag's file path argument with a temporary YAML file if the referenced file
+   * does not exist.
+   */
+  private String replacePolicyFlag(String command, String flag, List<String> substitutions) {
+    Pattern policyPattern = Pattern.compile(Pattern.quote(flag) + "\\s+([^\\s]+)");
     Matcher m = policyPattern.matcher(command);
     if (m.find()) {
       String path = m.group(1);
-      // Replace with a well-known existing policy path or a temp empty policy
-      String tempPath = createTempRpcPolicyPath();
-      if (tempPath != null) {
-        command = command.replace("--rpc-policy " + path, "--rpc-policy " + tempPath);
-        substitutions.add("Replaced --rpc-policy " + path + " with temp policy " + tempPath);
+      if (!Paths.get(path).toFile().exists()) {
+        String tempPath = createTempRpcPolicyPath();
+        if (tempPath != null) {
+          command = command.replace(flag + " " + path, flag + " " + tempPath);
+          substitutions.add("Replaced " + flag + " " + path + " with temp policy " + tempPath);
+        }
       }
     }
     return command;
@@ -735,7 +772,7 @@ public class CommandTransformer {
       List<String> substitutions) {
     boolean usesChronicle =
         chronicleResult.path != null
-            || command.contains("file:/")
+            || command.contains("file:")
             || (walResult.walName != null && walResult.walName.startsWith("file:"));
     if (!usesChronicle && !command.contains(" -k ") && !command.contains(" --kafka-servers ")) {
       command = command + " -k " + kafkaServers;
