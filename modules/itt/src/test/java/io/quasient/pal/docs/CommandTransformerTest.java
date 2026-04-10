@@ -121,9 +121,10 @@ public class CommandTransformerTest {
 
     assertFalse(result.isSkipped());
     List<String> allArgs = Arrays.asList(result.getArgs());
-    int bIdx = allArgs.indexOf("-b");
-    assertTrue("Expected -b flag in args", bIdx >= 0);
-    assertThat(allArgs.get(bIdx + 1), is(TEST_KAFKA));
+    // -b is replaced with -k since -b is not a valid flag for most subcommands
+    int kIdx = allArgs.indexOf("-k");
+    assertTrue("Expected -k flag in args (replacing -b)", kIdx >= 0);
+    assertThat(allArgs.get(kIdx + 1), is(TEST_KAFKA));
   }
 
   /**

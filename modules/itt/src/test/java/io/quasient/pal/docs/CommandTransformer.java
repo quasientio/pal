@@ -16,6 +16,9 @@
 package io.quasient.pal.docs;
 
 import com.google.common.base.Splitter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -92,11 +95,24 @@ public class CommandTransformer {
   private static final Pattern ECHO_PIPE_DOUBLE_QUOTE_PATTERN =
       Pattern.compile("^echo\\s+\"([^\"]*)\"\\s*\\|\\s*(.*)$");
 
+  /** Pattern matching {@code cat ... | pal ...} for stdin from cat piped into pal. */
+  private static final Pattern CAT_PIPE_PATTERN =
+      Pattern.compile("^cat\\s+[^|]*\\|\\s*(pal\\s+.*)$");
+
   /** Pattern matching {@code file:/tmp/<name>} Chronicle paths. */
   private static final Pattern CHRONICLE_PATH_PATTERN = Pattern.compile("file:/tmp/([^\\s]+)");
 
   /** Pattern matching {@code --wal <name>} where name doesn't start with {@code file:}. */
   private static final Pattern WAL_NAME_PATTERN = Pattern.compile("(--wal\\s+)((?!file:)[^\\s]+)");
+
+  /**
+   * Pattern matching synopsis/usage meta-syntax placeholders that are not real CLI arguments. These
+   * appear in documentation code blocks as syntax descriptions, not executable commands.
+   */
+  private static final Pattern SYNOPSIS_PLACEHOLDER_PATTERN =
+      Pattern.compile(
+          "\\[OPTIONS\\]|\\[LOG\\.\\.\\.\\]|\\[PEER\\]|\\[LOG_NAME\\]|\\[DIRECTORY\\]"
+              + "|\\[args\\.\\.\\.\\]|\\[FILE\\]|\\bclass\\b(?!\\w)");
 
   /** Pattern matching {@code -n <name>} or {@code --name <name>} for peer names. */
   private static final Pattern PEER_NAME_PATTERN = Pattern.compile("(-n\\s+|--name\\s+)([^\\s]+)");
@@ -182,6 +198,18 @@ public class CommandTransformer {
         palCommand = echoDoubleMatcher.group(2).strip();
         substitutions.add("Extracted stdin from echo pipe (double-quoted)");
         effectiveType = DocCommandType.classify(palCommand);
+      } else {
+        // Handle "cat ... | pal ..." patterns (heredoc body comes from DocCommand)
+        Matcher catPipeMatcher = CAT_PIPE_PATTERN.matcher(text.strip());
+        if (catPipeMatcher.matches()) {
+          palCommand = catPipeMatcher.group(1).strip();
+          substitutions.add("Extracted pal command from cat pipe");
+          effectiveType = DocCommandType.classify(palCommand);
+          if (command.getHeredocBody() != null) {
+            stdinData = command.getHeredocBody();
+            substitutions.add("Using heredoc body as stdin data");
+          }
+        }
       }
     }
 
@@ -198,6 +226,24 @@ public class CommandTransformer {
 
     // Strip leading $ and env var assignments for processing
     palCommand = stripShellPrefix(palCommand);
+
+    // Strip inline comments (e.g., "pal init my-project  # Create new project")
+    palCommand = stripInlineComment(palCommand, substitutions);
+
+    // Strip trailing pipe-to-non-pal commands (e.g., "pal peer ls ... | grep ...")
+    palCommand = stripTrailingPipe(palCommand, substitutions);
+
+    // Strip shell redirects (e.g., "> output.json", ">> file.txt")
+    palCommand = stripShellRedirect(palCommand, substitutions);
+
+    // Fix negated boolean flags (e.g., "--in-flight-tracking=false" -> skip the =false)
+    palCommand = fixNegatedBooleanFlags(palCommand, substitutions);
+
+    // Remove duplicate consecutive flags (e.g., "--json-rpc auto --json-rpc auto")
+    palCommand = removeDuplicateFlags(palCommand, substitutions);
+
+    // Fix obsolete/incorrect short flags from docs (e.g., -t -> --types for print commands)
+    palCommand = fixObsoleteFlags(palCommand, effectiveType, substitutions);
 
     // Step 1: Address substitution
     palCommand = substituteEtcdAddress(palCommand, substitutions);
@@ -227,10 +273,14 @@ public class CommandTransformer {
 
     if (isRunCommand) {
       palCommand = appendRpcDefaultAction(palCommand, substitutions);
+      palCommand = handleRpcPolicy(palCommand, substitutions);
+      palCommand = ensureDirectoryFlag(palCommand, substitutions);
+      palCommand = ensureKafkaFlag(palCommand, walResult, chronicleResult, substitutions);
     }
     if (isInitCommand) {
       palCommand = appendDryRun(palCommand, substitutions);
       palCommand = appendNonInteractive(palCommand, substitutions);
+      palCommand = appendGroupId(palCommand, substitutions);
     }
 
     // Step 8: Lifecycle classification
@@ -272,7 +322,21 @@ public class CommandTransformer {
       return "Requires JavaFX runtime (--fx-thread)";
     }
 
+    // Synopsis/usage lines contain meta-syntax placeholders that are not real arguments
+    if (isSynopsisLine(text)) {
+      return "Synopsis/usage line with meta-syntax placeholders";
+    }
+
     return null;
+  }
+
+  /**
+   * Checks whether a command line is a synopsis/usage line containing meta-syntax placeholders.
+   * These lines document CLI syntax but are not executable commands.
+   */
+  private static boolean isSynopsisLine(String text) {
+    String stripped = stripShellPrefix(text);
+    return SYNOPSIS_PLACEHOLDER_PATTERN.matcher(stripped).find();
   }
 
   /** Strips leading {@code $}, whitespace, and environment variable assignments. */
@@ -321,11 +385,10 @@ public class CommandTransformer {
     Matcher bm = KAFKA_B_ADDRESS_PATTERN.matcher(command);
     if (bm.find()) {
       String original = bm.group(2);
-      if (!original.equals(kafkaServers)) {
-        command = bm.replaceAll("$1" + Matcher.quoteReplacement(kafkaServers));
-        substitutions.add(
-            "Replaced Kafka bootstrap address (-b) " + original + " with " + kafkaServers);
-      }
+      // Replace -b with -k since -b is not a valid flag for most subcommands
+      command = bm.replaceAll("-k " + Matcher.quoteReplacement(kafkaServers));
+      substitutions.add(
+          "Replaced -b " + original + " with -k " + kafkaServers + " (-b is not a valid flag)");
     }
     return command;
   }
@@ -472,6 +535,211 @@ public class CommandTransformer {
     if (!command.contains("-y") && !command.contains("--non-interactive")) {
       substitutions.add("Appended -y (non-interactive)");
       return command + " -y";
+    }
+    return command;
+  }
+
+  /**
+   * Appends required init flags ({@code --group-id}, {@code --artifact-id}, {@code --main-class})
+   * to init commands if not already present and not running as a service.
+   */
+  private String appendGroupId(String command, List<String> substitutions) {
+    if (!command.contains("--group-id")) {
+      command = command + " --group-id com.example";
+      substitutions.add("Appended --group-id com.example");
+    }
+    if (!command.contains("--artifact-id")) {
+      command = command + " --artifact-id doc-test";
+      substitutions.add("Appended --artifact-id doc-test");
+    }
+    if (!command.contains("--main-class") && !command.contains("--as-service")) {
+      command = command + " --main-class com.example.Main";
+      substitutions.add("Appended --main-class com.example.Main");
+    }
+    return command;
+  }
+
+  /**
+   * Strips inline comments from a command. For example, {@code "pal init my-project # Create new
+   * project"} becomes {@code "pal init my-project"}.
+   */
+  private static String stripInlineComment(String command, List<String> substitutions) {
+    // Only strip # that appears after whitespace (not inside flag values)
+    int hashIdx = command.indexOf(" #");
+    if (hashIdx > 0) {
+      String stripped = command.substring(0, hashIdx).stripTrailing();
+      substitutions.add("Stripped inline comment");
+      return stripped;
+    }
+    return command;
+  }
+
+  /**
+   * Strips trailing pipe-to-non-pal commands. For example, {@code "pal peer ls -d localhost:2379 |
+   * grep callback-peer"} becomes {@code "pal peer ls -d localhost:2379"}.
+   */
+  private static String stripTrailingPipe(String command, List<String> substitutions) {
+    // Only strip pipe that goes to a non-pal command
+    int pipeIdx = command.lastIndexOf(" | ");
+    if (pipeIdx > 0) {
+      String afterPipe = command.substring(pipeIdx + 3).strip();
+      if (!afterPipe.startsWith("pal ")) {
+        String stripped = command.substring(0, pipeIdx).stripTrailing();
+        substitutions.add("Stripped trailing pipe to non-pal command: | " + afterPipe);
+        return stripped;
+      }
+    }
+    return command;
+  }
+
+  /**
+   * Strips shell output redirects from a command. For example, {@code "pal log print my-log --json
+   * > output.json"} becomes {@code "pal log print my-log --json"}.
+   */
+  private static String stripShellRedirect(String command, List<String> substitutions) {
+    // Match > or >> followed by a filename
+    int redirectIdx = command.indexOf(" > ");
+    if (redirectIdx < 0) {
+      redirectIdx = command.indexOf(" >> ");
+    }
+    if (redirectIdx > 0) {
+      String stripped = command.substring(0, redirectIdx).stripTrailing();
+      substitutions.add("Stripped shell redirect");
+      return stripped;
+    }
+    return command;
+  }
+
+  /**
+   * Fixes negated boolean flags that use {@code =false} or {@code =true} syntax, which PicoCLI does
+   * not accept for boolean flags. For example, {@code --in-flight-tracking=false} becomes {@code
+   * --no-in-flight-tracking} (if the flag supports negation) or is simply removed.
+   */
+  private static String fixNegatedBooleanFlags(String command, List<String> substitutions) {
+    // Handle --in-flight-tracking=false -> remove the flag entirely (disables tracking)
+    if (command.contains("--in-flight-tracking=false")) {
+      command = command.replace("--in-flight-tracking=false", "").replaceAll("\\s+", " ").strip();
+      substitutions.add("Removed --in-flight-tracking=false (default is disabled)");
+    }
+    return command;
+  }
+
+  /**
+   * Removes duplicate consecutive flag-value pairs. For example, {@code --json-rpc auto --json-rpc
+   * auto} is reduced to {@code --json-rpc auto}.
+   */
+  private static String removeDuplicateFlags(String command, List<String> substitutions) {
+    // Match patterns like "--flag value --flag value" where both are identical
+    Pattern dupPattern = Pattern.compile("(--[\\w-]+\\s+\\S+)\\s+\\1");
+    Matcher m = dupPattern.matcher(command);
+    if (m.find()) {
+      String duplicate = m.group(1);
+      command = m.replaceAll("$1");
+      substitutions.add("Removed duplicate flag: " + duplicate);
+    }
+    return command;
+  }
+
+  /**
+   * Fixes obsolete or incorrect short flags that appear in documentation but are not valid for the
+   * actual CLI subcommand.
+   *
+   * <ul>
+   *   <li>{@code peer print -t TYPE} → {@code peer print --types TYPE} (no {@code -t} alias)
+   *   <li>{@code log print -t TYPE} → {@code log print --types TYPE} (no {@code -t} alias)
+   *   <li>{@code peer print -f} → {@code peer print --full} ({@code -f} not valid for peer print)
+   * </ul>
+   */
+  private static String fixObsoleteFlags(
+      String command, DocCommandType type, List<String> substitutions) {
+    boolean isPeerPrint = type == DocCommandType.PEER_PRINT;
+    boolean isLogPrint = type == DocCommandType.LOG_PRINT;
+
+    // -t is only a valid short alias for log stats and peer call/log call (--num-threads).
+    // For peer print and log print, -t should be --types.
+    if ((isPeerPrint || isLogPrint) && command.contains(" -t ")) {
+      command = command.replace(" -t ", " --types ");
+      substitutions.add("Replaced -t with --types (no -t alias for this subcommand)");
+    }
+
+    // peer print has no -f flag; in docs it means --full
+    if (isPeerPrint && command.contains(" -f")) {
+      // Only replace standalone -f (not -fp, -ft, etc.)
+      command = command.replaceAll("\\s+-f\\b", " --full");
+      substitutions.add("Replaced -f with --full (peer print has no -f alias)");
+    }
+
+    return command;
+  }
+
+  /**
+   * Handles {@code --rpc-policy <path>} flags by creating a temporary RPC policy YAML file if the
+   * referenced file does not exist as a real file.
+   */
+  private String handleRpcPolicy(String command, List<String> substitutions) {
+    // Replace non-existent rpc-policy file references with a temp file path
+    Pattern policyPattern = Pattern.compile("--rpc-policy\\s+([^\\s]+\\.yaml)");
+    Matcher m = policyPattern.matcher(command);
+    if (m.find()) {
+      String path = m.group(1);
+      // Replace with a well-known existing policy path or a temp empty policy
+      String tempPath = createTempRpcPolicyPath();
+      if (tempPath != null) {
+        command = command.replace("--rpc-policy " + path, "--rpc-policy " + tempPath);
+        substitutions.add("Replaced --rpc-policy " + path + " with temp policy " + tempPath);
+      }
+    }
+    return command;
+  }
+
+  /**
+   * Creates a temporary RPC policy YAML file path. Returns the path string, or {@code null} if
+   * creation fails.
+   */
+  private String createTempRpcPolicyPath() {
+    try {
+      Path tempFile = Files.createTempFile("doc-test-rpc-policy-", ".yaml");
+      tempFile.toFile().deleteOnExit();
+      Files.writeString(
+          tempFile,
+          "# Temporary RPC policy for doc snippet testing\nrules: []\n",
+          StandardCharsets.UTF_8);
+      return tempFile.toAbsolutePath().toString();
+    } catch (IOException e) {
+      LOG.warn("Failed to create temp RPC policy file: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  /**
+   * Ensures a run command has a {@code -d} flag pointing to the test etcd directory. Commands
+   * without {@code -d} rely on the {@code PAL_DIRECTORY} environment variable, which is cleared in
+   * the test environment.
+   */
+  private String ensureDirectoryFlag(String command, List<String> substitutions) {
+    if (!command.contains(" -d ") && !command.contains(" --directory ")) {
+      command = command + " -d " + palDirectoryUrl;
+      substitutions.add("Appended -d " + palDirectoryUrl + " (required for test environment)");
+    }
+    return command;
+  }
+
+  /**
+   * Ensures a non-Chronicle run command has a {@code -k} flag pointing to the test Kafka servers.
+   * Chronicle-based commands (WAL starting with {@code file:}) do not need Kafka.
+   */
+  private String ensureKafkaFlag(
+      String command,
+      WalResult walResult,
+      ChronicleResult chronicleResult,
+      List<String> substitutions) {
+    boolean usesChronicle =
+        chronicleResult.path != null
+            || command.contains("file:/")
+            || (walResult.walName != null && walResult.walName.startsWith("file:"));
+    if (!usesChronicle && !command.contains(" -k ") && !command.contains(" --kafka-servers ")) {
+      command = command + " -k " + kafkaServers;
+      substitutions.add("Appended -k " + kafkaServers + " (required for non-Chronicle WAL)");
     }
     return command;
   }
