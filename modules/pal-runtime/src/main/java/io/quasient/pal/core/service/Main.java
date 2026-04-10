@@ -132,6 +132,25 @@ import picocli.CommandLine.Spec;
         "Main class with complex initialization; anonymous inner classes for service lifecycle")
 public class Main implements Callable<Integer> {
 
+  /** Exit code indicating successful peer execution. */
+  public static final int EXIT_SUCCESS = 0;
+
+  /**
+   * Exit code when the specified main class cannot be found on the classpath.
+   *
+   * <p>Returned when the class given as a positional argument (or via {@code -jar} manifest) cannot
+   * be resolved by the custom classloader.
+   */
+  public static final int EXIT_CLASS_NOT_FOUND = 1;
+
+  /**
+   * Exit code when replay detects divergences between live execution and the WAL oracle.
+   *
+   * <p>Only returned when the peer is launched with {@code --replay-wal} and the divergence report
+   * is non-empty. If the application itself exits non-zero, that exit code takes precedence.
+   */
+  public static final int EXIT_REPLAY_DIVERGENCES = 2;
+
   /** Reference to the parent PAL command instance providing common command-line options. */
   @SuppressWarnings("unused")
   @ParentCommand
@@ -2425,7 +2444,7 @@ public class Main implements Callable<Integer> {
         // Match the standard java launcher error format
         logger.error("Could not find or load main class {}", className, e);
         System.err.printf("Error: Could not find or load main class %s%n", className);
-        return 1;
+        return EXIT_CLASS_NOT_FOUND;
       }
       // self-call className.main() if given, and then we're done
       try {
@@ -2604,8 +2623,8 @@ public class Main implements Callable<Integer> {
     DivergenceReport report = replayContext.getDivergenceDetector().getReport();
     if (!report.isEmpty()) {
       System.err.print(report.formatAsText());
-      if (currentReturnValue == 0) {
-        return 2;
+      if (currentReturnValue == EXIT_SUCCESS) {
+        return EXIT_REPLAY_DIVERGENCES;
       }
     }
     return currentReturnValue;

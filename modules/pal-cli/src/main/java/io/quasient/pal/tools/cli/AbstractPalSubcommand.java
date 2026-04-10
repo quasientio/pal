@@ -43,6 +43,12 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractPalSubcommand extends AbstractTool implements Callable<Integer> {
 
+  /** Exit code indicating successful command completion. */
+  public static final int EXIT_SUCCESS = 0;
+
+  /** Exit code indicating a command error (invalid input, runtime failure, etc.). */
+  public static final int EXIT_ERROR = 1;
+
   /** Class logger. */
   private static final Logger logger = LoggerFactory.getLogger(AbstractPalSubcommand.class);
 
@@ -237,7 +243,7 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
       validateInput();
     } catch (RuntimeException e) {
       err.println(e.getMessage());
-      return 1;
+      return EXIT_ERROR;
     }
     initialize();
     int result = runCommand();

@@ -71,7 +71,7 @@ import picocli.CommandLine.ParentCommand;
 public class Replay extends AbstractPalSubcommand {
 
   /** Exit code returned when divergences are detected during replay. */
-  static final int EXIT_CODE_DIVERGENCES = 2;
+  public static final int EXIT_CODE_DIVERGENCES = 2;
 
   /** Parent command that provides access to the PalDirectory connection string. */
   @ParentCommand PalCommand palCommand;
