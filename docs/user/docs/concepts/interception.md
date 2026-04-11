@@ -129,6 +129,16 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
 
 **Limitations**: Cannot modify arguments, return values, or throw exceptions (fire-and-forget).
 
+### Choosing Synchronous vs Asynchronous
+
+As a general rule, the choice between synchronous and asynchronous intercept types maps to whether the callback needs to influence execution or merely observe it:
+
+- **Asynchronous** (`BEFORE_ASYNC`, `AFTER_ASYNC`) — use for **observability and data collection**: logging, tracing, monitoring, metrics, audit trails, big data pipelines, AI/ML feature capture, and cybernetics (feedback loops that don't gate the current call).
+
+- **Synchronous** (`BEFORE`, `AFTER`, `AROUND`) — use for **control and correctness**: hot-patching, access control, management policies, consensus enforcement, transaction coordination, input validation, and any case where the callback must block, modify, or reject the operation.
+
+When in doubt, start with asynchronous — it has zero impact on the target method's latency and cannot break application behavior. Move to synchronous only when you need the callback's result before the operation can proceed.
+
 ## Multiple Intercepts and Ordering
 
 When multiple intercepts match the same operation, they execute in a specific order determined by three factors:
