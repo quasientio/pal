@@ -152,15 +152,11 @@ public class Main implements Callable<Integer> {
   private String classpath;
 
   /**
-   * URL for the Pal directory used to register the peer. Provided as an option or through the
-   * PAL_DIRECTORY environment variable. If not specified, the peer runs unregistered.
+   * URL for the Pal directory used to register the peer. Resolved from the inherited {@code -d}
+   * option (defined on the root {@code pal} command), the {@code PAL_DIRECTORY} environment
+   * variable, or left {@code null} to run unregistered.
    */
-  @Option(
-      names = {"-d", "--dir"},
-      order = 2,
-      paramLabel = "HOST:PORT",
-      description = "PAL directory (if not given, run unregistered) [env: PAL_DIRECTORY]")
-  private String palDirectoryUrl; // corresponding ENV var: PAL_DIRECTORY
+  private String palDirectoryUrl;
 
   /**
    * Unique identifier for this peer. If not provided, a random UUID is generated. Mapped from the
@@ -1325,11 +1321,10 @@ public class Main implements Callable<Integer> {
       }
     }
 
-    // if not given as option to this CMD, check if it was given to parent (Pal) or ENV
+    // Resolve PAL directory: inherited -d option (via parent Pal command) → ENV → null
     if (palDirectoryUrl == null || palDirectoryUrl.trim().isEmpty()) {
       String palDirectoryEnvVar = System.getenv("PAL_DIRECTORY");
       palDirectoryEnvVar = palDirectoryEnvVar != null ? palDirectoryEnvVar.trim() : null;
-      // check if it was given to parent command (Pal) as option
       if (palCommand != null
           && !Arrays.asList(palDirectoryEnvVar, PalDirectory.NO_URL)
               .contains(palCommand.getPalDirectoryConnectionString())) {

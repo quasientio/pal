@@ -29,6 +29,7 @@ import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Model.UsageMessageSpec;
 import picocli.CommandLine.ParseResult;
+import picocli.CommandLine.ScopeType;
 import picocli.CommandLine.Spec;
 
 /**
@@ -66,7 +67,8 @@ public class Pal implements Callable<Integer>, PalCommand {
   @Option(
       names = {"-d", "--dir"},
       paramLabel = "HOST:PORT",
-      description = "PAL directory")
+      description = "PAL directory [env: PAL_DIRECTORY]",
+      scope = ScopeType.INHERIT)
   private String palDirectoryUrl;
 
   /**
