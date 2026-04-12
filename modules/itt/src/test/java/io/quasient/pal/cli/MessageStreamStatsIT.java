@@ -24,6 +24,7 @@ import static org.junit.Assert.assertEquals;
 import io.quasient.pal.PeerProcess;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.cxn.directory.PalDirectory;
+import io.quasient.pal.tools.cli.AbstractPalSubcommand;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
@@ -600,8 +601,8 @@ public class MessageStreamStatsIT extends AbstractCliIT {
         runCliSubcommandForDuration(new String[] {"peer", "stats"}, 5, "-d", palDir, pubAddress);
 
     assertThat(
-        "Exit code should be 0 or -1 (killed after timeout)",
-        result.exitCode() == 0 || result.exitCode() == -1,
+        "Exit code should be 0 or EXIT_INTERRUPTED (interrupted after timeout)",
+        result.exitCode() == 0 || result.exitCode() == AbstractPalSubcommand.EXIT_INTERRUPTED,
         is(true));
   }
 
@@ -656,8 +657,8 @@ public class MessageStreamStatsIT extends AbstractCliIT {
             new String[] {"peer", "stats"}, 5, "-d", palDir, pubAddress, "--types", "CONSTRUCTOR");
 
     assertThat(
-        "Exit code should be 0 or -1 (killed after timeout)",
-        result.exitCode() == 0 || result.exitCode() == -1,
+        "Exit code should be 0 or EXIT_INTERRUPTED (interrupted after timeout)",
+        result.exitCode() == 0 || result.exitCode() == AbstractPalSubcommand.EXIT_INTERRUPTED,
         is(true));
   }
 
@@ -718,8 +719,8 @@ public class MessageStreamStatsIT extends AbstractCliIT {
             pubAddress);
 
     assertThat(
-        "Exit code should be 0 or -1 (killed after timeout)",
-        result.exitCode() == 0 || result.exitCode() == -1,
+        "Exit code should be 0 or EXIT_INTERRUPTED (interrupted after timeout)",
+        result.exitCode() == 0 || result.exitCode() == AbstractPalSubcommand.EXIT_INTERRUPTED,
         is(true));
   }
 }

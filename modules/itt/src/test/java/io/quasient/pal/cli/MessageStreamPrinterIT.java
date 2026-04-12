@@ -25,6 +25,7 @@ import com.google.common.base.Splitter;
 import io.quasient.pal.PeerProcess;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.cxn.directory.PalDirectory;
+import io.quasient.pal.tools.cli.AbstractPalSubcommand;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -901,8 +902,8 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
         runCliSubcommandForDuration(
             new String[] {"peer", "print"}, 5, "-d", palDir, pubAddress, "--full");
 
-    // Verify the command did not crash (exit -1 means killed after timeout, which is expected)
-    assertEquals(-1, result.exitCode());
+    // Verify the command did not crash (EXIT_INTERRUPTED means interrupted after timeout)
+    assertEquals(AbstractPalSubcommand.EXIT_INTERRUPTED, result.exitCode());
   }
 
   /**
@@ -958,7 +959,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
         runCliSubcommandForDuration(
             new String[] {"peer", "print"}, 5, "-d", palDir, pubAddress, "--json");
 
-    assertEquals(-1, result.exitCode());
+    assertEquals(AbstractPalSubcommand.EXIT_INTERRUPTED, result.exitCode());
   }
 
   /**
@@ -1014,7 +1015,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
     CliProcessResult result =
         runCliSubcommandForDuration(new String[] {"peer", "print"}, 5, "-d", palDir, pubAddress);
 
-    assertEquals(-1, result.exitCode());
+    assertEquals(AbstractPalSubcommand.EXIT_INTERRUPTED, result.exitCode());
   }
 
   /**
@@ -1077,7 +1078,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             "CONSTRUCTOR",
             "--json");
 
-    assertEquals(-1, result.exitCode());
+    assertEquals(AbstractPalSubcommand.EXIT_INTERRUPTED, result.exitCode());
   }
 
   /**
@@ -1140,7 +1141,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             peerId.toString(),
             "--json");
 
-    assertEquals(-1, result.exitCode());
+    assertEquals(AbstractPalSubcommand.EXIT_INTERRUPTED, result.exitCode());
   }
 
   /**
@@ -1204,7 +1205,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
             "main",
             "--json");
 
-    assertEquals(-1, result.exitCode());
+    assertEquals(AbstractPalSubcommand.EXIT_INTERRUPTED, result.exitCode());
   }
 
   /**
@@ -1256,7 +1257,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
         runCliSubcommandForDuration(
             new String[] {"peer", "print"}, 5, "-d", palDir, peerId.toString(), "--json");
 
-    assertEquals(-1, result.exitCode());
+    assertEquals(AbstractPalSubcommand.EXIT_INTERRUPTED, result.exitCode());
   }
 
   // ==========================================================================
