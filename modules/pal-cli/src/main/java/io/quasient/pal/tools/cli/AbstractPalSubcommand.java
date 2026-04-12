@@ -49,6 +49,14 @@ public abstract class AbstractPalSubcommand extends AbstractTool implements Call
   /** Exit code indicating a command error (invalid input, runtime failure, etc.). */
   public static final int EXIT_ERROR = 1;
 
+  /**
+   * Exit code indicating the command was interrupted by an external signal (e.g., SIGTERM) while
+   * streaming. Used by long-running commands like {@code log print --follow} and {@code peer print}
+   * that are designed to run indefinitely until externally terminated. The value 130 follows the
+   * Unix convention (128 + signal number) for interrupted processes.
+   */
+  public static final int EXIT_INTERRUPTED = 130;
+
   /** Class logger. */
   private static final Logger logger = LoggerFactory.getLogger(AbstractPalSubcommand.class);
 

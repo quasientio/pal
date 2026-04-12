@@ -235,7 +235,7 @@ class PeerCall extends AbstractCallCommand {
                 RpcType.ZMQ_RPC.name(), RpcType.JSON_RPC.name()));
       }
       if (rpcType.equals(RpcType.JSON_RPC.name())) {
-        if (peerAddress == null || !peerAddress.startsWith("ws://")) {
+        if (peerAddress != null && !peerAddress.startsWith("ws://")) {
           throw new RuntimeException("Peer address must start with ws:// when using JSON-RPC.");
         }
       }
@@ -520,6 +520,7 @@ class PeerCall extends AbstractCallCommand {
 
       return new JsonRpcRequest.Builder()
           .withId(UUID.randomUUID().toString())
+          .withMethod("call")
           .withParams(paramsBuilder.build())
           .build();
     }

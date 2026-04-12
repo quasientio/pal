@@ -271,6 +271,9 @@ public class PeerStats extends AbstractStatsCommand {
               @Override
               public void run() {
                 performSocketShutdown();
+                // halt() here so the exit code is set before the JVM's own shutdown
+                // sequence completes with an uncontrolled 143 (128 + SIGTERM).
+                Runtime.getRuntime().halt(EXIT_INTERRUPTED);
               }
             });
 
@@ -293,7 +296,11 @@ public class PeerStats extends AbstractStatsCommand {
       logger.error("Uncaught error during stream processing", e);
       return 1;
     }
-    return 0;
+    // Shutdown latch was released by the shutdown hook (SIGTERM/SIGINT).
+    // Use halt() to exit with EXIT_INTERRUPTED before the JVM's own shutdown
+    // sequence completes with an uncontrolled exit code.
+    Runtime.getRuntime().halt(EXIT_INTERRUPTED);
+    return EXIT_INTERRUPTED; // unreachable, satisfies compiler
   }
 
   /**

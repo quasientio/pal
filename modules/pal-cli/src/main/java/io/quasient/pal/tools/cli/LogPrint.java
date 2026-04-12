@@ -129,6 +129,9 @@ class LogPrint extends AbstractPrintCommand {
       description = "Follow new messages (like 'tail -f')")
   boolean follow;
 
+  /** Set by the shutdown hook when the JVM receives SIGTERM/SIGINT during follow mode. */
+  private volatile boolean interrupted;
+
   /**
    * When used with --offset, also shows the corresponding return value or exception for the
    * operation at the specified offset.
@@ -201,6 +204,21 @@ class LogPrint extends AbstractPrintCommand {
   private int printLogMessageConsumer() throws Exception {
 
     logger.info("Started printer for log: {}", logIdentifier);
+
+    // Register shutdown hook so follow-mode loops can detect SIGTERM/SIGINT
+    if (follow) {
+      Runtime.getRuntime()
+          .addShutdownHook(
+              new Thread("log-print-shutdown-hook") {
+                @Override
+                public void run() {
+                  interrupted = true;
+                  // halt() here so the exit code is set before the JVM's own shutdown
+                  // sequence completes with an uncontrolled 143 (128 + SIGTERM).
+                  Runtime.getRuntime().halt(EXIT_INTERRUPTED);
+                }
+              });
+    }
 
     String kafkaServersToUse = kafkaServers != null ? kafkaServers : getKafkaServers();
     LogResolver logResolver =
@@ -297,7 +315,7 @@ class LogPrint extends AbstractPrintCommand {
       final AtomicBoolean done = new AtomicBoolean(false);
       // Tracks nesting depth when scanning for the matching return with --with-return
       final AtomicInteger withReturnDepth = new AtomicInteger(0);
-      while (!done.get()) {
+      while (!done.get() && !interrupted) {
 
         ConsumerRecords<String, LogMessage<?>> records = consumer.poll(Duration.ofMillis(200));
         if (records.isEmpty()) {
@@ -354,6 +372,9 @@ class LogPrint extends AbstractPrintCommand {
       }
     }
 
+    if (interrupted) {
+      Runtime.getRuntime().halt(EXIT_INTERRUPTED);
+    }
     return 0;
   }
 
@@ -423,7 +444,7 @@ class LogPrint extends AbstractPrintCommand {
       // Tracks nesting depth when scanning for the matching return with --with-return
       int withReturnDepth = 0;
 
-      while (true) {
+      while (!interrupted) {
         OutboundMsg outboundMsg = OutboundMsg.readNext(tailer);
 
         if (outboundMsg == null) {
@@ -497,6 +518,9 @@ class LogPrint extends AbstractPrintCommand {
       }
     }
 
+    if (interrupted) {
+      Runtime.getRuntime().halt(EXIT_INTERRUPTED);
+    }
     return 0;
   }
 
