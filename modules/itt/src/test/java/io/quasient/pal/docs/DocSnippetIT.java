@@ -19,8 +19,10 @@ import static org.junit.Assert.assertTrue;
 
 import io.quasient.pal.PeerProcess;
 import io.quasient.pal.cli.AbstractCliIT;
+import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.core.service.Main;
 import io.quasient.pal.core.service.PeerException;
+import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.docs.CommandTransformer.TransformedCommand;
 import io.quasient.pal.tools.cli.AbstractPalSubcommand;
 import io.quasient.pal.tools.cli.Replay;
@@ -86,6 +88,12 @@ import org.slf4j.LoggerFactory;
  *   <li>Failures are collected per test method and reported together
  * </ul>
  *
+ * <p><b>NOTE:</b> The expected number of non-success exit codes is hard-coded in {@link
+ * #EXPECTED_NON_SUCCESS_COUNT}. When user documentation is modified in a way that adds or removes
+ * CLI snippets producing non-success exit codes (e.g., new streaming or replay commands), the
+ * meta-test {@link #zz_testNonSuccessExitCodeCount()} will fail. Review the test log for the
+ * breakdown and update the constant accordingly.
+ *
  * @see DocSnippetScanner
  * @see CommandTransformer
  * @see DocCommand
@@ -104,6 +112,17 @@ public class DocSnippetIT extends AbstractCliIT {
 
   /** Timeout in seconds for short-lived peer run commands. */
   private static final int SHORT_LIVED_TIMEOUT_SECONDS = 30;
+
+  /**
+   * Expected number of documentation snippets that complete with a non-success exit code but are
+   * still accepted by the test (e.g., interrupted streaming commands exiting 130, replay commands
+   * exiting 2 for expected divergences). Verified by {@link #zz_testNonSuccessExitCodeCount()}.
+   *
+   * <p><b>Update this constant</b> when user documentation changes add or remove CLI snippets that
+   * produce non-success exit codes. See the test log's "Non-success accepted exit codes" report for
+   * the breakdown.
+   */
+  private static final int EXPECTED_NON_SUCCESS_COUNT = 23;
 
   // ---------------------------------------------------------------------------
   // Static state (set once in @BeforeClass, shared across all test methods)
@@ -150,6 +169,13 @@ public class DocSnippetIT extends AbstractCliIT {
 
   /** Accumulated skip descriptions for the coverage report. */
   private static final List<String> skipReasons = new ArrayList<>();
+
+  /**
+   * Snippets that completed with a non-zero exit code that was still accepted by the test. Grouped
+   * by command type for the end-of-suite report.
+   */
+  private static final Map<DocCommandType, List<String>> nonSuccessAccepted =
+      new EnumMap<>(DocCommandType.class);
 
   // ---------------------------------------------------------------------------
   // Per-test resource tracking (instance — reset and drained by @After)
@@ -327,6 +353,23 @@ public class DocSnippetIT extends AbstractCliIT {
     if (nonPal > 0) {
       logger.info("  NON_PAL (not tested): {}", nonPal);
     }
+
+    // Report all snippets accepted with non-success exit codes
+    int totalNonSuccess = nonSuccessAccepted.values().stream().mapToInt(List::size).sum();
+    if (totalNonSuccess > 0) {
+      logger.info("Non-success accepted exit codes ({} total):", totalNonSuccess);
+      for (DocCommandType type : DocCommandType.values()) {
+        List<String> entries = nonSuccessAccepted.get(type);
+        if (entries != null && !entries.isEmpty()) {
+          logger.info("  {} ({}):", type, entries.size());
+          for (String entry : entries) {
+            logger.info("    {}", entry);
+          }
+        }
+      }
+    } else {
+      logger.info("All tested snippets exited with success (exit code 0)");
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -364,9 +407,7 @@ public class DocSnippetIT extends AbstractCliIT {
    * Tests that all listing commands ({@link DocCommandType#PEER_LS}, {@link DocCommandType#LOG_LS},
    * {@link DocCommandType#INTERCEPT_LS}) and peer remove commands execute successfully.
    *
-   * <p>Listing commands run against the live directory and accept empty results (exit 0). Peer
-   * remove commands return the count of not-found peers as exit code, so any exit code is
-   * acceptable.
+   * <p>Listing commands run against the live directory and accept empty results (exit 0).
    *
    * @throws Exception if test execution fails
    */
@@ -377,8 +418,7 @@ public class DocSnippetIT extends AbstractCliIT {
             allCommands,
             DocCommandType.PEER_LS,
             DocCommandType.LOG_LS,
-            DocCommandType.INTERCEPT_LS,
-            DocCommandType.PEER_RM);
+            DocCommandType.INTERCEPT_LS);
     List<String> failures = new ArrayList<>();
     for (DocCommand cmd : cmds) {
       TransformedCommand tc = transformer.transform(cmd);
@@ -390,13 +430,59 @@ public class DocSnippetIT extends AbstractCliIT {
       logSubstitutions(tc);
       CliProcessResult result =
           runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), tc.getArgs());
-      // PEER_RM returns the count of not-found peers as exit code, so any exit is acceptable.
-      // Listing commands must exit 0.
-      if (cmd.getType() != DocCommandType.PEER_RM
-          && isCommandFailure(result.exitCode(), AbstractPalSubcommand.EXIT_SUCCESS)) {
+      if (isCommandFailure(result.exitCode(), AbstractPalSubcommand.EXIT_SUCCESS)) {
         failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      } else if (result.exitCode() != 0) {
+        trackNonSuccessExit(cmd, result.exitCode());
       }
       trackTested(cmd.getType());
+    }
+    assertNoFailures(failures);
+  }
+
+  /**
+   * Tests that all {@link DocCommandType#PEER_RM} commands successfully remove peers.
+   *
+   * <p>For each remove command, the peer identifiers (names or UUIDs) referenced in the command are
+   * pre-registered in the PAL directory so that the remove operation can find and delete them. For
+   * commands using {@code -s} (starting-with), a peer with a matching name prefix is registered.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPeerRemoveCommands() throws Exception {
+    List<DocCommand> cmds = filterByType(allCommands, DocCommandType.PEER_RM);
+    if (cmds.isEmpty()) {
+      logger.info("No PEER_RM commands found in docs");
+      return;
+    }
+
+    PalDirectory dir = new PalDirectory(getPalDirectoryUrl(), true);
+    List<String> failures = new ArrayList<>();
+    try {
+      for (DocCommand cmd : cmds) {
+        TransformedCommand tc = transformer.transform(cmd);
+        if (tc.isSkipped()) {
+          trackSkip(cmd, tc.getSkipReason());
+          continue;
+        }
+        logger.info("Testing: {}", cmd);
+        logSubstitutions(tc);
+
+        // Register peers that this command will try to remove
+        registerPeersForRmCommand(dir, tc.getArgs());
+
+        CliProcessResult result =
+            runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), tc.getArgs());
+        if (isCommandFailure(result.exitCode(), AbstractPalSubcommand.EXIT_SUCCESS)) {
+          failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        } else if (result.exitCode() != 0) {
+          trackNonSuccessExit(cmd, result.exitCode());
+        }
+        trackTested(cmd.getType());
+      }
+    } finally {
+      dir.close();
     }
     assertNoFailures(failures);
   }
@@ -447,6 +533,41 @@ public class DocSnippetIT extends AbstractCliIT {
   @Test
   public void testShortLivedRunCommands() throws Exception {
     List<DocCommand> cmds = filterByType(allCommands, DocCommandType.RUN);
+
+    // Pre-create a Chronicle WAL so --source-log file: paths have something to read
+    Path chronicleDir = Files.createTempDirectory("pal-doc-test-run-");
+    tempDirectories.add(chronicleDir);
+    Path chronicleWalPath = chronicleDir.resolve("shared-run-wal");
+    runPeer(
+        SHORT_LIVED_TIMEOUT_SECONDS,
+        "--wal",
+        "file:" + chronicleWalPath,
+        "-cp",
+        getIttAppsClasspath(),
+        METHODS_CLASS);
+    logger.info("Created Chronicle WAL for short-lived run tests: {}", chronicleWalPath);
+
+    // Pre-create a Kafka WAL so --source-log <name> has something to read
+    String kafkaWalName = "doc-test-wal-run-" + generateId();
+    runPeer(
+        SHORT_LIVED_TIMEOUT_SECONDS,
+        "-d",
+        getPalDirectoryUrl(),
+        "-k",
+        getKafkaServers(),
+        "--wal",
+        kafkaWalName,
+        "-cp",
+        getIttAppsClasspath(),
+        METHODS_CLASS);
+    createdKafkaTopics.add(kafkaWalName);
+    logger.info("Created Kafka WAL for short-lived run tests: {}", kafkaWalName);
+
+    // Create a temp properties file so --properties paths resolve
+    Path tempPropertiesFile = chronicleDir.resolve("tuning.properties");
+    Files.writeString(tempPropertiesFile, "# doc-test placeholder properties\n");
+    logger.info("Created temp properties file: {}", tempPropertiesFile);
+
     List<String> failures = new ArrayList<>();
     for (DocCommand cmd : cmds) {
       TransformedCommand tc = transformer.transform(cmd);
@@ -461,16 +582,13 @@ public class DocSnippetIT extends AbstractCliIT {
       logSubstitutions(tc);
       trackRunResources(tc);
       try {
-        ProcessResult result = runPeer(SHORT_LIVED_TIMEOUT_SECONDS, tc.getArgs());
-        // Accept 0 (normal), 1 (class not found or properties error — expected when
-        // placeholder class names or file paths cannot be fully resolved), and 7 (source log
-        // does not exist — expected for doc snippets with --source-log placeholder paths).
-        if (isCommandFailure(
-            result.exitCode(),
-            Main.EXIT_SUCCESS,
-            Main.EXIT_CLASS_NOT_FOUND,
-            PeerException.FatalCode.ERROR_INITIALIZING_LOGS.getCode())) {
+        String[] args = overrideLogRefs(tc.getArgs(), kafkaWalName, "file:" + chronicleWalPath);
+        args = overridePropertiesPath(args, tempPropertiesFile.toString());
+        ProcessResult result = runPeer(SHORT_LIVED_TIMEOUT_SECONDS, args);
+        if (isCommandFailure(result.exitCode(), Main.EXIT_SUCCESS)) {
           failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        } else if (result.exitCode() != Main.EXIT_SUCCESS) {
+          trackNonSuccessExit(cmd, result.exitCode());
         }
       } catch (RuntimeException e) {
         if (e.getMessage() != null && e.getMessage().contains("timed out")) {
@@ -563,11 +681,18 @@ public class DocSnippetIT extends AbstractCliIT {
             "--json-rpc",
             "auto",
             "--interceptable",
+            "--as-service",
             "-cp",
             getIttAppsClasspath(),
             METHODS_CLASS);
     launchedPeers.add(callPeer.getProcess());
     createdKafkaTopics.add(walName);
+
+    // Look up the peer's RPC addresses to replace ws:// and tcp:// URLs in doc commands
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+    String zmqRpcAddr = getPeerZmqRpcAddress(peerId);
+    logger.info("Peer JSON-RPC address for call tests: {}", jsonRpcAddr);
+    logger.info("Peer ZMQ-RPC address for call tests: {}", zmqRpcAddr);
 
     List<String> failures = new ArrayList<>();
     try {
@@ -579,18 +704,34 @@ public class DocSnippetIT extends AbstractCliIT {
         }
         logger.info("Testing: {}", cmd);
         logSubstitutions(tc);
-        String[] args = overridePeerRef(tc.getArgs(), peerId.toString());
-        // peer call can take longer than the default 15s timeout; use duration-based execution
-        CliProcessResult result =
-            runCliSubcommandForDuration(tc.getSubcommandParts(), SHORT_LIVED_TIMEOUT_SECONDS, args);
-        // Accept 0 (normal), 1 (runtime error — peer lookup race condition between etcd
-        // registration and CLI subprocess query), or -1 (killed after timeout)
-        if (isCommandFailure(
-            result.exitCode(),
-            AbstractPalSubcommand.EXIT_SUCCESS,
-            AbstractPalSubcommand.EXIT_ERROR,
-            EXIT_CODE_KILLED)) {
+        String[] args = overridePeerCallTarget(tc.getArgs(), peerName);
+        if (jsonRpcAddr != null) {
+          args = overrideWsUrls(args, jsonRpcAddr);
+        }
+        if (zmqRpcAddr != null) {
+          args = overrideTcpUrls(args, zmqRpcAddr);
+        }
+        // Inject -r ZMQ_RPC for directory-based calls that don't already specify an RPC type,
+        // are not ws:// direct calls, and have no stdin JSON-RPC data (which implies JSON-RPC)
+        if (tc.getStdinData() == null) {
+          args = injectZmqRpcTypeIfNeeded(args);
+        } else {
+          // Stdin commands imply JSON-RPC; inject -r JSON_RPC for directory-based calls
+          args = injectJsonRpcTypeIfNeeded(args);
+        }
+        // Use stdin-aware execution for JSON-RPC commands, duration-based for the rest
+        CliProcessResult result;
+        if (tc.getStdinData() != null) {
+          result = runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), args);
+        } else {
+          result =
+              runCliSubcommandForDuration(
+                  tc.getSubcommandParts(), SHORT_LIVED_TIMEOUT_SECONDS, args);
+        }
+        if (isCommandFailure(result.exitCode(), AbstractPalSubcommand.EXIT_SUCCESS)) {
           failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        } else if (result.exitCode() != 0) {
+          trackNonSuccessExit(cmd, result.exitCode());
         }
         trackTested(DocCommandType.PEER_CALL);
       }
@@ -635,10 +776,13 @@ public class DocSnippetIT extends AbstractCliIT {
             walName,
             "-n",
             peerName,
+            "--tcp-pub",
+            "auto",
             "--zmq-rpc",
             "auto",
             "--json-rpc",
             "auto",
+            "--as-service",
             "-cp",
             getIttAppsClasspath(),
             METHODS_CLASS);
@@ -658,14 +802,14 @@ public class DocSnippetIT extends AbstractCliIT {
         String[] args = overridePeerRef(tc.getArgs(), peerId.toString());
         CliProcessResult result =
             runCliSubcommandForDuration(tc.getSubcommandParts(), STREAMING_DURATION_SECONDS, args);
-        // Accept 0 (natural exit), 1 (runtime error — peer lookup race condition), or -1
-        // (killed after duration)
+        // Accept 0 (natural exit) or 130 (interrupted after streaming duration)
         if (isCommandFailure(
             result.exitCode(),
             AbstractPalSubcommand.EXIT_SUCCESS,
-            AbstractPalSubcommand.EXIT_ERROR,
-            EXIT_CODE_KILLED)) {
+            AbstractPalSubcommand.EXIT_INTERRUPTED)) {
           failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        } else if (result.exitCode() != 0) {
+          trackNonSuccessExit(cmd, result.exitCode());
         }
         trackTested(cmd.getType());
       }
@@ -751,10 +895,14 @@ public class DocSnippetIT extends AbstractCliIT {
       if (streaming) {
         CliProcessResult result =
             runCliSubcommandForDuration(tc.getSubcommandParts(), STREAMING_DURATION_SECONDS, args);
-        // Accept 0 (completed) or -1 (killed after streaming duration)
+        // Accept 0 (completed) or 130 (interrupted after streaming duration)
         if (isCommandFailure(
-            result.exitCode(), AbstractPalSubcommand.EXIT_SUCCESS, EXIT_CODE_KILLED)) {
+            result.exitCode(),
+            AbstractPalSubcommand.EXIT_SUCCESS,
+            AbstractPalSubcommand.EXIT_INTERRUPTED)) {
           failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+        } else if (result.exitCode() != 0) {
+          trackNonSuccessExit(cmd, result.exitCode());
         }
       } else {
         CliProcessResult result =
@@ -769,10 +917,15 @@ public class DocSnippetIT extends AbstractCliIT {
   }
 
   /**
-   * Tests that all {@link DocCommandType#LOG_CALL} commands execute against an existing WAL.
+   * Tests that all {@link DocCommandType#LOG_CALL} commands execute against existing WALs.
    *
-   * <p>Setup creates a Kafka WAL by running a short peer. Each log call command's log references
-   * are overridden to use the real WAL name. Teardown removes the Kafka topic.
+   * <p>Setup creates both a Kafka WAL and a Chronicle WAL by running short peers. Each log call
+   * command's log references are overridden to use the real WAL names. Commands that lack {@code
+   * --forget-response} are augmented with it, because the single-log doc snippet syntax does not
+   * support the separate source-log/WAL topology required for the response path (a circularity
+   * guard prevents a peer from writing responses to the same log it reads from). The full
+   * request/response flow through separate logs is covered by {@code CallerIT}. Teardown removes
+   * the Kafka topic.
    *
    * @throws Exception if test execution fails
    */
@@ -824,16 +977,13 @@ public class DocSnippetIT extends AbstractCliIT {
       logSubstitutions(tc);
       String[] args = overrideLogRefs(tc.getArgs(), kafkaWalName, "file:" + chronicleWalPath);
       args = ensureDirectoryAndKafkaFlags(args);
+      args = ensureForgetResponse(args);
       CliProcessResult result =
           runCliSubcommandForDuration(tc.getSubcommandParts(), SHORT_LIVED_TIMEOUT_SECONDS, args);
-      // Accept 0 (normal), 1 (application-level error — e.g., log call with -i/-o where
-      // PicoCLI maps the class to the LOG positional), or -1 (killed after timeout)
-      if (isCommandFailure(
-          result.exitCode(),
-          AbstractPalSubcommand.EXIT_SUCCESS,
-          AbstractPalSubcommand.EXIT_ERROR,
-          EXIT_CODE_KILLED)) {
+      if (isCommandFailure(result.exitCode(), AbstractPalSubcommand.EXIT_SUCCESS)) {
         failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      } else if (result.exitCode() != 0) {
+        trackNonSuccessExit(cmd, result.exitCode());
       }
       trackTested(DocCommandType.LOG_CALL);
     }
@@ -891,6 +1041,8 @@ public class DocSnippetIT extends AbstractCliIT {
       // is acceptable.
       if (result.exitCode() < 0) {
         failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      } else if (result.exitCode() != 0) {
+        trackNonSuccessExit(cmd, result.exitCode());
       }
       // Track as backup cleanup in case rm command failed
       if (result.exitCode() != 0) {
@@ -947,16 +1099,15 @@ public class DocSnippetIT extends AbstractCliIT {
       // Override WAL path references to use our shared WAL
       String[] args = overrideChroniclePaths(tc.getArgs(), "file:" + chronicleWalPath);
       args = overrideWalNames(args, "file:" + chronicleWalPath);
+      args = ensureJdkTimeReExecuteForStubAllElse(args);
       CliProcessResult result = runCliSubcommand(tc.getSubcommandParts(), tc.getStdinData(), args);
-      // Accept 0 (clean replay), 1 (replay completed with errors/divergence), or 2 (divergence
-      // detected). Doc snippets reference placeholder classes that differ from the recorded WAL
-      // data, so divergence is expected.
-      if (isCommandFailure(
-          result.exitCode(),
-          Main.EXIT_SUCCESS,
-          Main.EXIT_CLASS_NOT_FOUND,
-          Replay.EXIT_CODE_DIVERGENCES)) {
+      // Accept 0 (clean replay) or 2 (divergence detected). Doc snippets with --scope flags
+      // reference placeholder classes that differ from the recorded WAL data, so divergence
+      // is expected for those commands.
+      if (isCommandFailure(result.exitCode(), Main.EXIT_SUCCESS, Replay.EXIT_CODE_DIVERGENCES)) {
         failures.add(formatFailure(cmd, result.exitCode(), result.stderr()));
+      } else if (result.exitCode() != Main.EXIT_SUCCESS) {
+        trackNonSuccessExit(cmd, result.exitCode());
       }
       trackTested(DocCommandType.REPLAY);
     }
@@ -1157,6 +1308,45 @@ public class DocSnippetIT extends AbstractCliIT {
     }
   }
 
+  /**
+   * Meta-test that verifies the number of accepted non-success exit codes matches {@link
+   * #EXPECTED_NON_SUCCESS_COUNT}.
+   *
+   * <p>This acts as a tripwire: if user documentation changes add or remove CLI snippets that
+   * produce non-success exit codes (e.g., streaming commands that exit 130 when interrupted, or
+   * replay commands that exit 2 for expected divergences), this test fails with a descriptive
+   * message showing the actual vs. expected count and the full breakdown by category.
+   *
+   * <p>When this test fails, review the breakdown in the failure message, verify the new count is
+   * correct, and update {@link #EXPECTED_NON_SUCCESS_COUNT}.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void zz_testNonSuccessExitCodeCount() throws Exception {
+    int actual = nonSuccessAccepted.values().stream().mapToInt(List::size).sum();
+    if (actual != EXPECTED_NON_SUCCESS_COUNT) {
+      StringBuilder msg = new StringBuilder();
+      msg.append("Expected ")
+          .append(EXPECTED_NON_SUCCESS_COUNT)
+          .append(" non-success accepted exit codes, but found ")
+          .append(actual)
+          .append(".\n");
+      msg.append("If user documentation was modified, review the breakdown below ")
+          .append("and update EXPECTED_NON_SUCCESS_COUNT in DocSnippetIT.\n\n");
+      for (DocCommandType type : DocCommandType.values()) {
+        List<String> entries = nonSuccessAccepted.get(type);
+        if (entries != null && !entries.isEmpty()) {
+          msg.append(type).append(" (").append(entries.size()).append("):\n");
+          for (String entry : entries) {
+            msg.append("  ").append(entry).append("\n");
+          }
+        }
+      }
+      assertTrue(msg.toString(), false);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Helper methods
   // ---------------------------------------------------------------------------
@@ -1281,6 +1471,77 @@ public class DocSnippetIT extends AbstractCliIT {
   }
 
   /**
+   * Records a command that was accepted with a non-zero exit code.
+   *
+   * @param cmd the command
+   * @param exitCode the non-zero exit code
+   */
+  private static void trackNonSuccessExit(DocCommand cmd, int exitCode) {
+    String cmdText = cmd.getNormalizedText() != null ? cmd.getNormalizedText() : cmd.getRawText();
+    String label = describeExitCode(exitCode, cmd.getType());
+    String entry =
+        String.format(
+            "%s:%d — exit=%d (%s)  cmd: %s",
+            cmd.getSourceFile(), cmd.getLineNumber(), exitCode, label, cmdText);
+    nonSuccessAccepted.computeIfAbsent(cmd.getType(), k -> new ArrayList<>()).add(entry);
+  }
+
+  /**
+   * Returns a human-readable constant name for an exit code, using the command type to determine
+   * which exit-code domain applies.
+   *
+   * @param exitCode the exit code
+   * @param type the command type (determines which constants are relevant)
+   * @return the constant name or a plain integer string if unknown
+   */
+  @SuppressWarnings("EnumOrdinal") // FatalCode.getCode() is the semantic value, not ordinal
+  private static String describeExitCode(int exitCode, DocCommandType type) {
+    if (exitCode == EXIT_CODE_KILLED) {
+      return "EXIT_CODE_KILLED";
+    }
+    if (exitCode == EXIT_CODE_SIGTERM) {
+      return "EXIT_CODE_SIGTERM";
+    }
+    if (type == DocCommandType.RUN) {
+      if (exitCode == Main.EXIT_CLASS_NOT_FOUND) {
+        return "Main.EXIT_CLASS_NOT_FOUND";
+      }
+      if (exitCode == Main.EXIT_REPLAY_DIVERGENCES) {
+        return "Main.EXIT_REPLAY_DIVERGENCES";
+      }
+      for (PeerException.FatalCode fc : PeerException.FatalCode.values()) {
+        if (fc.getCode() == exitCode) {
+          return "PeerException.FatalCode." + fc.name();
+        }
+      }
+      return String.valueOf(exitCode);
+    }
+    if (type == DocCommandType.REPLAY) {
+      if (exitCode == Main.EXIT_CLASS_NOT_FOUND) {
+        return "Main.EXIT_CLASS_NOT_FOUND";
+      }
+      if (exitCode == Replay.EXIT_CODE_DIVERGENCES) {
+        return "Replay.EXIT_CODE_DIVERGENCES";
+      }
+      return String.valueOf(exitCode);
+    }
+    if (type == DocCommandType.PEER_RM) {
+      return exitCode + " not-found peer(s)";
+    }
+    if (type == DocCommandType.LOG_RM) {
+      return exitCode + " removal error(s)";
+    }
+    // CLI subcommands (peer call, peer print, log call, etc.)
+    if (exitCode == AbstractPalSubcommand.EXIT_ERROR) {
+      return "AbstractPalSubcommand.EXIT_ERROR";
+    }
+    if (exitCode == AbstractPalSubcommand.EXIT_INTERRUPTED) {
+      return "AbstractPalSubcommand.EXIT_INTERRUPTED";
+    }
+    return String.valueOf(exitCode);
+  }
+
+  /**
    * Logs all substitutions applied by the transformer for debugging.
    *
    * @param tc the transformed command
@@ -1354,6 +1615,66 @@ public class DocSnippetIT extends AbstractCliIT {
     }
     // Must contain "peer" to avoid false positives on other positional args
     return arg.toLowerCase(Locale.ROOT).contains("peer");
+  }
+
+  /**
+   * Flags used by {@code peer rm} that consume the next token as their value.
+   *
+   * <p>Used by {@link #registerPeersForRmCommand} to skip flag-value pairs when extracting
+   * positional peer identifiers.
+   */
+  private static final Set<String> RM_FLAGS_WITH_VALUE = Set.of("-d", "--directory");
+
+  /**
+   * Registers placeholder peers in the PAL directory so that a {@code peer rm} command can find and
+   * remove them.
+   *
+   * <p>Parses the transformed args to extract positional peer identifiers (names or UUIDs),
+   * skipping known flags. For each name, a peer with that name is registered. For each UUID, a peer
+   * with that exact UUID is registered. For commands using {@code -s} (starting-with), a peer whose
+   * name starts with the given prefix is registered so the prefix match finds a result.
+   *
+   * @param dir the PAL directory to register peers in
+   * @param args the transformed command args (after address substitution by the transformer)
+   * @throws Exception if peer registration fails
+   */
+  private void registerPeersForRmCommand(PalDirectory dir, String[] args) throws Exception {
+    boolean startingWith = false;
+    List<String> positionalArgs = new ArrayList<>();
+
+    for (int i = 0; i < args.length; i++) {
+      String arg = args[i];
+      if ("-s".equals(arg) || "--starting-with".equals(arg)) {
+        startingWith = true;
+        continue;
+      }
+      if (RM_FLAGS_WITH_VALUE.contains(arg) && i + 1 < args.length) {
+        i++; // skip value
+        continue;
+      }
+      if (arg.startsWith("-")) {
+        continue; // boolean flag (--force, --all, etc.)
+      }
+      positionalArgs.add(arg);
+    }
+
+    for (String id : positionalArgs) {
+      UUID uuid;
+      String name;
+      if (UUID_PATTERN.matcher(id).matches()) {
+        uuid = UUID.fromString(id);
+        name = "doc-test-rm-" + uuid.toString().substring(0, 8);
+      } else if (startingWith) {
+        uuid = UUID.randomUUID();
+        name = id + "-doc-test";
+      } else {
+        uuid = UUID.randomUUID();
+        name = id;
+      }
+      PeerInfo peer = new PeerInfo(uuid, name);
+      dir.createPeer(peer);
+      logger.info("Registered peer '{}' ({}) for rm command", name, uuid);
+    }
   }
 
   /**
@@ -1434,6 +1755,171 @@ public class DocSnippetIT extends AbstractCliIT {
   }
 
   /**
+   * Replaces any {@code ws://} or {@code wss://} URL in args with the given JSON-RPC address. Doc
+   * snippets use placeholder URLs like {@code ws://localhost:9001}; this substitutes the real
+   * address of the test peer's JSON-RPC endpoint.
+   *
+   * @param args the original args array
+   * @param jsonRpcAddr the actual WebSocket address (e.g., {@code ws://localhost:54321})
+   * @return a new args array with WebSocket URLs overridden
+   */
+  private static String[] overrideWsUrls(String[] args, String jsonRpcAddr) {
+    String[] result = args.clone();
+    for (int i = 0; i < result.length; i++) {
+      if (result[i].startsWith("ws://") || result[i].startsWith("wss://")) {
+        result[i] = jsonRpcAddr;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Replaces any {@code tcp://} URL in args with the given ZMQ-RPC address. Doc snippets use
+   * placeholder URLs like {@code tcp://localhost:5555}; this substitutes the real address of the
+   * test peer's ZMQ-RPC endpoint.
+   *
+   * @param args the original args array
+   * @param zmqAddr the actual ZMQ address (e.g., {@code tcp://localhost:54321})
+   * @return a new args array with TCP URLs overridden
+   */
+  private static String[] overrideTcpUrls(String[] args, String zmqAddr) {
+    String[] result = args.clone();
+    for (int i = 0; i < result.length; i++) {
+      if (result[i].startsWith("tcp://")) {
+        result[i] = zmqAddr;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Injects {@code -r ZMQ_RPC} into args if no RPC type is already specified and the command is not
+   * a direct ws:// call. This is needed because the test peer exposes both ZMQ-RPC and JSON-RPC,
+   * and PeerCall requires disambiguation when both are available.
+   *
+   * @param args the original args array
+   * @return a new args array with {@code -r ZMQ_RPC} prepended if needed, or the original array
+   */
+  private static String[] injectZmqRpcTypeIfNeeded(String[] args) {
+    boolean hasRpcType = false;
+    boolean isWsDirect = false;
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-r") || args[i].equals("--rpc-type")) {
+        hasRpcType = true;
+        break;
+      }
+      if (args[i].startsWith("ws://") || args[i].startsWith("wss://")) {
+        isWsDirect = true;
+      }
+    }
+    if (hasRpcType || isWsDirect) {
+      return args;
+    }
+    // Insert -r ZMQ_RPC after the -d <url> pair (if present) to preserve the expected
+    // arg layout for runCliSubcommandForDuration which extracts -d from position 0.
+    int insertAt = 0;
+    if (args.length >= 2 && args[0].equals("-d")) {
+      insertAt = 2;
+    }
+    String[] result = new String[args.length + 2];
+    System.arraycopy(args, 0, result, 0, insertAt);
+    result[insertAt] = "-r";
+    result[insertAt + 1] = "ZMQ_RPC";
+    System.arraycopy(args, insertAt, result, insertAt + 2, args.length - insertAt);
+    return result;
+  }
+
+  /**
+   * Injects {@code -r JSON_RPC} into argument arrays for stdin-based JSON-RPC commands that go
+   * through the directory (no ws:// URL). This disambiguates the RPC type for peers that listen on
+   * both ZMQ-RPC and JSON-RPC.
+   */
+  private static String[] injectJsonRpcTypeIfNeeded(String[] args) {
+    boolean hasRpcType = false;
+    boolean isWsDirect = false;
+    for (int i = 0; i < args.length; i++) {
+      if (args[i].equals("-r") || args[i].equals("--rpc-type")) {
+        hasRpcType = true;
+        break;
+      }
+      if (args[i].startsWith("ws://") || args[i].startsWith("wss://")) {
+        isWsDirect = true;
+      }
+    }
+    if (hasRpcType || isWsDirect) {
+      return args;
+    }
+    // Insert -r JSON_RPC after the -d <url> pair (if present)
+    int insertAt = 0;
+    if (args.length >= 2 && args[0].equals("-d")) {
+      insertAt = 2;
+    }
+    String[] result = new String[args.length + 2];
+    System.arraycopy(args, 0, result, 0, insertAt);
+    result[insertAt] = "-r";
+    result[insertAt + 1] = "JSON_RPC";
+    System.arraycopy(args, insertAt, result, insertAt + 2, args.length - insertAt);
+    return result;
+  }
+
+  /**
+   * PeerCall option flags that take a separate value argument. Used by {@link
+   * #overridePeerCallTarget} to skip flag-value pairs when searching for the first positional arg.
+   */
+  private static final Set<String> PEER_CALL_FLAGS_WITH_VALUE =
+      Set.of(
+          "-d",
+          "--directory",
+          "-k",
+          "--kafka-servers",
+          "-r",
+          "--rpc-type",
+          "-m",
+          "--method",
+          "-t",
+          "--num-threads",
+          "--thread-affinity");
+
+  /**
+   * Overrides the peer reference in a PEER_CALL command's args. Unlike {@link #overridePeerRef}
+   * which relies on heuristics (name must contain "peer"), this method uses the known PeerCall
+   * positional structure: the first non-flag, non-URL, non-FQN arg is always the peer.
+   *
+   * @param args the original args array
+   * @param peerRef the peer identifier to substitute (UUID string or name)
+   * @return a new args array with the peer reference overridden
+   */
+  private static String[] overridePeerCallTarget(String[] args, String peerRef) {
+    String[] result = args.clone();
+    boolean skipNext = false;
+    for (int i = 0; i < result.length; i++) {
+      if (skipNext) {
+        skipNext = false;
+        continue;
+      }
+      if (result[i].startsWith("-")) {
+        // Flag with attached value (--key=value): no next arg to skip
+        if (!result[i].contains("=") && PEER_CALL_FLAGS_WITH_VALUE.contains(result[i])) {
+          skipNext = true;
+        }
+        continue;
+      }
+      // Skip URLs (tcp://, ws://, wss://) — handled separately by overrideWsUrls/overrideTcpUrls
+      if (result[i].contains("://")) {
+        continue;
+      }
+      // Skip FQN class names (contain dots, e.g., io.quasient.foobar.apps.quantized.rpc.Methods)
+      if (result[i].contains(".")) {
+        continue;
+      }
+      // First remaining positional arg is the peer reference
+      result[i] = peerRef;
+      return result;
+    }
+    return result;
+  }
+
+  /**
    * Overrides both Kafka WAL names and Chronicle paths in args.
    *
    * @param args the original args array
@@ -1448,6 +1934,26 @@ public class DocSnippetIT extends AbstractCliIT {
       result = overrideChroniclePaths(result, chroniclePath);
     }
     return result;
+  }
+
+  /**
+   * Replaces the file path following {@code --properties} with the given temp path. Doc snippets
+   * reference paths like {@code /etc/pal/tuning.properties} that do not exist in the test
+   * environment; this substitutes a real temp file so the peer can start.
+   *
+   * @param args the original args array
+   * @param tempPath the path to the temporary properties file
+   * @return a new array with the properties path replaced, or the original if no flag found
+   */
+  private static String[] overridePropertiesPath(String[] args, String tempPath) {
+    for (int i = 0; i < args.length - 1; i++) {
+      if ("--properties".equals(args[i])) {
+        String[] result = args.clone();
+        result[i + 1] = tempPath;
+        return result;
+      }
+    }
+    return args;
   }
 
   /**
@@ -1485,6 +1991,74 @@ public class DocSnippetIT extends AbstractCliIT {
       result.add(getKafkaServers());
     }
     return result.toArray(new String[0]);
+  }
+
+  /**
+   * Ensures the args contain {@code --forget-response}. Log call doc snippets use a single log for
+   * both input and output, but the runtime's circularity guard prevents a peer from writing
+   * responses to the same log it reads from ({@code --source-log} == {@code --wal}). Adding {@code
+   * --forget-response} converts the command to fire-and-forget mode so it writes the request and
+   * exits. The full request/response flow is tested in {@code CallerIT} with separate logs.
+   *
+   * @param args the original args array
+   * @return the same array if already present, or a new array with {@code --forget-response}
+   *     appended
+   */
+  private static String[] ensureForgetResponse(String[] args) {
+    for (String arg : args) {
+      if ("-f".equals(arg) || "--forget-response".equals(arg)) {
+        return args;
+      }
+    }
+    String[] result = new String[args.length + 1];
+    System.arraycopy(args, 0, result, 0, args.length);
+    result[args.length] = "--forget-response";
+    return result;
+  }
+
+  /**
+   * Ensures JDK time helper methods are re-executed (not stubbed) when {@code --stub-all-else} is
+   * used. Without this, {@code ZoneId.of()} returns null from WAL stub because {@code ZoneRegion}
+   * (a JDK-internal subtype of {@code ZoneId}) is stored as reference-only in the WAL and cannot be
+   * deserialized. The null propagates to {@code LocalDate.now(null)}, causing a param-type mismatch
+   * ({@code ZoneId} declared type vs {@code ZoneRegion} in WAL) and a {@code NullPointerException}.
+   *
+   * <p>The fix appends {@code java.time.**} to the {@code --re-execute} patterns so that
+   * deterministic JDK time helpers like {@code ZoneId.of} run live and produce valid objects.
+   * Non-deterministic operations like {@code LocalDate.now} are still handled by {@code
+   * --shield-io} rules which have higher priority in the replay policy.
+   *
+   * @param args the original args array
+   * @return the same array if not applicable, or a modified array with {@code java.time.**} added
+   *     to {@code --re-execute}
+   */
+  private static String[] ensureJdkTimeReExecuteForStubAllElse(String[] args) {
+    boolean hasStubAllElse = false;
+    int reExecuteValueIdx = -1;
+    for (int i = 0; i < args.length; i++) {
+      if ("--stub-all-else".equals(args[i])) {
+        hasStubAllElse = true;
+      }
+      if ("--re-execute".equals(args[i]) && i + 1 < args.length) {
+        reExecuteValueIdx = i + 1;
+      }
+    }
+    if (!hasStubAllElse) {
+      return args;
+    }
+    String[] result = args.clone();
+    if (reExecuteValueIdx >= 0) {
+      // Append java.time.** to existing --re-execute pattern
+      result[reExecuteValueIdx] = result[reExecuteValueIdx] + ",java.time.**";
+    } else {
+      // No --re-execute flag — add one before --stub-all-else
+      List<String> list = new ArrayList<>(Arrays.asList(args));
+      int stubIdx = list.indexOf("--stub-all-else");
+      list.add(stubIdx, "java.time.**");
+      list.add(stubIdx, "--re-execute");
+      result = list.toArray(new String[0]);
+    }
+    return result;
   }
 
   /**

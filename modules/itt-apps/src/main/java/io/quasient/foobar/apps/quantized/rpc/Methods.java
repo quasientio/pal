@@ -36,6 +36,19 @@ import java.util.Map;
 public class Methods {
 
   public final Integer anInt = 4;
+
+  /** Version string field for JSON-RPC {@code get} operation tests. */
+  @SuppressFBWarnings(
+      value = {"MS_PKGPROTECT", "PA_PUBLIC_PRIMITIVE_ATTRIBUTE"},
+      justification = "Must be public for JSON-RPC field access via pal peer call get/put")
+  public static String VERSION = "1.0.0";
+
+  /** Debug mode flag for JSON-RPC {@code put} operation tests. */
+  @SuppressFBWarnings(
+      value = {"MS_PKGPROTECT", "PA_PUBLIC_PRIMITIVE_ATTRIBUTE"},
+      justification = "Must be public for JSON-RPC field access via pal peer call get/put")
+  public static boolean debugMode = false;
+
   private static Thread singleton;
 
   Integer giveMeX() {
@@ -163,6 +176,29 @@ public class Methods {
       return "NO_ARGS";
     }
     return "PROCESSED: " + String.join(",", args);
+  }
+
+  /**
+   * Adds two integers. Used by JSON-RPC {@code call} operation tests with typed int arguments.
+   *
+   * @param a the first operand
+   * @param b the second operand
+   * @return the sum
+   */
+  public static int add(int a, int b) {
+    return a + b;
+  }
+
+  /**
+   * Multiplies two integers. Used by JSON-RPC {@code call} operation tests with typed int
+   * arguments.
+   *
+   * @param a the first operand
+   * @param b the second operand
+   * @return the product
+   */
+  public static int multiply(int a, int b) {
+    return a * b;
   }
 
   protected static Integer highFive() {

@@ -45,4 +45,15 @@ public class Calculator {
   public int callMultiplyBy(Integer multiplier) {
     return multiplyBy(multiplier);
   }
+
+  /**
+   * Entry point for running the calculator from the command line or via {@code pal run} / {@code
+   * pal peer call}.
+   *
+   * @param args command-line arguments (ignored)
+   */
+  public static void main(String[] args) {
+    Calculator calc = new Calculator();
+    System.out.println("Calculator: 10 * 5 = " + calc.multiplyBy(5));
+  }
 }

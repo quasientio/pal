@@ -166,6 +166,28 @@ public abstract class AbstractIntegrationTest {
   }
 
   /**
+   * Gets the ZMQ-RPC address for a peer from the directory.
+   *
+   * <p>Looks up the peer by UUID in the PAL directory and returns its ZMQ-RPC address (format:
+   * "tcp://host:port").
+   *
+   * @param peerUuid the UUID of the peer to look up
+   * @return the ZMQ-RPC address (e.g., "tcp://localhost:5555"), or null if peer not found or has no
+   *     ZMQ-RPC address
+   * @throws Exception if directory access fails
+   */
+  protected static String getPeerZmqRpcAddress(UUID peerUuid) throws Exception {
+    PalDirectory palDirectory = new PalDirectory(getPalDirectoryUrl(), null, true);
+    PeerInfo peerInfo = palDirectory.getPeer(peerUuid);
+    palDirectory.close();
+    if (peerInfo == null) {
+      logger.warn("Peer with UUID {} not found in directory", peerUuid);
+      return null;
+    }
+    return peerInfo.getZmqRpcAddress();
+  }
+
+  /**
    * Executes `pal run` with the given arguments, waits for it to finish and returns the process
    * result. Uses the default timeout of {@link #PROCESS_TIMEOUT_SECONDS}.
    *

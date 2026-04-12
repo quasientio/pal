@@ -687,6 +687,103 @@ public class CallerIT extends AbstractCliIT {
   }
 
   // ==========================================================================
+  // Regression tests for PeerCall JSON-RPC product bugs
+  // ==========================================================================
+
+  /**
+   * Tests that {@code pal peer call ws://<addr> ClassName} works — i.e., calling a method via
+   * JSON-RPC using positional class/method args rather than stdin.
+   *
+   * <p>Regression test for a bug where {@code StaticMethodCallBuilder.buildJsonRpc()} failed to set
+   * the top-level JSON-RPC {@code "method"} field (should be {@code "call"}), causing the server to
+   * reject the request with "Method is missing".
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPeerCall_jsonRpc_directWsWithClassName() throws Exception {
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-ws-class-" + generateId();
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRpcAddr = getPeerJsonRpcAddress(peerId);
+
+    CliProcessResult result =
+        runPeerCall(jsonRpcAddr, "-m", "processArgs", METHODS_CLASS, "ws-direct");
+
+    assertThat("Expected exit code 0 for ws:// + class positional call", result.exitCode(), is(0));
+    assertThat("Expected PROCESSED: in output", result.stdout(), containsString("PROCESSED:"));
+    assertThat("Expected ws-direct in output", result.stdout(), containsString("ws-direct"));
+  }
+
+  /**
+   * Tests that {@code pal peer call -d <dir> -r JSON_RPC <peer-name>} with stdin works — i.e.,
+   * JSON-RPC via directory lookup when the peer has both ZMQ-RPC and JSON-RPC endpoints.
+   *
+   * <p>Regression test for a bug where {@code validateInput()} rejected {@code -r JSON_RPC} when
+   * the peer was identified by name (directory lookup) rather than by a direct {@code ws://}
+   * address, throwing "Peer address must start with ws:// when using JSON-RPC."
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testPeerCall_jsonRpcStdin_directoryLookupWithRpcTypeFlag() throws Exception {
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    UUID peerId = UUID.randomUUID();
+    String peerName = "call-dir-jrpc-" + generateId();
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "-n",
+            peerName,
+            "--zmq-rpc",
+            "auto",
+            "--json-rpc",
+            "auto",
+            "--as-service",
+            "-cp",
+            getIttAppsClasspath());
+
+    String jsonRequest =
+        "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"call\","
+            + "\"params\":{\"type\":\""
+            + METHODS_CLASS
+            + "\","
+            + "\"method\":\"staticStringWithStringArg\","
+            + "\"args\":[\"dir-lookup-test\"]}}\n";
+
+    CliProcessResult result =
+        runPeerCallWithStdin(jsonRequest, "-d", palDir, "-r", "JSON_RPC", peerName);
+
+    assertThat("Expected exit code 0 for JSON-RPC via directory lookup", result.exitCode(), is(0));
+    assertThat("Expected RESULT: in output", result.stdout(), containsString("RESULT:"));
+    assertThat(
+        "Expected dir-lookup-test in output", result.stdout(), containsString("dir-lookup-test"));
+  }
+
+  // ==========================================================================
   // Log call tests: pal log call
   // Old command: pal call -l <log> ...
   // New command: pal log call <log> ...

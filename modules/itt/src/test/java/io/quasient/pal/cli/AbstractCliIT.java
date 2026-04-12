@@ -59,6 +59,13 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
    */
   protected static final int EXIT_CODE_KILLED = -1;
 
+  /**
+   * Exit code produced by the JVM's default SIGTERM handler (128 + 15). Observed when a CLI
+   * subprocess is destroyed via {@link Process#destroy()} and does not call {@link
+   * Runtime#halt(int)} from a shutdown hook.
+   */
+  protected static final int EXIT_CODE_SIGTERM = 143;
+
   /** Counter for generating unique coverage file names for CLI processes. */
   private static final AtomicInteger cliInvocationCounter = new AtomicInteger(0);
 
@@ -555,8 +562,13 @@ public abstract class AbstractCliIT extends AbstractIntegrationTest {
     int exitCode;
     if (!completed) {
       process.destroy();
-      process.waitFor(2, TimeUnit.SECONDS);
-      exitCode = EXIT_CODE_KILLED;
+      boolean exitedGracefully = process.waitFor(2, TimeUnit.SECONDS);
+      if (exitedGracefully) {
+        exitCode = process.exitValue();
+      } else {
+        process.destroyForcibly();
+        exitCode = EXIT_CODE_KILLED;
+      }
     } else {
       exitCode = process.exitValue();
     }

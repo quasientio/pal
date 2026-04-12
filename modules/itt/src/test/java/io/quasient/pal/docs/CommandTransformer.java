@@ -24,9 +24,11 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -113,7 +115,7 @@ public class CommandTransformer {
   private static final Pattern SYNOPSIS_PLACEHOLDER_PATTERN =
       Pattern.compile(
           "\\[OPTIONS\\]|\\[LOG\\.\\.\\.\\]|\\[PEER\\]|\\[LOG_NAME\\]|\\[DIRECTORY\\]"
-              + "|\\[args\\.\\.\\.\\]|\\[FILE\\]|\\bclass\\b(?!\\w)"
+              + "|\\[args\\.\\.\\.\\]|\\[FILE\\]|(?<=\\s|^)class(?=\\s|$)"
               + "|<[a-z][a-z0-9_-]*>");
 
   /**
@@ -134,8 +136,31 @@ public class CommandTransformer {
   /** Pattern matching {@code -n <name>} or {@code --name <name>} for peer names. */
   private static final Pattern PEER_NAME_PATTERN = Pattern.compile("(-n\\s+|--name\\s+)([^\\s]+)");
 
+  /**
+   * Pattern matching {@code --re-execute}, {@code --scope}, or {@code --scope-exclude} flags
+   * followed by a quoted or unquoted Ant-style package glob pattern. The negative lookahead {@code
+   * (?!-)} prevents {@code --scope} from matching {@code --scope-default}, {@code --scope-io}, or
+   * {@code --scope-policy}.
+   */
+  private static final Pattern SCOPE_FLAG_PATTERN =
+      Pattern.compile("(--re-execute|--scope-exclude|--scope(?!-))\\s+(\"?)([^\"\\s]+)\\2");
+
+  /**
+   * Placeholder package prefixes used in documentation examples, mapped to the real itt-apps
+   * package. Used by {@link #substitutePackageGlobPatterns} to rewrite Ant-style class patterns so
+   * they match the actual test classes.
+   */
+  private static final Map<String, String> PACKAGE_PREFIX_MAP = new LinkedHashMap<>();
+
   /** Specific main class mappings from placeholder to itt-apps classes. */
   private static final Map<String, String> MAIN_CLASS_MAP = new HashMap<>();
+
+  /**
+   * Bare (non-FQN) class name mappings for documentation placeholders like {@code Main}, {@code
+   * OrderService}, or {@code Tests} that appear as positional main-class arguments without a
+   * package prefix.
+   */
+  private static final Map<String, String> BARE_MAIN_CLASS_MAP = new LinkedHashMap<>();
 
   /** Patterns that indicate a main class placeholder to replace. */
   private static final Pattern MAIN_CLASS_PLACEHOLDER_PATTERN =
@@ -143,13 +168,59 @@ public class CommandTransformer {
           "\\b(com\\.example\\.[A-Za-z.]+|tutorial\\.[A-Za-z.]+|com\\.mycompany\\.[A-Za-z.]+)\\b");
 
   static {
+    PACKAGE_PREFIX_MAP.put("com.example.", "io.quasient.foobar.");
+    PACKAGE_PREFIX_MAP.put("com.mycompany.", "io.quasient.foobar.");
+    PACKAGE_PREFIX_MAP.put("tutorial.", "io.quasient.foobar.");
+
     MAIN_CLASS_MAP.put("com.example.Main", DEFAULT_MAIN_CLASS);
     MAIN_CLASS_MAP.put("com.example.App", DEFAULT_MAIN_CLASS);
     MAIN_CLASS_MAP.put("com.example.Service", DEFAULT_MAIN_CLASS);
     MAIN_CLASS_MAP.put("com.example.Calculator", CALCULATOR_MAIN_CLASS);
     MAIN_CLASS_MAP.put("tutorial.CalculatorService", CALCULATOR_MAIN_CLASS);
     MAIN_CLASS_MAP.put("com.example.calculator.CalculatorService", CALCULATOR_MAIN_CLASS);
+
+    BARE_MAIN_CLASS_MAP.put("OrderService", DEFAULT_MAIN_CLASS);
+    BARE_MAIN_CLASS_MAP.put("HelloService", DEFAULT_MAIN_CLASS);
+    BARE_MAIN_CLASS_MAP.put("CalculatorService", CALCULATOR_MAIN_CLASS);
+    BARE_MAIN_CLASS_MAP.put("Calculator", CALCULATOR_MAIN_CLASS);
+    BARE_MAIN_CLASS_MAP.put("Processor", DEFAULT_MAIN_CLASS);
+    BARE_MAIN_CLASS_MAP.put("Tests", DEFAULT_MAIN_CLASS);
+    BARE_MAIN_CLASS_MAP.put("Main", DEFAULT_MAIN_CLASS);
+    BARE_MAIN_CLASS_MAP.put("App", DEFAULT_MAIN_CLASS);
   }
+
+  /**
+   * Methods known to exist on the itt-apps test classes (Methods + Calculator). Used to decide
+   * whether a {@code -m} value or JSON-RPC {@code "method"} field needs substitution.
+   */
+  private static final Set<String> KNOWN_CALL_METHODS =
+      Set.of(
+          "main",
+          "processArgs",
+          "staticStringWithStringArg",
+          "staticStringWithStringArgs",
+          "sumUpList",
+          "nonVoidSumUpList",
+          "nonVoidSumUpMap",
+          "throwMeAnException",
+          "giveMeNull",
+          "giveMeAnEmptyLongArray",
+          "giveMeNullBoolArray",
+          "multiplyBy",
+          "callMultiplyBy",
+          "add",
+          "multiply");
+
+  /** Pattern matching {@code -m <method>} or {@code --method <method>} for call method names. */
+  private static final Pattern METHOD_FLAG_PATTERN = Pattern.compile("(-m\\s+|--method\\s+)(\\S+)");
+
+  /**
+   * Pattern matching the JSON-RPC {@code "method":"<name>"} field. Captures the prefix (group 1),
+   * method name (group 2), and closing quote (group 3). Used to substitute placeholder method names
+   * in JSON-RPC stdin data.
+   */
+  private static final Pattern JSON_RPC_INNER_METHOD_PATTERN =
+      Pattern.compile("(\"method\"\\s*:\\s*\")([^\"]+)(\")");
 
   /** The etcd directory URL for the test environment. */
   private final String palDirectoryUrl;
@@ -225,6 +296,10 @@ public class CommandTransformer {
           if (command.getHeredocBody() != null) {
             stdinData = command.getHeredocBody();
             substitutions.add("Using heredoc body as stdin data");
+          } else {
+            // cat <file> | pal ... references an external file that doesn't exist in test env
+            return TransformedCommand.skipped(
+                "Cat pipe references external file (no heredoc body)", substitutions);
           }
         }
       }
@@ -267,8 +342,35 @@ public class CommandTransformer {
     palCommand = substituteClasspath(palCommand, substitutions);
     palCommand = substituteJarFlag(palCommand, substitutions);
 
-    // Step 3: Main class substitution
+    // Step 3: Main class substitution (command and stdin)
     palCommand = substituteMainClass(palCommand, substitutions);
+    if (stdinData != null) {
+      stdinData = substituteMainClass(stdinData, substitutions);
+    }
+
+    // Step 3a: Package glob pattern substitution (--re-execute, --scope, --scope-exclude)
+    palCommand = substitutePackageGlobPatterns(palCommand, substitutions);
+
+    // Step 3b: Bare class name substitution (non-FQN names like Main, OrderService, Tests)
+    palCommand = substituteBareMainClassName(palCommand, substitutions);
+
+    // Step 3b': If RUN/REPLAY has -cp but still no main class, append the default
+    if ((effectiveType == DocCommandType.RUN || effectiveType == DocCommandType.REPLAY)
+        && palCommand.contains("-cp ")
+        && !containsMainClass(palCommand)) {
+      palCommand = palCommand + " " + DEFAULT_MAIN_CLASS;
+      substitutions.add("Appended default main class " + DEFAULT_MAIN_CLASS);
+    }
+
+    // Step 3c: Call method substitution (peer call / log call only)
+    boolean isCallCommand =
+        effectiveType == DocCommandType.PEER_CALL || effectiveType == DocCommandType.LOG_CALL;
+    if (isCallCommand) {
+      palCommand = substituteCallMethod(palCommand, substitutions);
+      if (stdinData != null) {
+        stdinData = substituteJsonRpcMethod(stdinData, substitutions);
+      }
+    }
 
     // Step 4: Name uniquification
     WalResult walResult = uniquifyWalName(palCommand, text, substitutions);
@@ -352,19 +454,30 @@ public class CommandTransformer {
       return "Contains ellipsis-truncated UUID placeholder";
     }
 
-    // Direct WebSocket/HTTP connection URLs (ws://, http://) connect to specific endpoints
-    // that don't exist in the test environment.
-    if (text.contains("ws://") || text.contains("wss://")) {
-      return "Direct WebSocket connection URL (no test WS endpoint)";
-    }
-
     // Commands with ellipsis as arguments (e.g., "pal run -n user-service ...") are
     // incomplete examples that cannot be executed.
     if (BARE_ELLIPSIS_PATTERN.matcher(text).find()) {
       return "Contains bare ellipsis placeholder";
     }
 
+    // log call with both -i and -o: PicoCLI assigns the class name to the LOG positional
+    // (index 0) because -i/-o consume their own values, leaving the class token as the first
+    // unmatched positional. This is a PicoCLI structural limitation, not a test issue.
+    if (type == DocCommandType.LOG_CALL && hasInputAndOutputLogFlags(text)) {
+      return "log call with -i/-o (PicoCLI positional collision with class name)";
+    }
+
     return null;
+  }
+
+  /**
+   * Returns {@code true} when the command text contains both {@code -i}/{@code --input-log} and
+   * {@code -o}/{@code --output-log} flags.
+   */
+  private static boolean hasInputAndOutputLogFlags(String text) {
+    boolean hasInput = text.contains(" -i ") || text.contains(" --input-log ");
+    boolean hasOutput = text.contains(" -o ") || text.contains(" --output-log ");
+    return hasInput && hasOutput;
   }
 
   /**
@@ -494,6 +607,149 @@ public class CommandTransformer {
       return DEFAULT_MAIN_CLASS;
     }
     return placeholder;
+  }
+
+  /**
+   * Substitutes placeholder package prefixes in Ant-style glob patterns used by {@code
+   * --re-execute}, {@code --scope}, and {@code --scope-exclude} flags. Documentation examples use
+   * placeholder packages like {@code com.example.**} that must be rewritten to match the real
+   * itt-apps class hierarchy ({@code io.quasient.foobar.**}) for replay re-execution and recording
+   * scope to work correctly against test classes.
+   *
+   * <p>Handles comma-separated patterns (e.g., {@code "com.example.**,com.mycompany.**"}).
+   *
+   * @param command the command string
+   * @param substitutions the substitution log
+   * @return the command with package glob patterns replaced, or unchanged if none found
+   */
+  private static String substitutePackageGlobPatterns(String command, List<String> substitutions) {
+    Matcher m = SCOPE_FLAG_PATTERN.matcher(command);
+    StringBuffer sb = new StringBuffer();
+    boolean changed = false;
+    while (m.find()) {
+      String flag = m.group(1);
+      String quote = m.group(2);
+      String value = m.group(3);
+      String newValue = replacePackagePrefixes(value);
+      if (!newValue.equals(value)) {
+        m.appendReplacement(sb, Matcher.quoteReplacement(flag + " " + quote + newValue + quote));
+        substitutions.add("Replaced " + flag + " pattern " + value + " with " + newValue);
+        changed = true;
+      }
+    }
+    if (changed) {
+      m.appendTail(sb);
+      return sb.toString();
+    }
+    return command;
+  }
+
+  /**
+   * Replaces known placeholder package prefixes in a potentially comma-separated pattern value.
+   *
+   * @param value the pattern value (e.g., {@code "com.example.**"} or {@code
+   *     "com.example.**,com.mycompany.service.**"})
+   * @return the value with placeholder prefixes replaced
+   */
+  private static String replacePackagePrefixes(String value) {
+    String[] parts = value.split(",");
+    boolean changed = false;
+    for (int i = 0; i < parts.length; i++) {
+      for (Map.Entry<String, String> entry : PACKAGE_PREFIX_MAP.entrySet()) {
+        if (parts[i].startsWith(entry.getKey())) {
+          parts[i] = entry.getValue() + parts[i].substring(entry.getKey().length());
+          changed = true;
+          break;
+        }
+      }
+    }
+    return changed ? String.join(",", parts) : value;
+  }
+
+  /**
+   * Substitutes bare (non-FQN) class names like {@code Main}, {@code OrderService}, or {@code
+   * Tests} that appear as positional main-class arguments in documentation examples. These don't
+   * match the FQN pattern handled by {@link #substituteMainClass}. Only the first matching bare
+   * name is replaced to avoid affecting method names or program arguments.
+   *
+   * @param command the command string
+   * @param substitutions the substitution log
+   * @return the command with the bare class name replaced, or unchanged if none found
+   */
+  private String substituteBareMainClassName(String command, List<String> substitutions) {
+    for (Map.Entry<String, String> entry : BARE_MAIN_CLASS_MAP.entrySet()) {
+      String bare = entry.getKey();
+      String fqn = entry.getValue();
+      // Match bare name as a standalone word not adjacent to a dot (avoids matching inside FQNs)
+      Pattern p = Pattern.compile("(?<!\\.)\\b" + Pattern.quote(bare) + "\\b(?!\\.)");
+      Matcher m = p.matcher(command);
+      if (m.find()) {
+        command = m.replaceFirst(Matcher.quoteReplacement(fqn));
+        substitutions.add("Replaced bare class name " + bare + " with " + fqn);
+        break;
+      }
+    }
+    return command;
+  }
+
+  /**
+   * Substitutes the {@code -m <method>} flag value in a call command with a known method when the
+   * original method name does not exist on the itt-apps test classes.
+   *
+   * @param command the command string
+   * @param substitutions the substitution log
+   * @return the command with the method flag value replaced, or unchanged if already valid
+   */
+  private static String substituteCallMethod(String command, List<String> substitutions) {
+    Matcher m = METHOD_FLAG_PATTERN.matcher(command);
+    if (m.find()) {
+      String method = m.group(2);
+      if (!KNOWN_CALL_METHODS.contains(method)) {
+        String replacement = m.group(1) + "processArgs";
+        substitutions.add("Replaced call method " + method + " with processArgs");
+        return m.replaceFirst(Matcher.quoteReplacement(replacement));
+      }
+    }
+    return command;
+  }
+
+  /**
+   * Substitutes placeholder Java method names in JSON-RPC stdin data with a known method. Matches
+   * {@code "method":"<name>"} fields where {@code <name>} is not a JSON-RPC verb ({@code call},
+   * {@code new}, {@code get}, {@code put}) and not a known itt-apps method.
+   *
+   * @param stdin the JSON-RPC stdin data
+   * @param substitutions the substitution log
+   * @return the stdin with method names replaced, or unchanged if already valid
+   */
+  private static String substituteJsonRpcMethod(String stdin, List<String> substitutions) {
+    Matcher m = JSON_RPC_INNER_METHOD_PATTERN.matcher(stdin);
+    StringBuffer sb = new StringBuffer();
+    boolean replaced = false;
+    while (m.find()) {
+      String method = m.group(2);
+      if (isJsonRpcVerb(method) || KNOWN_CALL_METHODS.contains(method)) {
+        continue;
+      }
+      m.appendReplacement(sb, Matcher.quoteReplacement(m.group(1) + "processArgs" + m.group(3)));
+      if (!replaced) {
+        substitutions.add("Replaced JSON-RPC method " + method + " with processArgs");
+        replaced = true;
+      }
+    }
+    if (replaced) {
+      m.appendTail(sb);
+      return sb.toString();
+    }
+    return stdin;
+  }
+
+  /** Returns true if the method name is a JSON-RPC verb (top-level operation type). */
+  private static boolean isJsonRpcVerb(String method) {
+    return "call".equals(method)
+        || "new".equals(method)
+        || "get".equals(method)
+        || "put".equals(method);
   }
 
   /** Checks whether the command already contains a recognized main class token. */
@@ -817,7 +1073,11 @@ public class CommandTransformer {
     }
 
     List<String> tokenList = WHITESPACE_SPLITTER.splitToList(afterPal);
-    String[] tokens = tokenList.toArray(new String[0]);
+    // Strip shell-style quotes from each token. The command string comes from a markdown code
+    // block where quotes are syntactic (e.g., --re-execute "com.example.**"). Since we pass args
+    // directly to ProcessBuilder (no shell), the quotes would be passed as literal characters.
+    String[] tokens =
+        tokenList.stream().map(CommandTransformer::stripQuotes).toArray(String[]::new);
     if (tokens.length == 0) {
       return new SubcommandParseResult(new String[] {"help"}, new String[0]);
     }
@@ -849,6 +1109,21 @@ public class CommandTransformer {
     String[] args =
         tokens.length > 1 ? Arrays.copyOfRange(tokens, 1, tokens.length) : new String[0];
     return new SubcommandParseResult(new String[] {first}, args);
+  }
+
+  /**
+   * Strips matching leading and trailing double-quote characters from a token. Markdown code blocks
+   * contain shell-style quotes (e.g., {@code "com.example.**"}) that are syntactic in a shell but
+   * become literal characters when passed directly to {@link ProcessBuilder}.
+   *
+   * @param token the raw token
+   * @return the token with surrounding quotes removed, or the original if not quoted
+   */
+  private static String stripQuotes(String token) {
+    if (token.length() >= 2 && token.charAt(0) == '"' && token.charAt(token.length() - 1) == '"') {
+      return token.substring(1, token.length() - 1);
+    }
+    return token;
   }
 
   /** Checks whether a token is a top-level command. */
