@@ -43,7 +43,9 @@ import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +54,8 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ.Socket;
 
 public class LogRpcInvokerTest extends ZmqEnabledTest {
+  @Rule public Timeout globalTimeout = Timeout.seconds(30);
+
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
   private static final String SOURCE_LOG_ADDRESS = "inproc://source_log";
@@ -137,7 +141,8 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
     msg.send(dealerSocket);
 
     // wait for the message to be dispatched
-    latch.await();
+    boolean dispatched = latch.await(5, TimeUnit.SECONDS);
+    assertThat("Message should have been dispatched", dispatched, is(true));
 
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
 
@@ -187,7 +192,8 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
         });
 
     // wait for msg to be received
-    latch.await();
+    boolean dispatched = latch.await(5, TimeUnit.SECONDS);
+    assertThat("All messages should have been dispatched", dispatched, is(true));
 
     // assert number of calls
     verify(incomingMessageDispatcher, times(msgCount)).incomingCall(any(), any(), any());
@@ -529,7 +535,8 @@ public class LogRpcInvokerTest extends ZmqEnabledTest {
     msg.send(dealerSocket);
 
     // Then: Messages are processed; responses generated
-    latch.await();
+    boolean dispatched = latch.await(5, TimeUnit.SECONDS);
+    assertThat("Message should have been dispatched", dispatched, is(true));
 
     verify(incomingMessageDispatcher, times(1)).incomingCall(any(), any(), any());
     assertThat(execMessageReplies.size(), is(1));

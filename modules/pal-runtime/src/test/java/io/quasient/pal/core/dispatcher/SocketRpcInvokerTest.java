@@ -66,7 +66,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +80,8 @@ import org.zeromq.ZMQException;
 import zmq.ZError;
 
 public class SocketRpcInvokerTest extends ZmqEnabledTest {
+  @Rule public Timeout globalTimeout = Timeout.seconds(30);
+
   private static final Logger logger = LoggerFactory.getLogger("tests");
   private final UUID peerUuid = UUID.randomUUID();
   private static final String ZMQRPC_DEALER_ADDRESS = "inproc://zmq.deal";
@@ -97,9 +101,11 @@ public class SocketRpcInvokerTest extends ZmqEnabledTest {
     this.execService = Executors.newCachedThreadPool();
     // simulate RPCRequestDispatcher's DEALER socket
     this.zmqRpcDealerSocket = context.createSocket(SocketType.DEALER);
+    zmqRpcDealerSocket.setReceiveTimeOut(10_000);
     zmqRpcDealerSocket.bind(ZMQRPC_DEALER_ADDRESS);
     // simulate JSONRPCRequestDispatcher's DEALER socket
     this.jsonRpcDealerSocket = context.createSocket(SocketType.DEALER);
+    jsonRpcDealerSocket.setReceiveTimeOut(10_000);
     jsonRpcDealerSocket.bind(JSONRPC_DEALER_ADDRESS);
 
     /* mock incomingMessageDispatcher */
