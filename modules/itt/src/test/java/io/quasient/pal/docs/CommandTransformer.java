@@ -275,14 +275,15 @@ public class CommandTransformer {
 
     Matcher echoMatcher = ECHO_PIPE_PATTERN.matcher(text.strip());
     if (echoMatcher.matches()) {
-      stdinData = echoMatcher.group(1);
+      // Collapse multi-line JSON to a single line: PeerCall reads one request per line
+      stdinData = collapseNewlines(echoMatcher.group(1));
       palCommand = echoMatcher.group(2).strip();
       substitutions.add("Extracted stdin from echo pipe");
       effectiveType = DocCommandType.classify(palCommand);
     } else {
       Matcher echoDoubleMatcher = ECHO_PIPE_DOUBLE_QUOTE_PATTERN.matcher(text.strip());
       if (echoDoubleMatcher.matches()) {
-        stdinData = echoDoubleMatcher.group(1);
+        stdinData = collapseNewlines(echoDoubleMatcher.group(1));
         palCommand = echoDoubleMatcher.group(2).strip();
         substitutions.add("Extracted stdin from echo pipe (double-quoted)");
         effectiveType = DocCommandType.classify(palCommand);
@@ -402,6 +403,14 @@ public class CommandTransformer {
       palCommand = appendDryRun(palCommand, substitutions);
       palCommand = appendNonInteractive(palCommand, substitutions);
       palCommand = appendGroupId(palCommand, substitutions);
+    }
+    // Inject -d for all directory-dependent subcommands (listing, call, print, rm, stats, etc.)
+    // that don't already have it. RUN is handled above; INIT, REPLAY, and HELP don't need it.
+    if (!isRunCommand
+        && !isInitCommand
+        && !isReplayCommand
+        && effectiveType != DocCommandType.HELP) {
+      palCommand = ensureDirectoryFlag(palCommand, substitutions);
     }
 
     // Step 8: Lifecycle classification
@@ -1005,9 +1014,18 @@ public class CommandTransformer {
   }
 
   /**
-   * Ensures a run command has a {@code -d} flag pointing to the test etcd directory. Commands
-   * without {@code -d} rely on the {@code PAL_DIRECTORY} environment variable, which is cleared in
-   * the test environment.
+   * Collapses newlines (and surrounding whitespace) in echo-pipe stdin data to a single space. The
+   * CLI reads one JSON-RPC request per line, so multi-line JSON from documentation must be
+   * flattened before it can be sent as stdin.
+   */
+  private static String collapseNewlines(String stdinData) {
+    return stdinData.replaceAll("\\n\\s*", " ");
+  }
+
+  /**
+   * Ensures a command has a {@code -d} flag pointing to the test etcd directory. Commands without
+   * {@code -d} rely on the {@code PAL_DIRECTORY} environment variable, which is cleared in the test
+   * environment.
    */
   private String ensureDirectoryFlag(String command, List<String> substitutions) {
     if (!command.contains(" -d ") && !command.contains(" --directory ")) {

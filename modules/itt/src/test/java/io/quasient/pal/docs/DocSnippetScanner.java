@@ -204,7 +204,7 @@ public final class DocSnippetScanner {
       return new ArrayList<>();
     }
 
-    List<JoinedLine> joinedLines = joinContinuations(blockLines, lineNumbers);
+    List<JoinedLine> joinedLines = joinMultiLineQuotes(joinContinuations(blockLines, lineNumbers));
     List<DocCommand> commands = new ArrayList<>();
     int i = 0;
 
@@ -369,6 +369,57 @@ public final class DocSnippetScanner {
       end--;
     }
     return line.substring(0, end);
+  }
+
+  /**
+   * Joins lines that are part of a multi-line single-quoted string.
+   *
+   * <p>When a line opens a single quote that is not closed on the same line, subsequent lines are
+   * joined (separated by newlines) until the closing quote is found. This handles documentation
+   * patterns like multi-line {@code echo '...' | pal peer call ...}.
+   *
+   * @param lines the joined lines from continuation processing
+   * @return lines with multi-line quoted strings merged
+   */
+  private static List<JoinedLine> joinMultiLineQuotes(List<JoinedLine> lines) {
+    List<JoinedLine> result = new ArrayList<>();
+    int i = 0;
+    while (i < lines.size()) {
+      JoinedLine current = lines.get(i);
+      if (hasUnmatchedSingleQuote(current.text)) {
+        StringBuilder sb = new StringBuilder(current.text);
+        int startLine = current.lineNumber;
+        i++;
+        while (i < lines.size()) {
+          sb.append("\n").append(lines.get(i).text);
+          i++;
+          if (!hasUnmatchedSingleQuote(sb.toString())) {
+            break;
+          }
+        }
+        result.add(new JoinedLine(sb.toString(), startLine));
+      } else {
+        result.add(current);
+        i++;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Checks whether a string has an unmatched (odd number of) single-quote characters.
+   *
+   * @param text the text to check
+   * @return true if the number of single quotes is odd
+   */
+  private static boolean hasUnmatchedSingleQuote(String text) {
+    int count = 0;
+    for (int i = 0; i < text.length(); i++) {
+      if (text.charAt(i) == '\'') {
+        count++;
+      }
+    }
+    return count % 2 != 0;
   }
 
   /**
