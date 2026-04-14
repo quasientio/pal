@@ -442,7 +442,7 @@ public class Main {
 **Same code, running with PAL:**
 ```bash
 # Compile with AspectJ weaving
-mvn compile  # aspectj-maven-plugin configured
+./mvnw compile  # aspectj-maven-plugin configured
 
 # Run with PAL
 pal run --wal payment-log --json-rpc auto -cp app.jar Main

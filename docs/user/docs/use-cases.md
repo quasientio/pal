@@ -91,7 +91,7 @@ pal run --interceptable --wal service-b-log --json-rpc auto -cp service-b.jar Ma
 # (Intercept calls to Service C, return canned responses)
 
 # Terminal 4: Run tests against Service B
-mvn test
+./mvnw test
 ```
 
 You're testing real Service B code, but with controlled responses from dependencies.

@@ -169,7 +169,7 @@ pal run --wal file:/tmp/baseline -cp target/classes com.example.Calculator "2+3"
 # Output: 5
 
 # Modify the code (e.g., change add to multiply)
-mvn compile
+./mvnw compile
 
 # Replay against baseline
 pal replay --wal file:/tmp/baseline -cp target/classes com.example.Calculator "2+3"
@@ -268,7 +268,7 @@ Connect your IDE debugger to port 5005 and step through the code. The replay is 
 
 ```bash
 # 1. Build the application
-mvn clean compile
+./mvnw clean compile
 
 # 2. Record a known-good execution
 pal run --wal file:/tmp/golden-run \
@@ -284,7 +284,7 @@ pal replay --wal file:/tmp/golden-run \
 
 # 5. Make a code change
 vim src/main/java/com/example/OrderProcessor.java
-mvn compile
+./mvnw compile
 
 # 6. Replay to find what changed
 pal replay --wal file:/tmp/golden-run \

@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-mvn install -Pjavadoc -DskipTests
+./mvnwinstall -Pjavadoc -DskipTests

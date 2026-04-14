@@ -81,7 +81,7 @@ All without changing your code. No annotations, no interfaces, no framework lock
 # Clone and build
 git clone https://github.io/quasientinc/pal.git
 cd pal
-mvn install -DskipITs
+./mvnw install -DskipITs
 
 # Add to PATH
 export PATH="$(pwd)/bin:$PATH"

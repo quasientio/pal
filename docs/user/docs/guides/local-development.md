@@ -174,7 +174,7 @@ public static void processMessage(String msg) {
 ### 2. Rebuild
 
 ```bash
-mvn clean compile
+./mvnw clean compile
 ```
 
 AspectJ weaving happens automatically.
@@ -385,11 +385,11 @@ pal run --wal file:/tmp/test-wal -cp target/classes com.example.Main
 
 ```bash
 # Fast (no JAR packaging)
-mvn compile
+./mvnw compile
 pal run --wal file:dev -cp target/classes com.example.Main
 
 # Slower
-mvn package
+./mvnw package
 pal run --wal file:dev -cp target/app.jar com.example.Main
 ```
 
@@ -397,10 +397,10 @@ pal run --wal file:dev -cp target/app.jar com.example.Main
 
 ```bash
 # Only recompile changed files
-mvn compile
+./mvnw compile
 
 # Full clean when needed
-mvn clean compile
+./mvnw clean compile
 ```
 
 ## When to Switch to Distributed
@@ -479,7 +479,7 @@ javap -c target/classes/com/example/MyClass.class | grep aspectOf
 
 If not, rebuild with AspectJ plugin:
 ```bash
-mvn clean compile
+./mvnw clean compile
 ```
 
 ## Manual Setup
@@ -543,7 +543,7 @@ java {
 }
 ```
 
-Build with `mvn clean install` (Maven) or `gradle build` (Gradle). Your application is then ready to run with PAL.
+Build with `./mvnw clean install` (Maven) or `gradle build` (Gradle). Your application is then ready to run with PAL.
 
 ## Example: Complete Development Session
 
@@ -554,7 +554,7 @@ cd my-pal-app
 source .env.pal
 
 # 2. Build
-mvn compile
+./mvnw compile
 
 # 3. Run and test locally
 pal run --wal file:dev-wal \
@@ -567,7 +567,7 @@ pal log print file:dev-wal --compact
 vim src/main/java/com/example/SampleService.java
 
 # 6. Rebuild
-mvn compile
+./mvnw compile
 
 # 7. Test changes
 pal run --wal file:dev-wal2 \
@@ -577,7 +577,7 @@ pal run --wal file:dev-wal2 \
 diff <(pal log print file:dev-wal) <(pal log print file:dev-wal2)
 
 # 9. When satisfied, package
-mvn package
+./mvnw package
 
 # 10. Ready for distributed testing or deployment
 ```

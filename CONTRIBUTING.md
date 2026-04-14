@@ -12,7 +12,7 @@ Thanks for your interest in contributing to PAL!
    ```
 3. Build the project:
    ```bash
-   mvn install -DskipITs
+   ./mvnw install -DskipITs
    ```
 
 ## Development Requirements
@@ -23,7 +23,7 @@ Thanks for your interest in contributing to PAL!
 
 ## Code Conventions
 
-- **Google Java Format**: run `mvn spotless:apply` before committing
+- **Google Java Format**: run `./mvnw spotless:apply` before committing
 - **Javadoc required** for all classes and members (including private/package-private)
 - **No fully-qualified names** in code — always use imports
 - **JUnit 4** for all tests (not JUnit 5)
@@ -31,9 +31,9 @@ Thanks for your interest in contributing to PAL!
 
 ## Before Submitting a Pull Request
 
-1. Build is clean with no warnings: `mvn install -DskipITs`
+1. Build is clean with no warnings: `./mvnw install -DskipITs`
 2. All unit tests pass
-3. Code is formatted: `mvn spotless:apply`
+3. Code is formatted: `./mvnw spotless:apply`
 4. License headers are present
 5. New functionality has tests
 6. Commits follow [Conventional Commits](https://www.conventionalcommits.org/)

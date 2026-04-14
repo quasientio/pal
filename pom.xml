@@ -992,9 +992,9 @@
             <!--
                 Javadoc generation profile (pal-api and pal-client only).
                 Usage:
-                  mvn javadoc:javadoc -Pjavadoc         - Generate HTML docs
-                  mvn javadoc:jar -Pjavadoc             - Generate javadoc JARs
-                  mvn javadoc:aggregate -Pjavadoc       - Generate combined HTML docs at root
+                  ./mvnw javadoc:javadoc -Pjavadoc         - Generate HTML docs
+                  ./mvnw javadoc:jar -Pjavadoc             - Generate javadoc JARs
+                  ./mvnw javadoc:aggregate -Pjavadoc       - Generate combined HTML docs at root
 
                 Artifacts:
                   - Per-module HTML: modules/<name>/target/site/apidocs/

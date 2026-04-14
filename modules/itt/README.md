@@ -25,7 +25,7 @@ __NOTE__: if you already added `$PAL_HOME/bin` and `$PAL_HOME/infra/bin` to your
     ```
 2. Clean up logs from previous tests
     ```bash
-    mvn -Plogs clean -q
+    ./mvnw -Plogs clean -q
     ```
 3. Ensure no stale peer is running
     ```bash
@@ -38,7 +38,7 @@ __NOTE__: if you already added `$PAL_HOME/bin` and `$PAL_HOME/infra/bin` to your
    NOTE: If you're using a local installation of etcd and kafka, then replace the above by `start-etcd.sh && start-kafka.sh`.
 5. Run the integration tests
     ```bash
-    timeout 65m mvn -pl modules/itt verify
+    timeout 65m ./mvnw -pl modules/itt verify
     ```
    NOTE: Tests that require a peer automatically launch and manage their own peer processes via test suites:
    - `RpcTestSuite`: Manages a peer for all RPC tests, exposing both binary and JSON rpc interfaces.
@@ -118,19 +118,19 @@ itt-focus.sh reset
 
 ```bash
 # Run a standalone test (not part of a suite)
-mvn -pl modules/itt verify -Dit.test=MyStandaloneIT
+./mvnw -pl modules/itt verify -Dit.test=MyStandaloneIT
 
 # Run a full test suite
-mvn -pl modules/itt verify -Dit.test=RpcTestSuite
+./mvnw -pl modules/itt verify -Dit.test=RpcTestSuite
 
 # Run a single class within a suite
 itt-focus.sh RpcTestSuite::SpecificRpcIT
-mvn -pl modules/itt verify -Dit.test=RpcTestSuite
+./mvnw -pl modules/itt verify -Dit.test=RpcTestSuite
 itt-focus.sh reset
 
 # Run a single method within a suite
 itt-focus.sh InterceptFowTestSuite::CallbackIT#testSpecificBehavior
-mvn -pl modules/itt verify -Dit.test=InterceptFowTestSuite
+./mvnw -pl modules/itt verify -Dit.test=InterceptFowTestSuite
 itt-focus.sh reset
 ```
 
@@ -166,7 +166,7 @@ When multiple failures exist (especially in suite-based tests), **isolate to a s
 Full cleanup before a test run:
 ```bash
 pkill -9 -f "pal-1.0.0-SNAPSHOT.jar"
-mvn clean -Plogs
+./mvnw clean -Plogs
 infra/bin/restart-containers.sh
 ```
 

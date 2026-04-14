@@ -108,7 +108,7 @@ In `pom.xml`:
 ### Build
 
 ```bash
-mvn clean install
+./mvnw clean install
 ```
 
 ## Step 2: Start the Calculator Service
@@ -250,7 +250,7 @@ public class CalculatorClient {
 ### Run Client
 
 ```bash
-mvn clean install
+./mvnw clean install
 
 pal run -d localhost:2379 \
   -cp target/client-1.0-SNAPSHOT.jar \

@@ -108,7 +108,7 @@ pal help
 # Clone and build (requires Maven 3)
 git clone https://github.com/quasientio/pal.git
 cd pal
-mvn install -DskipITs
+./mvnw install -DskipITs
 
 # Add to PATH
 export PATH="$(pwd)/bin:$PATH"

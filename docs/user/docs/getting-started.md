@@ -35,7 +35,7 @@ Requires **Maven 3.x** and **Git**:
 ```bash
 git clone https://github.com/quasientio/pal.git
 cd pal
-mvn install -DskipITs
+./mvnw install -DskipITs
 
 export PATH="$(pwd)/bin:$PATH"
 ```
@@ -376,7 +376,7 @@ java {
 }
 ```
 
-Then create your Java source files, build with `mvn compile` (or `gradle build`), and run with `pal run` as described above.
+Then create your Java source files, build with `./mvnw compile` (or `gradle build`), and run with `pal run` as described above.
 
 ## Distributed Mode: Multiple Peers
 
@@ -441,7 +441,7 @@ public class CalculatorService {
 Rebuild:
 
 ```bash
-mvn compile
+./mvnw compile
 ```
 
 ### 3. Run the Service Peer

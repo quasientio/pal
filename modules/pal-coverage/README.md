@@ -8,10 +8,10 @@ Run from the **project root** (not this module directly):
 
 ```bash
 # Option 1: Full build with all tests (generates reports automatically)
-mvn clean install -DskipITs && mvn verify -DskipUTs
+./mvnw clean install -DskipITs && ./mvnw verify -DskipUTs
 
 # Option 2: Regenerate reports only (using existing exec files from previous test runs)
-mvn verify -pl modules/pal-coverage -am -DskipTests -DskipITs
+./mvnw verify -pl modules/pal-coverage -am -DskipTests -DskipITs
 ```
 
 **Note:** Option 1 requires two phases because integration tests spawn separate JVM processes
@@ -85,7 +85,7 @@ COMPLEXITY_COVERED, METHOD_MISSED, METHOD_COVERED`
 
 ## How It Works
 
-1. **Unit test coverage**: Each module generates `target/jacoco.exec` during `mvn test`
+1. **Unit test coverage**: Each module generates `target/jacoco.exec` during `./mvnw test`
 2. **Integration test coverage**: The `itt` module's integration tests spawn peer and CLI
    processes with JaCoCo agents, generating `jacoco-peer-*.exec` and `jacoco-cli-*.exec` files
 3. **Shaded JAR handling**: The `pal-cli` module uses maven-shade-plugin which modifies
@@ -133,7 +133,7 @@ Line-level merge (new approach):
 
 ### Running the Merge Manually
 
-The merge runs automatically during `mvn verify`. To run manually:
+The merge runs automatically during `./mvnw verify`. To run manually:
 
 ```bash
 cd modules/pal-coverage
@@ -192,7 +192,7 @@ For per-module coverage (without aggregation):
 
 ```bash
 # Generate coverage for a specific module
-mvn test jacoco:report -pl modules/pal-runtime
+./mvnw test jacoco:report -pl modules/pal-runtime
 
 # View report
 open modules/pal-runtime/target/site/jacoco/index.html

@@ -1,7 +1,7 @@
 # pal-runtime Coverage Report
 
 **Date:** 2026-02-04
-**Build:** `mvn clean install -DskipITs` with JaCoCo coverage
+**Build:** `./mvnw clean install -DskipITs` with JaCoCo coverage
 
 ## Executive Summary
 
