@@ -1,6 +1,6 @@
 # Getting Started with PAL
 
-This guide walks you through installing PAL, running your first peer, and experiencing how operations become messages.
+This guide walks you through installing PAL, running your first peer, and inspecting the messages it produces.
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ Requires **Maven 3.x** and **Git**:
 ```bash
 git clone https://github.com/quasientio/pal.git
 cd pal
-./mvnw install -DskipITs
+./mvnw install -DskipTests
 
 export PATH="$(pwd)/bin:$PATH"
 ```
@@ -51,24 +51,29 @@ You should see:
 ```
 Usage: pal [OPTIONS] COMMAND
 
-The friendly java runtime
+The message-passing runtime for Java
+
+Options:
+  -d, --dir HOST:PORT   PAL directory [env: PAL_DIRECTORY]
+  -h, --help            Show this help message and exit.
+  -V, --version         Print version information and exit.
 
 Management Commands:
-  peer       Manage peers
-  log        Manage logs
-  intercept  Manage intercepts
+  peer          Manage peers
+  log           Manage logs
+  intercept     Manage intercepts
 
 Commands:
-  run     Run a new peer
-  replay  Deterministic WAL replay
-  init    Initialize a project for PAL
+  run           Run a new peer
+  replay        Replay application deterministically from a recorded WAL
+  init          Initialize a project for PAL
 
 Shortcuts:
-  peers       List peers (shorthand for 'peer ls')
-  logs        List logs (shorthand for 'log ls')
-  intercepts  List intercepts (shorthand for 'intercept ls')
+  peers         List peers (shorthand for 'peer ls')
+  logs          List logs (shorthand for 'log ls')
+  intercepts    List intercepts (shorthand for 'intercept ls')
 
-Run 'pal COMMAND --help' for more information on a command.
+Run 'pal COMMAND --help' or 'pal COMMAND SUBCOMMAND --help' for more information.
 ```
 
 ## Your First PAL Application
@@ -77,7 +82,7 @@ Let's build a simple application and run it with PAL to see operations become me
 
 ### 1. Create a Project with `pal init`
 
-The fastest way to get started is with `pal init`, which sets up everything you need — build configuration, AspectJ weaving, sample code, and environment files:
+The fastest way to get started is with `pal init`, which sets up everything you need — build descriptors including AspectJ weaving, sample code, PAL configuration and environment files:
 
 ```bash
 pal init pal-tutorial
@@ -161,13 +166,9 @@ pal run --wal file:/tmp/tutorial-wal --json-rpc auto \
   com.example.Main
 ```
 
-You should see the application output plus PAL startup messages:
+You should see the application output:
 
 ```
-[PAL] Peer starting: uuid=550e8400-...
-[PAL] Chronicle WAL: /tmp/tutorial-wal
-[PAL] RPC server: localhost:5555
-
 === Order Processing Demo ===
 
 Processing order #1
@@ -188,58 +189,41 @@ Total: $149.99
 Discount applied: $14.999
 
 Total orders processed: 3
-
-[PAL] Peer stopping
 ```
 
 **What just happened?**
 
-Every method call (`processOrder`, `applyDiscount`, `getOrderCount`) was converted to a message and logged to `/tmp/tutorial-wal`.
+Every method call (`processOrder`, `applyDiscount`, `getOrderCount`) was converted to a message and logged to `/tmp/tutorial-wal`. This transformation happened at build time: the AspectJ Maven plugin wove PAL's aspects into your compiled `.class` files during the build step. At runtime, these woven classes create messages for each operation, which PAL then writes to the WAL.
 
 ### 4. Inspect the Messages
 
 Let's see what PAL captured:
 
 ```bash
-# Print all messages from the log
-pal log print file:/tmp/tutorial-wal --full
+# Print all messages from the log (tree view)
+pal log print file:/tmp/tutorial-wal --tree
 ```
 
 Output (abbreviated):
 
 ```
-Message 0:
-  Class: tutorial.Main
-  Method: main
-  Args: [[Ljava.lang.String;@1a2b3c]
-  Timestamp: 2023-11-09T10:15:30.123Z
-
-Message 1:
-  Class: tutorial.OrderService
-  Method: <init>
-  Args: []
-  Timestamp: 2023-11-09T10:15:30.125Z
-
-Message 2:
-  Class: tutorial.OrderService
-  Method: processOrder
-  Args: ["Laptop", 1, 999.99]
-  Timestamp: 2023-11-09T10:15:30.130Z
-
-Message 3:
-  Class: tutorial.OrderService
-  Method: applyDiscount
-  Args: [999.99]
-  Timestamp: 2023-11-09T10:15:30.132Z
-
-Message 4:
-  Class: tutorial.OrderService
-  Method: processOrder
-  Args: ["Mouse", 2, 29.99]
-  Timestamp: 2023-11-09T10:15:30.135Z
-
-...
+[0] call Main.main
+  [1] new OrderService.<init>
+  [2] return OrderService@1
+  [3] call OrderService.processOrder@1
+    [4] call OrderService.applyDiscount@1
+    [5] return 99.999 (double)
+  [6] return void
+  [7] call OrderService.processOrder@1
+  [8] return void
+  [9] call OrderService.processOrder@1
+    [10] call OrderService.applyDiscount@1
+    [11] return 14.999 (double)
+  [12] return void
+[13] return void
 ```
+
+Other output formats are available (`--full`, `--json`). See [CLI Reference](cli-reference.md#pal-log-print-print-messages-from-a-log) for details.
 
 **This is the key insight:** Every operation is now a discrete, inspectable message.
 
@@ -380,7 +364,7 @@ Then create your Java source files, build with `./mvnw compile` (or `gradle buil
 
 ## Distributed Mode: Multiple Peers
 
-Now let's see how PAL enables transparent RPC between peers.
+Now let's see how PAL enables cross-peer method invocation.
 
 ### 1. Start Infrastructure
 
@@ -458,13 +442,7 @@ pal run -d localhost:2379 -k localhost:29092 \
 You should see:
 
 ```
-[PAL] Peer starting: uuid=abcd1234-..., name=calculator
-[PAL] Registered in directory: localhost:2379
-[PAL] Kafka WAL: calculator-wal
-[PAL] RPC server (Binary): localhost:5555
-[PAL] RPC server (JSON): ws://localhost:8080/rpc
 Calculator service ready
-[PAL] Ready to serve requests
 ```
 
 ### 4. Call the Service Remotely
@@ -488,7 +466,7 @@ pal peer call -d localhost:2379 calculator \
 5. Returned result 30
 6. Result sent back to caller
 
-**Transparent RPC:** No stubs, no service definitions, no code generation.
+**Dynamic RPC:** Method invocation via reflection, useful for development and operational workflows.
 
 ### 5. List Peers and Logs
 
@@ -496,31 +474,19 @@ pal peer call -d localhost:2379 calculator \
 # List all registered peers
 pal peer ls -d localhost:2379 -l
 
-# Output:
-# Peers:
-#   abcd1234-... (calculator) - localhost:5555 - RUNNING
-
 # List all logs
 pal log ls -d localhost:2379 -l
-
-# Output:
-# Logs:
-#   calculator-wal - kafka - 45 messages
 ```
 
 ### 6. Inspect the RPC Messages
 
 ```bash
 # Print messages from calculator's WAL
-pal log print -d localhost:2379 calculator-wal --full
+pal log print -k localhost:29092 calculator-wal --tree
 
 # You'll see the RPC call captured:
-# Message 0:
-#   Class: tutorial.Calculator
-#   Method: add
-#   Args: [10, 20]
-#   Result: 30
-#   Peer: calculator (abcd1234-...)
+# [0] call Calculator.add
+# [1] return 30 (int)
 ```
 
 ## Interception: Dynamic Behavior Modification
@@ -529,58 +495,42 @@ Let's see how to intercept method calls at runtime.
 
 ### 1. Create a Monitoring Peer
 
-Create `src/main/java/tutorial/Monitor.java`:
+Create `src/main/java/tutorial/MonitorCallback.java`:
 
 ```java
 package tutorial;
 
-public class Monitor {
-    // This method will be called when Calculator methods are intercepted
-    public void onCalculatorCall(String method, Object[] args) {
-        System.out.println("[MONITOR] Intercepted: " + method);
-        System.out.println("[MONITOR] Args: " + java.util.Arrays.toString(args));
-        System.out.println("[MONITOR] Timestamp: " + System.currentTimeMillis());
-        System.out.println();
+import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
+import io.quasient.pal.common.lang.intercept.InterceptContext;
+
+public class MonitorCallback {
+    // Callback methods must be public static, accept InterceptContext,
+    // and return InterceptCallbackResponse
+    public static InterceptCallbackResponse onCalculatorCall(InterceptContext ctx) {
+        System.out.println("[MONITOR] Intercepted with args: "
+            + java.util.Arrays.toString(ctx.getArgs()));
+        return new InterceptCallbackResponse();
     }
 }
 ```
 
-Create `src/main/java/tutorial/MonitorService.java`:
+Register the intercept using a YAML bundle file `monitor-intercept.yaml`:
 
-```java
-package tutorial;
+```yaml
+bundle: "calculator-monitor"
+defaults:
+  peer: "monitor"
 
-import io.quasient.pal.cxn.PalDirectory;
-import io.quasient.pal.core.api.InterceptRequest;
-import io.quasient.pal.core.api.InterceptType;
+intercepts:
+  - target: tutorial.Calculator.*
+    type: BEFORE
+    callback:
+      class: tutorial.MonitorCallback
+      method: onCalculatorCall
+```
 
-public class MonitorService {
-    public static void main(String[] args) throws Exception {
-        Monitor monitor = new Monitor();
-        System.out.println("Monitor service starting");
-
-        // Connect to PAL directory
-        PalDirectory directory = ...; // Get from runtime
-
-        // Register intercept for all Calculator methods
-        UUID myPeerUuid = UUID.fromString(System.getProperty("pal.peer.uuid"));
-        InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
-            UUID.randomUUID(),
-            myPeerUuid,
-            InterceptType.BEFORE,
-            "tutorial.Calculator",
-            "tutorial.Monitor",
-            "onCalculatorCall",
-            new InterceptableMethodCall("*", Collections.emptyList()));
-
-        directory.createIntercept(intercept);
-
-        System.out.println("Monitoring Calculator methods");
-
-        // Keep running
-        Thread.sleep(Long.MAX_VALUE);
-    }
-}
+```bash
+pal intercept apply -d localhost:2379 monitor-intercept.yaml
 ```
 
 ### 2. Run with Interception
@@ -631,15 +581,11 @@ pal peer call -d localhost:2379 my-service \
 pal peer call -d localhost:2379 550e8400-... \
   com.example.MyClass myMethod arg1 arg2
 
-# With JSON-RPC (for non-Java clients)
-curl -X POST http://localhost:8080/rpc \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "MyClass.myMethod",
-    "params": ["arg1", "arg2"],
-    "id": 1
-  }'
+# With JSON-RPC on stdin (full control over types)
+echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{
+  "type":"com.example.MyClass","method":"myMethod",
+  "args":[{"type":"java.lang.String","value":"\"arg1\""}]
+}}' | pal peer call -d localhost:2379 my-service
 ```
 
 ### Clean Up
@@ -706,6 +652,13 @@ javap -c build/classes/java/main/tutorial/OrderService.class | grep aspectOf
 # and the AspectJ weaving configuration
 ```
 
+Common causes:
+
+- **Missing AspectJ plugin**: Ensure your Maven or Gradle build includes the AspectJ weaving plugin with `pal-weave` as an aspect library
+- **Class not woven**: Only classes processed by the AspectJ plugin will have PAL's dispatch. Verify with `javap -c` as shown above
+- **Wrong plugin configuration**: The aspect library must reference `pal-weave`, not just have it as a dependency
+- **Incremental build stale**: Try a clean build (`mvn clean install`) to ensure all classes are freshly woven
+
 ### Interception Not Working
 
 1. Ensure class was compiled with AspectJ weaving
@@ -716,6 +669,10 @@ javap -c build/classes/java/main/tutorial/OrderService.class | grep aspectOf
 ```xml
 <logger name="io.quasient.pal.core.InterceptMatcher" level="DEBUG"/>
 ```
+
+### Infrastructure Failure Modes
+
+For detailed information about what happens when etcd or Kafka become unavailable (at startup or while running), see [Trade-offs and Limitations — Failure Modes](concepts/trade-offs.md#failure-modes).
 
 ## Next Steps
 
@@ -744,7 +701,7 @@ You've learned:
 - ✓ How operations become messages (quantization)
 - ✓ How to run peers locally (Chronicle) and distributed (Kafka/etcd)
 - ✓ How to inspect messages in logs
-- ✓ How to call remote methods transparently
+- ✓ How to call remote methods via RPC
 - ✓ How to replay executions from logs
 - ✓ The basics of interception for dynamic behavior
 

@@ -5,6 +5,7 @@ nav:
   - Understanding PAL: understanding-pal.md
   - Getting Started: getting-started.md
   - Use Cases: use-cases.md
+  - Trade-offs and Limitations: concepts/trade-offs.md
   - Concepts:
     - Peers and Logs: concepts/peers-and-logs.md
     - Remote Procedure Calls: concepts/rpc.md

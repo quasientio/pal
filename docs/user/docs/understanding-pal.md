@@ -13,14 +13,20 @@ PAL reifies operations as messages:
 ```java
 calculator.add(2, 3);
 // → ExecMessage { class: "Calculator", method: "add", args: [2, 3] }
-// The operation persists, can be replayed, routed, intercepted
+// The operation persists, can be logged, replayed, intercepted
 ```
 
 Same code, but now every operation is a first-class entity. This has profound implications.
 
-## Quantization: Operations Become Messages
+## Prior Art
 
-PAL quantizes execution into discrete messages. Every constructor call, method invocation, and field access becomes a serializable event.
+The principle of treating operations as messages is foundational to computing. Smalltalk (1970s) pioneered "everything is a message." Erlang/OTP built a production-grade ecosystem on message-passing and process isolation. Akka brought actor-model message-passing to the JVM. Dapr provides a sidecar-based approach for polyglot systems.
+
+PAL's specific contribution is *retrofitting* message-passing onto existing Java code through post-compile bytecode weaving, without requiring developers to adopt a new programming model, language, or framework. This comes with trade-offs (see [Trade-offs and Limitations](concepts/trade-offs.md)) but enables incremental adoption: you can add PAL to an existing project and selectively use its capabilities without rewriting code.
+
+## Quantization: How Operations Become Messages
+
+PAL quantizes execution by instrumenting every constructor call, method invocation, and field access at build time via AspectJ. At runtime, these instrumented operations become messages when logging, interception, or publishing is enabled.
 
 ### What Gets Quantized
 
@@ -72,38 +78,39 @@ ExecMessage {
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  1. Build Time: AspectJ Weaving                         │
-│                                                          │
+│                                                         │
 │  Your Java classes are compiled with AspectJ aspects    │
 │  that insert interception points at every operation.    │
-│                                                          │
+│                                                         │
 │  YourClass.java ──AspectJ──► YourClass.class (woven)    │
 └─────────────────────────────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│  2. Runtime: Message Creation                           │
-│                                                          │
-│  When your code runs, each operation:                   │
+│  2. Runtime: Conditional Message Creation               │
+│                                                         │
+│  When your code runs, each instrumented operation:      │
 │  - Triggers the woven interception point                │
-│  - Captures operation metadata (class, method, args)    │
-│  - Creates an ExecMessage                               │
-│  - Passes through PAL runtime for processing            │
-│                                                          │
-│  Operation ──Intercept──► ExecMessage ──Process──► ...  │
+│  - If logging, publishing, or interception is active    │
+│    and the operation is within recording scope:         │
+│    creates an ExecMessage for processing                │
+│  - Otherwise: executes with minimal overhead            │
+│                                                         │
+│  Operation ──Dispatch──► [Config+Scope?] ──► Message    │
 └─────────────────────────────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│  3. Message Processing                                   │
-│                                                          │
+│  3. Message Processing                                  │
+│                                                         │
 │  The ExecMessage can now be:                            │
 │  - Logged to write-ahead log (WAL)                      │
-│  - Routed to remote peer (RPC)                          │
+│  - Published via a ZMQ socket (PUB)                     │
 │  - Intercepted by callbacks (interception)              │
-│  - Executed locally via reflection                      │
-│                                                          │
+│  - Executed locally                                     │
+│                                                         │
 │  ExecMessage ───┬──► WAL                                │
-│                 ├──► Remote Peer                        │
+│                 ├──► Remote Peer (SUB)                  │
 │                 ├──► Intercept Callback                 │
 │                 └──► Local Execution                    │
 └─────────────────────────────────────────────────────────┘
@@ -111,7 +118,7 @@ ExecMessage {
 
 ## Why Operations as Messages?
 
-Once operations are reified as messages, they become first-class entities that can be manipulated, stored, and transmitted. This unlocks capabilities that are fundamentally impossible when operations are ephemeral.
+Once operations are reified as messages, they become first-class entities that can be manipulated, stored, and transmitted. This unlocks capabilities that are not available when operations are ephemeral.
 
 ### Messages Can Be Logged
 
@@ -142,31 +149,41 @@ pal run --source-log payment-log -cp app.jar
 - **Event sourcing:** State reconstructed from operation log
 - **Root cause analysis:** See exact sequence that led to a bug
 
-### Messages Can Be Routed
+### Messages Can Be Sent to Remote Peers
 
 **Standard JVM:**
 ```java
-// Objects must be in the same JVM
-Calculator calc = new Calculator();
-int result = calc.add(2, 3);  // Local only
+// To call a method on a remote service, you need:
+// - Service definitions (gRPC .proto, REST endpoints)
+// - Generated client code or HTTP clients
+// - Explicit serialization/deserialization
 ```
 
 **With PAL:**
-```java
-// Objects can be on remote peers, called transparently
-Calculator calc = ...; // May be remote, code doesn't know or care
-int result = calc.add(2, 3);  // RPC happens transparently
+```bash
+# Invoke a method on a remote peer by name
+pal peer call calculator com.example.Calculator add 2 3
 
-// The message routes to the peer hosting Calculator
-ExecMessage {method: "add", args: [2, 3]} ──Network──► Peer B
+# Or with full control via JSON-RPC on stdin
+echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{
+  "type":"com.example.Calculator","method":"add",
+  "args":[{"type":"int","value":2},{"type":"int","value":3}]
+}}' | pal peer call calculator
+
+# PAL sends an ExecMessage to the target peer:
+# ExecMessage {method: "add", args: [2, 3]} ──Network──► Peer "calculator"
+# Target peer executes message, returns result
 ```
+
+The CLI is one way to make RPC calls. PAL also provides programmatic APIs at different levels of abstraction—see [Making RPC Calls](concepts/rpc.md#making-rpc-calls), [JsonRpcMessageFactory](concepts/rpc.md#jsonrpcmessagefactory), and the [RpcChain DSL](concepts/rpc-chain.md).
+
+RPC is explicit—you target a specific peer by name or UUID. There is no transparent location independence; you always know when a call crosses a network boundary.
 
 **Enables:**
 
-- **Transparent RPC:** Call remote methods as if local, no stubs or proxies
-- **Distributed systems:** Objects communicate across network boundaries
-- **Actor patterns:** Asynchronous messaging with normal objects
-- **Location transparency:** Objects can move between peers
+- **Cross-peer invocation:** Call any method on a remote peer by name—no service definitions or code generation required
+- **Intercept callbacks:** Intercepts on one peer can trigger callbacks on another, enabling cross-peer behavior modification
+- **Development and operational workflows:** Invoke methods, inspect state, and test behavior on running peers, programmatically or from the CLI
 
 ### Messages Can Be Intercepted
 
@@ -188,10 +205,10 @@ public int calculateDiscount(Order order) {
 }
 
 // But at runtime, register an intercept:
-InterceptRequest<InterceptableMethodCall> intercept =
+InterceptRequest<InterceptableMethodCall> discountOverride =
     new InterceptRequest<>(
         UUID.randomUUID(),
-        myCallbackPeer,
+        discountServicePeerUuid,
         InterceptType.AROUND,
         "com.example.OrderService",
         "com.example.DiscountOverride",
@@ -199,20 +216,38 @@ InterceptRequest<InterceptableMethodCall> intercept =
         new InterceptableMethodCall(
             "calculateDiscount", Arrays.asList("com.example.Order")));
 
+// The callback on the intercepting peer:
+public class DiscountOverride {
+    public static InterceptCallbackResponse applyNewDiscount(InterceptContext ctx) {
+        // Override the 10% discount with 20%
+        Order order = (Order) ctx.getArgs()[0];
+        ctx.setReturnValue(order.total() * 20 / 100);
+        return InterceptCallbackResponse.skipProceed();
+    }
+}
+
 // Now when calculateDiscount() is called:
-// 1. Message created: {method: "calculateDiscount", args: [order]}
-// 2. Intercept matched
-// 3. Callback peer invoked
-// 4. Callback can: inspect args, replace result, skip execution
+// 1. Intercept matched
+// 2. Callback peer invoked
+// 3. applyNewDiscount() skips original method, returns 20% discount
 ```
 
 **Enables:**
 
 - **Hot-patching production:** Fix bugs without restart or redeploy
 - **Testing without mocks:** Replace implementations dynamically
-- **A/B testing:** Route some requests to new implementation
+- **A/B testing:** Redirect some requests to a new implementation
 - **Feature flags:** Enable/disable features at message level
 - **Monitoring:** Observe every call without instrumentation
+
+Because intercept callbacks can mutate arguments, skip execution, or override return values, interception serves as a **general-purpose primitive**. Higher-level patterns like:
+
+- **routing:** e.g. dispatch calls to the right peer
+- **filtering:** e.g. reject calls based on arguments
+- **transformation:** e.g. rewrite arguments or return values
+- **caching:** e.g. return stored results without executing
+
+...just to name a few can all be built on top of it.
 
 ## The Architecture
 
@@ -220,7 +255,7 @@ InterceptRequest<InterceptableMethodCall> intercept =
 ┌───────────────────────────────────────────────────────────────┐
 │                     Your Application                          │
 │                                                               │
-│  OrderService.java    PaymentService.java    Account.java    │
+│  OrderService.java    PaymentService.java    Account.java     │
 │  (Normal Java code, no PAL dependencies)                      │
 └────────────────────────┬──────────────────────────────────────┘
                          │
@@ -230,21 +265,21 @@ InterceptRequest<InterceptableMethodCall> intercept =
 ┌───────────────────────────────────────────────────────────────┐
 │                      PAL Runtime                              │
 │                                                               │
-│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐ │
-│  │  Dispatch   │  │ Serialization│  │   Transport         │ │
-│  │             │  │              │  │                     │ │
-│  │ • Method    │  │ • Colfer     │  │ • ZeroMQ (RPC)     │ │
-│  │ • Field     │  │ • JSON-RPC   │  │ • Kafka (async)    │ │
-│  │ • Ctor      │  │              │  │ • Chronicle (local)│ │
-│  └─────────────┘  └──────────────┘  └─────────────────────┘ │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐   │
+│  │  Dispatch   │  │ Serialization│  │   Transport         │   │
+│  │             │  │              │  │                     │   │
+│  │ • Method    │  │ • Colfer     │  │ • ZeroMQ (RPC)      │   │
+│  │ • Field     │  │ • JSON-RPC   │  │ • Kafka (async)     │   │
+│  │ • Ctor      │  │              │  │ • Chronicle (local) │   │
+│  └─────────────┘  └──────────────┘  └─────────────────────┘   │
 │                                                               │
-│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐ │
-│  │Interception │  │   Logging    │  │   Directory         │ │
-│  │             │  │              │  │                     │ │
-│  │ • Pattern   │  │ • WAL write  │  │ • Peer registry    │ │
-│  │   matching  │  │ • WAL read   │  │   (etcd)           │ │
-│  │ • Callbacks │  │ • Replay     │  │ • Service discovery│ │
-│  └─────────────┘  └──────────────┘  └─────────────────────┘ │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐   │
+│  │Interception │  │   Logging    │  │   Directory         │   │
+│  │             │  │              │  │                     │   │
+│  │ • Pattern   │  │ • WAL write  │  │ • Peer registry     │   │
+│  │   matching  │  │ • WAL read   │  │   (etcd)            │   │
+│  │ • Callbacks │  │ • Replay     │  │ • Service discovery │   │
+│  └─────────────┘  └──────────────┘  └─────────────────────┘   │
 └───────────────────────────────────────────────────────────────┘
                          │
                          │
@@ -252,7 +287,7 @@ InterceptRequest<InterceptableMethodCall> intercept =
 ┌───────────────────────────────────────────────────────────────┐
 │                   Infrastructure                              │
 │                                                               │
-│  etcd (directory)    Kafka (logs)    Chronicle (local logs)  │
+│  etcd (directory)    Kafka (logs)    Chronicle (local logs)   │
 └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -289,18 +324,18 @@ A peer is a PAL runtime instance that executes your code.
 ┌─────────────────────────────────────┐
 │  Peer (process)                     │
 │                                     │
-│  UUID: 550e8400-e29b-41d4-a716-... │
+│  UUID: 550e8400-e29b-41d4-a716-...  │
 │  Name: "payment-service"            │
 │                                     │
-│  ┌───────────────────────────────┐ │
-│  │  Your Application             │ │
-│  │  PaymentService, OrderService │ │
-│  └───────────────────────────────┘ │
+│  ┌───────────────────────────────┐  │
+│  │  Your Application             │  │
+│  │  PaymentService, OrderService │  │
+│  └───────────────────────────────┘  │
 │                                     │
-│  ┌───────────────────────────────┐ │
-│  │  PAL Runtime                  │ │
-│  │  Message routing, logging     │ │
-│  └───────────────────────────────┘ │
+│  ┌───────────────────────────────┐  │
+│  │  PAL Runtime                  │  │
+│  │  Message dispatch, logging    │  │
+│  └───────────────────────────────┘  │
 └─────────────────────────────────────┘
 ```
 
@@ -317,25 +352,25 @@ Peers can:
 
 Logs are durable, ordered sequences of messages.
 
-**Kafka logs (distributed):**
-```
-Topic: order-service-wal
-├── Message 0: OrderService.create(order1)
-├── Message 1: OrderService.validate(order1)
-├── Message 2: PaymentService.charge(card, 100)
-├── Message 3: OrderService.confirm(order1)
-└── Message 4: NotificationService.send(email)
+**Two backends, same output—only the command differs:**
+```bash
+# Chronicle (local, no infrastructure)
+pal log print file:/tmp/hello-world.wal --tree
+
+# Kafka (distributed)
+pal log print -k localhost:29092 hello-world-wal --tree
 ```
 
-**Chronicle logs (local):**
 ```
-Path: /tmp/order-service-wal/
-├── 20231109.cq4     (memory-mapped file)
-│   └── Messages 0-1000000
-├── 20231109-01.cq4
-│   └── Messages 1000001-2000000
-└── metadata.cq4t
+[0] call HelloWorld.main
+  [1] get System.out
+  [2] return PrintStream@1 (out)
+  [3] call PrintStream.println@1
+  [4] return void
+[5] return void
 ```
+
+Other output formats are available (`--full`, `--json`). See [CLI Reference](cli-reference.md#pal-log-print-print-messages-from-a-log) for details.
 
 Logs enable:
 
@@ -372,8 +407,10 @@ palDirectory.createIntercept(intercept);
 **Intercept types:**
 
 - **BEFORE:** Callback runs before method, synchronously (blocks)
-- **AFTER:** Callback runs after method, asynchronously
+- **AFTER:** Callback runs after method, synchronously
 - **AROUND:** Callback can replace method entirely, return different result
+- **BEFORE_ASYNC:** Fire-and-forget BEFORE—callback is sent but execution proceeds without waiting for a response (cannot mutate arguments)
+- **AFTER_ASYNC:** Fire-and-forget AFTER—callback is sent but execution proceeds without waiting (cannot override return value)
 
 **Pattern matching:**
 
@@ -395,9 +432,8 @@ Messages must be serialized to be sent across network or written to logs.
 **JSON-RPC format:**
 
 - Human-readable
-- Interoperable (any language can call)
 - Debuggable (inspect with standard tools)
-- Best for external integrations
+- Best for tooling and external integrations
 
 Same operation, two formats:
 
@@ -445,10 +481,10 @@ public class Main {
 ./mvnw compile  # aspectj-maven-plugin configured
 
 # Run with PAL
-pal run --wal payment-log --json-rpc auto -cp app.jar Main
+pal run --wal payment-log --interceptable --json-rpc auto -cp app.jar Main
 
 # Now:
-# - Every method call is logged to payment-log
+# - Every method call is logged to a write-ahead log
 # - RPC is available (call from other peers)
 # - Interception is possible (hot-patch at runtime)
 # - But Main.java is unchanged
@@ -474,95 +510,26 @@ No framework coupling:
 import io.quasient.pal.*  // ✗ (in application code)
 ```
 
-## Comparison to Other Approaches
+### What Does Change
 
-### PAL vs Akka
+While your application source code remains unchanged, the build and compiled output do change:
 
-**Akka (explicit actors):**
-```java
-// Akka requires actor model
-class PaymentActor extends AbstractActor {
-    @Override
-    public Receive createReceive() {
-        return receiveBuilder()
-            .match(ChargeMessage.class, msg -> {
-                // Handle message explicitly
-            })
-            .build();
-    }
-}
+- **Build configuration**: Your Maven or Gradle build adds the AspectJ weaving plugin and declares `pal-weave` as an aspect library dependency
+- **Compiled `.class` files**: Woven bytecode contains PAL dispatch calls that depend on PAL's runtime aspects
+- **Reversibility**: Removing the weaving plugin and rebuilding produces standard Java classes that work without PAL
+- **Nature of the trade-off**: This is a build-time opt-in, not a source-code-level dependency. Your `.java` files never import PAL, but your `.class` files contain PAL's weaving
 
-// Send message explicitly
-paymentActor.tell(new ChargeMessage(card, amount), self());
-```
+## How PAL Relates to Other Technologies
 
-**PAL (transparent actors):**
-```java
-// Normal Java class
-class PaymentService {
-    public void charge(Card card, double amount) {
-        // Business logic
-    }
-}
+PAL builds on ideas from message-passing systems (Smalltalk, Erlang, Akka) but differs in approach: rather than requiring you to adopt a new programming model, PAL retrofits message-passing onto existing Java code via build-time weaving. This means you don't rewrite code to an actor model or define service contracts—but it also means your compiled `.class` files depend on PAL's runtime aspects, trading a build-time dependency for transparency and flexibility.
 
-// Call normally, messaging is transparent
-paymentService.charge(card, amount);
-// PAL converts this to message internally
-```
+PAL's RPC is not a replacement for purpose-built RPC frameworks like gRPC, which offer schema evolution, code generation, and strong typing. PAL's RPC serves a different purpose: it enables intercept callbacks between peers, supports development and debugging workflows, and provides operational tooling for PAL-managed applications.
 
-**Key difference:** Akka requires rewriting code to actor model. PAL works with normal objects.
-
-### PAL vs AspectJ Alone
-
-**AspectJ (requires aspects in application):**
-```java
-// Application must define aspects
-@Aspect
-public class LoggingAspect {
-    @Around("execution(* com.example.*.*(..))")
-    public Object logMethod(ProceedingJoinPoint pjp) {
-        // Logging logic in application code
-    }
-}
-```
-
-**PAL (aspects provided by runtime):**
-```java
-// Application just uses PAL runtime
-// No aspects in application code
-// PAL's aspects intercept everything
-```
-
-**Key difference:** AspectJ requires application to define aspects. PAL provides aspects as runtime service.
-
-### PAL vs gRPC/REST
-
-**gRPC (explicit service definitions):**
-```protobuf
-// Define service in .proto file
-service PaymentService {
-  rpc Charge (ChargeRequest) returns (ChargeResponse);
-}
-
-// Generate stubs
-// Implement server interface
-// Client uses generated stub
-```
-
-**PAL (no service definitions needed):**
-```java
-// Just normal Java class
-class PaymentService {
-    public void charge(Card card, double amount) { ... }
-}
-
-// Automatically available for RPC
-// No .proto, no generation, no stubs
-```
-
-**Key difference:** gRPC requires explicit service definitions and code generation. PAL discovers methods via reflection.
+PAL's interception system is more dynamic than traditional AspectJ usage. Where AspectJ aspects are typically defined in application code and woven at build time, PAL's intercepts are registered at runtime via a directory service and can be added or removed without recompilation.
 
 ## When to Use PAL
+
+All PAL features are off by default. Weaving is a build-time step, but at runtime nothing is enabled unless you explicitly turn it on: WAL logging, interception, publishing, and RPC are each independent flags. This means adopting PAL carries no runtime cost for features you don't use, and you can enable capabilities incrementally as you need them.
 
 **Use PAL when you want:**
 
@@ -575,32 +542,13 @@ class PaymentService {
 
 **Don't use PAL when:**
 
-- You need extreme performance (PAL adds overhead)
-- You're working with non-Java languages (PAL is Java-only)
-- Your application is small/simple (overhead not worth it)
 - You don't need any of PAL's capabilities
 
 ## Performance Considerations
 
-PAL adds overhead at each stage:
+**Performance characteristics** depend heavily on configuration (which features are enabled) and workload. PAL adds overhead at each dispatch point—the magnitude depends on whether WAL writing, PUB publishing, or intercept matching is active. With no features enabled (standalone mode), overhead is primarily the AspectJ dispatch cost. See the [JVM Configuration](guides/jvm-configuration.md) guide for tuning options. Benchmark results will be published separately.
 
-| Stage | Overhead | Impact |
-|-------|----------|--------|
-| Weaving (build time) | One-time | Slightly larger .class files |
-| Interception (runtime) | 10-50ns per call | Negligible for most apps |
-| Message creation | 100-500ns per call | Noticeable for hot loops |
-| Serialization (Colfer) | 1-10μs | Acceptable for RPC |
-| Serialization (JSON) | 50-200μs | Use for external clients only |
-| Kafka write | 1-10ms (async batched) | Don't use in critical path |
-| Chronicle write | 100ns-1μs | Fast enough for most logging |
-| RPC (ZeroMQ) | 10-100μs (local network) | Similar to gRPC |
-
-**General guidance:**
-
-- For CPU-bound tight loops: Consider selective weaving (don't intercept math operations)
-- For I/O-bound services: PAL overhead is negligible compared to I/O
-- For RPC: Performance similar to gRPC or Thrift
-- For logging: Chronicle is fast enough for most use cases
+For a detailed discussion of overhead sources and mitigation strategies, see [Trade-offs and Limitations](concepts/trade-offs.md).
 
 ## Next Steps
 

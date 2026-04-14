@@ -2,6 +2,8 @@
 
 This guide walks you through building a distributed calculator service with PAL, demonstrating RPC, service discovery, and distributed logging.
 
+> This guide demonstrates PAL's RPC capabilities for building connected services. PAL's RPC is useful for development, testing, debugging, and operational scenarios where dynamic method invocation between peers is valuable. For production inter-service communication at scale, consider using purpose-built RPC frameworks (gRPC, etc.) alongside PAL—PAL's interception and logging capabilities complement these frameworks.
+
 ## What We'll Build
 
 A simple distributed system with:
@@ -426,7 +428,7 @@ infra/bin/stop-etcd-and-kafka-docker.sh
 ## Key Takeaways
 
 1. **Service Discovery**: etcd directory enables peers to find each other by name
-2. **RPC**: Call remote methods transparently, PAL handles serialization/transport
+2. **RPC**: Invoke remote methods dynamically, useful for development and operational workflows
 3. **Logging**: All operations captured in Kafka for replay/audit
 4. **Interception**: Monitor can observe operations without modifying calculator code
 5. **Scaling**: Start multiple instances, each with its own log

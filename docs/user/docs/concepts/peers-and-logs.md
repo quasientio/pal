@@ -47,6 +47,18 @@ Logs enable:
 - **Pub/Sub**: Multiple peers read the same log
 - **Recovery**: Restart from last checkpoint
 
+### WAL as Integration Point
+
+When backed by Kafka, the WAL is a standard Kafka topic. This means PAL's operation stream integrates with the Kafka ecosystem: Kafka Streams, ksqlDB, Kafka Connect, and any Kafka consumer can process the WAL for purposes PAL doesn't need to handle directly—analytics, caching, search indexing, custom monitoring dashboards, data lake ingestion, etc. The WAL is not a closed system; it's an open data stream in a widely-adopted format.
+
+### WAL Use Cases Beyond Replay
+
+- **Auditing and compliance**: The WAL is a complete record of operations executed by a peer. For regulated environments, this provides an audit trail without manual logging.
+- **Debugging**: `pal log print` with various filters lets you inspect what happened in a running system after the fact, without having added debug logging beforehand.
+- **Analytics via Kafka ecosystem**: When using Kafka-backed WALs, the operation stream is available to Kafka Streams, ksqlDB, Kafka Connect, and any Kafka consumer for downstream processing—search indexing, analytics, anomaly detection, etc.
+- **Caching and derived state**: Kafka consumers can build materialized views or caches from the operation stream.
+- **Cross-system integration**: WAL messages can be consumed by non-Java systems via Kafka, enabling integration without PAL's runtime.
+
 ### Log Types
 
 PAL supports two log backends:

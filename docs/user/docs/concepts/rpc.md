@@ -1,8 +1,10 @@
 # Remote Procedure Calls (RPC)
 
-PAL's RPC system lets you call methods on remote peers as if they were local. No network code, no serialization logic - just normal method calls.
+PAL's RPC system enables method invocation across peers, primarily supporting intercept callbacks, development workflows, testing, and operational tooling.
 
 ## How RPC Works
+
+> **Positioning:** PAL's RPC system is infrastructure that supports PAL's core capabilities—intercept callbacks, development workflows, testing, debugging, and operational tooling. It provides flexible, dynamic method invocation between peers without requiring service definitions or code generation. For production inter-service communication requiring type safety, schema evolution, and high-throughput optimization, purpose-built RPC frameworks (gRPC, Thrift, etc.) are more appropriate. PAL's RPC is complementary to these frameworks, not a replacement.
 
 When your code calls a method, PAL:
 
@@ -437,6 +439,22 @@ Use JSON-RPC for arbitrary signatures.
 Complex objects must be serializable. Primitives, Strings, and arrays work automatically.
 
 For custom objects, PAL creates ObjectRefs (UUIDs) instead of copying data.
+
+### Reflection-Based Dispatch
+
+PAL's RPC uses reflection to invoke methods on the target peer. There is no compile-time type checking of remote calls—if a method signature is wrong, the error occurs at runtime, not at compile time.
+
+### No Schema Evolution
+
+If a method signature changes (parameters added, types changed, method renamed), all callers must be updated manually. There is no schema versioning, compatibility checking, or migration tooling like what gRPC's `.proto` files or Thrift's IDL provide.
+
+### No Built-In Resilience Patterns
+
+PAL's RPC does not include retry logic, circuit breaking, or load balancing. These are application-layer concerns. The "Load Balancing" note in Common Patterns above is honest: currently there is no automatic load balancing—the client gets the first match. If you need these patterns, use a purpose-built RPC framework or implement them in your application code.
+
+### Complex Object Transfer
+
+Only simple types (primitives, strings, arrays of these) are fully serialized across peers. Complex objects become ObjectRefs—peer-local UUID references that are not transferable between peers. This means you cannot pass a complex domain object to a remote peer and have it reconstructed there; the remote peer gets a reference that is only meaningful on the originating peer.
 
 ## JSON-RPC API Reference
 

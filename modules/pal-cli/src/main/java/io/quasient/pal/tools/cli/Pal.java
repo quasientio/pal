@@ -41,7 +41,7 @@ import picocli.CommandLine.Spec;
 @Command(
     name = "pal",
     customSynopsis = "pal [OPTIONS] COMMAND",
-    description = "%nThe friendly java runtime",
+    description = "%nThe message-passing runtime for Java",
     separator = " ",
     mixinStandardHelpOptions = true,
     optionListHeading = "%nOptions:%n",

@@ -2,6 +2,8 @@
 
 Interception lets you insert callbacks before, after, or around any method call at runtime - without changing code or recompiling.
 
+> **Scope:** Interception applies to classes compiled with PAL's AspectJ weaving. It provides dynamic, runtime-registered callbacks—not static AOP aspects defined in your application code. Interception is powerful for testing, debugging, hot-patching, and monitoring, but it is not a general-purpose AOP framework or a replacement for compile-time design patterns. For trade-offs and constraints, see [Trade-offs and Limitations](trade-offs.md) and the [Limitations](#limitations) section below.
+
 ## What is Interception?
 
 Imagine you want to know every time a method is called in a running application:
@@ -32,7 +34,7 @@ Callback executes **before** the method, synchronously:
 ```java
 InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
     UUID.randomUUID(),
-    myPeerUuid,
+    callbackPeerUuid,
     InterceptType.BEFORE,
     "com.example.Calculator",
     "com.example.CalculatorCallback",
@@ -56,7 +58,7 @@ Callback executes **after** the method completes, synchronously:
 ```java
 InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
     UUID.randomUUID(),
-    myPeerUuid,
+    callbackPeerUuid,
     InterceptType.AFTER,
     "com.example.Calculator",
     "com.example.CalculatorCallback",
@@ -80,7 +82,7 @@ Callback **wraps** the method execution with before/after logic. Call `ctx.proce
 ```java
 InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
     UUID.randomUUID(),
-    myPeerUuid,
+    callbackPeerUuid,
     InterceptType.AROUND,
     "com.example.Calculator",
     "com.example.CalculatorCallback",
@@ -110,7 +112,7 @@ Fire-and-forget callbacks that don't block execution:
 ```java
 InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
     UUID.randomUUID(),
-    myPeerUuid,
+    callbackPeerUuid,
     InterceptType.BEFORE_ASYNC,  // or AFTER_ASYNC
     "com.example.Service",
     "com.example.ServiceCallback",
@@ -302,7 +304,7 @@ PalDirectory directory = new PalDirectory("localhost:2379");
 // 2. Create intercept request
 InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
     UUID.randomUUID(),
-    myCallbackPeerUuid,
+    callbackPeerUuid,
     InterceptType.BEFORE,
     "com.example.Service",
     "com.example.ServiceCallback",
@@ -352,25 +354,16 @@ Matches all classes in `com.example` and subpackages, all methods (any parameter
 ### Setup Callback Peer
 
 ```java
-// 1. Start peer with RPC
-public class CallbackPeer {
-    public static void main(String[] args) {
-        // Your peer will receive callback messages
-        System.out.println("Callback peer ready");
-
-        // Keep running
-        Thread.sleep(Long.MAX_VALUE);
-    }
-
-    // Callback methods get invoked automatically
-    public void handleCallback(ExecMessage msg) {
-        System.out.println("Method called: " + msg.getMethod());
-        System.out.println("Arguments: " + Arrays.toString(msg.getArgs()));
+// Callback methods must be public static, accept InterceptContext, return InterceptCallbackResponse
+public class CalculatorCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
+        System.out.println("Method called: " + ctx.getArgs());
+        return new InterceptCallbackResponse();
     }
 }
 ```
 
-Run it:
+Run the callback peer:
 ```bash
 pal run -d localhost:2379 --json-rpc auto -n callback-peer \
   -cp callback.jar com.example.CallbackPeer
@@ -378,24 +371,17 @@ pal run -d localhost:2379 --json-rpc auto -n callback-peer \
 
 ### Processing Callbacks
 
-When a matched method is called, your callback peer receives an `ExecMessage` with:
+When a matched method is called, your callback peer receives an `InterceptContext` providing:
 
-- `sourceClass`: Class name (e.g., "com.example.Calculator")
-- `method`: Method name (e.g., "add")
-- `args`: Arguments array
-- `sourcePeer`: UUID of peer that called the method
-- `timestamp`: When it was called
+- `getArgs()`: Arguments array
+- `setArg(index, value)`: Mutate an argument (BEFORE, AROUND before proceed)
+- `getReturnValue()`: Return value (AFTER, AROUND after proceed)
+- `setReturnValue(value)`: Override return value (AFTER, AROUND after proceed)
+- `proceed()`: Execute the method or next layer in the chain (AROUND only), returns `ProceedResult`
 
-**BEFORE callbacks** also let you:
+The context is phase-aware — calling unsupported operations (e.g., `getReturnValue()` in BEFORE) throws `InterceptTypeNotSupportedException`.
 
-- Inspect arguments before execution
-- Skip execution (AROUND type)
-- Modify behavior
-
-**AFTER callbacks** also include:
-
-- `returnValue`: What the method returned
-- `exception`: If an exception was thrown
+See [Writing Callback Handlers](../guides/writing-callback-handlers.md) for the full API.
 
 ## Common Use Cases
 
@@ -424,11 +410,9 @@ public void testServiceCalledWithCorrectArgs() {
     // 4. Trigger application behavior
     app.doSomething();
 
-    // 5. Verify callback was received
-    List<ExecMessage> callbacks = getReceivedCallbacks();
-    assertEquals(1, callbacks.size());
-    assertEquals("processRequest", callbacks.get(0).getMethod());
-    assertArrayEquals(expectedArgs, callbacks.get(0).getArgs());
+    // 5. Verify callback was received (your callback stores calls for assertion)
+    assertEquals(1, ServiceCallback.getCalls().size());
+    assertArrayEquals(expectedArgs, ServiceCallback.getCalls().get(0));
 }
 ```
 
@@ -455,16 +439,22 @@ InterceptRequest<InterceptableMethodCall> afterIntercept = new InterceptRequest<
     new InterceptableMethodCall("*", Collections.emptyList()));
 
 // In monitor peer:
-Map<String, Long> startTimes = new ConcurrentHashMap<>();
+public class MonitorCallback {
+    private static final Map<String, Long> startTimes = new ConcurrentHashMap<>();
 
-public void handleBeforeCallback(ExecMessage msg) {
-    startTimes.put(msg.getId(), System.nanoTime());
-}
+    public static InterceptCallbackResponse handleBeforeCallback(InterceptContext ctx) {
+        startTimes.put(Thread.currentThread().getName(), System.nanoTime());
+        return new InterceptCallbackResponse();
+    }
 
-public void handleAfterCallback(ExecMessage msg) {
-    long startTime = startTimes.remove(msg.getId());
-    long duration = System.nanoTime() - startTime;
-    System.out.println(msg.getMethod() + " took " + (duration / 1_000_000) + "ms");
+    public static InterceptCallbackResponse handleAfterCallback(InterceptContext ctx) {
+        Long startTime = startTimes.remove(Thread.currentThread().getName());
+        if (startTime != null) {
+            long duration = System.nanoTime() - startTime;
+            System.out.println("Call took " + (duration / 1_000_000) + "ms");
+        }
+        return new InterceptCallbackResponse();
+    }
 }
 ```
 
@@ -482,11 +472,11 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
     new InterceptableMethodCall("*", Collections.emptyList()));
 
 // In audit peer:
-public void handleCallback(ExecMessage msg) {
-    log.info("Called: {}.{}({})",
-        msg.getSourceClass(),
-        msg.getMethod(),
-        Arrays.toString(msg.getArgs()));
+public class AuditCallback {
+    public static InterceptCallbackResponse handleCallback(InterceptContext ctx) {
+        log.info("Intercepted call with args: {}", Arrays.toString(ctx.getArgs()));
+        return new InterceptCallbackResponse();
+    }
 }
 ```
 
@@ -504,9 +494,12 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
     new InterceptableMethodCall("queryDatabase", Collections.emptyList()));
 
 // In mock peer:
-public Object handleAroundCallback(ExecMessage msg) {
-    // Return mock data instead of hitting database
-    return mockData;
+public class MockCallback {
+    public static InterceptCallbackResponse handleAroundCallback(InterceptContext ctx) {
+        // Return mock data instead of hitting database
+        ctx.setReturnValue(mockData);
+        return InterceptCallbackResponse.skipProceed();
+    }
 }
 ```
 
@@ -1232,6 +1225,14 @@ Uses ant-style patterns, not regex:
 - `*` matches one level
 - `**` matches multiple levels
 - No regex features like `(a|b)` or `[0-9]`
+
+### No Type Hierarchy Matching
+
+Intercept class pattern matching is by exact class name or Ant-style wildcard; it does not follow Java inheritance. Intercepting `Animal` does not intercept calls on `Dog extends Animal` unless `Dog` also matches the pattern. If you need to intercept all subclasses, use a wildcard pattern that covers them (e.g., `com.example.animals.*`).
+
+### Serialization Constraints
+
+Callback argument and return value serialization is limited to simple types (primitives, strings, arrays of these). Complex objects are serialized by value, which may not preserve all state—particularly objects with transient fields, circular references, or non-serializable components.
 
 ## Security Considerations
 

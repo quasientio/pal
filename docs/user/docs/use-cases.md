@@ -144,6 +144,8 @@ palDirectory.createIntercept(intercept);
 
 Then deploy the proper fix during the next maintenance window.
 
+> **Important context:** Hot-patching via intercepts is a targeted incident response tool for bridging the gap until a proper fix is deployed. It is not a substitute for proper deployment pipelines. In-flight tracking ensures safe activation—see the [Interception](concepts/interception.md) documentation for details.
+
 ### Scenario: Incident Response
 
 **Challenge:** Critical bug causing revenue loss, but root cause unclear.
@@ -199,7 +201,7 @@ public List<Product> handleIntercept(Context ctx) {
 }
 ```
 
-**No feature flags, no if-statements in production code. Pure message-level routing.**
+**No feature flags, no if-statements in production code. Pure interception.**
 
 ## For Architects: Event Sourcing & Distributed Systems
 
@@ -283,7 +285,7 @@ PAL handles:
 - Message logging (all operations in WAL)
 - Replay (reconstruct state from logs)
 
-**No REST, no HTTP, no explicit RPC code.**
+PAL can invoke methods on remote peers via direct RPC, which is useful for prototyping and development. Production distributed systems need proper error handling, retry logic, and service contracts that purpose-built RPC frameworks provide. PAL can complement these, not replace them.
 
 ### Scenario: Actor-Based System
 
@@ -321,14 +323,14 @@ class OrderService {
 orderService.processOrder(order);
 ```
 
-**PAL converts this to asynchronous message** if configured:
+PAL converts this to a message that can be logged and intercepted:
 
 ```bash
 # Run with message-based dispatch
 pal run --wal order-wal --json-rpc auto -cp app.jar OrderService
 ```
 
-Now `orderService.processOrder(order)` executes asynchronously via message passing, but code looks synchronous.
+> **Note:** PAL's dispatch is synchronous on the hot path. The message-passing layer does not make calls asynchronous by default. This scenario illustrates the conceptual similarity to actor patterns—operations are reified as messages that can be logged and intercepted—not actual asynchronous execution as in Akka's actor model.
 
 ## For Security Teams: Audit & Compliance
 
@@ -416,7 +418,7 @@ pal log print perf-log --full
 # which can be used to identify bottlenecks
 ```
 
-**Automatic performance profiling with zero instrumentation.**
+**WAL inspection for execution analysis** — the WAL captures operations which can be analyzed offline. This is not a profiler but provides execution traces without manual logging in your application code.
 
 ### Scenario: Slow Request Investigation
 
@@ -551,9 +553,9 @@ pal run --source-log prod-log -cp app.jar
 | Role | Primary Use Case | Key Benefit |
 |------|------------------|-------------|
 | **Developer** | Testing without mocks | Test real code, faster to write |
-| **SRE** | Production hot-patching | Fix bugs in 60 seconds, zero downtime |
-| **Architect** | Event sourcing & distributed systems | Automatic event capture, transparent RPC |
-| **Security** | Audit & compliance | Complete audit trail, zero instrumentation |
+| **SRE** | Production hot-patching | Targeted incident response via runtime intercepts |
+| **Architect** | Event sourcing & distributed systems | Automatic event capture, cross-peer method invocation |
+| **Security** | Audit & compliance | Complete audit trail, without manual instrumentation in application code |
 | **Performance Engineer** | Profiling & optimization | Automatic timing, production profiling |
 | **QA** | Regression testing | Test with real traffic, not manual cases |
 

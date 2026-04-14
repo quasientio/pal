@@ -4,7 +4,7 @@
 
 ## The Core Insight
 
-PAL converts every Java operation into a message.
+PAL instruments every Java operation at build time. At runtime, instrumented operations become messages when you enable logging, interception, or publishing.
 
 ```
 Your Code              PAL Runtime                Messages
@@ -17,41 +17,47 @@ calculator.add(2, 3)   ──────────►   ExecMessage {
                                               │
                        ┌──────────────────────┼──────────────────────┐
                        ▼                      ▼                      ▼
-                    LOGGED                 ROUTED              INTERCEPTED
-                 (write-ahead log)    (remote peers)      (modify behavior)
+                    LOGGED                 REPLAYED             INTERCEPTED
+                 (write-ahead log)   (deterministic replay)  (modify behavior)
                        │                      │                      │
                        ▼                      ▼                      ▼
-                  Time-travel           Distributed              Hot-patch
-                   debugging              systems               production
+                  Time-travel           Reproduce any           Hot-patch
+                   debugging              execution             production
 ```
 
-Method calls, field access, and constructors become discrete, serializable messages. Because operations are messages, they can be logged, routed, intercepted, and replayed.
+Method calls, field access, and constructors are instrumented at build time, and become discrete, serializable messages at runtime based on your configuration. Because operations can become messages, they can be logged, intercepted, and replayed.
 
-This single abstraction enables capabilities that are impossible with standard JVMs.
+PAL is a post-compile weaving layer and runtime that adds message-passing semantics to Java operations. Method calls, field access, and constructors are instrumented at build time via AspectJ. At runtime, when logging, interception, or publishing is enabled, these instrumented operations become messages that can be logged to a write-ahead log, replayed for deterministic debugging, or intercepted by dynamic callbacks—without modifying your application source code.
+
+The idea of reifying operations as messages has a long heritage: Smalltalk (1970s), Erlang/OTP, Akka, and others have built on this principle. PAL's contribution is applying it to existing Java code through bytecode weaving, enabling capabilities like write-ahead logging, deterministic replay, dynamic interception, and cross-peer invocation as runtime options rather than architectural commitments. All features are off by default—you enable only what you need, and pay no runtime cost for features you don't use.
+
+This single abstraction enables capabilities that are not available in standard JVMs.
 
 ## One Abstraction, Many Capabilities
 
-PAL doesn't have separate features for testing, distributed systems, and production debugging. Instead, it provides one primitive: **operations as messages**. The capabilities emerge naturally:
+PAL's capabilities share a common foundation: operations represented as messages. Because method calls, field access, and constructors are instrumented, they can become messages that are logged, intercepted, and replayed—each unlocking a different set of capabilities:
 
-**Because messages can be logged:**
+**Logged:**
 
 - Time-travel debugging (replay any execution)
 - Audit trails (observe every operation)
 - Event sourcing (automatic, transparent)
 
-**Because messages can be routed:**
+**Replayed:**
 
-- Remote procedure calls (transparent RPC without code changes)
-- Distributed systems (objects communicate across network)
-- Actor patterns (asynchronous messaging with normal objects)
+- Deterministic debugging (reproduce any execution exactly)
+- Root cause analysis (step through the exact sequence that led to a failure)
+- State reconstruction (rebuild state from the operation log)
 
-**Because messages can be intercepted:**
+**Intercepted:**
 
 - Hot-patching production (modify behavior at runtime)
 - Testing without mocks (replace implementations dynamically)
 - Monitoring (observe calls as they happen)
 
-All without changing your code. No annotations, no interfaces, no framework lock-in.
+Because intercept callbacks can mutate arguments, skip execution, or override return values, higher-level patterns like routing, filtering, transformation, and caching follow naturally from this mechanism.
+
+Without modifying your application source code (AspectJ weaving is configured at build time). No annotations, no interfaces in your source files.
 
 ## What You Can Do
 
@@ -63,15 +69,9 @@ All without changing your code. No annotations, no interfaces, no framework lock
 
 ### Production
 
-- Hot-patch bugs in 60 seconds (intercept and replace behavior without restart)
+- Hot-patch bugs in 60 seconds (via runtime intercepts, as a targeted incident response measure until a proper fix is deployed)
 - Audit every operation (messages provide compliance trail)
 - Trace requests across distributed systems (messages carry context)
-
-### Architecture
-
-- Event-source your application automatically (every operation is logged)
-- Implement actor patterns with normal objects (messages enable asynchronous communication)
-- Route operations across network boundaries (transparent RPC)
 
 ## Quick Start
 
@@ -79,9 +79,9 @@ All without changing your code. No annotations, no interfaces, no framework lock
 
 ```bash
 # Clone and build
-git clone https://github.io/quasientinc/pal.git
+git clone https://github.com/quasientio/pal.git
 cd pal
-./mvnw install -DskipITs
+./mvnw install -DskipTests
 
 # Add to PATH
 export PATH="$(pwd)/bin:$PATH"
@@ -92,28 +92,32 @@ pal help
 
 See [Getting Started](getting-started.md) for detailed installation.
 
+The distributed examples below assume the following environment variable:
+
+```bash
+export PAL_DIRECTORY=localhost:2379
+```
+
+and infrastructure containers started (see [Start/Stop Infrastructure](getting-started.md#startstop-infrastructure)).
+
 ### 2. Run Your First Peer
 
 ```bash
 # Simple local peer with Chronicle Queue
-pal run --wal file:/tmp/my-wal --json-rpc auto \
-  -cp myapp.jar com.example.Main
+pal run --wal file:/tmp/my-wal -cp myapp.jar com.example.Main
 
 # Distributed peer with Kafka
-pal run -d localhost:2379 -k localhost:29092 \
-  --wal my-wal --json-rpc auto \
-  -cp myapp.jar com.example.Main
+pal run --wal my-wal -k localhost:29092 -cp myapp.jar com.example.Main
 ```
 
 ### 3. Call a Remote Method
 
 ```bash
 # List running peers
-pal peer ls -d localhost:2379
+pal peers
 
 # Call a method
-pal peer call -d localhost:2379 peer-uuid \
-  com.example.Calculator add 5 3
+pal peer call peer-uuid com.example.Calculator add 5 3
 ```
 
 ## Core Concepts
@@ -123,8 +127,10 @@ pal peer call -d localhost:2379 peer-uuid \
 Peers are PAL runtime instances that execute your code. Each peer:
 
 - Has a unique ID and optional name
+- Can have its operations intercepted by dynamic callbacks
+- Can register intercepts that target other peers' operations
+- Can read from and write to [logs](concepts/peers-and-logs.md#what-is-a-log) (durable message streams backed by Kafka or Chronicle Queue)
 - Can send and receive RPC calls
-- Can read from and write to logs
 - Registers in a directory (etcd) for discovery
 
 Learn more: [Peers and Logs](concepts/peers-and-logs.md)
@@ -134,7 +140,7 @@ Learn more: [Peers and Logs](concepts/peers-and-logs.md)
 PAL converts method calls into messages that can be:
 
 - Sent to remote peers (RPC)
-- Written to logs for replay
+- Written to [logs](concepts/peers-and-logs.md#what-is-a-log) for replay
 - Intercepted for testing/monitoring
 
 Two formats: Binary (fast) and JSON (interoperable)
@@ -181,8 +187,7 @@ Learn more: [Interception](concepts/interception.md)
 
 ```bash
 # Run with Chronicle (no infrastructure needed)
-pal run --wal file:/tmp/dev-log --json-rpc auto \
-  -cp target/classes com.example.Dev
+pal run --wal file:/tmp/dev-log -cp target/classes com.example.Dev
 
 # Test with interception
 # Register intercepts to verify method calls
@@ -194,13 +199,10 @@ Guide: [Local Development](guides/local-development.md)
 
 ```bash
 # Peer A: Service provider
-pal run -d etcd:2379 -k kafka:9092 \
-  --wal service-wal --json-rpc auto -n my-service \
-  -cp service.jar com.example.Service
+pal run --wal service-wal --json-rpc 7767 -n my-service -cp service.jar com.example.Service
 
 # Peer B: Client
-pal peer call -d etcd:2379 my-service \
-  com.example.Service processRequest data
+pal peer call my-service com.example.Service processRequest data
 ```
 
 Guide: [Distributed Application](guides/distributed-application.md)
@@ -221,11 +223,11 @@ Guide: [Testing with Interception](guides/testing-with-interception.md)
 
 | Command | Purpose |
 |---------|---------|
+| `pal init` | Initialize a project for PAL (scaffold or patch existing) |
 | `pal run` | Start a peer and run application code |
 | `pal peer` | Manage peers (ls, call, print, rm, stats) |
 | `pal log` | Manage logs (ls, call, print, rm, index, stats) |
 | `pal intercept` | Manage intercepts (ls) |
-| `pal run` | Start a peer and run application code |
 | `pal replay` | Replay application and verify against recorded WAL |
 
 See [CLI Reference](cli-reference.md) for complete documentation.
@@ -236,19 +238,13 @@ See [CLI Reference](cli-reference.md) for complete documentation.
 
 ```bash
 # Run with WAL
-pal run --wal file:/tmp/execution-log \
-  -cp app.jar com.example.Main arg1 arg2
-
-# Replay and verify execution against the WAL
-pal replay --wal file:/tmp/execution-log \
-  -cp app.jar com.example.Main arg1 arg2
-
-# Or replay individual operations from the WAL
-pal run --source-log file:/tmp/execution-log \
-  -cp app.jar
+pal run --wal file:/tmp/execution-log -cp app.jar com.example.Main arg1 arg2
 
 # Print to see what happened
 pal log print file:/tmp/execution-log --full
+
+# Replay and verify execution against the WAL
+pal replay --wal file:/tmp/execution-log -cp app.jar com.example.Main arg1 arg2
 ```
 
 Guide: [Deterministic Replay](guides/deterministic-replay.md)
@@ -257,24 +253,17 @@ Guide: [Deterministic Replay](guides/deterministic-replay.md)
 
 ```bash
 # Terminal 1: Start service peer
-pal run -d localhost:2379 -k localhost:29092 \
-  --wal service-wal --json-rpc auto -n calculator \
-  -cp calc.jar com.example.Calculator
+pal run --wal service-wal --json-rpc 7767 -n calculator -cp calc.jar com.example.Calculator
 
 # Terminal 2: Call service
-pal peer call -d localhost:2379 calculator \
-  com.example.Calculator add 10 20
-
-# Result: 30
+pal peer call calculator com.example.Calculator add 10 20
 ```
 
 ### Monitor Method Calls
 
 ```bash
 # Start peer with interception enabled
-pal run -d localhost:2379 --interceptable \
-  --json-rpc auto -n monitored-app \
-  -cp app.jar com.example.App
+pal run --interceptable -n monitored-app -cp app.jar com.example.App
 
 # From monitoring code, register intercepts
 # Get callbacks for every method call
@@ -292,9 +281,9 @@ pal run -d localhost:2379 --interceptable \
 - **Java**: JDK 17 or later
 - **Build**: Maven 3.x
 - **Infrastructure** (for distributed mode):
-  - etcd 3.x (directory service)
-  - Kafka 3.x (distributed logs)
-  - Docker (for local etcd/Kafka)
+    - etcd 3.x (directory service)
+    - Kafka 3.x (distributed logs)
+    - Docker (for local etcd/Kafka)
 
 ## Next Steps
 

@@ -172,6 +172,17 @@ kafka-console-consumer.sh --bootstrap-server localhost:29092 \
 - ✅ Integrating with Kafka ecosystem
 - ✅ Running in production
 
+## Kafka WAL as an Integration Surface
+
+Because Kafka-backed WALs are standard Kafka topics, they participate in the Kafka ecosystem. You can use Kafka Streams to build real-time processors over the operation stream, Kafka Connect to sink operations to databases or search engines, or any Kafka consumer to build custom tooling. This makes the WAL useful beyond PAL's built-in features—it's an open integration surface for your operations data.
+
+Example use cases:
+
+- **Kafka Streams**: Real-time aggregation or transformation of the operation stream
+- **Kafka Connect**: Sink operations to Elasticsearch for full-text search, to a database for analytics, or to S3 for archival
+- **Custom consumers**: Build monitoring dashboards, anomaly detection, or compliance reporting on top of the operation stream
+- **ksqlDB**: Run SQL queries over the live operation stream for ad-hoc analysis
+
 ## Mixed Scenarios
 
 ### Develop with Chronicle, Deploy with Kafka

@@ -4,9 +4,9 @@
 <h1>PAL - Message-Passing Runtime for Java</h1>
 </p>
 
-## Every Operation Becomes a Message
+## Every Operation Is Instrumented
 
-PAL converts Java operations into messages. Method calls, field access, and constructors become discrete, serializable messages that can be logged, routed, intercepted, and replayed.
+PAL instruments every Java operation at build time. At runtime, instrumented operations become messages when you enable logging, interception, or publishing—and only for operations within your configured recording scope.
 
 ```java
 // Your code
@@ -21,7 +21,7 @@ ExecMessage msg = {
 };
 ```
 
-This single transformation enables capabilities that are impossible with standard JVMs.
+This single transformation enables capabilities that are not available in standard JVMs. All features are off by default—you enable only what you need, and pay no runtime cost for features you don't use.
 
 ## What You Can Do
 
@@ -36,11 +36,10 @@ This single transformation enables capabilities that are impossible with standar
 - Trace requests across distributed systems (messages carry context)
 
 **Architecture:**
-- Event-source your application automatically (every operation is logged)
-- Implement actor patterns with normal objects (messages enable asynchronous communication)
-- Route operations across network boundaries (transparent RPC)
+- Event-source your application automatically (for operations within recording scope)
+- Invoke methods on remote peers (cross-peer RPC via ZMQ or JSON-RPC)
 
-All without changing your code. No annotations, no interfaces, no framework lock-in.
+Without modifying your application source code (AspectJ weaving is configured at build time). No annotations, no interfaces in your source files.
 
 ## How It Works
 
@@ -52,25 +51,25 @@ All without changing your code. No annotations, no interfaces, no framework lock
                   │
                   ▼
 ┌─────────────────────────────────────────────────────┐
-│  PAL Runtime (AspectJ weaving at build time)        │
-│  Converts: operation → ExecMessage                  │
+│  PAL (AspectJ instrumentation at build time)        │
+│  Dispatch: operation → ExecMessage (when enabled)   │
 └─────────────────┬───────────────────────────────────┘
                   │
         ┌─────────┴─────────┬─────────────┐
         ▼                   ▼             ▼
   ┌──────────┐        ┌──────────┐  ┌──────────┐
-  │   LOG    │        │   ROUTE  │  │ INTERCEPT│
-  │  (WAL)   │        │  (RPC)   │  │ (modify) │
+  │   LOG    │        │  REPLAY  │  │ INTERCEPT│
+  │  (WAL)   │        │ (verify) │  │ (modify) │
   └──────────┘        └──────────┘  └──────────┘
        │                   │              │
        ▼                   ▼              ▼
-  Replay/Debug      Distributed      Hot-patch
-                      Systems        Production
+  Audit/Debug       Deterministic    Hot-patch
+                       replay        Production
 ```
 
-Because operations are messages, they can be:
+Because operations are instrumented, they can be:
 - **Logged** → Write-ahead log for replay and debugging
-- **Routed** → RPC across peers without code changes
+- **Replayed** → Deterministic reproduction of any execution
 - **Intercepted** → Dynamic behavior modification at runtime
 - **Inspected** → Real-time observability of execution
 
@@ -150,19 +149,23 @@ pal run --wal file:/tmp/my-wal -cp target/my-app.jar com.example.Main
 
 **Interception:** Dynamic registration of callbacks that execute before, after, or around operations. Enables hot-patching production code.
 
-**RPC:** Transparent remote procedure calls. Objects on remote peers are invoked as if local.
+**RPC:** Methods on remote peers can be invoked programmatically, supporting intercept callbacks, development workflows, and operational tooling.
 
 ## One Abstraction, Many Capabilities
 
 PAL doesn't have separate features for testing, production debugging, and event sourcing. Instead, it provides one primitive: **operations as messages**.
 
-Because operations are messages, they can be logged (enabling time-travel debugging), routed (enabling distributed systems), and intercepted (enabling hot-patching). These capabilities emerge naturally from the abstraction.
+Because operations are messages, they can be logged (enabling time-travel debugging), intercepted (enabling hot-patching and patterns like routing, filtering, and caching), and replayed (enabling deterministic debugging). These capabilities follow from the abstraction.
+
+### Prior Art & Motivation
+
+The idea of reifying operations as messages has deep roots: Smalltalk, Erlang/OTP, Akka, and others. PAL applies this principle to existing Java code through build-time bytecode weaving, enabling message-passing capabilities as runtime options rather than architectural commitments.
 
 ## Architecture
 
 PAL consists of:
 - **pal-weave:** AspectJ aspects that intercept operations at build time
-- **pal-runtime:** Message creation, routing, logging, and interception at runtime
+- **pal-runtime:** Message creation, dispatch, logging, and interception at runtime
 - **pal-api:** Core types, interfaces, common utilities, and message serialization (Colfer/JSON-RPC)
 - **pal-client:** Directory service (etcd), RPC clients with fluent DSL, and peer management
 - **pal-cli:** Command-line interface for running peers and inspecting logs
