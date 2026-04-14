@@ -278,7 +278,9 @@ public final class InitWizard {
     if (overrides.getArtifactId() != null) {
       artifactId = overrides.getArtifactId();
     } else {
-      artifactId = promptProvider.promptText("Project artifact ID", DEFAULT_ARTIFACT_ID);
+      Path dirName = targetDir.getFileName();
+      String defaultArtifactId = dirName != null ? dirName.toString() : DEFAULT_ARTIFACT_ID;
+      artifactId = promptProvider.promptText("Project artifact ID", defaultArtifactId);
     }
     builder.artifactId(artifactId);
 
