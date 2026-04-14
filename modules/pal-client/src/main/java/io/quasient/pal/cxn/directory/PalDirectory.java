@@ -1265,7 +1265,9 @@ public class PalDirectory {
                 DeleteOption.builder().isPrefix(true).build())
             .get();
     if (deleteResponse.getDeleted() == 0) {
-      logger.warn("No intercept requests found for peer w/uuid: {}", peerUuid);
+      if (logger.isDebugEnabled()) {
+        logger.debug("No intercept requests found for peer w/uuid: {}", peerUuid);
+      }
     } else {
       logger.info(
           "Deleted {} intercept request(s) for peer w/uuid: {}",

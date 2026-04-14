@@ -1895,7 +1895,9 @@ public class ThinPeer {
           logger.debug("Session w/id {} was deleted.", sessionId);
         }
       } else {
-        logger.error("Error deleting session w/id: {} - status: {}", sessionId, statusType);
+        if (logger.isDebugEnabled()) {
+          logger.debug("Error deleting session w/id: {} - status: {}", sessionId, statusType);
+        }
       }
     } else if (isWsClientConnected) {
       JsonRpcRequest request = JsonRpcMessageFactory.buildDeleteSessionCommandMessage();
@@ -1906,8 +1908,10 @@ public class ThinPeer {
             logger.debug("Session w/id {} was deleted.", sessionId);
           }
         } else {
-          logger.error(
-              "Error deleting session w/id: {} - error: {}", sessionId, response.getError());
+          if (logger.isDebugEnabled()) {
+            logger.debug(
+                "Error deleting session w/id: {} - error: {}", sessionId, response.getError());
+          }
         }
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
