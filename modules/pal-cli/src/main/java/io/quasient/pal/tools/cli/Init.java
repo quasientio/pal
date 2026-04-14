@@ -900,10 +900,12 @@ public class Init extends AbstractPalSubcommand {
     }
 
     String compileCmd;
-    if (config.isNewProject()) {
-      compileCmd = config.getBuildTool() == BuildTool.GRADLE ? "./gradlew build" : "./mvnw package";
+    if (config.getBuildTool() == BuildTool.GRADLE) {
+      boolean useWrapper = config.isNewProject() || Files.exists(effectiveDir.resolve("gradlew"));
+      compileCmd = useWrapper ? "./gradlew build" : "gradle build";
     } else {
-      compileCmd = config.getBuildTool() == BuildTool.GRADLE ? "gradle build" : "mvn package";
+      boolean useWrapper = config.isNewProject() || Files.exists(effectiveDir.resolve("mvnw"));
+      compileCmd = useWrapper ? "./mvnw package" : "mvn package";
     }
     String buildHint = config.needsWeaving() ? "Build with AspectJ weaving" : "Build";
     out.println("  " + step + ". " + compileCmd + "              # " + buildHint);

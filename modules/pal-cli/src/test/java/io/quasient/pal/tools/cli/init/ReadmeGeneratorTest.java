@@ -115,6 +115,58 @@ public class ReadmeGeneratorTest {
     assertThat(content, containsString("com.example.Main"));
   }
 
+  /** Verifies that an existing project with a Maven wrapper uses ./mvnw. */
+  @Test
+  public void testExistingProjectWithWrapperUsesMvnw() throws Exception {
+    // Given: an existing project that already has mvnw
+    Path projectDir = tempDir.getRoot().toPath();
+    Files.createFile(projectDir.resolve("mvnw"));
+
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .artifactId("my-app")
+            .buildTool(BuildTool.MAVEN)
+            .existingBuildFile(projectDir.resolve("pom.xml"))
+            .force(true)
+            .build();
+    ReadmeGenerator generator = new ReadmeGenerator(config);
+
+    // When
+    generator.generate(projectDir);
+
+    // Then
+    String content = Files.readString(projectDir.resolve("README.md"), StandardCharsets.UTF_8);
+    assertThat(content, containsString("./mvnw test"));
+    assertThat(content, containsString("./mvnw package"));
+  }
+
+  /** Verifies that an existing project without a wrapper uses plain mvn. */
+  @Test
+  public void testExistingProjectWithoutWrapperUsesPlainMvn() throws Exception {
+    // Given: an existing project without mvnw
+    Path projectDir = tempDir.getRoot().toPath();
+
+    InitConfig config =
+        InitConfig.builder()
+            .groupId("com.example")
+            .artifactId("my-app")
+            .buildTool(BuildTool.MAVEN)
+            .existingBuildFile(projectDir.resolve("pom.xml"))
+            .force(true)
+            .build();
+    ReadmeGenerator generator = new ReadmeGenerator(config);
+
+    // When
+    generator.generate(projectDir);
+
+    // Then
+    String content = Files.readString(projectDir.resolve("README.md"), StandardCharsets.UTF_8);
+    assertThat(content, containsString("mvn test"));
+    assertThat(content, containsString("mvn package"));
+    assertThat(content, not(containsString("./mvnw")));
+  }
+
   /** Verifies that the generator does not overwrite an existing README.md without force. */
   @Test
   public void testDoesNotOverwriteWithoutForce() throws Exception {

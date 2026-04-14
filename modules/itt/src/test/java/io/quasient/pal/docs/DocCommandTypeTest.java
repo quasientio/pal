@@ -153,6 +153,7 @@ public class DocCommandTypeTest {
     // When: classify() is called on each
     // Then: all return NON_PAL
     assertThat(DocCommandType.classify("mvn install"), is(DocCommandType.NON_PAL));
+    assertThat(DocCommandType.classify("./mvnw install"), is(DocCommandType.NON_PAL));
     assertThat(DocCommandType.classify("tar xzf pal.tar.gz"), is(DocCommandType.NON_PAL));
     assertThat(DocCommandType.classify("docker ps"), is(DocCommandType.NON_PAL));
     assertThat(DocCommandType.classify("curl http://localhost"), is(DocCommandType.NON_PAL));

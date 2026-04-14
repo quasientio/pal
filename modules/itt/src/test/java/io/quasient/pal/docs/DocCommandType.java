@@ -93,7 +93,7 @@ public enum DocCommandType {
   /** {@code pal intercept status ...}. */
   INTERCEPT_STATUS,
 
-  /** Non-PAL command (e.g., {@code tar}, {@code mvn}, {@code docker}). */
+  /** Non-PAL command (e.g., {@code tar}, {@code mvn}, {@code ./mvnw}, {@code docker}). */
   NON_PAL,
 
   /** Unrecognizable PAL command that cannot be classified. */

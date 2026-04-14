@@ -71,7 +71,7 @@ public final class ReadmeGenerator {
 
     if (!config.isDryRun()) {
       Files.createDirectories(targetDir);
-      Files.writeString(readmeFile, buildContent(), StandardCharsets.UTF_8);
+      Files.writeString(readmeFile, buildContent(targetDir), StandardCharsets.UTF_8);
     }
 
     return Collections.unmodifiableList(generated);
@@ -80,9 +80,10 @@ public final class ReadmeGenerator {
   /**
    * Builds the README content based on the build tool and configuration.
    *
+   * @param targetDir the project root directory
    * @return the file content
    */
-  private String buildContent() {
+  private String buildContent(Path targetDir) {
     StringBuilder sb = new StringBuilder();
     String artifactId = safe(config.getArtifactId());
     String mainClass = resolveMainClass();
@@ -91,9 +92,9 @@ public final class ReadmeGenerator {
     sb.append("## Build\n\n");
 
     if (config.getBuildTool() == BuildTool.GRADLE) {
-      appendGradleBuild(sb);
+      appendGradleBuild(sb, targetDir);
     } else {
-      appendMavenBuild(sb);
+      appendMavenBuild(sb, targetDir);
     }
 
     sb.append("\n## Run\n\n");
@@ -111,9 +112,11 @@ public final class ReadmeGenerator {
    * Appends Maven build commands and weaving explanation.
    *
    * @param sb the string builder
+   * @param targetDir the project root directory
    */
-  private void appendMavenBuild(StringBuilder sb) {
-    String mvn = config.isNewProject() ? "./mvnw" : "mvn";
+  private void appendMavenBuild(StringBuilder sb, Path targetDir) {
+    boolean useWrapper = config.isNewProject() || Files.exists(targetDir.resolve("mvnw"));
+    String mvn = useWrapper ? "./mvnw" : "mvn";
     sb.append("```sh\n");
     if (config.needsWeaving()) {
       sb.append(mvn).append(" test                  # compile and test (unwoven classes)\n");
@@ -134,9 +137,11 @@ public final class ReadmeGenerator {
    * Appends Gradle build commands and weaving explanation.
    *
    * @param sb the string builder
+   * @param targetDir the project root directory
    */
-  private void appendGradleBuild(StringBuilder sb) {
-    String gradle = config.isNewProject() ? "./gradlew" : "gradle";
+  private void appendGradleBuild(StringBuilder sb, Path targetDir) {
+    boolean useWrapper = config.isNewProject() || Files.exists(targetDir.resolve("gradlew"));
+    String gradle = useWrapper ? "./gradlew" : "gradle";
     sb.append("```sh\n");
     if (config.needsWeaving()) {
       sb.append(gradle).append(" test               # compile and test (unwoven classes)\n");

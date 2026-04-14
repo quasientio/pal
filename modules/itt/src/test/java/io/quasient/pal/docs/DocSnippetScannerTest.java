@@ -446,7 +446,7 @@ public class DocSnippetScannerTest {
             """
             ```bash
             tar xzf pal.tar.gz
-            mvn install
+            ./mvnw install
             pal help
             ```
             """);
