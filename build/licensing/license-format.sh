@@ -17,4 +17,4 @@
 # Update copyright year in all license headers
 
 export YEAR_NOW=$(date '+%Y')
-./mvnwlicense:format -DcopyrightYear=$YEAR_NOW
+./mvnw license:format -DcopyrightYear=$YEAR_NOW

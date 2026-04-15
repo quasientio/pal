@@ -16,5 +16,5 @@
 
 # create release branch
 git switch -c release-1.4
-./mvnwlicense:format -DcopyrightYear=$(date '+%Y')
+./mvnw license:format -DcopyrightYear=$(date '+%Y')
 git commit -am "Release 1.4"
