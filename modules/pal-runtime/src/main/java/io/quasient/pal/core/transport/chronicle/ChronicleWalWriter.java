@@ -335,7 +335,7 @@ public class ChronicleWalWriter extends WalWriter {
       }
       OutboundMsg msg;
       while ((msg = walQueue.poll()) != null) {
-        writeMessageUsingAppender(msg, queueAppender);
+        appendMessage(msg, queueAppender);
       }
 
       if (logger.isDebugEnabled()) {
@@ -424,6 +424,19 @@ public class ChronicleWalWriter extends WalWriter {
           msg.getMessageId());
       return;
     }
+
+    appendMessage(msg, appender);
+  }
+
+  /**
+   * Appends a single message to the Chronicle Queue via the given appender. This method performs
+   * the actual write and is safe to call during the flush-on-close drain, where {@code
+   * shutdownRequested} is already {@code true} but remaining messages must still be persisted.
+   *
+   * @param msg the message to append; must not be {@code null}
+   * @param appender the Chronicle Queue appender to write with
+   */
+  private void appendMessage(OutboundMsg msg, ExcerptAppender appender) {
 
     if (POISON_PILL.equals(msg)) {
       return; // graceful exit
