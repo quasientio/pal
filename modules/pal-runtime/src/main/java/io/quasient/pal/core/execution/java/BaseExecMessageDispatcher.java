@@ -1089,6 +1089,13 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    */
   private ReplayAction resolveReplayAction(WalEntry entry) {
     if (isPhantomTarget(entry)) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Phantom cascade: {} on ref {} at offset {} — auto-stubbing",
+            entry.getClassName() + "." + entry.getExecutableName(),
+            extractTargetRef(entry),
+            entry.getOffset());
+      }
       return ReplayAction.STUB_FROM_WAL;
     }
     return replayContext
@@ -1148,7 +1155,6 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     // 1. Find the span's completion entry
     Span span = replayContext.getWalIndex().getSpans().get(operationOffset);
     if (span == null) {
-      // No span found — fall back to re-execution (defensive; should not happen for valid WALs)
       logger.warn(
           "No span found for STUB_FROM_WAL at offset {}, falling back to RE_EXECUTE",
           operationOffset);
@@ -1183,8 +1189,25 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     if (walRef != 0) {
       if (stubbedValue != null) {
         replayContext.getObjectStore().register(walRef, stubbedValue);
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Stub at offset {}: registered live object ref {} (type={})",
+              operationOffset,
+              walRef,
+              stubbedValue.getClass().getName());
+        }
       } else {
         replayContext.getObjectStore().registerPhantom(walRef);
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "Stub at offset {}: registered PHANTOM ref {} for {}.{} "
+                  + "(completion at offset {}, stubbedValue=null)",
+              operationOffset,
+              walRef,
+              expectedEntry.getClassName(),
+              expectedEntry.getExecutableName(),
+              completionEntry.getOffset());
+        }
       }
     }
 
@@ -1470,6 +1493,14 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
     }
     // Reference-only: has a ref but no serialized value
     if (obj.getRef() != 0 && (obj.getValue() == null || obj.getValue().isEmpty())) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "reconstructReturnValue at offset {}: reference-only (ref={}, className={}), "
+                + "returning null (will become phantom)",
+            completionEntry.getOffset(),
+            obj.getRef(),
+            obj.getClazz() != null ? obj.getClazz().getName() : "unknown");
+      }
       return null;
     }
     try {

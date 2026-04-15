@@ -82,8 +82,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
@@ -826,9 +828,22 @@ public class PeerWiring extends AbstractModule {
 
     WalIndex index = WalIndex.build(entries);
     logger.info(
-        "Replay WAL loaded: {} entries, {} structural issues",
+        "Replay WAL loaded: {} entries, {} spans, {} structural issues",
         entries.size(),
+        index.getSpans().size(),
         index.getStructuralIssues().size());
+    if (logger.isDebugEnabled()) {
+      Map<String, Integer> threadCounts = new LinkedHashMap<>();
+      for (WalEntry entry : entries) {
+        threadCounts.merge(entry.getThreadName(), 1, Integer::sum);
+      }
+      for (Map.Entry<String, Integer> tc : threadCounts.entrySet()) {
+        logger.debug("  WAL thread '{}': {} entries", tc.getKey(), tc.getValue());
+      }
+      for (String issue : index.getStructuralIssues()) {
+        logger.debug("  WAL structural issue: {}", issue);
+      }
+    }
 
     String policyStr = properties.getProperty("replay.divergence.policy", "WARN");
     DivergenceDetector.DivergencePolicy policy;
