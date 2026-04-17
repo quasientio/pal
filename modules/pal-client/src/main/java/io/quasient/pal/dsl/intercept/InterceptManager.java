@@ -101,6 +101,7 @@ public class InterceptManager {
     List<UUID> interceptUuids = new ArrayList<>();
     InterceptBundleDefaults defaults = bundle.getDefaults();
     UUID metadataPeerUuid = null;
+    long maxTtlSeconds = 0;
 
     for (InterceptSpec spec : bundle.getIntercepts()) {
       UUID interceptUuid = generateInterceptUuid(bundle.getBundleName(), spec);
@@ -118,9 +119,10 @@ public class InterceptManager {
           spec.toInterceptRequest(interceptUuid, peerUuid, defaults);
 
       long ttlSeconds = resolveTtlSeconds(spec, defaults);
+      maxTtlSeconds = Math.max(maxTtlSeconds, ttlSeconds);
 
       try {
-        directory.createIntercept(request, ttlSeconds);
+        directory.createIntercept(request, ttlSeconds, false);
         entries.add(new ApplyResult.Entry(spec, interceptUuid, ApplyResult.Status.CREATED, null));
         logger.info(
             "Created intercept {} for {}.{} (bundle \"{}\")",
@@ -147,11 +149,11 @@ public class InterceptManager {
       }
     }
 
-    // Store bundle metadata
+    // Store bundle metadata with the same max TTL as the intercepts
     BundleMetadata metadata =
         new BundleMetadata(
             bundle.getBundleName(), metadataPeerUuid, interceptUuids, Instant.now(), 1);
-    directory.createBundleMetadata(bundle.getBundleName(), metadata);
+    directory.createBundleMetadata(bundle.getBundleName(), metadata, maxTtlSeconds);
 
     return new ApplyResult(entries);
   }

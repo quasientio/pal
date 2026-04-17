@@ -1042,6 +1042,9 @@ public class PalDirectory {
    * @param intercept the intercept request to create
    * @param ttlSeconds the value in seconds for the TTL assigned to this intercept; 0 == use the
    *     peer's lease.
+   * @param trackLease if {@code true}, the lease is tracked in {@link #activeInterceptLeases} so
+   *     that {@link #close()} revokes it. Pass {@code false} for fire-and-forget creation (e.g.,
+   *     from the CLI) where the lease should outlive this {@code PalDirectory} instance.
    * @return an {@link InterceptLease} handle for the dedicated lease when {@code ttlSeconds > 0},
    *     or {@link InterceptLease#NONE} when no dedicated TTL was requested
    * @throws ExecutionException if an error occurs during etcd operation
@@ -1049,7 +1052,8 @@ public class PalDirectory {
    * @throws NoPeerInfoNodeException if the associated peer does not exist in the directory
    * @throws IllegalArgumentException if the intercept request is already created for this peer
    */
-  public InterceptLease createIntercept(InterceptRequest<?> intercept, long ttlSeconds)
+  public InterceptLease createIntercept(
+      InterceptRequest<?> intercept, long ttlSeconds, boolean trackLease)
       throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
 
     long now = System.currentTimeMillis();
@@ -1109,10 +1113,31 @@ public class PalDirectory {
       InterceptLease interceptLease =
           new InterceptLease(
               leaseId, interceptUuid, ttlSeconds, client.getLeaseClient(), leasePool);
-      activeInterceptLeases.put(interceptUuid, interceptLease);
+      if (trackLease) {
+        activeInterceptLeases.put(interceptUuid, interceptLease);
+      }
       return interceptLease;
     }
     return InterceptLease.NONE;
+  }
+
+  /**
+   * Creates a new intercept request in the directory with the given TTL. The lease is tracked by
+   * default so that {@link #close()} revokes it on shutdown.
+   *
+   * @param intercept the intercept request to create
+   * @param ttlSeconds the value in seconds for the TTL assigned to this intercept; 0 == use the
+   *     peer's lease.
+   * @return an {@link InterceptLease} handle for the dedicated lease when {@code ttlSeconds > 0},
+   *     or {@link InterceptLease#NONE} when no dedicated TTL was requested
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   * @throws NoPeerInfoNodeException if the associated peer does not exist in the directory
+   * @throws IllegalArgumentException if the intercept request is already created for this peer
+   */
+  public InterceptLease createIntercept(InterceptRequest<?> intercept, long ttlSeconds)
+      throws ExecutionException, InterruptedException, NoPeerInfoNodeException {
+    return createIntercept(intercept, ttlSeconds, true);
   }
 
   /**
@@ -1318,11 +1343,48 @@ public class PalDirectory {
   // <editor-fold desc="Bundle metadata methods">
 
   /**
-   * Stores bundle metadata in etcd.
+   * Stores bundle metadata in etcd with an optional TTL.
    *
    * <p>The metadata is stored as JSON under the key {@code /<namespace>/bundles/<bundleName>}. If a
    * bundle with the same name already exists, it is overwritten (re-apply is expected to be
    * idempotent).
+   *
+   * <p>When {@code ttlSeconds > 0}, a dedicated lease is created so the bundle metadata expires
+   * together with its intercepts. This prevents orphaned bundle entries after intercept leases
+   * expire or are revoked.
+   *
+   * @param bundleName the bundle name
+   * @param metadata the bundle metadata to store
+   * @param ttlSeconds TTL in seconds for the bundle metadata key; 0 means no expiration
+   * @throws ExecutionException if an error occurs during etcd operation
+   * @throws InterruptedException if the current thread is interrupted while waiting
+   */
+  public void createBundleMetadata(String bundleName, BundleMetadata metadata, long ttlSeconds)
+      throws ExecutionException, InterruptedException {
+    Objects.requireNonNull(bundleName, "bundleName must not be null");
+    Objects.requireNonNull(metadata, "metadata must not be null");
+
+    String key = format("%s/%s", getBundlesPath(), bundleName);
+    String json = metadata.toJson();
+    ByteSequence bKey = ByteSequence.from(key, UTF8);
+    ByteSequence bVal = ByteSequence.from(json, UTF8);
+
+    if (ttlSeconds > 0) {
+      long leaseId = client.getLeaseClient().grant(ttlSeconds).get().getID();
+      kvClient.put(bKey, bVal, PutOption.builder().withLeaseId(leaseId).build()).get();
+      logger.info(
+          "Stored bundle metadata for \"{}\" (TTL {} s, lease {})",
+          bundleName,
+          ttlSeconds,
+          leaseId);
+    } else {
+      kvClient.put(bKey, bVal).get();
+      logger.info("Stored bundle metadata for \"{}\"", bundleName);
+    }
+  }
+
+  /**
+   * Stores bundle metadata in etcd with no expiration.
    *
    * @param bundleName the bundle name
    * @param metadata the bundle metadata to store
@@ -1331,13 +1393,7 @@ public class PalDirectory {
    */
   public void createBundleMetadata(String bundleName, BundleMetadata metadata)
       throws ExecutionException, InterruptedException {
-    Objects.requireNonNull(bundleName, "bundleName must not be null");
-    Objects.requireNonNull(metadata, "metadata must not be null");
-
-    String key = format("%s/%s", getBundlesPath(), bundleName);
-    String json = metadata.toJson();
-    kvClient.put(ByteSequence.from(key, UTF8), ByteSequence.from(json, UTF8)).get();
-    logger.info("Stored bundle metadata for \"{}\"", bundleName);
+    createBundleMetadata(bundleName, metadata, 0);
   }
 
   /**
