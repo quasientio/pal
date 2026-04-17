@@ -20,8 +20,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 /**
  * Test application where {@code main()} calls a method that always throws.
  *
- * <p>Used by integration tests to verify that {@code pal print --with-return} correctly matches an
- * {@code EXEC_THROWABLE} message as the return for the operation that threw. The exception is
+ * <p>Used by integration tests to verify that {@code pal log print --with-return} correctly matches
+ * an {@code EXEC_THROWABLE} message as the return for the operation that threw. The exception is
  * caught in {@code main()} so the peer exits cleanly.
  *
  * <p>WAL structure (offset 0 is {@code alwaysThrows()} call, its return is the THROWABLE):

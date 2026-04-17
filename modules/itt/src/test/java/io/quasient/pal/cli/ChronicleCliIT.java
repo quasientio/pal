@@ -78,8 +78,6 @@ public class ChronicleCliIT extends AbstractCliIT {
 
   // ==========================================================================
   // Chronicle log print tests: pal log print
-  // Old command: pal print -l file:<name>
-  // New command: pal log print file:<name>
   // ==========================================================================
 
   /**
@@ -150,8 +148,7 @@ public class ChronicleCliIT extends AbstractCliIT {
 
   // ==========================================================================
   // Chronicle log list tests: pal log ls
-  // Old command: pal ls -L
-  // New command: pal log ls
+  // command: pal log ls
   // ==========================================================================
 
   /**
@@ -277,8 +274,7 @@ public class ChronicleCliIT extends AbstractCliIT {
 
   // ==========================================================================
   // Chronicle log remove tests: pal log rm
-  // Old command: pal rm -L <name>
-  // New command: pal log rm <name>
+  // command: pal log rm <name>
   // ==========================================================================
 
   /**
@@ -419,8 +415,7 @@ public class ChronicleCliIT extends AbstractCliIT {
 
   // ==========================================================================
   // Chronicle log call tests: pal log call
-  // Old command: pal call --output-log file:<source> --input-log file:<wal>
-  // New command: pal log call --output-log file:<source> --input-log file:<wal>
+  // command: pal log call --output-log file:<source> --input-log file:<wal>
   // ==========================================================================
 
   /**

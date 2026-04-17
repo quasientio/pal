@@ -71,8 +71,7 @@ public class ListIT extends AbstractCliIT {
 
   // ==========================================================================
   // Peer listing tests: pal peer ls
-  // Old command: pal ls -P
-  // New command: pal peer ls
+  // command: pal peer ls
   // ==========================================================================
 
   /**
@@ -289,8 +288,7 @@ public class ListIT extends AbstractCliIT {
 
   // ==========================================================================
   // Log listing tests: pal log ls
-  // Old command: pal ls -L
-  // New command: pal log ls
+  // command: pal log ls
   // ==========================================================================
 
   /**

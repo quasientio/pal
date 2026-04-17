@@ -71,8 +71,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
 
   // ==========================================================================
   // Log stats tests: pal log stats
-  // Old: programmatic LogStats API
-  // New command: pal log stats
+  // command: pal log stats
   // ==========================================================================
 
   /**
@@ -546,8 +545,7 @@ public class MessageStreamStatsIT extends AbstractCliIT {
 
   // ==========================================================================
   // Peer stats tests: pal peer stats
-  // Old: programmatic PeerStats API
-  // New command: pal peer stats
+  // command: pal peer stats
   // ==========================================================================
 
   /**

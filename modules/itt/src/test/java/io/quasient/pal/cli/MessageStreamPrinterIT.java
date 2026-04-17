@@ -76,8 +76,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
   // ==========================================================================
   // Log print tests (Kafka): pal log print
-  // Old command: pal print -l <log>
-  // New command: pal log print <log>
   // ==========================================================================
 
   /**
@@ -530,8 +528,6 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
   // ==========================================================================
   // Log print tests (Chronicle): pal log print
-  // Old command: pal print -l <log>
-  // New command: pal log print <log>
   // ==========================================================================
 
   /**
@@ -842,8 +838,7 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
 
   // ==========================================================================
   // Peer print tests (socket streaming): pal peer print
-  // Old command: pal print -pa <pubAddress> / pal print -pu <peerUuid>
-  // New command: pal peer print <pubAddress> / pal peer print <peerUuid>
+  // command: pal peer print <pubAddress> / pal peer print <peerUuid>
   //              (address/UUID becomes positional argument)
   // ==========================================================================
 

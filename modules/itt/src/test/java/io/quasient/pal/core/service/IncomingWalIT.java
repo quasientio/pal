@@ -93,7 +93,7 @@ public class IncomingWalIT extends AbstractCliIT {
    * <p>When: {@code pal call -d <etcd> -p <peer-name> -m processArgs
    * io.quasient.foobar.apps.quantized.rpc.Methods wal-test-arg} invoked
    *
-   * <p>Then: {@code pal print -d <etcd> -l <wal-topic>} shows both the BEFORE message (call to
+   * <p>Then: {@code pal log print -d <etcd> -l <wal-topic>} shows both the BEFORE message (call to
    * processArgs) and the AFTER message (with return value PROCESSED) for the incoming RPC call
    *
    * @throws Exception if test execution fails
@@ -173,8 +173,8 @@ public class IncomingWalIT extends AbstractCliIT {
    *
    * <p>When: Same {@code pal call} invoked
    *
-   * <p>Then: {@code pal print} shows only hot-path messages from internal execution (e.g., {@code
-   * String.join}), not the incoming RPC's BEFORE or AFTER messages
+   * <p>Then: {@code pal log print} shows only hot-path messages from internal execution (e.g.,
+   * {@code String.join}), not the incoming RPC's BEFORE or AFTER messages
    *
    * @throws Exception if test execution fails
    */

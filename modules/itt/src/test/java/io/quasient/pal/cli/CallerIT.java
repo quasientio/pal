@@ -81,8 +81,7 @@ public class CallerIT extends AbstractCliIT {
 
   // ==========================================================================
   // Peer call tests via ZMQ RPC: pal peer call
-  // Old command: pal call -p <peer> ...
-  // New command: pal peer call <peer> ...
+  // command: pal peer call <peer> ...
   // ==========================================================================
 
   /**
@@ -398,8 +397,7 @@ public class CallerIT extends AbstractCliIT {
 
   // ==========================================================================
   // Peer call tests via JSON-RPC: pal peer call
-  // Old command: pal call -p <peer> (with stdin)
-  // New command: pal peer call <peer> (with stdin)
+  // command: pal peer call <peer> (with stdin)
   // ==========================================================================
 
   /**
@@ -785,8 +783,7 @@ public class CallerIT extends AbstractCliIT {
 
   // ==========================================================================
   // Log call tests: pal log call
-  // Old command: pal call -l <log> ...
-  // New command: pal log call <log> ...
+  // command: pal log call <log> ...
   // ==========================================================================
 
   /**
@@ -908,8 +905,7 @@ public class CallerIT extends AbstractCliIT {
 
   // ==========================================================================
   // Async / fire-and-forget tests: pal peer call / pal log call
-  // Old command: pal call --forget-response ...
-  // New command: pal log call --forget-response ... / pal peer call --forget-response ...
+  // command: pal log call --forget-response ... / pal peer call --forget-response ...
   // ==========================================================================
 
   /**

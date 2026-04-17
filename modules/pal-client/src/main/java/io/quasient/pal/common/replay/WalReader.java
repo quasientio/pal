@@ -50,8 +50,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>This utility is the I/O bridge between the persisted WAL and the in-memory {@link WalIndex}.
  * For Chronicle queues, it reuses the mature {@link OutboundMsg#readNext(ExcerptTailer)}
- * deserialization pipeline already used by {@code pal print} and {@code ChronicleSourceLogReader}.
- * For Kafka topics, it reads raw bytes and extracts the message type from Kafka headers.
+ * deserialization pipeline already used by {@code pal log print} and {@code
+ * ChronicleSourceLogReader}. For Kafka topics, it reads raw bytes and extracts the message type
+ * from Kafka headers.
  *
  * <p>The Chronicle deserialization pipeline is:
  *

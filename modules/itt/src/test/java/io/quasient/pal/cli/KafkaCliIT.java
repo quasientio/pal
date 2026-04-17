@@ -71,8 +71,7 @@ public class KafkaCliIT extends AbstractCliIT {
 
   // ==========================================================================
   // Kafka log print tests: pal log print
-  // Old command: pal print -l <log>
-  // New command: pal log print <log>
+  // command: pal log print <log>
   // ==========================================================================
 
   /**
@@ -146,8 +145,7 @@ public class KafkaCliIT extends AbstractCliIT {
 
   // ==========================================================================
   // Kafka log list tests: pal log ls
-  // Old command: pal ls -L
-  // New command: pal log ls
+  // command: pal log ls
   // ==========================================================================
 
   /**
@@ -189,8 +187,7 @@ public class KafkaCliIT extends AbstractCliIT {
 
   // ==========================================================================
   // Kafka log remove tests: pal log rm
-  // Old command: pal rm -L <name>
-  // New command: pal log rm <name>
+  // command: pal log rm <name>
   // ==========================================================================
 
   /**
@@ -271,8 +268,7 @@ public class KafkaCliIT extends AbstractCliIT {
 
   // ==========================================================================
   // Kafka log call tests: pal log call
-  // Old command: pal call --output-log <source> --input-log <wal>
-  // New command: pal log call --output-log <source> --input-log <wal>
+  // command: pal log call --output-log <source> --input-log <wal>
   // ==========================================================================
 
   /**

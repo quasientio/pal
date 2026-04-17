@@ -73,8 +73,7 @@ public class ListInterceptIT extends AbstractCliIT {
 
   // ==========================================================================
   // Intercept listing tests: pal intercept ls
-  // Old command: pal ls -I
-  // New command: pal intercept ls
+  // command: pal intercept ls
   // ==========================================================================
 
   /**

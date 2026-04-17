@@ -72,8 +72,7 @@ public class RemoveIT extends AbstractCliIT {
 
   // ==========================================================================
   // Peer removal tests: pal peer rm
-  // Old command: pal rm -P <name>
-  // New command: pal peer rm <name>
+  // command: pal peer rm <name>
   // ==========================================================================
 
   /**
@@ -286,8 +285,7 @@ public class RemoveIT extends AbstractCliIT {
 
   // ==========================================================================
   // Log removal tests: pal log rm
-  // Old command: pal rm -L <name>
-  // New command: pal log rm <name>
+  // command: pal log rm <name>
   // ==========================================================================
 
   /**
