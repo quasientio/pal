@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -195,8 +196,8 @@ public class InterceptApplyTest {
 
     // Then
     assertThat(result, is(0));
-    verify(mockDir).createIntercept(any(InterceptRequest.class), anyLong());
-    verify(mockDir).createBundleMetadata(anyString(), any());
+    verify(mockDir).createIntercept(any(InterceptRequest.class), anyLong(), eq(false));
+    verify(mockDir).createBundleMetadata(anyString(), any(), anyLong());
     String output = bout.toString(UTF_8);
     assertThat(output, containsString("created"));
   }
@@ -226,7 +227,7 @@ public class InterceptApplyTest {
 
     // Then
     assertThat(result, is(0));
-    verify(mockDir, never()).createIntercept(any(InterceptRequest.class), anyLong());
+    verify(mockDir, never()).createIntercept(any(InterceptRequest.class), anyLong(), eq(false));
     String output = bout.toString(UTF_8);
     assertThat(output, containsString("would be created"));
   }
@@ -315,7 +316,7 @@ public class InterceptApplyTest {
     // First call succeeds, second call throws
     doThrow(new RuntimeException("etcd unavailable"))
         .when(mockDir)
-        .createIntercept(any(InterceptRequest.class), anyLong());
+        .createIntercept(any(InterceptRequest.class), anyLong(), eq(false));
 
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     ByteArrayOutputStream berr = new ByteArrayOutputStream();

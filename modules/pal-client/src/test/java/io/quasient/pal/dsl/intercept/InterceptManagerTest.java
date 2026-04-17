@@ -142,7 +142,7 @@ public class InterceptManagerTest {
     InterceptBundleSpec bundle = bundle("test-bundle", PEER_NAME, spec1, spec2);
 
     when(directory.getPeerByName(PEER_NAME)).thenReturn(peerInfo(PEER_UUID, PEER_NAME));
-    when(directory.createIntercept(any(), anyLong())).thenReturn(InterceptLease.NONE);
+    when(directory.createIntercept(any(), anyLong(), eq(false))).thenReturn(InterceptLease.NONE);
 
     // When
     ApplyResult result = manager.apply(bundle);
@@ -151,8 +151,9 @@ public class InterceptManagerTest {
     //       and ApplyResult has 2 created entries
     assertThat(result.getCreatedCount(), is(2L));
     assertThat(result.getEntries().size(), is(2));
-    verify(directory, times(2)).createIntercept(any(), anyLong());
-    verify(directory, times(1)).createBundleMetadata(eq("test-bundle"), any(BundleMetadata.class));
+    verify(directory, times(2)).createIntercept(any(), anyLong(), eq(false));
+    verify(directory, times(1))
+        .createBundleMetadata(eq("test-bundle"), any(BundleMetadata.class), anyLong());
   }
 
   @Test
@@ -164,7 +165,7 @@ public class InterceptManagerTest {
     InterceptBundleSpec bundle = bundle("test-bundle", PEER_NAME, spec1, spec2);
 
     when(directory.getPeerByName(PEER_NAME)).thenReturn(peerInfo(PEER_UUID, PEER_NAME));
-    when(directory.createIntercept(any(), anyLong()))
+    when(directory.createIntercept(any(), anyLong(), eq(false)))
         .thenThrow(new IllegalArgumentException("already exists"))
         .thenReturn(InterceptLease.NONE);
 
@@ -183,19 +184,19 @@ public class InterceptManagerTest {
     InterceptBundleSpec bundle = bundle("test-bundle", PEER_NAME, spec1);
 
     when(directory.getPeerByName(PEER_NAME)).thenReturn(peerInfo(PEER_UUID, PEER_NAME));
-    when(directory.createIntercept(any(), anyLong())).thenReturn(InterceptLease.NONE);
+    when(directory.createIntercept(any(), anyLong(), eq(false))).thenReturn(InterceptLease.NONE);
 
     // When: apply(bundle) is called twice
     ArgumentCaptor<InterceptRequest<?>> captor1 = ArgumentCaptor.forClass(InterceptRequest.class);
     manager.apply(bundle);
-    verify(directory).createIntercept(captor1.capture(), anyLong());
+    verify(directory).createIntercept(captor1.capture(), anyLong(), eq(false));
     UUID firstUuid = captor1.getValue().getUuid();
 
     // Reset and apply again
-    when(directory.createIntercept(any(), anyLong())).thenReturn(InterceptLease.NONE);
+    when(directory.createIntercept(any(), anyLong(), eq(false))).thenReturn(InterceptLease.NONE);
     ArgumentCaptor<InterceptRequest<?>> captor2 = ArgumentCaptor.forClass(InterceptRequest.class);
     manager.apply(bundle);
-    verify(directory, times(2)).createIntercept(captor2.capture(), anyLong());
+    verify(directory, times(2)).createIntercept(captor2.capture(), anyLong(), eq(false));
     UUID secondUuid = captor2.getAllValues().get(1).getUuid();
 
     // Then: The same UUIDs are generated both times
@@ -209,7 +210,7 @@ public class InterceptManagerTest {
     InterceptBundleSpec bundle = bundle("test-bundle", PEER_NAME, spec1);
 
     when(directory.getPeerByName(PEER_NAME)).thenReturn(peerInfo(PEER_UUID, PEER_NAME));
-    when(directory.createIntercept(any(), anyLong())).thenReturn(InterceptLease.NONE);
+    when(directory.createIntercept(any(), anyLong(), eq(false))).thenReturn(InterceptLease.NONE);
 
     // When
     manager.apply(bundle);
@@ -260,7 +261,7 @@ public class InterceptManagerTest {
         .thenReturn(peerInfo(defaultPeerUuid, "default-peer"));
     when(directory.getPeerByName("override-peer"))
         .thenReturn(peerInfo(overridePeerUuid, "override-peer"));
-    when(directory.createIntercept(any(), anyLong())).thenReturn(InterceptLease.NONE);
+    when(directory.createIntercept(any(), anyLong(), eq(false))).thenReturn(InterceptLease.NONE);
 
     // When
     manager.apply(bundle);
@@ -285,13 +286,13 @@ public class InterceptManagerTest {
     InterceptBundleSpec bundle = bundle("test-bundle", PEER_NAME, spec);
 
     when(directory.getPeerByName(PEER_NAME)).thenReturn(peerInfo(PEER_UUID, PEER_NAME));
-    when(directory.createIntercept(any(), eq(300L))).thenReturn(InterceptLease.NONE);
+    when(directory.createIntercept(any(), eq(300L), eq(false))).thenReturn(InterceptLease.NONE);
 
     // When
     manager.apply(bundle);
 
     // Then: createIntercept(request, 300) is called with ttlSeconds=300
-    verify(directory).createIntercept(any(), eq(300L));
+    verify(directory).createIntercept(any(), eq(300L), eq(false));
   }
 
   @Test
@@ -311,7 +312,8 @@ public class InterceptManagerTest {
 
     when(directory.getPeerByName(PEER_NAME)).thenReturn(peerInfo(PEER_UUID, PEER_NAME));
     ArgumentCaptor<InterceptRequest<?>> captor = ArgumentCaptor.forClass(InterceptRequest.class);
-    when(directory.createIntercept(captor.capture(), anyLong())).thenReturn(InterceptLease.NONE);
+    when(directory.createIntercept(captor.capture(), anyLong(), eq(false)))
+        .thenReturn(InterceptLease.NONE);
 
     // When
     manager.apply(bundle);
@@ -674,6 +676,78 @@ public class InterceptManagerTest {
 
     // Then: The same UUID is produced both times
     assertThat(first, is(second));
+  }
+
+  // ===== Bundle metadata TTL tests =====
+
+  @Test
+  public void apply_bundleMetadata_receivesMaxTtl() throws Exception {
+    // Given: A bundle with default ttl: 10m (600 seconds)
+    InterceptSpec spec = methodSpec("com.acme.OrderService", "placeOrder", "verify");
+    InterceptBundleDefaults defaults =
+        new InterceptBundleDefaults(
+            PEER_NAME, null, Duration.ofMinutes(10), null, null, null, null);
+    InterceptBundleSpec bundle =
+        InterceptBundleSpec.builder("ttl-bundle").defaults(defaults).addIntercept(spec).build();
+
+    when(directory.getPeerByName(PEER_NAME)).thenReturn(peerInfo(PEER_UUID, PEER_NAME));
+    when(directory.createIntercept(any(), eq(600L), eq(false))).thenReturn(InterceptLease.NONE);
+
+    // When
+    manager.apply(bundle);
+
+    // Then: createBundleMetadata receives the same TTL (600 seconds)
+    verify(directory).createBundleMetadata(eq("ttl-bundle"), any(BundleMetadata.class), eq(600L));
+  }
+
+  @Test
+  public void apply_bundleMetadata_receivesMaxOfPerInterceptTtls() throws Exception {
+    // Given: Two intercepts with different TTL overrides (5m and 10m)
+    InterceptSpec spec1 =
+        InterceptSpec.builder()
+            .targetClass("com.acme.OrderService")
+            .targetName("placeOrder")
+            .type(InterceptType.BEFORE)
+            .callbackClass("com.acme.Callback")
+            .callbackMethod("verify")
+            .ttlOverride(Duration.ofMinutes(5))
+            .build();
+    InterceptSpec spec2 =
+        InterceptSpec.builder()
+            .targetClass("com.acme.OrderService")
+            .targetName("refund")
+            .type(InterceptType.BEFORE)
+            .callbackClass("com.acme.Callback")
+            .callbackMethod("checkRefund")
+            .ttlOverride(Duration.ofMinutes(10))
+            .build();
+    InterceptBundleSpec bundle = bundle("max-ttl-bundle", PEER_NAME, spec1, spec2);
+
+    when(directory.getPeerByName(PEER_NAME)).thenReturn(peerInfo(PEER_UUID, PEER_NAME));
+    when(directory.createIntercept(any(), anyLong(), eq(false))).thenReturn(InterceptLease.NONE);
+
+    // When
+    manager.apply(bundle);
+
+    // Then: createBundleMetadata receives the max TTL (600 seconds = 10m)
+    verify(directory)
+        .createBundleMetadata(eq("max-ttl-bundle"), any(BundleMetadata.class), eq(600L));
+  }
+
+  @Test
+  public void apply_bundleMetadata_zeroTtlWhenNoTtlConfigured() throws Exception {
+    // Given: A bundle with no TTL at all (neither default nor per-intercept)
+    InterceptSpec spec = methodSpec("com.acme.OrderService", "placeOrder", "verify");
+    InterceptBundleSpec bundle = bundle("no-ttl-bundle", PEER_NAME, spec);
+
+    when(directory.getPeerByName(PEER_NAME)).thenReturn(peerInfo(PEER_UUID, PEER_NAME));
+    when(directory.createIntercept(any(), anyLong(), eq(false))).thenReturn(InterceptLease.NONE);
+
+    // When
+    manager.apply(bundle);
+
+    // Then: createBundleMetadata receives ttlSeconds=0 (no expiration)
+    verify(directory).createBundleMetadata(eq("no-ttl-bundle"), any(BundleMetadata.class), eq(0L));
   }
 
   @Test

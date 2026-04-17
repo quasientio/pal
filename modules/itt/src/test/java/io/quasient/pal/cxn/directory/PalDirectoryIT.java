@@ -30,7 +30,9 @@ import io.quasient.pal.common.directory.nodes.LogInfo;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.common.lang.intercept.InterceptType;
 import io.quasient.pal.common.lang.intercept.InterceptableMethodCall;
+import io.quasient.pal.dsl.intercept.BundleMetadata;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -3114,5 +3116,442 @@ public class PalDirectoryIT extends AbstractIntegrationTest {
     assertTrue(
         "Intercepts should be removed after directory close",
         palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty());
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*     C R E A T E   I N T E R C E P T   T R A C K   L E A S E       */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Tests that creating an intercept with {@code trackLease=true} registers the lease in the
+   * directory's internal tracking map.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL and trackLease=true
+   *   <li>When: getInterceptLease(interceptUuid) called
+   *   <li>Then: Returns the tracked InterceptLease
+   * </ul>
+   */
+  @Test
+  public void createIntercept_trackLeaseTrue_leaseIsTracked() throws Exception {
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "track-true-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    InterceptLease lease = palDirectory.createIntercept(req, 30, true);
+
+    // Lease should be tracked
+    assertTrue(
+        "getInterceptLease should return the lease when trackLease=true",
+        palDirectory.getInterceptLease(interceptUuid).isPresent());
+    assertEquals(
+        lease.getLeaseId(), palDirectory.getInterceptLease(interceptUuid).get().getLeaseId());
+
+    // Cleanup: close lease to revoke from etcd
+    lease.close();
+  }
+
+  /**
+   * Tests that creating an intercept with {@code trackLease=false} does NOT register the lease in
+   * the directory's internal tracking map.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL and trackLease=false
+   *   <li>When: getInterceptLease(interceptUuid) called
+   *   <li>Then: Returns Optional.empty()
+   * </ul>
+   */
+  @Test
+  public void createIntercept_trackLeaseFalse_leaseIsNotTracked() throws Exception {
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "track-false-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    palDirectory.createIntercept(req, 30, false);
+
+    // Lease should NOT be tracked
+    assertFalse(
+        "getInterceptLease should return empty when trackLease=false",
+        palDirectory.getInterceptLease(interceptUuid).isPresent());
+
+    // But the intercept should still exist in etcd
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    // Cleanup: manually delete since it's not tracked for auto-revoke
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+  }
+
+  /**
+   * Regression test: intercept created with {@code trackLease=false} survives {@code
+   * PalDirectory.close()}.
+   *
+   * <p>This is the core regression test for the bug where {@code pal intercept apply} created
+   * intercepts that were immediately revoked when the CLI process exited, because {@code
+   * PalDirectory.close()} revoked all tracked leases.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL and trackLease=false via a separate PalDirectory
+   *   <li>When: That PalDirectory is closed
+   *   <li>Then: The intercept still exists in etcd (lease was not revoked)
+   * </ul>
+   */
+  @Test
+  public void createIntercept_trackLeaseFalse_survivesDirectoryClose() throws Exception {
+    // Use a separate PalDirectory to simulate the CLI lifecycle
+    PalDirectory cliDir = new PalDirectory(getPalDirectoryUrl());
+
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "survive-close-peer");
+    cliDir.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    cliDir.createIntercept(req, 30, false);
+
+    // Verify intercept exists before close
+    assertEquals(
+        "Intercept should exist before close",
+        1,
+        palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    // Close the CLI directory — simulates CLI process exit
+    cliDir.close();
+
+    // The intercept should still exist (lease was NOT revoked)
+    assertEquals(
+        "Intercept should survive directory close when trackLease=false",
+        1,
+        palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    // Cleanup
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+  }
+
+  /**
+   * Regression test: intercept created with {@code trackLease=true} (the default) is revoked when
+   * {@code PalDirectory.close()} is called. This confirms the existing behavior for long-running
+   * peers is preserved.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with TTL and trackLease=true via a separate PalDirectory
+   *   <li>When: That PalDirectory is closed
+   *   <li>Then: The intercept is removed from etcd (lease was revoked)
+   * </ul>
+   */
+  @Test
+  public void createIntercept_trackLeaseTrue_revokedOnDirectoryClose() throws Exception {
+    PalDirectory peerDir = new PalDirectory(getPalDirectoryUrl());
+
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "revoke-close-peer");
+    peerDir.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    InterceptLease lease = peerDir.createIntercept(req, 30, true);
+    assertFalse(lease.isClosed());
+
+    // Verify intercept exists before close
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    // Close the peer directory — should revoke all tracked leases
+    peerDir.close();
+
+    assertTrue("Lease should be closed after directory close", lease.isClosed());
+
+    // Wait for etcd to process the revoke
+    for (int i = 0; i < 12; i++) {
+      if (palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty()) {
+        break;
+      }
+      TimeUnit.MILLISECONDS.sleep(500);
+    }
+    assertTrue(
+        "Intercept should be removed after directory close when trackLease=true",
+        palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty());
+  }
+
+  /**
+   * Tests that the two-argument overload {@code createIntercept(request, ttlSeconds)} tracks the
+   * lease by default (equivalent to {@code trackLease=true}).
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created via two-arg createIntercept(request, ttlSeconds)
+   *   <li>When: getInterceptLease(interceptUuid) called
+   *   <li>Then: Returns the tracked InterceptLease (same as trackLease=true)
+   * </ul>
+   */
+  @Test
+  public void createIntercept_twoArgOverload_tracksLeaseByDefault() throws Exception {
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "default-track-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    InterceptLease lease = palDirectory.createIntercept(req, 30);
+
+    // Two-arg overload should track by default
+    assertTrue(
+        "Two-arg overload should track the lease by default",
+        palDirectory.getInterceptLease(interceptUuid).isPresent());
+
+    // Cleanup
+    lease.close();
+  }
+
+  /**
+   * Tests that {@code trackLease=false} with {@code ttlSeconds=0} returns {@link
+   * InterceptLease#NONE} and the intercept persists (no lease to track or revoke).
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Intercept created with ttlSeconds=0 and trackLease=false
+   *   <li>When: Intercept created
+   *   <li>Then: Returns NONE; intercept exists in etcd; not tracked
+   * </ul>
+   */
+  @Test
+  public void createIntercept_trackLeaseFalse_noTTL_returnsNone() throws Exception {
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "no-ttl-untracked-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    InterceptLease lease = palDirectory.createIntercept(req, 0, false);
+
+    assertEquals("Should return NONE for ttlSeconds=0", InterceptLease.NONE, lease);
+    assertFalse("Should not be tracked", palDirectory.getInterceptLease(interceptUuid).isPresent());
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+
+    // Cleanup
+    addInterceptRequestToCreated(peer.getUuid(), interceptUuid);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*     B U N D L E   M E T A D A T A   T T L   T E S T S             */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Tests that bundle metadata created with a TTL auto-expires.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Bundle metadata stored with a 3-second TTL
+   *   <li>When: 4 seconds elapse
+   *   <li>Then: getBundleMetadata returns null (expired)
+   * </ul>
+   */
+  @Test
+  public void createBundleMetadata_withTTL_autoExpires() throws Exception {
+    String bundleName = "ttl-bundle-" + UUID.randomUUID();
+    BundleMetadata metadata =
+        new BundleMetadata(
+            bundleName, UUID.randomUUID(), List.of(UUID.randomUUID()), Instant.now(), 1);
+
+    palDirectory.createBundleMetadata(bundleName, metadata, 3);
+
+    // Verify it exists
+    assertNotNull(
+        "Bundle metadata should exist immediately after creation",
+        palDirectory.getBundleMetadata(bundleName));
+
+    // Wait for expiry
+    TimeUnit.SECONDS.sleep(4);
+
+    assertNull(
+        "Bundle metadata should expire after TTL", palDirectory.getBundleMetadata(bundleName));
+  }
+
+  /**
+   * Tests that bundle metadata created without a TTL persists indefinitely.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Bundle metadata stored with ttlSeconds=0 (no TTL)
+   *   <li>When: Time elapses
+   *   <li>Then: getBundleMetadata still returns the metadata
+   * </ul>
+   */
+  @Test
+  public void createBundleMetadata_noTTL_persists() throws Exception {
+    String bundleName = "persist-bundle-" + UUID.randomUUID();
+    BundleMetadata metadata =
+        new BundleMetadata(
+            bundleName, UUID.randomUUID(), List.of(UUID.randomUUID()), Instant.now(), 1);
+
+    palDirectory.createBundleMetadata(bundleName, metadata, 0);
+
+    // Verify it exists
+    assertNotNull(palDirectory.getBundleMetadata(bundleName));
+
+    // Wait a bit and verify it still exists
+    TimeUnit.SECONDS.sleep(2);
+    assertNotNull(
+        "Bundle metadata should persist when no TTL is set",
+        palDirectory.getBundleMetadata(bundleName));
+
+    // Cleanup
+    palDirectory.deleteBundleMetadata(bundleName);
+  }
+
+  /**
+   * Tests that the no-arg overload of createBundleMetadata stores metadata without expiration
+   * (backward compatibility).
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: Bundle metadata stored via the two-arg overload (no TTL parameter)
+   *   <li>When: Time elapses
+   *   <li>Then: getBundleMetadata still returns the metadata
+   * </ul>
+   */
+  @Test
+  public void createBundleMetadata_twoArgOverload_persists() throws Exception {
+    String bundleName = "compat-bundle-" + UUID.randomUUID();
+    BundleMetadata metadata =
+        new BundleMetadata(
+            bundleName, UUID.randomUUID(), List.of(UUID.randomUUID()), Instant.now(), 1);
+
+    palDirectory.createBundleMetadata(bundleName, metadata);
+
+    assertNotNull(palDirectory.getBundleMetadata(bundleName));
+
+    TimeUnit.SECONDS.sleep(2);
+    assertNotNull(
+        "Two-arg overload should persist (no TTL)", palDirectory.getBundleMetadata(bundleName));
+
+    // Cleanup
+    palDirectory.deleteBundleMetadata(bundleName);
+  }
+
+  /**
+   * Regression test: bundle metadata and intercept expire together when given the same TTL.
+   *
+   * <p>This is the regression test for the orphaned bundle metadata issue where intercepts expired
+   * but the bundle metadata key remained indefinitely.
+   *
+   * <p>Specification:
+   *
+   * <ul>
+   *   <li>Given: A peer with an intercept (TTL=3s) and bundle metadata (TTL=3s)
+   *   <li>When: 4 seconds elapse
+   *   <li>Then: Both the intercept and bundle metadata are gone
+   * </ul>
+   */
+  @Test
+  public void createBundleMetadata_withTTL_expiresWithIntercept() throws Exception {
+    PeerInfo peer = new PeerInfo(UUID.randomUUID(), "bundle-ttl-peer");
+    palDirectory.createPeer(peer);
+    createdPeers.add(peer.getUuid());
+
+    UUID interceptUuid = UUID.randomUUID();
+    InterceptRequest<InterceptableMethodCall> req =
+        new InterceptRequest<>(
+            interceptUuid,
+            peer.getUuid(),
+            InterceptType.BEFORE,
+            "java.lang.System",
+            "org.Callback",
+            "noop",
+            new InterceptableMethodCall("currentTimeMillis", List.of()));
+
+    // Create intercept with 3s TTL (untracked, like the CLI does)
+    palDirectory.createIntercept(req, 3, false);
+
+    // Create bundle metadata with the same 3s TTL
+    String bundleName = "expire-together-" + UUID.randomUUID();
+    BundleMetadata metadata =
+        new BundleMetadata(bundleName, peer.getUuid(), List.of(interceptUuid), Instant.now(), 1);
+    palDirectory.createBundleMetadata(bundleName, metadata, 3);
+
+    // Both should exist
+    assertEquals(1, palDirectory.listInterceptsForPeer(peer.getUuid()).size());
+    assertNotNull(palDirectory.getBundleMetadata(bundleName));
+
+    // Wait for expiry
+    TimeUnit.SECONDS.sleep(4);
+
+    // Both should be gone
+    assertTrue(
+        "Intercept should expire", palDirectory.listInterceptsForPeer(peer.getUuid()).isEmpty());
+    assertNull(
+        "Bundle metadata should expire together with intercept",
+        palDirectory.getBundleMetadata(bundleName));
+    // Peer still lives
+    assertNotNull(palDirectory.getPeer(peer.getUuid()));
   }
 }
