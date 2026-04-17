@@ -62,7 +62,7 @@ abstract class AbstractPrintCommand extends AbstractPalSubcommand {
    *
    * <ul>
    *   <li>FULL - Detailed output with context and headers.
-   *   <li>JSON - Output in JSON format.
+   *   <li>JSON - Valid JSON output with the message offset embedded as a field.
    *   <li>COMPACT - Concise output with key information.
    *   <li>TREE - Tree view showing nested operation structure with indentation.
    * </ul>
@@ -71,7 +71,7 @@ abstract class AbstractPrintCommand extends AbstractPalSubcommand {
     /** Fully detailed output, including context and headers. */
     FULL,
 
-    /** Machine-readable output serialized as JSON. */
+    /** Machine-readable output serialized as valid JSON with offset embedded as a field. */
     JSON,
 
     /** Minimalist output showing only the essentials in a compact form. */
@@ -417,8 +417,14 @@ abstract class AbstractPrintCommand extends AbstractPalSubcommand {
           System.out.printf(
               "CONTEXT: offset: %d key: %s %nHEADERS: %s%n%s%n",
               offset, key, msg.getHeaders(), getMessageContentAsPrettyJson(msg));
-      case JSON ->
-          System.out.printf("offset: %d,%n%s%n", offset, getMessageContentAsPrettyJson(msg));
+      case JSON -> {
+        String json = getMessageContentAsPrettyJson(msg);
+        if (json.startsWith("{")) {
+          System.out.printf("{%n  \"offset\": %d,%s%n", offset, json.substring(1));
+        } else {
+          System.out.println(json);
+        }
+      }
       case COMPACT ->
           System.out.printf(
               "offset=%d id=%s message=%s%n", offset, getId(msg), getMessageOneLiner(msg));

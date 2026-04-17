@@ -358,10 +358,9 @@ public class AbstractPrintCommandTest {
       // When: printRecord() called
       cmd.printRecord(peer.toString(), lm, 10L);
 
-      // Then: Output contains JSON content and offset
+      // Then: Output is valid JSON with offset embedded as a field
       String output = bout.toString(UTF_8);
-      assertThat(output, containsString("offset: 10"));
-      // JSON output contains curly braces
+      assertThat(output, containsString("\"offset\": 10"));
       assertThat(output, containsString("{"));
     } finally {
       System.setOut(originalOut);
