@@ -67,6 +67,8 @@ import org.junit.Test;
  * <ul>
  *   <li>Loading phase fails, policy is STUB_FROM_WAL → returns WAL value (phantom stub)
  *   <li>Loading phase fails, policy is RE_EXECUTE → skips entry point, returns empty response
+ *   <li>Loading phase fails, entry point already handled by {@code dispatchReplay} → returns empty
+ *       skip response without consulting policy
  *   <li>Cursor and gate advancement via {@code advancePhantomStub()}
  *   <li>Loading succeeds but policy is STUB_FROM_WAL → returns WAL value instead of executing
  *   <li>Phantom cascading: stubbed return ref becomes phantom, subsequent ops auto-stub
@@ -174,6 +176,68 @@ public class DispatchIncomingPhantomStubTest {
     assertThat(response.getReturnValue(), is(nullValue()));
     assertThat(gate.getCompletedOffset(), is(20L));
     assertThat(ctx.getCursor(WAL_THREAD_NAME).isExhausted(), is(true));
+  }
+
+  /**
+   * Verifies that when {@code dispatchReplay} has already handled an entry point (via the real
+   * runtime path, because an unwoven framework such as Hibernate triggered a woven operation on a
+   * live thread), a subsequent phantom-handler invocation from the injector thread returns an empty
+   * skip response without consulting the replay policy or reconstructing a WAL-stubbed value.
+   *
+   * <p>Regression test for the race where Hibernate entity creation causes {@code dispatchReplay}
+   * to process a woven field-init entry point first, and the injector's {@code dispatchIncoming}
+   * loading phase later fails (target unresolvable through the injector's view) and previously
+   * emitted a spurious {@code "Phantom object skip: ... not stubbable"} warning. The dedup check at
+   * the top of the phantom handler mirrors the successful-loading dedup logic in {@code
+   * BaseExecMessageDispatcher#dispatchIncoming} and keeps behavior symmetrical across both paths.
+   */
+  @Test
+  public void phantomStub_skippedWhenEntryPointAlreadyHandled() throws Exception {
+    // Given: WAL with entry-point operation at offset 10 and completion at 20;
+    //        policy is STUB_FROM_WAL (would return a WAL value if the phantom handler ran fully);
+    //        loading phase throws (target not in store — e.g., Hibernate-created entity);
+    //        AND the entry point is ALREADY marked handled, simulating a prior dispatchReplay run.
+    List<WalEntry> entries = new ArrayList<>();
+    entries.add(makeEntryPointOperation(10L, WAL_THREAD_NAME, 0, "com.example.Pet", "visits"));
+    entries.add(makeReturnValue(20L, WAL_THREAD_NAME, 1, "\"wal-recorded\"", "java.lang.String"));
+    WalIndex index = WalIndex.build(entries);
+
+    ReplayPolicy policy = stubAllPolicy();
+    ReplayGate gate = new ReplayGate(true);
+    ReplayContext ctx =
+        new ReplayContext(
+            index,
+            policy,
+            new ReplayObjectStore(),
+            new DivergenceDetector(DivergenceDetector.DivergencePolicy.WARN),
+            gate);
+
+    // Simulate: dispatchReplay on the real runtime thread already handled this entry point.
+    ctx.markEntryPointHandled(10L);
+
+    // Injector pushed the pending injection before calling incomingCall().
+    ctx.pushPendingInjection(WAL_THREAD_NAME, 10L);
+
+    PhantomFailingDispatcher dispatcher = createPhantomDispatcher(ctx);
+
+    ExecMessage msg = createInstanceMethodExecMessage("com.example.Pet", "visits", true);
+
+    // When
+    ExecMessage response = dispatcher.dispatchIncoming(msg, MessageChannelType.REPLAY_INJECTION);
+
+    // Then: empty skip response (NOT the WAL-stubbed value, even though the policy would stub).
+    // This distinguishes the already-handled path from the normal phantom-stub path.
+    assertThat(response, is(notNullValue()));
+    assertThat(
+        "Should not return a WAL value when the entry point was already handled by dispatchReplay",
+        response.getReturnValue(),
+        is(nullValue()));
+
+    // Gate advanced to completion offset so any still-blocked injector can proceed.
+    assertThat("Gate should advance to completion offset", gate.getCompletedOffset(), is(20L));
+
+    // Entry point remains marked handled (idempotent).
+    assertThat(ctx.isEntryPointHandled(10L), is(true));
   }
 
   /**

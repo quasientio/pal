@@ -1740,6 +1740,30 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
         }
 
         if (phantomOffset >= 0) {
+          // Dedup: if dispatchReplay on the real runtime path already handled this entry point
+          // (common when unwoven framework code, e.g., Hibernate entity creation, triggers a
+          // woven field-init or method), skip silently. Mirrors the successful-loading path's
+          // dedup check below.
+          if (replayContext.isEntryPointHandled(phantomOffset)) {
+            Long completionOffset = replayContext.getWalIndex().getCompletionOffset(phantomOffset);
+            if (completionOffset != null) {
+              replayContext.getReplayGate().advanceTo(completionOffset);
+            }
+            if (logger.isDebugEnabled()) {
+              logger.debug(
+                  "Phantom handler: entry point at offset {} already handled by dispatchReplay,"
+                      + " skipping silently",
+                  phantomOffset);
+            }
+            if (trackingEnabled) {
+              inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
+            }
+            ExecMessage skipResponse = new ExecMessage();
+            skipResponse.setMessageId(incomingCall.getMessageId());
+            skipResponse.setPeerUuid(incomingCall.getPeerUuid());
+            return skipResponse;
+          }
+
           // Check if this operation should be stubbed according to the replay policy
           ReplayAction phantomAction =
               replayContext.getPolicy().getAction(phantomClassName, phantomMethodName, messageType);
