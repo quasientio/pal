@@ -87,6 +87,55 @@ public class FullQuantizeAspect {
   @Pointcut("allClasses() && call(new(..))")
   private void constructors() {}
 
+  /**
+   * Matches executions of non-static void methods in the selected classes.
+   *
+   * <p>Supplements {@link #voidInstanceMethods()} by firing on the callee side, capturing
+   * invocations originating from unwoven callers (e.g. reflection, method references, JNI, or
+   * framework callbacks).
+   */
+  @Pointcut("allClasses() && execution(!static void *(..))")
+  private void voidInstanceMethodsExec() {}
+
+  /**
+   * Matches executions of static void methods in the selected classes.
+   *
+   * <p>Supplements {@link #voidClassMethods()} by firing on the callee side, capturing invocations
+   * originating from unwoven callers (e.g. reflection, method references, JNI, or framework
+   * callbacks).
+   */
+  @Pointcut("allClasses() && execution(static void *(..))")
+  private void voidClassMethodsExec() {}
+
+  /**
+   * Matches executions of non-static methods returning a value in the selected classes.
+   *
+   * <p>Supplements {@link #nonVoidInstanceMethods()} by firing on the callee side, capturing
+   * invocations originating from unwoven callers (e.g. reflection, method references, JNI, or
+   * framework callbacks).
+   */
+  @Pointcut("allClasses() && execution(!static !void *(..))")
+  private void nonVoidInstanceMethodsExec() {}
+
+  /**
+   * Matches executions of static methods returning a value in the selected classes.
+   *
+   * <p>Supplements {@link #nonVoidClassMethods()} by firing on the callee side, capturing
+   * invocations originating from unwoven callers (e.g. reflection, method references, JNI, or
+   * framework callbacks).
+   */
+  @Pointcut("allClasses() && execution(static !void *(..))")
+  private void nonVoidClassMethodsExec() {}
+
+  /**
+   * Matches constructor executions in the selected classes.
+   *
+   * <p>Supplements {@link #constructors()} by firing on the callee side, capturing constructions
+   * originating from unwoven callers (e.g. reflection, serialization, or framework instantiation).
+   */
+  @Pointcut("allClasses() && execution(new(..))")
+  private void constructorsExec() {}
+
   /** Matches get access to static fields in the selected classes. */
   @Pointcut("allClasses() && get(static * *)")
   private void staticGetfields() {}
@@ -233,6 +282,132 @@ public class FullQuantizeAspect {
     } finally {
       TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
     }
+  }
+
+  /* ADVICE for Method/Constructor Executions (supplement call-site advice) */
+
+  /**
+   * Around advice that intercepts executions of non-static void methods and, when no call-site
+   * advice is active on this thread, forwards them to {@link DispatchForwarder#voidInstanceMethod}.
+   *
+   * <p>When {@link #TL_CALL_ADVICE_DEPTH} is positive, the call-site advice has already dispatched
+   * for this invocation and this advice simply proceeds to avoid double-dispatch.
+   *
+   * @param pjp the proceeding join point representing the method execution
+   * @throws Throwable if the forwarding or target invocation fails
+   */
+  @Around("voidInstanceMethodsExec()")
+  public void aroundVoidInstanceMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
+    if (TL_CALL_ADVICE_DEPTH.get() == 0) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            " D --> void instance method (exec): {}",
+            pjp.getStaticPart().getSignature().toShortString());
+      }
+      DispatchForwarder.voidInstanceMethod(pjp);
+    } else {
+      pjp.proceed();
+    }
+  }
+
+  /**
+   * Around advice that intercepts executions of static void methods and, when no call-site advice
+   * is active on this thread, forwards them to {@link DispatchForwarder#voidClassMethod}.
+   *
+   * <p>When {@link #TL_CALL_ADVICE_DEPTH} is positive, the call-site advice has already dispatched
+   * for this invocation and this advice simply proceeds to avoid double-dispatch.
+   *
+   * @param pjp the proceeding join point representing the method execution
+   * @throws Throwable if the forwarding or target invocation fails
+   */
+  @Around("voidClassMethodsExec()")
+  public void aroundVoidClassMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
+    if (TL_CALL_ADVICE_DEPTH.get() == 0) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            " D --> void class method (exec): {}",
+            pjp.getStaticPart().getSignature().toShortString());
+      }
+      DispatchForwarder.voidClassMethod(pjp);
+    } else {
+      pjp.proceed();
+    }
+  }
+
+  /**
+   * Around advice that intercepts executions of non-static methods returning a value and, when no
+   * call-site advice is active on this thread, forwards them to {@link
+   * DispatchForwarder#nonVoidInstanceMethod}.
+   *
+   * <p>When {@link #TL_CALL_ADVICE_DEPTH} is positive, the call-site advice has already dispatched
+   * for this invocation and this advice simply proceeds, returning the result of {@code
+   * pjp.proceed()} to avoid double-dispatch.
+   *
+   * @param pjp the proceeding join point representing the method execution
+   * @return the result returned by the target method or dispatcher
+   * @throws Throwable if the forwarding or target invocation fails
+   */
+  @Around("nonVoidInstanceMethodsExec()")
+  public Object aroundNonVoidInstanceMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
+    if (TL_CALL_ADVICE_DEPTH.get() == 0) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            " D --> non-void instance method (exec): {}",
+            pjp.getStaticPart().getSignature().toShortString());
+      }
+      return DispatchForwarder.nonVoidInstanceMethod(pjp);
+    }
+    return pjp.proceed();
+  }
+
+  /**
+   * Around advice that intercepts executions of static methods returning a value and, when no
+   * call-site advice is active on this thread, forwards them to {@link
+   * DispatchForwarder#nonVoidClassMethod}.
+   *
+   * <p>When {@link #TL_CALL_ADVICE_DEPTH} is positive, the call-site advice has already dispatched
+   * for this invocation and this advice simply proceeds, returning the result of {@code
+   * pjp.proceed()} to avoid double-dispatch.
+   *
+   * @param pjp the proceeding join point representing the method execution
+   * @return the result returned by the target method or dispatcher
+   * @throws Throwable if the forwarding or target invocation fails
+   */
+  @Around("nonVoidClassMethodsExec()")
+  public Object aroundNonVoidClassMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
+    if (TL_CALL_ADVICE_DEPTH.get() == 0) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            " D --> non-void class method (exec): {}",
+            pjp.getStaticPart().getSignature().toShortString());
+      }
+      return DispatchForwarder.nonVoidClassMethod(pjp);
+    }
+    return pjp.proceed();
+  }
+
+  /**
+   * Around advice that intercepts constructor executions and, when no call-site advice is active on
+   * this thread, forwards them to {@link DispatchForwarder#constructor}.
+   *
+   * <p>When {@link #TL_CALL_ADVICE_DEPTH} is positive, the call-site advice has already dispatched
+   * for this invocation and this advice simply proceeds, returning the result of {@code
+   * pjp.proceed()} to avoid double-dispatch.
+   *
+   * @param pjp the proceeding join point representing the constructor execution
+   * @return the constructed object or a replacement provided by the dispatcher
+   * @throws Throwable if the forwarding or target invocation fails
+   */
+  @Around("constructorsExec()")
+  public Object aroundConstructorsExec(ProceedingJoinPoint pjp) throws Throwable {
+    if (TL_CALL_ADVICE_DEPTH.get() == 0) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            " D --> constructor (exec): {}", pjp.getStaticPart().getSignature().toShortString());
+      }
+      return DispatchForwarder.constructor(pjp);
+    }
+    return pjp.proceed();
   }
 
   /* ADVICE for Fields */
