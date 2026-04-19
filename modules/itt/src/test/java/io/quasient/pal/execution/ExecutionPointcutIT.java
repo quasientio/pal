@@ -53,8 +53,18 @@ public class ExecutionPointcutIT extends AbstractCliIT {
   /** Unqualified class name used to match WAL entries belonging to the test app. */
   private static final String APP_CLASS = "ExecutionPointcutApp";
 
-  /** Expected output marker produced by {@code ExecutionPointcutApp#main}. */
-  private static final String EXPECTED_MARKER = "results: n:hello|r:world|mr:ref|s:static|l:lam|";
+  /**
+   * Expected output marker produced by {@code ExecutionPointcutApp#main}.
+   *
+   * <p>Order matches the paths exercised in {@code main}: direct call, reflected instance,
+   * method-reference, reflected static, lambda-captured, reflected constructor marker, recursion
+   * count (3 from {@code RECURSION_DEPTH}), virtual dispatch (override wins), interface dispatch.
+   */
+  private static final String EXPECTED_MARKER =
+      "results: n:hello|r:world|mr:ref|s:static|l:lam|ctor-marker|3|sub:vd|iface:id";
+
+  /** Recursion depth used by the app; total number of {@code recursiveCount} frames is this + 1. */
+  private static final int RECURSION_DEPTH = 3;
 
   /**
    * Creates a unique Chronicle WAL spec and registers the path for cleanup.
@@ -120,7 +130,23 @@ public class ExecutionPointcutIT extends AbstractCliIT {
    * @return the number of OPERATION entries matching
    */
   private int countOperationEntries(String output, String executableName) {
-    String marker = APP_CLASS + "." + executableName + "(";
+    return countOperationEntries(output, APP_CLASS, executableName);
+  }
+
+  /**
+   * Counts the number of verbose {@code OPERATION} lines whose signature matches {@code className +
+   * "." + executableName + "("}. Use this overload when the target class is a nested class of
+   * {@link #APP_CLASS} (rendered as {@code ExecutionPointcutApp$NestedName} in the WAL verbose
+   * output) or any other class whose short name is not {@link #APP_CLASS}.
+   *
+   * @param output the stdout from {@code pal log index --verbose}
+   * @param className the short class name as it appears in verbose output (e.g., {@code
+   *     "ExecutionPointcutApp$VirtualSub"})
+   * @param executableName the simple method or constructor name
+   * @return the number of OPERATION entries matching
+   */
+  private int countOperationEntries(String output, String className, String executableName) {
+    String marker = className + "." + executableName + "(";
     long count =
         output.lines().filter(line -> line.contains(" OPERATION") && line.contains(marker)).count();
     return (int) count;
@@ -300,6 +326,110 @@ public class ExecutionPointcutIT extends AbstractCliIT {
         "Constructor.newInstance call-site must appear in WAL",
         (int) newInstanceCount,
         greaterThanOrEqualTo(1));
+  }
+
+  /**
+   * Records a WAL with the test application and asserts that a directly recursive method produces
+   * exactly {@code RECURSION_DEPTH + 1} OPERATION entries — one per recursion frame. A
+   * double-dispatch regression (for example, an execution-site key that did not match its call-site
+   * key at the same frame) would inflate this count to {@code 2 * (RECURSION_DEPTH + 1)}.
+   *
+   * @throws Exception if any step fails
+   */
+  @Test
+  public void shouldNotDoubleDispatchOnRecursiveCall() throws Exception {
+    String walSpec = createWalSpec("exec-recursive");
+
+    ProcessResult recordResult = recordWal(walSpec);
+    assertEquals("Recording should succeed", 0, recordResult.exitCode());
+    assertThat(
+        "Recording should produce expected output marker",
+        recordResult.stdout(),
+        containsString(EXPECTED_MARKER));
+
+    CliProcessResult indexResult = doVerboseIndex(walSpec);
+    assertEquals("wal-index should succeed", 0, indexResult.exitCode());
+
+    int recursiveCount = countOperationEntries(indexResult.stdout(), "recursiveCount");
+    logger.info("recursiveCount OPERATION entries: {}", recursiveCount);
+
+    assertEquals(
+        "recursiveCount should appear exactly " + (RECURSION_DEPTH + 1) + " times (one per frame)",
+        RECURSION_DEPTH + 1,
+        recursiveCount);
+  }
+
+  /**
+   * Records a WAL with the test application and asserts that a virtual-dispatch call to an
+   * overridden method (made through a base-typed reference on a subclass instance) produces exactly
+   * one OPERATION entry.
+   *
+   * <p>This is the regression test for the call-site/execution-site key mismatch fixed in this
+   * change: before the fix, the call-site keyed on the static base type while the execution-site
+   * keyed on the runtime subclass, so the guard failed to suppress exec-site dispatch and the same
+   * invocation was recorded twice. With the runtime-class-keyed guard, both sides agree and the WAL
+   * contains exactly one entry.
+   *
+   * @throws Exception if any step fails
+   */
+  @Test
+  public void shouldNotDoubleDispatchOnVirtualDispatch() throws Exception {
+    String walSpec = createWalSpec("exec-virtual");
+
+    ProcessResult recordResult = recordWal(walSpec);
+    assertEquals("Recording should succeed", 0, recordResult.exitCode());
+    assertThat(
+        "Recording should produce expected output marker (override wins on virtual dispatch)",
+        recordResult.stdout(),
+        containsString(EXPECTED_MARKER));
+
+    CliProcessResult indexResult = doVerboseIndex(walSpec);
+    assertEquals("wal-index should succeed", 0, indexResult.exitCode());
+
+    int virtualCount =
+        countOperationEntries(indexResult.stdout(), APP_CLASS + "$VirtualSub", "virtualMethod");
+    logger.info("VirtualSub.virtualMethod OPERATION entries: {}", virtualCount);
+
+    assertEquals(
+        "virtualMethod should appear exactly once under virtual dispatch (no double-dispatch)",
+        1,
+        virtualCount);
+  }
+
+  /**
+   * Records a WAL with the test application and asserts that an interface-dispatch call (made
+   * through an interface-typed reference on a concrete implementation) produces exactly one
+   * OPERATION entry.
+   *
+   * <p>Analogous to {@link #shouldNotDoubleDispatchOnVirtualDispatch()} but with an interface
+   * declaration rather than an overridden class method. The call-site's declaring type is the
+   * interface while the execution-site runs on the concrete implementation; the runtime-class-keyed
+   * guard must align both sides.
+   *
+   * @throws Exception if any step fails
+   */
+  @Test
+  public void shouldNotDoubleDispatchOnInterfaceDispatch() throws Exception {
+    String walSpec = createWalSpec("exec-iface");
+
+    ProcessResult recordResult = recordWal(walSpec);
+    assertEquals("Recording should succeed", 0, recordResult.exitCode());
+    assertThat(
+        "Recording should produce expected output marker (impl runs on interface dispatch)",
+        recordResult.stdout(),
+        containsString(EXPECTED_MARKER));
+
+    CliProcessResult indexResult = doVerboseIndex(walSpec);
+    assertEquals("wal-index should succeed", 0, indexResult.exitCode());
+
+    int ifaceCount =
+        countOperationEntries(indexResult.stdout(), APP_CLASS + "$VirtualIfaceImpl", "ifaceMethod");
+    logger.info("VirtualIfaceImpl.ifaceMethod OPERATION entries: {}", ifaceCount);
+
+    assertEquals(
+        "ifaceMethod should appear exactly once under interface dispatch (no double-dispatch)",
+        1,
+        ifaceCount);
   }
 
   /**
