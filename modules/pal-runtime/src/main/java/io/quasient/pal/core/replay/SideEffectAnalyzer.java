@@ -19,6 +19,8 @@ import io.quasient.pal.common.replay.Span;
 import io.quasient.pal.common.replay.WalEntry;
 import io.quasient.pal.common.replay.WalIndex;
 import io.quasient.pal.core.replay.ReplayPolicy.ReplayAction;
+import io.quasient.pal.messages.colfer.Obj;
+import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.types.MessageType;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,6 +86,15 @@ public class SideEffectAnalyzer {
         continue;
       }
 
+      // When a constructor is stubbed, the constructed object becomes a phantom and all
+      // subsequent operations on it are auto-stubbed via phantom cascade. PUT_FIELD entries
+      // targeting the constructed object are safe to skip because no live code will read
+      // the field value — the entire object is a phantom.
+      int constructorReturnRef = 0;
+      if (opEntry.getMessageType() == MessageType.EXEC_CONSTRUCTOR) {
+        constructorReturnRef = extractConstructorReturnRef(index, span);
+      }
+
       List<WalEntry> innerEntries = index.getEntriesInSpan(span);
       for (WalEntry innerEntry : innerEntries) {
         MessageType msgType = innerEntry.getMessageType();
@@ -92,6 +103,9 @@ public class SideEffectAnalyzer {
           warnings.add(new UnsafeStubWarning(opEntry, innerEntry, span, -1));
           logger.warn("{}", warnings.get(warnings.size() - 1));
         } else if (msgType == MessageType.EXEC_PUT_FIELD) {
+          if (constructorReturnRef != 0 && innerEntry.getObjectRef() == constructorReturnRef) {
+            continue;
+          }
           long externalRefOffset = findExternalReference(index, innerEntry, span);
           if (externalRefOffset >= 0) {
             warnings.add(new UnsafeStubWarning(opEntry, innerEntry, span, externalRefOffset));
@@ -102,6 +116,33 @@ public class SideEffectAnalyzer {
     }
 
     return warnings;
+  }
+
+  /**
+   * Extracts the return ref from the completion entry of a constructor span.
+   *
+   * <p>The constructor's completion entry contains the {@link ReturnValue} with the newly
+   * constructed object's {@link Obj#getRef() ref}. This ref identifies the phantom object during
+   * replay.
+   *
+   * @param index the WAL index
+   * @param span the constructor span
+   * @return the constructed object's ref, or {@code 0} if unavailable
+   */
+  private static int extractConstructorReturnRef(WalIndex index, Span span) {
+    WalEntry completionEntry = index.getEntryAtOffset(span.completionOffset());
+    if (completionEntry == null) {
+      return 0;
+    }
+    ReturnValue rv = completionEntry.getRawMessage().getReturnValue();
+    if (rv == null) {
+      return 0;
+    }
+    Obj obj = rv.getObject();
+    if (obj == null) {
+      return 0;
+    }
+    return obj.getRef();
   }
 
   /**

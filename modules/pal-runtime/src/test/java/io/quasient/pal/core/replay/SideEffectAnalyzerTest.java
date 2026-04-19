@@ -24,11 +24,13 @@ import io.quasient.pal.common.replay.WalIndex;
 import io.quasient.pal.core.replay.ReplayPolicy.ReplayAction;
 import io.quasient.pal.core.replay.SideEffectAnalyzer.UnsafeStubWarning;
 import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ConstructorCall;
 import io.quasient.pal.messages.colfer.ExecMessage;
 import io.quasient.pal.messages.colfer.Field;
 import io.quasient.pal.messages.colfer.InstanceFieldPut;
 import io.quasient.pal.messages.colfer.InstanceFieldPutDone;
 import io.quasient.pal.messages.colfer.InstanceMethodCall;
+import io.quasient.pal.messages.colfer.Obj;
 import io.quasient.pal.messages.colfer.ReturnValue;
 import io.quasient.pal.messages.colfer.StaticFieldPut;
 import io.quasient.pal.messages.colfer.StaticFieldPutDone;
@@ -218,6 +220,65 @@ public class SideEffectAnalyzerTest {
   }
 
   /**
+   * Verifies that PUT_FIELD entries inside a constructor span targeting the constructed object do
+   * not produce a warning, because the object becomes a phantom and all subsequent operations on it
+   * are auto-stubbed via phantom cascade.
+   */
+  @Test
+  public void noWarningForPutFieldOnConstructedObjectInPhantomCascade() {
+    // Given: WAL with constructor span (10, 40) containing PUT_FIELD on ref 99 (the constructed
+    // object); ref 99 appears in method calls at offsets 50, 60, 70 (outside span);
+    // policy stubs the constructor
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeConstructorOperation(10, "com.example.DataService", 1),
+            makePutFieldOperation(20, "com.example.DataService", "prefix", 99, 2),
+            makePutFieldCompletion(25, 3),
+            makeConstructorCompletion(40, 99, 4),
+            makeMethodOperation(50, "com.example.DataService", "query", 99, 5),
+            makeCompletion(55, 6),
+            makeMethodOperation(60, "com.example.DataService", "transform", 99, 7),
+            makeCompletion(65, 8));
+
+    WalIndex index = WalIndex.build(entries);
+    ReplayPolicy policy = stubAllPolicy();
+
+    // When
+    List<UnsafeStubWarning> warnings = analyzer.analyze(index, policy);
+
+    // Then: No warning — the PUT_FIELD target is the constructed object, which becomes a phantom
+    assertThat(warnings.size(), is(0));
+  }
+
+  /**
+   * Verifies that PUT_FIELD entries inside a constructor span targeting a DIFFERENT object still
+   * produce a warning (only the constructed object itself is exempt from phantom cascade).
+   */
+  @Test
+  public void warningForPutFieldOnOtherObjectInsideConstructor() {
+    // Given: WAL with constructor span (10, 40) containing PUT_FIELD on ref 77 (a different
+    // object); ref 77 appears outside the span; constructor returns object with ref 99
+    List<WalEntry> entries =
+        Arrays.asList(
+            makeConstructorOperation(10, "com.example.Service", 1),
+            makePutFieldOperation(20, "com.example.Other", "field", 77, 2),
+            makePutFieldCompletion(25, 3),
+            makeConstructorCompletion(40, 99, 4),
+            makeMethodOperation(50, "com.example.Processor", "process", 77, 5),
+            makeCompletion(55, 6));
+
+    WalIndex index = WalIndex.build(entries);
+    ReplayPolicy policy = stubAllPolicy();
+
+    // When
+    List<UnsafeStubWarning> warnings = analyzer.analyze(index, policy);
+
+    // Then: Warning — the PUT_FIELD targets a different object (77 ≠ 99)
+    assertThat(warnings.size(), is(1));
+    assertThat(warnings.get(0).getPutEntry().getOffset(), is(20L));
+  }
+
+  /**
    * Creates a policy that stubs all operations with {@link ReplayAction#STUB_FROM_WAL}.
    *
    * @return a stub-all replay policy
@@ -363,6 +424,49 @@ public class SideEffectAnalyzerTest {
     field.setClazz(clazz);
     done.setField(field);
     msg.setStaticFieldPutDone(done);
+    return WalEntry.fromExecMessage(offset, msg);
+  }
+
+  /**
+   * Creates a synthetic constructor OPERATION {@link WalEntry}.
+   *
+   * @param offset the WAL offset
+   * @param className the class being constructed
+   * @param builderSeq the builder sequence number
+   * @return a new constructor operation entry
+   */
+  private static WalEntry makeConstructorOperation(long offset, String className, int builderSeq) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName("self-caller");
+    msg.setBuilderSeq(builderSeq);
+    ConstructorCall cc = new ConstructorCall();
+    Class clazz = new Class();
+    clazz.setName(className);
+    cc.setClazz(clazz);
+    msg.setConstructorCall(cc);
+    return WalEntry.fromExecMessage(offset, msg);
+  }
+
+  /**
+   * Creates a synthetic constructor COMPLETION {@link WalEntry} with a return ref.
+   *
+   * @param offset the WAL offset
+   * @param returnRef the ref of the constructed object
+   * @param builderSeq the builder sequence number
+   * @return a new constructor completion entry
+   */
+  private static WalEntry makeConstructorCompletion(long offset, int returnRef, int builderSeq) {
+    ExecMessage msg = new ExecMessage();
+    msg.setThreadName("self-caller");
+    msg.setBuilderSeq(builderSeq);
+    ReturnValue rv = new ReturnValue();
+    Obj obj = new Obj();
+    obj.setRef(returnRef);
+    Class objClazz = new Class();
+    objClazz.setName("com.example.ConstructedObject");
+    obj.setClazz(objClazz);
+    rv.setObject(obj);
+    msg.setReturnValue(rv);
     return WalEntry.fromExecMessage(offset, msg);
   }
 }
