@@ -16,6 +16,7 @@
 package io.quasient.pal.weave;
 
 import io.quasient.pal.common.runtime.DispatchForwarder;
+import java.lang.reflect.Modifier;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.JoinPoint.StaticPart;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -23,6 +24,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.CodeSignature;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,19 +44,23 @@ public class FullQuantizeAspect {
   private static final Logger logger = LoggerFactory.getLogger(FullQuantizeAspect.class);
 
   /**
-   * Records the signature of the innermost call-site advice currently active on the thread.
+   * Records a guard key identifying the innermost call-site advice currently active on the thread.
    *
-   * <p>Each call-site advice saves the previous value, stores its own join-point long signature,
-   * dispatches, and restores the previous value in a {@code finally} block (prev/restore pattern).
-   * Nested woven-to-woven calls are handled naturally: the current thread-local holds the signature
-   * of the deepest active call-site at all times.
+   * <p>Each call-site advice saves the previous value, stores its own guard key (see {@link
+   * #computeMethodGuardKey(JoinPoint)}), dispatches, and restores the previous value in a {@code
+   * finally} block (prev/restore pattern). Nested woven-to-woven calls are handled naturally: the
+   * current thread-local holds the key of the deepest active call-site at all times.
    *
-   * <p>Execution-site advice uses this to avoid double-dispatch. If the thread-local's signature
-   * matches the execution-site's own signature, the call-site already dispatched for this
-   * invocation and the advice simply proceeds. If the signatures differ (or the thread-local is
-   * {@code null}), the call-site did not dispatch for this invocation — the caller is unwoven
-   * (reflection, method references, {@code invokedynamic}, JNI, JDK) — so the execution-site advice
-   * must dispatch itself.
+   * <p>Execution-site advice uses this to avoid double-dispatch. If the thread-local's key matches
+   * the execution-site's own key (computed the same way from the execution join point), the
+   * call-site already dispatched for this invocation and the advice simply proceeds. If the keys
+   * differ (or the thread-local is {@code null}), the call-site did not dispatch for this
+   * invocation — the caller is unwoven (reflection, method references, {@code invokedynamic}, JNI,
+   * JDK) — so the execution-site advice must dispatch itself.
+   *
+   * <p>The key must include the runtime receiver class rather than the static call-site type so
+   * that call-site and execution-site keys agree in the presence of virtual dispatch, interface
+   * dispatch, and super calls. See {@link #computeMethodGuardKey(JoinPoint)} for the format.
    *
    * <p>The PAL runtime can set the slot to {@link #RUNTIME_INVOKE_SENTINEL} around its own
    * reflective invocation of an incoming message target (e.g. {@code
@@ -67,9 +73,17 @@ public class FullQuantizeAspect {
 
   /**
    * Sentinel value the PAL runtime places in {@link #TL_CURRENT_CALL_SIG} while it reflectively
-   * invokes an incoming-message target. Compared by reference identity, so it cannot collide with a
-   * real join-point signature string. Execution-site advice treats this state as "a woven caller
-   * already claimed this invocation" and proceeds without dispatching.
+   * invokes an incoming-message target. It is compared by <strong>reference identity</strong>
+   * ({@code ==}), not by {@link String#equals(Object)} — this is load-bearing: the identity check
+   * guarantees no user-supplied join-point key can ever collide with the sentinel, regardless of
+   * its content. Execution-site advice treats this state as "a woven caller already claimed this
+   * invocation" and proceeds without dispatching.
+   *
+   * <p><strong>Do not change the {@code ==} comparison in {@link
+   * #callSiteAlreadyDispatched(JoinPoint)} to {@code .equals(...)}.</strong> A value-equal but
+   * non-identical string constructed from user input (or deserialised from a wire format) could
+   * otherwise forge the sentinel and cause exec-site advice to silently skip dispatch on a call the
+   * runtime did not claim.
    */
   public static final String RUNTIME_INVOKE_SENTINEL = "<pal-runtime-reflective-invoke>";
 
@@ -205,7 +219,7 @@ public class FullQuantizeAspect {
     }
 
     String prev = TL_CURRENT_CALL_SIG.get();
-    TL_CURRENT_CALL_SIG.set(pjp.getSignature().toLongString());
+    TL_CURRENT_CALL_SIG.set(computeMethodGuardKey(pjp));
     try {
       DispatchForwarder.voidInstanceMethod(pjp);
     } finally {
@@ -231,7 +245,7 @@ public class FullQuantizeAspect {
     }
 
     String prev = TL_CURRENT_CALL_SIG.get();
-    TL_CURRENT_CALL_SIG.set(pjp.getSignature().toLongString());
+    TL_CURRENT_CALL_SIG.set(computeMethodGuardKey(pjp));
     try {
       DispatchForwarder.voidClassMethod(pjp);
     } finally {
@@ -259,7 +273,7 @@ public class FullQuantizeAspect {
     }
 
     String prev = TL_CURRENT_CALL_SIG.get();
-    TL_CURRENT_CALL_SIG.set(pjp.getSignature().toLongString());
+    TL_CURRENT_CALL_SIG.set(computeMethodGuardKey(pjp));
     try {
       return DispatchForwarder.nonVoidInstanceMethod(pjp);
     } finally {
@@ -286,7 +300,7 @@ public class FullQuantizeAspect {
     }
 
     String prev = TL_CURRENT_CALL_SIG.get();
-    TL_CURRENT_CALL_SIG.set(pjp.getSignature().toLongString());
+    TL_CURRENT_CALL_SIG.set(computeMethodGuardKey(pjp));
     try {
       return DispatchForwarder.nonVoidClassMethod(pjp);
     } finally {
@@ -439,13 +453,21 @@ public class FullQuantizeAspect {
    * because something has already claimed this invocation on the current thread:
    *
    * <ul>
-   *   <li>A woven call-site whose join-point signature matches this execution-site's own — the
-   *       normal woven-to-woven direct-call case.
+   *   <li>A woven call-site whose guard key matches this execution-site's own — the normal
+   *       woven-to-woven direct-call case. The key is computed from the runtime receiver class (see
+   *       {@link #computeMethodGuardKey(JoinPoint)}), so virtual-dispatch, interface-dispatch and
+   *       {@code super} calls all produce agreeing keys on both sides of the invocation.
    *   <li>The PAL runtime's reflective invocation path, which installs {@link
    *       #RUNTIME_INVOKE_SENTINEL} before calling {@code Method.invoke} on an incoming-message
-   *       target and restores the previous value afterwards. Sentinel identity is checked with
-   *       {@code ==}, so it cannot collide with any real join-point signature.
+   *       target and restores the previous value afterwards.
    * </ul>
+   *
+   * <p><strong>The sentinel check uses {@code ==} on purpose.</strong> Reference identity
+   * guarantees that only the exact constant installed by {@link #beginRuntimeInvoke()} trips the
+   * short-circuit. A {@code .equals(...)} check would allow any equal-content string — including
+   * one derived from user data, a deserialised message, or a maliciously crafted class name — to
+   * impersonate the sentinel and cause exec-site advice to silently skip dispatch. Do not change
+   * this comparison.
    *
    * @param pjp the join point whose execution-site advice is consulting the guard
    * @return whether the exec-site advice should skip dispatch and simply proceed
@@ -455,10 +477,59 @@ public class FullQuantizeAspect {
     if (current == null) {
       return false;
     }
+    // Identity comparison is load-bearing: see javadoc on RUNTIME_INVOKE_SENTINEL and this method.
     if (current == RUNTIME_INVOKE_SENTINEL) {
       return true;
     }
-    return current.equals(pjp.getSignature().toLongString());
+    return current.equals(computeMethodGuardKey(pjp));
+  }
+
+  /**
+   * Computes the thread-local guard key used to pair a method call-site advice with the matching
+   * execution-site advice on the same invocation.
+   *
+   * <p>The key format is {@code <class-name>#<method-name>(<param-1>,<param-2>,...)}, where:
+   *
+   * <ul>
+   *   <li>For instance methods, {@code class-name} is the <strong>runtime class of the receiver
+   *       ({@link JoinPoint#getTarget()})</strong>. At a call-site this is the actual object about
+   *       to dispatch (not the static compile-time type), and at an execution-site this is {@code
+   *       this}. The two sides therefore agree even when the call-site's static receiver type is a
+   *       supertype of the actual runtime class — i.e. virtual dispatch on an override ({@code Base
+   *       b = new Sub(); b.foo()}), interface dispatch ({@code Iface i = new Impl(); i.m()}), and
+   *       {@code super.foo()} calls (where the exec-site is the base method but {@code
+   *       this.getClass()} is still the concrete subclass).
+   *   <li>For static methods (and whenever the target is {@code null}), {@code class-name} is the
+   *       signature's declaring type, which is stable across call and execution.
+   * </ul>
+   *
+   * <p>Using {@link org.aspectj.lang.Signature#toLongString()} instead would key on the static
+   * compile-time receiver type, causing a mismatch between the call-site and the execution-site
+   * under virtual/interface dispatch and yielding double-dispatch.
+   *
+   * @param pjp the method call-site or execution-site join point to key
+   * @return a stable guard key that agrees on both sides of a woven-to-woven invocation
+   */
+  private static String computeMethodGuardKey(JoinPoint pjp) {
+    MethodSignature ms = (MethodSignature) pjp.getSignature();
+    Class<?> keyClass;
+    Object target = pjp.getTarget();
+    if (target != null && !Modifier.isStatic(ms.getModifiers())) {
+      keyClass = target.getClass();
+    } else {
+      keyClass = ms.getDeclaringType();
+    }
+    StringBuilder sb = new StringBuilder();
+    sb.append(keyClass.getName()).append('#').append(ms.getName()).append('(');
+    Class<?>[] params = ms.getParameterTypes();
+    for (int i = 0; i < params.length; i++) {
+      if (i > 0) {
+        sb.append(',');
+      }
+      sb.append(params[i].getName());
+    }
+    sb.append(')');
+    return sb.toString();
   }
 
   /* ADVICE for Fields */
