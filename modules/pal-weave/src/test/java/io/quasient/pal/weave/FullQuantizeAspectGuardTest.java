@@ -16,169 +16,177 @@
 package io.quasient.pal.weave;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Specification tests for the {@code TL_CALL_ADVICE_DEPTH} thread-local guard counter in {@link
+ * Specification tests for the {@code TL_CURRENT_CALL_SIG} thread-local signature guard in {@link
  * FullQuantizeAspect}.
  *
- * <p>The guard counter prevents double-dispatch between call-site and execution-site advice: when
- * call-site advice is active (depth &gt; 0), execution-site advice must skip dispatch and simply
- * proceed. These tests verify the counter's invariants under nested, concurrent, and exceptional
- * scenarios.
+ * <p>The guard holds the join-point signature of the innermost active call-site advice on the
+ * current thread. Execution-site advice uses it to distinguish the "woven-to-woven direct call"
+ * case (signatures match — skip dispatch) from "unwoven caller" cases such as reflection and method
+ * references (no match — execution-site must dispatch itself).
+ *
+ * <p>These tests verify the guard's invariants under nested, concurrent, and exceptional scenarios
+ * using the save-prev / restore-prev pattern employed by the call-site advice.
  */
 public class FullQuantizeAspectGuardTest {
 
   /** Ensures the thread-local starts fresh on the test thread. */
   @Before
   public void resetBefore() {
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.remove();
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.remove();
   }
 
-  /** Removes any state so the counter does not leak into other tests on the same thread. */
+  /** Removes any state so the signature does not leak into other tests on the same thread. */
   @After
   public void resetAfter() {
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.remove();
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.remove();
   }
 
   /**
-   * Verifies the guard counter is initialized to 0 on a fresh thread.
+   * Verifies the guard slot is initialized to {@code null} on a fresh thread.
    *
-   * <p>This is the baseline invariant: any thread that has never touched the counter should observe
-   * a value of 0, which is the "no call-site advice active" state.
+   * <p>This is the baseline invariant: any thread that has never touched the slot must observe
+   * {@code null}, representing the "no call-site advice active" state.
    */
   @Test
-  public void shouldInitializeCounterToZero() {
-    assertEquals(
-        "Fresh thread-local must initialize to 0",
-        Integer.valueOf(0),
-        FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+  public void shouldInitializeSignatureToNull() {
+    assertNull(
+        "Fresh thread-local must initialize to null", FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
   }
 
   /**
-   * Verifies that a single increment followed by a matching decrement returns the counter to 0.
+   * Verifies a single save / set / restore sequence returns the slot to {@code null}.
    *
-   * <p>Models the simplest call-site advice lifecycle: enter advice (increment), exit advice
-   * (decrement in finally).
+   * <p>Models the simplest call-site advice lifecycle: enter advice (save prev, set own sig), exit
+   * advice (restore prev in finally).
    */
   @Test
-  public void shouldIncrementAndDecrementInPairs() {
-    assertEquals(Integer.valueOf(0), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+  public void shouldSetAndRestoreSignature() {
+    assertNull(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
 
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() + 1);
-    assertEquals(Integer.valueOf(1), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+    String prev = FullQuantizeAspect.TL_CURRENT_CALL_SIG.get();
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("sigA");
+    assertEquals("sigA", FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set(prev);
 
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() - 1);
-    assertEquals(Integer.valueOf(0), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+    assertNull(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
   }
 
   /**
-   * Verifies nested increments and matching decrements balance correctly.
+   * Verifies nested save / set / restore sequences preserve the outer signature.
    *
-   * <p>Models woven→woven→woven call chains: each nested call-site advice adds to the depth, and
-   * each exit subtracts. After all exits, the counter must be back to 0.
+   * <p>Models woven→woven→woven call chains: each nested call-site advice saves the current slot
+   * value, writes its own signature, and on exit restores what it found. After all exits, the slot
+   * must be back to its starting value.
    */
   @Test
-  public void shouldHandleNestedIncrements() {
-    assertEquals(Integer.valueOf(0), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+  public void shouldRestorePreviousSignatureOnNestedCalls() {
+    assertNull(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
 
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() + 1);
-    assertEquals(Integer.valueOf(1), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+    String prev1 = FullQuantizeAspect.TL_CURRENT_CALL_SIG.get();
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("outer");
+    assertEquals("outer", FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
 
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() + 1);
-    assertEquals(Integer.valueOf(2), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+    String prev2 = FullQuantizeAspect.TL_CURRENT_CALL_SIG.get();
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("middle");
+    assertEquals("middle", FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
 
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() + 1);
-    assertEquals(Integer.valueOf(3), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+    String prev3 = FullQuantizeAspect.TL_CURRENT_CALL_SIG.get();
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("inner");
+    assertEquals("inner", FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
 
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() - 1);
-    assertEquals(Integer.valueOf(2), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set(prev3);
+    assertEquals("middle", FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
 
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() - 1);
-    assertEquals(Integer.valueOf(1), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set(prev2);
+    assertEquals("outer", FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
 
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() - 1);
-    assertEquals(Integer.valueOf(0), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set(prev1);
+    assertNull(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
   }
 
   /**
-   * Verifies the counter is thread-local and changes on one thread do not leak to others.
+   * Verifies the slot is thread-local and changes on one thread do not leak to others.
    *
    * <p>Concurrent peer threads must not interfere with each other's guard state, otherwise
    * execution-site advice on one thread could be incorrectly suppressed by call-site activity on
    * another.
    */
   @Test
-  public void shouldIsolateCountersPerThread() throws InterruptedException {
-    final CountDownLatch mainIncremented = new CountDownLatch(1);
+  public void shouldIsolateSignaturesPerThread() throws InterruptedException {
+    final CountDownLatch mainSet = new CountDownLatch(1);
     final CountDownLatch workerChecked = new CountDownLatch(1);
-    final AtomicInteger workerObserved = new AtomicInteger(-1);
+    final AtomicReference<String> workerObserved = new AtomicReference<>("sentinel");
 
     Thread worker =
         new Thread(
             () -> {
               try {
-                mainIncremented.await(5, TimeUnit.SECONDS);
-                workerObserved.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+                mainSet.await(5, TimeUnit.SECONDS);
+                workerObserved.set(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
               } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
               } finally {
-                FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.remove();
+                FullQuantizeAspect.TL_CURRENT_CALL_SIG.remove();
                 workerChecked.countDown();
               }
             });
     worker.start();
 
-    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(42);
-    mainIncremented.countDown();
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("mainSig");
+    mainSet.countDown();
 
     workerChecked.await(5, TimeUnit.SECONDS);
     worker.join(5_000);
 
-    assertEquals(
-        "Worker thread must observe its own fresh counter, not the main thread's value",
-        0,
+    assertNull(
+        "Worker thread must observe its own fresh slot, not the main thread's value",
         workerObserved.get());
     assertEquals(
-        "Main thread's counter must remain unchanged by worker thread",
-        Integer.valueOf(42),
-        FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+        "Main thread's slot must remain unchanged by worker thread",
+        "mainSig",
+        FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
   }
 
   /**
-   * Verifies the counter is correctly decremented when the guarded body throws.
+   * Verifies the slot is correctly restored when the guarded body throws.
    *
    * <p>The advice wraps dispatch in a try/finally; an exception thrown from within the guarded
-   * region must still result in the counter being decremented, so subsequent advice on the same
-   * thread observes the correct depth.
+   * region must still result in the slot being restored to its pre-advice value, so subsequent
+   * advice on the same thread observes the correct signature.
    */
   @Test
-  public void shouldDecrementOnExceptionPath() {
-    assertEquals(Integer.valueOf(0), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+  public void shouldRestoreSignatureOnExceptionPath() {
+    assertNull(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("outer");
+    assertEquals("outer", FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
 
     assertThrows(
         RuntimeException.class,
         () -> {
-          FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(
-              FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() + 1);
+          String prev = FullQuantizeAspect.TL_CURRENT_CALL_SIG.get();
+          FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("inner");
           try {
             throw new RuntimeException("simulated dispatch failure");
           } finally {
-            FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(
-                FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() - 1);
+            FullQuantizeAspect.TL_CURRENT_CALL_SIG.set(prev);
           }
         });
 
     assertEquals(
-        "Counter must be decremented back to 0 on the exceptional return path",
-        Integer.valueOf(0),
-        FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+        "Slot must be restored to the outer value on the exceptional return path",
+        "outer",
+        FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
   }
 }

@@ -42,18 +42,21 @@ public class FullQuantizeAspect {
   private static final Logger logger = LoggerFactory.getLogger(FullQuantizeAspect.class);
 
   /**
-   * Tracks the nesting depth of active call-site advice on the current thread.
+   * Records the signature of the innermost call-site advice currently active on the thread.
    *
-   * <p>Each call-site advice increments this counter before invoking the {@link DispatchForwarder}
-   * and decrements it in a {@code finally} block on return (including exceptional return). A
-   * counter (rather than a boolean) is required to correctly handle nested woven-to-woven calls,
-   * where multiple call-site advice frames are simultaneously active on the same thread.
+   * <p>Each call-site advice saves the previous value, stores its own join-point long signature,
+   * dispatches, and restores the previous value in a {@code finally} block (prev/restore pattern).
+   * Nested woven-to-woven calls are handled naturally: the current thread-local holds the signature
+   * of the deepest active call-site at all times.
    *
-   * <p>Execution-site advice consults this counter to avoid double-dispatch: when the counter is
-   * positive, the call-site advice has already dispatched and the execution-site advice must simply
-   * {@code proceed}.
+   * <p>Execution-site advice uses this to avoid double-dispatch. If the thread-local's signature
+   * matches the execution-site's own signature, the call-site already dispatched for this
+   * invocation and the advice simply proceeds. If the signatures differ (or the thread-local is
+   * {@code null}), the call-site did not dispatch for this invocation — the caller is unwoven
+   * (reflection, method references, {@code invokedynamic}, JNI, JDK) — so the execution-site advice
+   * must dispatch itself.
    */
-  static final ThreadLocal<Integer> TL_CALL_ADVICE_DEPTH = ThreadLocal.withInitial(() -> 0);
+  static final ThreadLocal<String> TL_CURRENT_CALL_SIG = new ThreadLocal<>();
 
   /* POINTCUT DEFINITIONS */
 
@@ -127,15 +130,6 @@ public class FullQuantizeAspect {
   @Pointcut("allClasses() && execution(static !void *(..))")
   private void nonVoidClassMethodsExec() {}
 
-  /**
-   * Matches constructor executions in the selected classes.
-   *
-   * <p>Supplements {@link #constructors()} by firing on the callee side, capturing constructions
-   * originating from unwoven callers (e.g. reflection, serialization, or framework instantiation).
-   */
-  @Pointcut("allClasses() && execution(new(..))")
-  private void constructorsExec() {}
-
   /** Matches get access to static fields in the selected classes. */
   @Pointcut("allClasses() && get(static * *)")
   private void staticGetfields() {}
@@ -171,11 +165,12 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() + 1);
+    String prev = TL_CURRENT_CALL_SIG.get();
+    TL_CURRENT_CALL_SIG.set(pjp.getSignature().toLongString());
     try {
       DispatchForwarder.voidInstanceMethod(pjp);
     } finally {
-      TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
+      TL_CURRENT_CALL_SIG.set(prev);
     }
   }
 
@@ -196,11 +191,12 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() + 1);
+    String prev = TL_CURRENT_CALL_SIG.get();
+    TL_CURRENT_CALL_SIG.set(pjp.getSignature().toLongString());
     try {
       DispatchForwarder.voidClassMethod(pjp);
     } finally {
-      TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
+      TL_CURRENT_CALL_SIG.set(prev);
     }
   }
 
@@ -223,11 +219,12 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() + 1);
+    String prev = TL_CURRENT_CALL_SIG.get();
+    TL_CURRENT_CALL_SIG.set(pjp.getSignature().toLongString());
     try {
       return DispatchForwarder.nonVoidInstanceMethod(pjp);
     } finally {
-      TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
+      TL_CURRENT_CALL_SIG.set(prev);
     }
   }
 
@@ -249,11 +246,12 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() + 1);
+    String prev = TL_CURRENT_CALL_SIG.get();
+    TL_CURRENT_CALL_SIG.set(pjp.getSignature().toLongString());
     try {
       return DispatchForwarder.nonVoidClassMethod(pjp);
     } finally {
-      TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
+      TL_CURRENT_CALL_SIG.set(prev);
     }
   }
 
@@ -276,72 +274,87 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() + 1);
+    String prev = TL_CURRENT_CALL_SIG.get();
+    TL_CURRENT_CALL_SIG.set(pjp.getSignature().toLongString());
     try {
       return DispatchForwarder.constructor(pjp);
     } finally {
-      TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
+      TL_CURRENT_CALL_SIG.set(prev);
     }
   }
 
-  /* ADVICE for Method/Constructor Executions (supplement call-site advice) */
+  /*
+   * ADVICE for Method Executions (supplement call-site advice).
+   *
+   * Execution-site advice runs inside the callee's body, so it captures method invocations that
+   * never hit a woven call-site (reflection, method references, lambdas, invokedynamic, JNI,
+   * external unwoven code). In those cases the original caller is unwoven or synthetic, so the
+   * dispatched operation records {@code sender == target} — the only PAL-visible peer on the stack
+   * is the callee itself.
+   *
+   * <p>When a woven call-site has already dispatched for this exact invocation on this thread,
+   * {@link #TL_CURRENT_CALL_SIG} holds that call-site's join-point signature. Execution-site advice
+   * compares its own signature to the thread-local; an exact match means the call-site already
+   * dispatched and this advice must simply {@code proceed} to avoid double-recording. Any other
+   * state (null, or a different signature left by an outer unrelated call-site such as {@code
+   * Method.invoke} or {@code Function.apply}) means the caller was unwoven for THIS method, and
+   * the execution-site must dispatch.
+   *
+   * <p><strong>Note on constructors:</strong> no execution-site advice is declared for {@code
+   * execution(new(..))}. AspectJ's {@code @Around} over constructor execution must wrap the body
+   * in a synthetic method, which prevents {@code final} field assignments from reaching {@code
+   * <init>} and raises {@code IllegalAccessError}. Reflective constructor invocation is therefore
+   * observable only indirectly via the surrounding {@code Constructor.newInstance} call-site.
+   */
 
   /**
-   * Around advice that intercepts executions of non-static void methods and, when no call-site
-   * advice is active on this thread, forwards them to {@link DispatchForwarder#voidInstanceMethod}.
-   *
-   * <p>When {@link #TL_CALL_ADVICE_DEPTH} is positive, the call-site advice has already dispatched
-   * for this invocation and this advice simply proceeds to avoid double-dispatch.
+   * Around advice that intercepts executions of non-static void methods and, when the call-site
+   * advice has not already dispatched for this exact invocation on this thread, forwards them to
+   * {@link DispatchForwarder#voidInstanceMethod}.
    *
    * @param pjp the proceeding join point representing the method execution
    * @throws Throwable if the forwarding or target invocation fails
    */
   @Around("voidInstanceMethodsExec()")
   public void aroundVoidInstanceMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
-    if (TL_CALL_ADVICE_DEPTH.get() == 0) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            " D --> void instance method (exec): {}",
-            pjp.getStaticPart().getSignature().toShortString());
-      }
-      DispatchForwarder.voidInstanceMethod(pjp);
-    } else {
+    if (callSiteAlreadyDispatched(pjp)) {
       pjp.proceed();
+      return;
     }
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          " D --> void instance method (exec): {}",
+          pjp.getStaticPart().getSignature().toShortString());
+    }
+    DispatchForwarder.voidInstanceMethod(pjp);
   }
 
   /**
-   * Around advice that intercepts executions of static void methods and, when no call-site advice
-   * is active on this thread, forwards them to {@link DispatchForwarder#voidClassMethod}.
-   *
-   * <p>When {@link #TL_CALL_ADVICE_DEPTH} is positive, the call-site advice has already dispatched
-   * for this invocation and this advice simply proceeds to avoid double-dispatch.
+   * Around advice that intercepts executions of static void methods and, when the call-site advice
+   * has not already dispatched for this exact invocation on this thread, forwards them to {@link
+   * DispatchForwarder#voidClassMethod}.
    *
    * @param pjp the proceeding join point representing the method execution
    * @throws Throwable if the forwarding or target invocation fails
    */
   @Around("voidClassMethodsExec()")
   public void aroundVoidClassMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
-    if (TL_CALL_ADVICE_DEPTH.get() == 0) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            " D --> void class method (exec): {}",
-            pjp.getStaticPart().getSignature().toShortString());
-      }
-      DispatchForwarder.voidClassMethod(pjp);
-    } else {
+    if (callSiteAlreadyDispatched(pjp)) {
       pjp.proceed();
+      return;
     }
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          " D --> void class method (exec): {}",
+          pjp.getStaticPart().getSignature().toShortString());
+    }
+    DispatchForwarder.voidClassMethod(pjp);
   }
 
   /**
-   * Around advice that intercepts executions of non-static methods returning a value and, when no
-   * call-site advice is active on this thread, forwards them to {@link
-   * DispatchForwarder#nonVoidInstanceMethod}.
-   *
-   * <p>When {@link #TL_CALL_ADVICE_DEPTH} is positive, the call-site advice has already dispatched
-   * for this invocation and this advice simply proceeds, returning the result of {@code
-   * pjp.proceed()} to avoid double-dispatch.
+   * Around advice that intercepts executions of non-static methods returning a value and, when the
+   * call-site advice has not already dispatched for this exact invocation on this thread, forwards
+   * them to {@link DispatchForwarder#nonVoidInstanceMethod}.
    *
    * @param pjp the proceeding join point representing the method execution
    * @return the result returned by the target method or dispatcher
@@ -349,25 +362,21 @@ public class FullQuantizeAspect {
    */
   @Around("nonVoidInstanceMethodsExec()")
   public Object aroundNonVoidInstanceMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
-    if (TL_CALL_ADVICE_DEPTH.get() == 0) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            " D --> non-void instance method (exec): {}",
-            pjp.getStaticPart().getSignature().toShortString());
-      }
-      return DispatchForwarder.nonVoidInstanceMethod(pjp);
+    if (callSiteAlreadyDispatched(pjp)) {
+      return pjp.proceed();
     }
-    return pjp.proceed();
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          " D --> non-void instance method (exec): {}",
+          pjp.getStaticPart().getSignature().toShortString());
+    }
+    return DispatchForwarder.nonVoidInstanceMethod(pjp);
   }
 
   /**
-   * Around advice that intercepts executions of static methods returning a value and, when no
-   * call-site advice is active on this thread, forwards them to {@link
-   * DispatchForwarder#nonVoidClassMethod}.
-   *
-   * <p>When {@link #TL_CALL_ADVICE_DEPTH} is positive, the call-site advice has already dispatched
-   * for this invocation and this advice simply proceeds, returning the result of {@code
-   * pjp.proceed()} to avoid double-dispatch.
+   * Around advice that intercepts executions of static methods returning a value and, when the
+   * call-site advice has not already dispatched for this exact invocation on this thread, forwards
+   * them to {@link DispatchForwarder#nonVoidClassMethod}.
    *
    * @param pjp the proceeding join point representing the method execution
    * @return the result returned by the target method or dispatcher
@@ -375,39 +384,27 @@ public class FullQuantizeAspect {
    */
   @Around("nonVoidClassMethodsExec()")
   public Object aroundNonVoidClassMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
-    if (TL_CALL_ADVICE_DEPTH.get() == 0) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            " D --> non-void class method (exec): {}",
-            pjp.getStaticPart().getSignature().toShortString());
-      }
-      return DispatchForwarder.nonVoidClassMethod(pjp);
+    if (callSiteAlreadyDispatched(pjp)) {
+      return pjp.proceed();
     }
-    return pjp.proceed();
+    if (logger.isDebugEnabled()) {
+      logger.debug(
+          " D --> non-void class method (exec): {}",
+          pjp.getStaticPart().getSignature().toShortString());
+    }
+    return DispatchForwarder.nonVoidClassMethod(pjp);
   }
 
   /**
-   * Around advice that intercepts constructor executions and, when no call-site advice is active on
-   * this thread, forwards them to {@link DispatchForwarder#constructor}.
+   * Returns {@code true} when the call-site advice has already dispatched for this exact execution
+   * on the current thread, as indicated by {@link #TL_CURRENT_CALL_SIG}.
    *
-   * <p>When {@link #TL_CALL_ADVICE_DEPTH} is positive, the call-site advice has already dispatched
-   * for this invocation and this advice simply proceeds, returning the result of {@code
-   * pjp.proceed()} to avoid double-dispatch.
-   *
-   * @param pjp the proceeding join point representing the constructor execution
-   * @return the constructed object or a replacement provided by the dispatcher
-   * @throws Throwable if the forwarding or target invocation fails
+   * @param pjp the join point whose execution-site advice is consulting the guard
+   * @return whether the exec-site advice should skip dispatch and simply proceed
    */
-  @Around("constructorsExec()")
-  public Object aroundConstructorsExec(ProceedingJoinPoint pjp) throws Throwable {
-    if (TL_CALL_ADVICE_DEPTH.get() == 0) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(
-            " D --> constructor (exec): {}", pjp.getStaticPart().getSignature().toShortString());
-      }
-      return DispatchForwarder.constructor(pjp);
-    }
-    return pjp.proceed();
+  private static boolean callSiteAlreadyDispatched(JoinPoint pjp) {
+    String current = TL_CURRENT_CALL_SIG.get();
+    return current != null && current.equals(pjp.getSignature().toLongString());
   }
 
   /* ADVICE for Fields */
