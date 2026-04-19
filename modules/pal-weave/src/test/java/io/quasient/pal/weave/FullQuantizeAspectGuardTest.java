@@ -15,9 +15,14 @@
  */
 package io.quasient.pal.weave;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
-import org.junit.Ignore;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -28,11 +33,20 @@ import org.junit.Test;
  * call-site advice is active (depth &gt; 0), execution-site advice must skip dispatch and simply
  * proceed. These tests verify the counter's invariants under nested, concurrent, and exceptional
  * scenarios.
- *
- * <p>All tests are stubs awaiting implementation in issue #1459. Implementation may require a
- * package-private accessor for the counter, or reflection (per PAL test conventions).
  */
 public class FullQuantizeAspectGuardTest {
+
+  /** Ensures the thread-local starts fresh on the test thread. */
+  @Before
+  public void resetBefore() {
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.remove();
+  }
+
+  /** Removes any state so the counter does not leak into other tests on the same thread. */
+  @After
+  public void resetAfter() {
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.remove();
+  }
 
   /**
    * Verifies the guard counter is initialized to 0 on a fresh thread.
@@ -41,14 +55,11 @@ public class FullQuantizeAspectGuardTest {
    * a value of 0, which is the "no call-site advice active" state.
    */
   @Test
-  @Ignore("Awaiting implementation in #1459")
   public void shouldInitializeCounterToZero() {
-    // Given: A fresh thread that has not yet accessed the counter.
-    // When: The counter value is read.
-    // Then: The value is 0.
-
-    // TODO(#1459): Implement test logic
-    fail("Not yet implemented");
+    assertEquals(
+        "Fresh thread-local must initialize to 0",
+        Integer.valueOf(0),
+        FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
   }
 
   /**
@@ -58,14 +69,14 @@ public class FullQuantizeAspectGuardTest {
    * (decrement in finally).
    */
   @Test
-  @Ignore("Awaiting implementation in #1459")
   public void shouldIncrementAndDecrementInPairs() {
-    // Given: The counter is at 0.
-    // When: The counter is incremented once and then decremented once.
-    // Then: The counter returns to 0.
+    assertEquals(Integer.valueOf(0), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
 
-    // TODO(#1459): Implement test logic
-    fail("Not yet implemented");
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() + 1);
+    assertEquals(Integer.valueOf(1), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() - 1);
+    assertEquals(Integer.valueOf(0), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
   }
 
   /**
@@ -75,14 +86,26 @@ public class FullQuantizeAspectGuardTest {
    * each exit subtracts. After all exits, the counter must be back to 0.
    */
   @Test
-  @Ignore("Awaiting implementation in #1459")
   public void shouldHandleNestedIncrements() {
-    // Given: A nested call pattern (multiple increments before any decrement).
-    // When: Each increment is matched by a corresponding decrement in reverse order.
-    // Then: The counter returns to 0, and intermediate reads reflect the correct depth.
+    assertEquals(Integer.valueOf(0), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
 
-    // TODO(#1459): Implement test logic
-    fail("Not yet implemented");
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() + 1);
+    assertEquals(Integer.valueOf(1), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() + 1);
+    assertEquals(Integer.valueOf(2), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() + 1);
+    assertEquals(Integer.valueOf(3), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() - 1);
+    assertEquals(Integer.valueOf(2), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() - 1);
+    assertEquals(Integer.valueOf(1), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() - 1);
+    assertEquals(Integer.valueOf(0), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
   }
 
   /**
@@ -93,14 +116,40 @@ public class FullQuantizeAspectGuardTest {
    * another.
    */
   @Test
-  @Ignore("Awaiting implementation in #1459")
-  public void shouldIsolateCountersPerThread() {
-    // Given: Two threads, each with their own view of the counter.
-    // When: One thread increments its counter while the other observes its own.
-    // Then: The second thread's counter is unaffected by the first thread's modification.
+  public void shouldIsolateCountersPerThread() throws InterruptedException {
+    final CountDownLatch mainIncremented = new CountDownLatch(1);
+    final CountDownLatch workerChecked = new CountDownLatch(1);
+    final AtomicInteger workerObserved = new AtomicInteger(-1);
 
-    // TODO(#1459): Implement test logic
-    fail("Not yet implemented");
+    Thread worker =
+        new Thread(
+            () -> {
+              try {
+                mainIncremented.await(5, TimeUnit.SECONDS);
+                workerObserved.set(FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+              } finally {
+                FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.remove();
+                workerChecked.countDown();
+              }
+            });
+    worker.start();
+
+    FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(42);
+    mainIncremented.countDown();
+
+    workerChecked.await(5, TimeUnit.SECONDS);
+    worker.join(5_000);
+
+    assertEquals(
+        "Worker thread must observe its own fresh counter, not the main thread's value",
+        0,
+        workerObserved.get());
+    assertEquals(
+        "Main thread's counter must remain unchanged by worker thread",
+        Integer.valueOf(42),
+        FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
   }
 
   /**
@@ -111,13 +160,25 @@ public class FullQuantizeAspectGuardTest {
    * thread observes the correct depth.
    */
   @Test
-  @Ignore("Awaiting implementation in #1459")
   public void shouldDecrementOnExceptionPath() {
-    // Given: The counter is at 0 and has been incremented to 1.
-    // When: The guarded body throws an exception and the finally block runs.
-    // Then: The counter is decremented back to 0.
+    assertEquals(Integer.valueOf(0), FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
 
-    // TODO(#1459): Implement test logic
-    fail("Not yet implemented");
+    assertThrows(
+        RuntimeException.class,
+        () -> {
+          FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(
+              FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() + 1);
+          try {
+            throw new RuntimeException("simulated dispatch failure");
+          } finally {
+            FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.set(
+                FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get() - 1);
+          }
+        });
+
+    assertEquals(
+        "Counter must be decremented back to 0 on the exceptional return path",
+        Integer.valueOf(0),
+        FullQuantizeAspect.TL_CALL_ADVICE_DEPTH.get());
   }
 }

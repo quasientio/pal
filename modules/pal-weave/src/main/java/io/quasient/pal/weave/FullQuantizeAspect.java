@@ -41,6 +41,20 @@ public class FullQuantizeAspect {
   /** Logger instance used for logging internal events and error messages. */
   private static final Logger logger = LoggerFactory.getLogger(FullQuantizeAspect.class);
 
+  /**
+   * Tracks the nesting depth of active call-site advice on the current thread.
+   *
+   * <p>Each call-site advice increments this counter before invoking the {@link DispatchForwarder}
+   * and decrements it in a {@code finally} block on return (including exceptional return). A
+   * counter (rather than a boolean) is required to correctly handle nested woven-to-woven calls,
+   * where multiple call-site advice frames are simultaneously active on the same thread.
+   *
+   * <p>Execution-site advice consults this counter to avoid double-dispatch: when the counter is
+   * positive, the call-site advice has already dispatched and the execution-site advice must simply
+   * {@code proceed}.
+   */
+  static final ThreadLocal<Integer> TL_CALL_ADVICE_DEPTH = ThreadLocal.withInitial(() -> 0);
+
   /* POINTCUT DEFINITIONS */
 
   /**
@@ -48,7 +62,7 @@ public class FullQuantizeAspect {
    * types.
    */
   @Pointcut(
-      "!within(io.quasient.pal.weave.FullQuantizeAspect) && "
+      "!within(io.quasient.pal.weave..*) && "
           + "!within(io.quasient.pal.core..*) && "
           + "!within(is(EnumType))")
   private void allClasses() {}
@@ -108,7 +122,12 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    DispatchForwarder.voidInstanceMethod(pjp);
+    TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() + 1);
+    try {
+      DispatchForwarder.voidInstanceMethod(pjp);
+    } finally {
+      TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
+    }
   }
 
   /**
@@ -128,7 +147,12 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    DispatchForwarder.voidClassMethod(pjp);
+    TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() + 1);
+    try {
+      DispatchForwarder.voidClassMethod(pjp);
+    } finally {
+      TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
+    }
   }
 
   /**
@@ -150,7 +174,12 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    return DispatchForwarder.nonVoidInstanceMethod(pjp);
+    TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() + 1);
+    try {
+      return DispatchForwarder.nonVoidInstanceMethod(pjp);
+    } finally {
+      TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
+    }
   }
 
   /**
@@ -171,7 +200,12 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    return DispatchForwarder.nonVoidClassMethod(pjp);
+    TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() + 1);
+    try {
+      return DispatchForwarder.nonVoidClassMethod(pjp);
+    } finally {
+      TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
+    }
   }
 
   /* ADVICE for Constructors */
@@ -193,7 +227,12 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    return DispatchForwarder.constructor(pjp);
+    TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() + 1);
+    try {
+      return DispatchForwarder.constructor(pjp);
+    } finally {
+      TL_CALL_ADVICE_DEPTH.set(TL_CALL_ADVICE_DEPTH.get() - 1);
+    }
   }
 
   /* ADVICE for Fields */
