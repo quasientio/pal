@@ -29,6 +29,7 @@ import java.util.Map;
 @SuppressFBWarnings(
     value = {
       "CT_CONSTRUCTOR_THROW",
+      "PA_PUBLIC_PRIMITIVE_ATTRIBUTE",
       "PZLA_PREFER_ZERO_LENGTH_ARRAYS",
       "UPM_UNCALLED_PRIVATE_METHOD"
     },

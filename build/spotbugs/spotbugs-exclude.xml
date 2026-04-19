@@ -37,6 +37,22 @@
         <Package name="io.quasient.foobar.apps.quantized.replay"/>
     </Match>
 
+    <!-- Exclude quantized execution sample apps (test applications for integration tests) -->
+    <Match>
+        <Package name="io.quasient.foobar.apps.quantized.execution"/>
+    </Match>
+
+    <!--
+        AspectJ execution-site advice on constructors introduces a generated `throws Throwable`
+        handler into every woven constructor body, which SpotBugs flags as CT_CONSTRUCTOR_THROW
+        for quantized test applications. The throw is synthetic (produced by the weaver) and
+        cannot be annotated away on the weaved bytecode.
+    -->
+    <Match>
+        <Package name="~io\.quasient\.foobar\.apps\.quantized\..*"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+
     <!--
         AspectJ-generated singleton instance fields.
         These are internal AspectJ implementation details that cannot be modified.
