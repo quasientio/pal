@@ -138,6 +138,7 @@
         <dependency>
             <groupId>io.quasient.pal</groupId>
             <artifactId>pal-weave</artifactId>
+            <scope>compile</scope>
         </dependency>
 
         <!-- STATIC ANALYSIS -->

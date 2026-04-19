@@ -55,8 +55,47 @@ public class FullQuantizeAspect {
    * {@code null}), the call-site did not dispatch for this invocation — the caller is unwoven
    * (reflection, method references, {@code invokedynamic}, JNI, JDK) — so the execution-site advice
    * must dispatch itself.
+   *
+   * <p>The PAL runtime can set the slot to {@link #RUNTIME_INVOKE_SENTINEL} around its own
+   * reflective invocation of an incoming message target (e.g. {@code
+   * MethodDispatcher.invokeIncoming} calling {@link java.lang.reflect.Method#invoke}). In that
+   * state the execution-site advice on the target body must not dispatch, because the runtime owns
+   * the recording decision for the incoming call (gated by flags such as {@code
+   * --wal-incoming-rpc}).
    */
-  static final ThreadLocal<String> TL_CURRENT_CALL_SIG = new ThreadLocal<>();
+  public static final ThreadLocal<String> TL_CURRENT_CALL_SIG = new ThreadLocal<>();
+
+  /**
+   * Sentinel value the PAL runtime places in {@link #TL_CURRENT_CALL_SIG} while it reflectively
+   * invokes an incoming-message target. Compared by reference identity, so it cannot collide with a
+   * real join-point signature string. Execution-site advice treats this state as "a woven caller
+   * already claimed this invocation" and proceeds without dispatching.
+   */
+  public static final String RUNTIME_INVOKE_SENTINEL = "<pal-runtime-reflective-invoke>";
+
+  /**
+   * Enters a PAL-runtime reflective invocation scope: saves the current value of {@link
+   * #TL_CURRENT_CALL_SIG} and installs {@link #RUNTIME_INVOKE_SENTINEL}. The caller must pass the
+   * returned value to {@link #endRuntimeInvoke(String)} in a {@code finally} block to restore the
+   * previous state.
+   *
+   * @return the previous thread-local value (to restore in a matching {@code finally} block)
+   */
+  public static String beginRuntimeInvoke() {
+    String prev = TL_CURRENT_CALL_SIG.get();
+    TL_CURRENT_CALL_SIG.set(RUNTIME_INVOKE_SENTINEL);
+    return prev;
+  }
+
+  /**
+   * Exits a PAL-runtime reflective invocation scope by restoring the value captured by {@link
+   * #beginRuntimeInvoke()}.
+   *
+   * @param prev the value previously returned by {@link #beginRuntimeInvoke()}
+   */
+  public static void endRuntimeInvoke(String prev) {
+    TL_CURRENT_CALL_SIG.set(prev);
+  }
 
   /* POINTCUT DEFINITIONS */
 
@@ -396,15 +435,30 @@ public class FullQuantizeAspect {
   }
 
   /**
-   * Returns {@code true} when the call-site advice has already dispatched for this exact execution
-   * on the current thread, as indicated by {@link #TL_CURRENT_CALL_SIG}.
+   * Returns {@code true} when the execution-site advice must skip dispatch and simply proceed,
+   * because something has already claimed this invocation on the current thread:
+   *
+   * <ul>
+   *   <li>A woven call-site whose join-point signature matches this execution-site's own — the
+   *       normal woven-to-woven direct-call case.
+   *   <li>The PAL runtime's reflective invocation path, which installs {@link
+   *       #RUNTIME_INVOKE_SENTINEL} before calling {@code Method.invoke} on an incoming-message
+   *       target and restores the previous value afterwards. Sentinel identity is checked with
+   *       {@code ==}, so it cannot collide with any real join-point signature.
+   * </ul>
    *
    * @param pjp the join point whose execution-site advice is consulting the guard
    * @return whether the exec-site advice should skip dispatch and simply proceed
    */
   private static boolean callSiteAlreadyDispatched(JoinPoint pjp) {
     String current = TL_CURRENT_CALL_SIG.get();
-    return current != null && current.equals(pjp.getSignature().toLongString());
+    if (current == null) {
+      return false;
+    }
+    if (current == RUNTIME_INVOKE_SENTINEL) {
+      return true;
+    }
+    return current.equals(pjp.getSignature().toLongString());
   }
 
   /* ADVICE for Fields */

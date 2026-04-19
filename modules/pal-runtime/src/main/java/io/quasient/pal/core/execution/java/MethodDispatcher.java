@@ -20,6 +20,7 @@ import io.quasient.pal.common.lang.reflect.MethodSignature;
 import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.weave.FullQuantizeAspect;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -82,7 +83,16 @@ public abstract class MethodDispatcher extends BaseExecMessageDispatcher {
     Object[] args =
         ParameterAdaptationUtils.adaptParametersForMethod(
             method, deserializedArgs.toArray(new MessageArgument[0]));
-    return method.invoke(target, args);
+    // Suppress the execution-site advice on the target body: the runtime is the caller here, and
+    // the incoming-message path owns the recording decision (gated by --wal-incoming-rpc and
+    // related flags). Without this guard, exec-site advice would treat the reflective invocation
+    // as an "unwoven caller" and dispatch an outgoing operation, bypassing the incoming-WAL gate.
+    String prevSig = FullQuantizeAspect.beginRuntimeInvoke();
+    try {
+      return method.invoke(target, args);
+    } finally {
+      FullQuantizeAspect.endRuntimeInvoke(prevSig);
+    }
   }
 
   @Override

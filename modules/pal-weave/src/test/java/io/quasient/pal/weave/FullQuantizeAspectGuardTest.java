@@ -16,7 +16,9 @@
 package io.quasient.pal.weave;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 
 import java.util.concurrent.CountDownLatch;
@@ -188,5 +190,190 @@ public class FullQuantizeAspectGuardTest {
         "Slot must be restored to the outer value on the exceptional return path",
         "outer",
         FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+  }
+
+  /**
+   * Verifies {@link FullQuantizeAspect#beginRuntimeInvoke()} installs the sentinel by reference and
+   * returns the previous value (here {@code null}), and {@link
+   * FullQuantizeAspect#endRuntimeInvoke(String)} restores it.
+   *
+   * <p>The sentinel identity (checked with {@code ==} by the exec-site guard) is load-bearing: it
+   * is what lets the aspect distinguish "PAL runtime owns this invocation" from any real join-point
+   * signature string.
+   */
+  @Test
+  public void shouldInstallSentinelAndRestorePreviousValue() {
+    assertNull(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+
+    String prev = FullQuantizeAspect.beginRuntimeInvoke();
+    try {
+      assertNull("beginRuntimeInvoke must return the prior value (null on a fresh slot)", prev);
+      assertSame(
+          "Slot must hold the sentinel by reference after beginRuntimeInvoke",
+          FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL,
+          FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+    } finally {
+      FullQuantizeAspect.endRuntimeInvoke(prev);
+    }
+
+    assertNull(
+        "Slot must be restored to its pre-invoke value after endRuntimeInvoke",
+        FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+  }
+
+  /**
+   * Verifies nested runtime-invoke scopes preserve state: the inner {@code
+   * beginRuntimeInvoke}/{@code endRuntimeInvoke} pair leaves the outer sentinel in place.
+   *
+   * <p>This models the runtime reentering its own reflective-invoke path (e.g., an incoming RPC
+   * whose body triggers another incoming RPC on the same thread).
+   */
+  @Test
+  public void shouldPreserveOuterSentinelAcrossNestedRuntimeInvokes() {
+    String outerPrev = FullQuantizeAspect.beginRuntimeInvoke();
+    try {
+      assertSame(
+          FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL, FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+
+      String innerPrev = FullQuantizeAspect.beginRuntimeInvoke();
+      try {
+        assertSame(
+            "Nested begin must save the sentinel it found",
+            FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL,
+            innerPrev);
+        assertSame(
+            "Slot must still hold the sentinel during the nested scope",
+            FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL,
+            FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+      } finally {
+        FullQuantizeAspect.endRuntimeInvoke(innerPrev);
+      }
+
+      assertSame(
+          "Outer sentinel must remain in place after the nested scope exits",
+          FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL,
+          FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+    } finally {
+      FullQuantizeAspect.endRuntimeInvoke(outerPrev);
+    }
+
+    assertNull(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+  }
+
+  /**
+   * Verifies that when the slot already holds a call-site signature, {@code beginRuntimeInvoke}
+   * saves it and {@code endRuntimeInvoke} restores it.
+   *
+   * <p>This path corresponds to the runtime performing a reflective invoke from within a woven
+   * caller on the same thread (exotic but possible): the call-site's signature must not be
+   * clobbered.
+   */
+  @Test
+  public void shouldSaveAndRestoreCallSignatureAcrossRuntimeInvoke() {
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("sig-of-outer-call");
+
+    String prev = FullQuantizeAspect.beginRuntimeInvoke();
+    try {
+      assertEquals(
+          "beginRuntimeInvoke must save the call-site signature", "sig-of-outer-call", prev);
+      assertSame(
+          FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL, FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+    } finally {
+      FullQuantizeAspect.endRuntimeInvoke(prev);
+    }
+
+    assertEquals(
+        "Call-site signature must be restored after endRuntimeInvoke",
+        "sig-of-outer-call",
+        FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+  }
+
+  /**
+   * Verifies the sentinel survives a nested call-site save/restore cycle.
+   *
+   * <p>Inside a reflectively-invoked target body, woven-to-woven calls trigger call-site advice,
+   * which uses the save-prev/restore-prev pattern. This test simulates that: begin runtime-invoke
+   * (sentinel installed), perform a save/set/restore as call-site advice would, and verify the
+   * sentinel is still in place afterwards so subsequent exec-site checks still skip dispatch.
+   */
+  @Test
+  public void shouldKeepSentinelVisibleAcrossNestedCallSiteSaveRestore() {
+    String runtimePrev = FullQuantizeAspect.beginRuntimeInvoke();
+    try {
+      assertSame(
+          FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL, FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+
+      String callSitePrev = FullQuantizeAspect.TL_CURRENT_CALL_SIG.get();
+      FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("sig-of-nested-call");
+      try {
+        assertEquals(
+            "Nested call-site advice writes its own signature",
+            "sig-of-nested-call",
+            FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+      } finally {
+        FullQuantizeAspect.TL_CURRENT_CALL_SIG.set(callSitePrev);
+      }
+
+      assertSame(
+          "Sentinel must be restored by the call-site advice's finally block",
+          FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL,
+          FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+    } finally {
+      FullQuantizeAspect.endRuntimeInvoke(runtimePrev);
+    }
+
+    assertNull(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+  }
+
+  /**
+   * Verifies the slot is correctly restored when the runtime-guarded body throws.
+   *
+   * <p>{@code MethodDispatcher.invokeIncoming} wraps {@code method.invoke} in a try/finally; a
+   * thrown exception (e.g., {@link java.lang.reflect.InvocationTargetException}) must still result
+   * in the sentinel being replaced by the previously-held value.
+   */
+  @Test
+  public void shouldRestorePreviousValueOnExceptionInGuardedBody() {
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("pre-existing-sig");
+
+    assertThrows(
+        RuntimeException.class,
+        () -> {
+          String prev = FullQuantizeAspect.beginRuntimeInvoke();
+          try {
+            assertSame(
+                FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL,
+                FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+            throw new RuntimeException("simulated reflective-invoke failure");
+          } finally {
+            FullQuantizeAspect.endRuntimeInvoke(prev);
+          }
+        });
+
+    assertEquals(
+        "Pre-existing slot value must be restored on the exceptional return path",
+        "pre-existing-sig",
+        FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+  }
+
+  /**
+   * Verifies the sentinel is recognized by reference identity, not string equality.
+   *
+   * <p>The exec-site guard uses {@code ==} to distinguish the runtime-installed sentinel from any
+   * real join-point signature. A user-created string whose value happens to equal the sentinel's
+   * characters must therefore be a different object, guaranteeing it cannot masquerade as the
+   * sentinel.
+   */
+  @Test
+  public void shouldDistinguishSentinelByReferenceIdentity() {
+    String lookalike = new String(FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL);
+    assertEquals(
+        "Lookalike must be .equals() to sentinel",
+        FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL,
+        lookalike);
+    assertNotSame(
+        "Lookalike must be a distinct object, so == sentinel check cannot collide",
+        FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL,
+        lookalike);
   }
 }
