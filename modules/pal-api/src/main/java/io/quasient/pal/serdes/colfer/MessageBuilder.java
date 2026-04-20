@@ -522,17 +522,11 @@ public final class MessageBuilder {
    * Builds and returns a reusable {@link io.quasient.pal.messages.colfer.Context} when source
    * context is enabled.
    *
-   * <p>Fills fields from the provided {@link Context} and optional sender, otherwise returns {@code
-   * null} if source context inclusion is disabled.
-   *
    * @param context the execution context providing source location details
-   * @param sender the sender instance, or {@code null}
-   * @param senderObjRef the sender's object reference, or {@code null}
    * @return the thread-local context bean when enabled; {@code null} otherwise
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  private io.quasient.pal.messages.colfer.Context buildContextIfEnabled(
-      Context context, Object sender, ObjectRef senderObjRef) {
+  private io.quasient.pal.messages.colfer.Context buildContextIfEnabled(Context context) {
     if (!includeSourceContext) {
       return null;
     }
@@ -540,17 +534,6 @@ public final class MessageBuilder {
     c.sourceLocationFile = context.getSourceFilename();
     c.sourceLocationLine = context.getSourceLine();
     c.sourceLocationType = context.getWithinType().getName();
-    if (sender != null) {
-      c.senderClass = getWrappedClass(sender.getClass());
-      Obj senderObj = TlScratchHolder.senderObj();
-      Wrapper.wrapInto(
-          senderObj,
-          sender,
-          sender.getClass().getName(),
-          senderObjRef,
-          WrapPolicy.PREFER_REFERENCE);
-      c.sender = senderObj;
-    }
     return c;
   }
 
@@ -606,8 +589,6 @@ public final class MessageBuilder {
    * object references.
    *
    * @param context the execution context containing method signature information
-   * @param sender the object sending the message
-   * @param senderObjRef the reference to the sender object
    * @param args the array of argument values corresponding to the parameters
    * @param argObjRefs the array of object references corresponding to the arguments
    * @return an {@code ExecMessage} representing the class method invocation with context
@@ -616,8 +597,6 @@ public final class MessageBuilder {
       UUID peerUuid,
       String className,
       Context context,
-      Object sender,
-      ObjectRef senderObjRef,
       String[] parameterTypes,
       Object[] args,
       ObjectRef[] argObjRefs) {
@@ -627,7 +606,7 @@ public final class MessageBuilder {
       constructorCall.setArgs(createArgs(context, args, argObjRefs));
       constructorCall.setModifiers(codeSignature.getModifiers());
       if (includeSourceContext) {
-        constructorCall.setContext(getWrappedContext(context, sender, senderObjRef));
+        constructorCall.setContext(getWrappedContext(context));
       }
       constructorCall.setClazz(getWrappedClass(codeSignature.getDeclaringTypeName()));
     } else {
@@ -659,8 +638,7 @@ public final class MessageBuilder {
       Object[] args,
       ObjectRef[] argObjRefs) {
 
-    return buildConstructorMessage(
-        peerUuid, null, context, sender, senderObjRef, null, args, argObjRefs);
+    return buildConstructorMessage(peerUuid, null, context, null, args, argObjRefs);
   }
 
   // </editor-fold>
@@ -703,8 +681,7 @@ public final class MessageBuilder {
 
     // optional source context
     {
-      final io.quasient.pal.messages.colfer.Context c =
-          buildContextIfEnabled(context, sender, senderObjRef);
+      final io.quasient.pal.messages.colfer.Context c = buildContextIfEnabled(context);
       if (c != null) {
         cc.context = c;
       }
@@ -778,8 +755,7 @@ public final class MessageBuilder {
     }
 
     {
-      final io.quasient.pal.messages.colfer.Context c =
-          buildContextIfEnabled(context, sender, senderObjRef);
+      final io.quasient.pal.messages.colfer.Context c = buildContextIfEnabled(context);
       if (c != null) {
         call.context = c;
       }
@@ -865,8 +841,7 @@ public final class MessageBuilder {
     }
 
     {
-      final io.quasient.pal.messages.colfer.Context c =
-          buildContextIfEnabled(context, sender, senderObjRef);
+      final io.quasient.pal.messages.colfer.Context c = buildContextIfEnabled(context);
       if (c != null) {
         call.context = c;
       }
@@ -922,17 +897,6 @@ public final class MessageBuilder {
       cctxBean.sourceLocationFile = context.getSourceFilename();
       cctxBean.sourceLocationLine = context.getSourceLine();
       cctxBean.sourceLocationType = context.getWithinType().getName();
-      if (sender != null) {
-        cctxBean.senderClass = getWrappedClass(sender.getClass());
-        Obj senderObj = TlScratchHolder.senderObj();
-        Wrapper.wrapInto(
-            senderObj,
-            sender,
-            sender.getClass().getName(),
-            senderObjRef,
-            WrapPolicy.PREFER_REFERENCE);
-        cctxBean.sender = senderObj;
-      }
     }
 
     // ---- ExecMessage header (reuse) ----
@@ -1174,7 +1138,7 @@ public final class MessageBuilder {
    * @return an {@code ExecMessage} representing the empty constructor invocation
    */
   public ExecMessage buildEmptyConstructor(UUID peerUuid, String className) {
-    return buildConstructorMessage(peerUuid, className, null, null, null, null, null, null);
+    return buildConstructorMessage(peerUuid, className, null, null, null, null);
   }
 
   /**
@@ -1214,7 +1178,7 @@ public final class MessageBuilder {
     }
 
     return buildConstructorMessage(
-        peerUuid, className, null, null, null, parameterTypes, normArgs, normArgRefs);
+        peerUuid, className, null, parameterTypes, normArgs, normArgRefs);
   }
 
   /**
@@ -1254,7 +1218,7 @@ public final class MessageBuilder {
     }
 
     return buildConstructorMessage(
-        peerUuid, className, null, sender, senderObjRef, parameterTypes, nonObjRefArgs, objRefArgs);
+        peerUuid, className, null, parameterTypes, nonObjRefArgs, objRefArgs);
   }
 
   // </editor-fold>
@@ -1686,9 +1650,6 @@ public final class MessageBuilder {
       classMethodCall.setArgs(createArgs(parameterTypes, args, argObjRefs));
     }
 
-    if (includeSourceContext && senderObjRef != null) {
-      classMethodCall.setContext(getWrappedContext(null, sender, senderObjRef));
-    }
     ExecMessage execMessage = newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
     return execMessage;
   }
@@ -1724,10 +1685,6 @@ public final class MessageBuilder {
         new ClassMethodCall().withClazz(getWrappedClass(className)).withName(methodName);
     if (parameterTypes != null && args != null && argObjRefs != null) {
       classMethodCall.setArgs(createArgs(parameterTypes, args, argObjRefs));
-    }
-
-    if (includeSourceContext && senderObjRef != null) {
-      classMethodCall.setContext(getWrappedContext(null, sender, senderObjRef));
     }
 
     ExecMessage execMessage = newExecMessage(peerUuid).withClassMethodCall(classMethodCall);
@@ -1853,7 +1810,7 @@ public final class MessageBuilder {
         getWrappedField(
             fieldSignature.getFieldType(), fieldSignature.getName(), fieldSignature.getModifiers());
     io.quasient.pal.messages.colfer.Context ctxt =
-        includeSourceContext ? getWrappedContext(context, sender, senderObjRef) : null;
+        includeSourceContext ? getWrappedContext(context) : null;
     final ExecMessage execMessage = newExecMessage(peerUuid);
     switch (messageType) {
       case EXEC_GET_FIELD ->

@@ -250,7 +250,7 @@ public class MessageBuilderTest {
   }
 
   @Test
-  public void messageBuilder_nullPeerId_includeSrcContextTrue_contextIncludedOnClassMethod() {
+  public void messageBuilder_nullPeerId_includeSrcContextTrue_noContextOnClassMethod() {
     MessageBuilder b = new MessageBuilder(null, Boolean.toString(true));
     String[] parameterTypes = null;
     Object[] args = null;
@@ -265,7 +265,7 @@ public class MessageBuilderTest {
             ObjectRef.randomRef(),
             args,
             argRefs);
-    assertNotNull(em.getClassMethodCall().getContext());
+    assertNull(em.getClassMethodCall().getContext());
   }
 
   // <editor-fold desc="Thread-local sequence stamping methods">
@@ -564,7 +564,7 @@ public class MessageBuilderTest {
     assertEquals(
         DummyClassForTest.class.getName(), execMessage.getClassMethodCall().getClazz().getName());
     assertEquals("dummyStaticMethod", execMessage.getClassMethodCall().getName());
-    assertNotNull(execMessage.getClassMethodCall().getContext());
+    assertNull(execMessage.getClassMethodCall().getContext());
   }
 
   @Test

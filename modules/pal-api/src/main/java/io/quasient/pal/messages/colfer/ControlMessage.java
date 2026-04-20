@@ -884,8 +884,7 @@ public class ControlMessage implements Serializable, io.quasient.pal.messages.Ma
         JsonArray jsonArray = json.getAsJsonArray("fromPeer");
         this.fromPeer = new byte[jsonArray.size()];
         for (int i = 0; i < jsonArray.size(); i++) {
-          byte jsonByte = jsonArray.get(i).getAsByte();
-          this.fromPeer[i] = jsonByte;
+          this.fromPeer[i] = jsonArray.get(i).getAsByte();
         }
       }
       if (json.has("messageId")) {

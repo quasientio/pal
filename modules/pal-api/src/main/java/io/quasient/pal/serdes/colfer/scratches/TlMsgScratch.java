@@ -107,9 +107,6 @@ public final class TlMsgScratch {
   /** Reusable {@link Field} for reflectable buffer */
   final Field rf = new Field();
 
-  /** Reusable {@link Obj} for sender in context data. */
-  final Obj senderObj = new Obj();
-
   /** Reusable {@link Obj} for return value. */
   final Obj retObj = new Obj();
 

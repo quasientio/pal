@@ -375,8 +375,7 @@ public class WrapperTest extends WrappingTestBase {
     int lineNumber = 16;
     var withinType = Dimension.class;
     Context context = new Context(sourceFile, lineNumber, withinType, signature);
-    io.quasient.pal.messages.colfer.Context wrappedContext =
-        Wrapper.getWrappedContext(context, this, ObjectRef.randomRef());
+    io.quasient.pal.messages.colfer.Context wrappedContext = Wrapper.getWrappedContext(context);
     assertNotNull(wrappedContext);
     assertEquals(sourceFile, wrappedContext.getSourceLocationFile());
     assertEquals(lineNumber, wrappedContext.getSourceLocationLine());

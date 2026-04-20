@@ -1788,8 +1788,7 @@ public class ExecMessage implements Serializable, io.quasient.pal.messages.Marsh
         JsonArray jsonArray = json.getAsJsonArray("peerUuid");
         this.peerUuid = new byte[jsonArray.size()];
         for (int i = 0; i < jsonArray.size(); i++) {
-          byte jsonByte = jsonArray.get(i).getAsByte();
-          this.peerUuid[i] = jsonByte;
+          this.peerUuid[i] = jsonArray.get(i).getAsByte();
         }
       }
       if (json.has("messageId")) {

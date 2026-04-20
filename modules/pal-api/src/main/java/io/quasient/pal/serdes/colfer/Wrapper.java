@@ -504,42 +504,19 @@ public final class Wrapper {
   }
 
   /**
-   * Wraps the provided context into a Colfer {@code Context} instance, encapsulating contextual
-   * information such as sender details and source location.
+   * Wraps the provided runtime context into a Colfer {@code Context} instance, capturing source
+   * location.
    *
-   * @param context the runtime context, may be {@code null}
-   * @param sender the sender object
-   * @param senderObjRef the reference to the sender object
-   * @return a Colfer {@code Context} instance representing the provided context and sender
-   *     information
+   * @param context the runtime context
+   * @return a Colfer {@code Context} populated with the source location fields
    */
   @SuppressWarnings("PMD.NoFullyQualifiedTypes")
-  static io.quasient.pal.messages.colfer.Context getWrappedContext(
-      @Nullable Context context, Object sender, ObjectRef senderObjRef) {
-
+  static io.quasient.pal.messages.colfer.Context getWrappedContext(Context context) {
     final io.quasient.pal.messages.colfer.Context wrappedCtxt =
         new io.quasient.pal.messages.colfer.Context();
-
-    if (context != null) {
-      wrappedCtxt.setSenderClass(getWrappedClass(context.getWithinType()));
-      if (sender != null) {
-        wrappedCtxt.setSender(
-            getWrappedObject(
-                sender,
-                context.getWithinType().getName(),
-                senderObjRef,
-                WrapPolicy.PREFER_REFERENCE));
-      }
-      wrappedCtxt.setSourceLocationFile(context.getSourceFilename());
-      wrappedCtxt.setSourceLocationLine(context.getSourceLine());
-      wrappedCtxt.setSourceLocationType(context.getWithinType().getName());
-    } else {
-      wrappedCtxt.setSenderClass(getWrappedClass(sender.getClass()));
-      wrappedCtxt.setSender(
-          getWrappedObject(
-              sender, sender.getClass().getName(), senderObjRef, WrapPolicy.PREFER_REFERENCE));
-    }
-
+    wrappedCtxt.setSourceLocationFile(context.getSourceFilename());
+    wrappedCtxt.setSourceLocationLine(context.getSourceLine());
+    wrappedCtxt.setSourceLocationType(context.getWithinType().getName());
     return wrappedCtxt;
   }
 

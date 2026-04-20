@@ -16,8 +16,6 @@
 package colfer
 
 type Context struct {
-	senderClass Class
-	sender      Obj
 
 	//source context from where the call was made
 	sourceLocationFile text

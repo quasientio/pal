@@ -464,12 +464,6 @@ public class JsonSerializers {
     public JsonElement serialize(
         Context message, Type type, JsonSerializationContext jsonSerializationContext) {
       final JsonObject jsonElement = new JsonObject();
-      if (notEmpty(message.senderClass)) {
-        jsonElement.add("sender_class", jsonSerializationContext.serialize(message.senderClass));
-      }
-      if (notEmpty(message.sender)) {
-        jsonElement.add("sender", jsonSerializationContext.serialize(message.sender));
-      }
       if (notEmpty(message.sourceLocationFile)) {
         jsonElement.addProperty("source_location_file", message.sourceLocationFile);
       }

@@ -215,17 +215,6 @@ public final class TlScratchHolder {
   }
 
   /**
-   * Returns a reusable {@link Obj} for sender data, reset for fresh use.
-   *
-   * @return cleared sender {@code Obj}
-   */
-  public static Obj senderObj() {
-    final var x = s().senderObj;
-    x.reset();
-    return x;
-  }
-
-  /**
    * Returns a reusable {@link Obj} for a value, reset for fresh use.
    *
    * @return cleared return {@code Obj}

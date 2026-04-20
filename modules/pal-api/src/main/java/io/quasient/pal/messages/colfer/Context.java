@@ -47,10 +47,6 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
   /** The upper limit for serial byte sizes. */
   public static int colferSizeMax = 16 * 1024 * 1024;
 
-  public Class senderClass;
-
-  public Obj sender;
-
   /** */
   public String sourceLocationFile;
 
@@ -168,8 +164,6 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
             + 5
             + 6
             + (long) this.sourceLocationType.length() * 3;
-    if (this.senderClass != null) n += 1 + (long) this.senderClass.marshalFit();
-    if (this.sender != null) n += 1 + (long) this.sender.marshalFit();
     if (n < 0 || n > (long) Context.colferSizeMax) return Context.colferSizeMax;
     return (int) n;
   }
@@ -212,18 +206,8 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
     int i = offset;
 
     try {
-      if (this.senderClass != null) {
-        buf[i++] = (byte) 0;
-        i = this.senderClass.marshal(buf, i);
-      }
-
-      if (this.sender != null) {
-        buf[i++] = (byte) 1;
-        i = this.sender.marshal(buf, i);
-      }
-
       if (!this.sourceLocationFile.isEmpty()) {
-        buf[i++] = (byte) 2;
+        buf[i++] = (byte) 0;
         int start = ++i;
 
         String s = this.sourceLocationFile;
@@ -273,12 +257,12 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
       if (this.sourceLocationLine != 0) {
         int x = this.sourceLocationLine;
         if ((x & ~((1 << 21) - 1)) != 0) {
-          buf[i++] = (byte) (3 | 0x80);
+          buf[i++] = (byte) (1 | 0x80);
           buf[i++] = (byte) (x >>> 24);
           buf[i++] = (byte) (x >>> 16);
           buf[i++] = (byte) (x >>> 8);
         } else {
-          buf[i++] = (byte) 3;
+          buf[i++] = (byte) 1;
           while (x > 0x7f) {
             buf[i++] = (byte) (x | 0x80);
             x >>>= 7;
@@ -288,7 +272,7 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
       }
 
       if (!this.sourceLocationType.isEmpty()) {
-        buf[i++] = (byte) 4;
+        buf[i++] = (byte) 2;
         int start = ++i;
 
         String s = this.sourceLocationType;
@@ -381,18 +365,6 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
       byte header = buf[i++];
 
       if (header == (byte) 0) {
-        this.senderClass = new Class();
-        i = this.senderClass.unmarshal(buf, i, end);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 1) {
-        this.sender = new Obj();
-        i = this.sender.unmarshal(buf, i, end);
-        header = buf[i++];
-      }
-
-      if (header == (byte) 2) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -411,7 +383,7 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
         header = buf[i++];
       }
 
-      if (header == (byte) 3) {
+      if (header == (byte) 1) {
         int x = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -420,7 +392,7 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
         }
         this.sourceLocationLine = x;
         header = buf[i++];
-      } else if (header == (byte) (3 | 0x80)) {
+      } else if (header == (byte) (1 | 0x80)) {
         this.sourceLocationLine =
             (buf[i++] & 0xff) << 24
                 | (buf[i++] & 0xff) << 16
@@ -429,7 +401,7 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
         header = buf[i++];
       }
 
-      if (header == (byte) 4) {
+      if (header == (byte) 2) {
         int size = 0;
         for (int shift = 0; true; shift += 7) {
           byte b = buf[i++];
@@ -464,7 +436,7 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
   }
 
   // {@link Serializable} version number.
-  private static final long serialVersionUID = 5L;
+  private static final long serialVersionUID = 3L;
 
   // {@link Serializable} Colfer extension.
   private void writeObject(ObjectOutputStream out) throws IOException {
@@ -487,64 +459,6 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
   // {@link Serializable} Colfer extension.
   private void readObjectNoData() throws ObjectStreamException {
     init();
-  }
-
-  /**
-   * Gets io.quasient.pal.messages/colfer.Context.senderClass.
-   *
-   * @return the value.
-   */
-  public Class getSenderClass() {
-    return this.senderClass;
-  }
-
-  /**
-   * Sets io.quasient.pal.messages/colfer.Context.senderClass.
-   *
-   * @param value the replacement.
-   */
-  public void setSenderClass(Class value) {
-    this.senderClass = value;
-  }
-
-  /**
-   * Sets io.quasient.pal.messages/colfer.Context.senderClass.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Context withSenderClass(Class value) {
-    this.senderClass = value;
-    return this;
-  }
-
-  /**
-   * Gets io.quasient.pal.messages/colfer.Context.sender.
-   *
-   * @return the value.
-   */
-  public Obj getSender() {
-    return this.sender;
-  }
-
-  /**
-   * Sets io.quasient.pal.messages/colfer.Context.sender.
-   *
-   * @param value the replacement.
-   */
-  public void setSender(Obj value) {
-    this.sender = value;
-  }
-
-  /**
-   * Sets io.quasient.pal.messages/colfer.Context.sender.
-   *
-   * @param value the replacement.
-   * @return {@code this}.
-   */
-  public Context withSender(Obj value) {
-    this.sender = value;
-    return this;
   }
 
   /**
@@ -637,8 +551,6 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
   @Override
   public final int hashCode() {
     int h = 1;
-    if (this.senderClass != null) h = 31 * h + this.senderClass.hashCode();
-    if (this.sender != null) h = 31 * h + this.sender.hashCode();
     if (this.sourceLocationFile != null) h = 31 * h + this.sourceLocationFile.hashCode();
     h = 31 * h + this.sourceLocationLine;
     if (this.sourceLocationType != null) h = 31 * h + this.sourceLocationType.hashCode();
@@ -654,11 +566,7 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
     if (o == null) return false;
     if (o == this) return true;
 
-    return (this.senderClass == null
-            ? o.senderClass == null
-            : this.senderClass.equals(o.senderClass))
-        && (this.sender == null ? o.sender == null : this.sender.equals(o.sender))
-        && (this.sourceLocationFile == null
+    return (this.sourceLocationFile == null
             ? o.sourceLocationFile == null
             : this.sourceLocationFile.equals(o.sourceLocationFile))
         && this.sourceLocationLine == o.sourceLocationLine
@@ -670,16 +578,6 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
   @Override
   public Context fromJson(JsonObject json) throws JsonParseException {
     try {
-      if (json.has("senderClass")) {
-        JsonObject jsonObj = json.getAsJsonObject("senderClass");
-        this.senderClass = new Class().fromJson(jsonObj);
-      }
-
-      if (json.has("sender")) {
-        JsonObject jsonObj = json.getAsJsonObject("sender");
-        this.sender = new Obj().fromJson(jsonObj);
-      }
-
       if (json.has("sourceLocationFile")) {
         this.sourceLocationFile = json.get("sourceLocationFile").getAsString();
       }
@@ -704,8 +602,6 @@ public class Context implements Serializable, io.quasient.pal.messages.Marshalla
    */
   public void reset() {
     init();
-    this.senderClass = null;
-    this.sender = null;
     this.sourceLocationLine = 0;
   }
 }

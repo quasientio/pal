@@ -1241,8 +1241,7 @@ public class InterceptCallbackRequestMessage
         JsonArray jsonArray = json.getAsJsonArray("interceptedPeer");
         this.interceptedPeer = new byte[jsonArray.size()];
         for (int i = 0; i < jsonArray.size(); i++) {
-          byte jsonByte = jsonArray.get(i).getAsByte();
-          this.interceptedPeer[i] = jsonByte;
+          this.interceptedPeer[i] = jsonArray.get(i).getAsByte();
         }
       }
       if (json.has("registeredCallbackId")) {

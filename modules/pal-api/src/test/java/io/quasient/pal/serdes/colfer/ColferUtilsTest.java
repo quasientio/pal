@@ -23,7 +23,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import io.quasient.pal.common.lang.reflect.FieldSignature;
-import io.quasient.pal.common.objects.ObjectRef;
 import io.quasient.pal.common.runtime.Context;
 import io.quasient.pal.messages.Marshallable;
 import io.quasient.pal.messages.colfer.Field;
@@ -53,8 +52,7 @@ public class ColferUtilsTest {
     Field field =
         Wrapper.getWrappedField(
             signature.getFieldType(), signature.getName(), signature.getModifiers());
-    io.quasient.pal.messages.colfer.Context ctxt =
-        Wrapper.getWrappedContext(context, this, ObjectRef.randomRef());
+    io.quasient.pal.messages.colfer.Context ctxt = Wrapper.getWrappedContext(context);
     return new InstanceFieldGet().withClazz(clazz).withField(field).withContext(ctxt);
   }
 

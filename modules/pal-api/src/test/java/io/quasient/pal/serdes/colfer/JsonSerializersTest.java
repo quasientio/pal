@@ -80,9 +80,7 @@ public class JsonSerializersTest {
     msg.clazz = clazz;
     msg.modifiers = 1;
     Context ctx = new Context();
-    Class senderClass = new Class();
-    senderClass.name = "com.example.Sender";
-    ctx.senderClass = senderClass;
+    ctx.sourceLocationType = "com.example.Sender";
     msg.context = ctx;
 
     String json = ColferUtils.toJson(msg);
