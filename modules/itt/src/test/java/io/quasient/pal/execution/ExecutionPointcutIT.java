@@ -182,13 +182,23 @@ public class ExecutionPointcutIT extends AbstractCliIT {
 
   /**
    * Records a WAL with the test application and asserts that {@code Method.invoke} on the instance
-   * method {@code reflectedInstanceMethod} produces at least one OPERATION entry, captured by
-   * execution-site advice (call-site advice does not fire inside {@code java.lang.reflect}).
+   * method {@code reflectedInstanceMethod} produces exactly one OPERATION entry for the target
+   * method.
+   *
+   * <p>This verifies both dimensions of the fix in a single assertion:
+   *
+   * <ul>
+   *   <li><strong>Captured:</strong> At least one entry exists — the execution-site advice fires
+   *       inside the target body even though the call site is inside {@code java.lang.reflect}
+   *       (unwoven).
+   *   <li><strong>Not double-dispatched:</strong> Exactly one entry exists — the guard does not
+   *       allow a second dispatch from any other path for this invocation.
+   * </ul>
    *
    * @throws Exception if any step fails
    */
   @Test
-  public void shouldCaptureReflectionInvocation() throws Exception {
+  public void shouldCaptureReflectionInvocationWithoutDoubleDispatch() throws Exception {
     String walSpec = createWalSpec("exec-reflect-inst");
 
     ProcessResult recordResult = recordWal(walSpec);
@@ -200,20 +210,24 @@ public class ExecutionPointcutIT extends AbstractCliIT {
     int count = countOperationEntries(indexResult.stdout(), "reflectedInstanceMethod");
     logger.info("reflectedInstanceMethod OPERATION entries: {}", count);
 
-    assertThat(
-        "reflectedInstanceMethod must appear in WAL (captured by execution advice)",
-        count,
-        greaterThanOrEqualTo(1));
+    assertEquals(
+        "reflectedInstanceMethod must appear in WAL exactly once"
+            + " (captured by execution advice, not double-dispatched)",
+        1,
+        count);
   }
 
   /**
    * Records a WAL with the test application and asserts that {@code Method.invoke(null, ...)} on a
-   * static method produces at least one OPERATION entry, captured by execution-site advice.
+   * static method produces exactly one OPERATION entry for the target method.
+   *
+   * <p>Verifies both capture (entry exists — execution-site advice fires even though the call site
+   * is inside {@code java.lang.reflect}) and no double-dispatch (entry count is exactly one).
    *
    * @throws Exception if any step fails
    */
   @Test
-  public void shouldCaptureStaticMethodReflection() throws Exception {
+  public void shouldCaptureStaticMethodReflectionWithoutDoubleDispatch() throws Exception {
     String walSpec = createWalSpec("exec-reflect-static");
 
     ProcessResult recordResult = recordWal(walSpec);
@@ -225,22 +239,28 @@ public class ExecutionPointcutIT extends AbstractCliIT {
     int count = countOperationEntries(indexResult.stdout(), "reflectedStaticMethod");
     logger.info("reflectedStaticMethod OPERATION entries: {}", count);
 
-    assertThat(
-        "reflectedStaticMethod must appear in WAL (captured by execution advice)",
-        count,
-        greaterThanOrEqualTo(1));
+    assertEquals(
+        "reflectedStaticMethod must appear in WAL exactly once"
+            + " (captured by execution advice, not double-dispatched)",
+        1,
+        count);
   }
 
   /**
-   * Records a WAL with the test application and asserts that a method reference ({@code
-   * obj::methodReferenceTarget}) invoked through a {@link java.util.function.Function} produces at
-   * least one OPERATION entry. The invokedynamic / LambdaMetafactory call site is not a direct call
-   * — only execution-site advice on the target body captures the invocation.
+   * Records a WAL with the test application and asserts that a <strong>bound</strong> method
+   * reference ({@code obj::methodReferenceTarget}) invoked through a {@link
+   * java.util.function.Function} produces exactly one OPERATION entry for the target method.
+   *
+   * <p>The {@code invokedynamic} / {@link java.lang.invoke.LambdaMetafactory} call site is resolved
+   * into a runtime-generated class that is not woven by the compile-time aspect; only
+   * execution-site advice on the target body captures the invocation. The stricter assertion
+   * ({@code == 1}) additionally guards against a regression where a second dispatch path ever fires
+   * for the same invocation.
    *
    * @throws Exception if any step fails
    */
   @Test
-  public void shouldCaptureMethodReference() throws Exception {
+  public void shouldCaptureMethodReferenceWithoutDoubleDispatch() throws Exception {
     String walSpec = createWalSpec("exec-method-ref");
 
     ProcessResult recordResult = recordWal(walSpec);
@@ -252,22 +272,25 @@ public class ExecutionPointcutIT extends AbstractCliIT {
     int count = countOperationEntries(indexResult.stdout(), "methodReferenceTarget");
     logger.info("methodReferenceTarget OPERATION entries: {}", count);
 
-    assertThat(
-        "methodReferenceTarget must appear in WAL (captured by execution advice)",
-        count,
-        greaterThanOrEqualTo(1));
+    assertEquals(
+        "methodReferenceTarget must appear in WAL exactly once"
+            + " (captured by execution advice, not double-dispatched)",
+        1,
+        count);
   }
 
   /**
    * Records a WAL with the test application and asserts that a woven method invoked from within a
-   * lambda body ({@code x -> app.lambdaTarget(x)}) produces at least one OPERATION entry.
-   * Regardless of how the JVM's lambda metafactory shapes the caller's bytecode, execution-site
-   * advice on the callee body guarantees capture.
+   * lambda body ({@code x -> app.lambdaTarget(x)}) produces exactly one OPERATION entry.
+   *
+   * <p>Regardless of how the JVM's lambda metafactory shapes the caller's bytecode, execution-site
+   * advice on the callee body guarantees capture, and the thread-local guard ensures no second
+   * dispatch for the same invocation.
    *
    * @throws Exception if any step fails
    */
   @Test
-  public void shouldCaptureLambdaCapturedMethodCall() throws Exception {
+  public void shouldCaptureLambdaCapturedMethodCallWithoutDoubleDispatch() throws Exception {
     String walSpec = createWalSpec("exec-lambda");
 
     ProcessResult recordResult = recordWal(walSpec);
@@ -279,10 +302,11 @@ public class ExecutionPointcutIT extends AbstractCliIT {
     int count = countOperationEntries(indexResult.stdout(), "lambdaTarget");
     logger.info("lambdaTarget OPERATION entries: {}", count);
 
-    assertThat(
-        "lambdaTarget must appear in WAL (captured by execution advice)",
-        count,
-        greaterThanOrEqualTo(1));
+    assertEquals(
+        "lambdaTarget must appear in WAL exactly once"
+            + " (captured by execution advice, not double-dispatched)",
+        1,
+        count);
   }
 
   /**
