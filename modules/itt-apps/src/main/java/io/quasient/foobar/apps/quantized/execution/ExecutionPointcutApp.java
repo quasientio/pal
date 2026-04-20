@@ -17,6 +17,7 @@ package io.quasient.foobar.apps.quantized.execution;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -33,9 +34,15 @@ import java.util.function.Function;
  *   <li>{@link #reflectedInstanceMethod(String)} — invoked via {@link Method#invoke(Object,
  *       Object...)} on an instance. The call site is unwoven (inside {@code java.lang.reflect});
  *       the method body must be captured by execution-site advice.
- *   <li>{@link #methodReferenceTarget(String)} — invoked through a method reference bound to a
- *       {@link Function}. The {@code invokedynamic}/{@code LambdaMetafactory} call site is not a
- *       direct call; execution-site advice on the target body captures it.
+ *   <li>{@link #methodReferenceTarget(String)} — invoked through a <strong>bound</strong> method
+ *       reference ({@code app::methodReferenceTarget}) stored in a {@link Function}. The {@code
+ *       invokedynamic}/{@code LambdaMetafactory} call site is not a direct call; execution-site
+ *       advice on the target body captures it.
+ *   <li>{@link #unboundRefTarget(String)} — invoked through an <strong>unbound</strong> method
+ *       reference ({@code ExecutionPointcutApp::unboundRefTarget}) stored in a {@link BiFunction}
+ *       that receives the instance as its first argument at each call.
+ *   <li>{@link #staticRefTarget(String)} — invoked through a <strong>static</strong> method
+ *       reference ({@code ExecutionPointcutApp::staticRefTarget}) stored in a {@link Function}.
  *   <li>{@link #reflectedStaticMethod(String)} — static method invoked via {@link
  *       Method#invoke(Object, Object...)} with a {@code null} receiver.
  *   <li>{@link #lambdaTarget(String)} — invoked from inside a lambda body. Verifies that regardless
@@ -55,6 +62,11 @@ import java.util.function.Function;
  *       through the interface-typed reference. Same concern as virtual dispatch with an additional
  *       wrinkle: the call-site's declaring type is the interface while the execution-site runs on
  *       the concrete impl. The runtime-class-keyed guard must align both sides.
+ *   <li>{@link #frameworkCallbackTarget(String)} — invoked from a {@link Runnable} dispatched by
+ *       {@link Thread#start()}. The native {@code Thread.run()} bridge into the {@code Runnable}
+ *       body is not a woven call-site, so the target method is only captured by execution-site
+ *       advice. Stands in for framework-driven callbacks (Quarkus scheduler, JavaFX event dispatch,
+ *       Spring MVC handler) where the caller is external/unwoven.
  * </ol>
  *
  * <p>The app prints a single-line {@code results: ...} marker that encodes each path's return
@@ -64,6 +76,9 @@ public class ExecutionPointcutApp {
 
   /** Marker string assigned by a constructor; used to verify constructor reflection captured. */
   private String marker;
+
+  /** Captures the return value of {@link #frameworkCallbackTarget(String)} across thread join. */
+  private String frameworkCallbackResult;
 
   /**
    * Default no-arg constructor used for the app instance created in {@link #main(String[])}.
@@ -117,14 +132,42 @@ public class ExecutionPointcutApp {
   }
 
   /**
-   * Target for the method-reference path. Invoked via a {@link Function} constructed from a method
-   * reference.
+   * Target for the <strong>bound</strong> method-reference path. Invoked via a {@link Function}
+   * constructed from {@code app::methodReferenceTarget} (the receiver is captured at the time the
+   * reference is built).
    *
    * @param input the input string
    * @return {@code "mr:" + input}
    */
   public String methodReferenceTarget(String input) {
     return "mr:" + input;
+  }
+
+  /**
+   * Target for the <strong>unbound</strong> method-reference path. Invoked via a {@link
+   * java.util.function.BiFunction} constructed from {@code ExecutionPointcutApp::unboundRefTarget}
+   * — the method reference takes the receiver as its first parameter at each call, so the call site
+   * at {@code apply} is in a runtime-generated {@code BiFunction} implementation that is not woven.
+   * Only execution-site advice on this method captures the invocation.
+   *
+   * @param input the input string
+   * @return {@code "ur:" + input}
+   */
+  public String unboundRefTarget(String input) {
+    return "ur:" + input;
+  }
+
+  /**
+   * Target for the <strong>static</strong> method-reference path. Invoked via a {@link Function}
+   * constructed from {@code ExecutionPointcutApp::staticRefTarget}. The static method reference is
+   * dispatched from a runtime-generated {@link Function} implementation that is not woven — only
+   * execution-site advice on this method captures the invocation.
+   *
+   * @param input the input string
+   * @return {@code "sr:" + input}
+   */
+  public static String staticRefTarget(String input) {
+    return "sr:" + input;
   }
 
   /**
@@ -135,6 +178,24 @@ public class ExecutionPointcutApp {
    */
   public String lambdaTarget(String input) {
     return "l:" + input;
+  }
+
+  /**
+   * Target for the framework-style callback path. Invoked from a {@link Runnable} dispatched by
+   * {@link Thread#start()} — a JDK-native entry point that stands in for framework callbacks (for
+   * example, a Quarkus scheduler firing a scheduled method, JavaFX's event-dispatch thread calling
+   * a handler, or Spring MVC dispatching a controller method). The bridge from {@code Thread.run()}
+   * into the application-level callback body is not a woven call site, so only execution-site
+   * advice on this method can capture the invocation.
+   *
+   * <p>The returned value is stored on the enclosing app instance via {@link
+   * #frameworkCallbackResult} so that {@link #main(String[])} can read it after the thread joins.
+   *
+   * @param input the input string
+   * @return {@code "fc:" + input}
+   */
+  public String frameworkCallbackTarget(String input) {
+    return "fc:" + input;
   }
 
   /**
@@ -230,13 +291,15 @@ public class ExecutionPointcutApp {
 
   /**
    * Exercises all invocation paths (direct, reflective, method-reference, static reflection,
-   * lambda, reflective constructor, recursion, virtual dispatch, interface dispatch) and prints a
-   * single {@code results: ...} marker line.
+   * lambda, reflective constructor, recursion, virtual dispatch, interface dispatch,
+   * framework-style callback via {@link Thread}) and prints a single {@code results: ...} marker
+   * line.
    *
    * @param args command-line arguments (ignored)
    * @throws ReflectiveOperationException if reflective invocation fails
+   * @throws InterruptedException if the framework-callback worker thread is interrupted
    */
-  public static void main(String[] args) throws ReflectiveOperationException {
+  public static void main(String[] args) throws ReflectiveOperationException, InterruptedException {
     ExecutionPointcutApp app = new ExecutionPointcutApp();
 
     String r1 = app.normalMethod("hello");
@@ -255,6 +318,13 @@ public class ExecutionPointcutApp {
     Function<String, String> lam = x -> app.lambdaTarget(x);
     String r5 = lam.apply("lam");
 
+    BiFunction<ExecutionPointcutApp, String, String> unboundRef =
+        ExecutionPointcutApp::unboundRefTarget;
+    String r5a = unboundRef.apply(app, "unb");
+
+    Function<String, String> staticRef = ExecutionPointcutApp::staticRefTarget;
+    String r5b = staticRef.apply("sref");
+
     Constructor<ExecutionPointcutApp> ctor =
         ExecutionPointcutApp.class.getConstructor(String.class);
     ExecutionPointcutApp reflectedApp = ctor.newInstance("ctor-marker");
@@ -268,6 +338,12 @@ public class ExecutionPointcutApp {
     VirtualIface ifaceRef = new VirtualIfaceImpl();
     String r9 = ifaceRef.ifaceMethod("id");
 
+    Runnable worker = () -> app.frameworkCallbackResult = app.frameworkCallbackTarget("fw");
+    Thread workerThread = new Thread(worker, "framework-callback");
+    workerThread.start();
+    workerThread.join();
+    String r10 = app.frameworkCallbackResult;
+
     System.out.println(
         "results: "
             + r1
@@ -280,12 +356,18 @@ public class ExecutionPointcutApp {
             + "|"
             + r5
             + "|"
+            + r5a
+            + "|"
+            + r5b
+            + "|"
             + r6
             + "|"
             + r7
             + "|"
             + r8
             + "|"
-            + r9);
+            + r9
+            + "|"
+            + r10);
   }
 }

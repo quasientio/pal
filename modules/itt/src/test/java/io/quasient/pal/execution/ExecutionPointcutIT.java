@@ -56,12 +56,15 @@ public class ExecutionPointcutIT extends AbstractCliIT {
   /**
    * Expected output marker produced by {@code ExecutionPointcutApp#main}.
    *
-   * <p>Order matches the paths exercised in {@code main}: direct call, reflected instance,
-   * method-reference, reflected static, lambda-captured, reflected constructor marker, recursion
-   * count (3 from {@code RECURSION_DEPTH}), virtual dispatch (override wins), interface dispatch.
+   * <p>Order matches the paths exercised in {@code main}: direct call, reflected instance, bound
+   * method reference, reflected static, lambda-captured, unbound method reference, static method
+   * reference, reflected constructor marker, recursion count (3 from {@code RECURSION_DEPTH}),
+   * virtual dispatch (override wins), interface dispatch, framework-style callback via {@code
+   * Thread.start()}.
    */
   private static final String EXPECTED_MARKER =
-      "results: n:hello|r:world|mr:ref|s:static|l:lam|ctor-marker|3|sub:vd|iface:id";
+      "results: n:hello|r:world|mr:ref|s:static|l:lam"
+          + "|ur:unb|sr:sref|ctor-marker|3|sub:vd|iface:id|fc:fw";
 
   /** Recursion depth used by the app; total number of {@code recursiveCount} frames is this + 1. */
   private static final int RECURSION_DEPTH = 3;
@@ -280,6 +283,70 @@ public class ExecutionPointcutIT extends AbstractCliIT {
   }
 
   /**
+   * Records a WAL with the test application and asserts that an <strong>unbound</strong> method
+   * reference ({@code ExecutionPointcutApp::unboundRefTarget}) invoked through a {@link
+   * java.util.function.BiFunction} produces exactly one OPERATION entry for the target method.
+   *
+   * <p>Unbound method references compile to a different {@code invokedynamic} shape than bound
+   * ones: the receiver is passed as the first argument of the functional interface's abstract
+   * method rather than captured at construction time. The runtime-generated {@code BiFunction}
+   * implementation is not woven, so only execution-site advice on the callee can capture the
+   * invocation — the assertion verifies both capture and the no-double-dispatch guarantee.
+   *
+   * @throws Exception if any step fails
+   */
+  @Test
+  public void shouldCaptureUnboundMethodReferenceWithoutDoubleDispatch() throws Exception {
+    String walSpec = createWalSpec("exec-unbound-ref");
+
+    ProcessResult recordResult = recordWal(walSpec);
+    assertEquals("Recording should succeed", 0, recordResult.exitCode());
+
+    CliProcessResult indexResult = doVerboseIndex(walSpec);
+    assertEquals("wal-index should succeed", 0, indexResult.exitCode());
+
+    int count = countOperationEntries(indexResult.stdout(), "unboundRefTarget");
+    logger.info("unboundRefTarget OPERATION entries: {}", count);
+
+    assertEquals(
+        "unboundRefTarget must appear in WAL exactly once"
+            + " (captured by execution advice, not double-dispatched)",
+        1,
+        count);
+  }
+
+  /**
+   * Records a WAL with the test application and asserts that a <strong>static</strong> method
+   * reference ({@code ExecutionPointcutApp::staticRefTarget}) invoked through a {@link
+   * java.util.function.Function} produces exactly one OPERATION entry for the target method.
+   *
+   * <p>Static method references compile to yet another {@code invokedynamic} shape. The
+   * runtime-generated {@code Function} implementation is not woven, and the target has no receiver
+   * — so only execution-site advice on the static body can capture the invocation.
+   *
+   * @throws Exception if any step fails
+   */
+  @Test
+  public void shouldCaptureStaticMethodReferenceWithoutDoubleDispatch() throws Exception {
+    String walSpec = createWalSpec("exec-static-ref");
+
+    ProcessResult recordResult = recordWal(walSpec);
+    assertEquals("Recording should succeed", 0, recordResult.exitCode());
+
+    CliProcessResult indexResult = doVerboseIndex(walSpec);
+    assertEquals("wal-index should succeed", 0, indexResult.exitCode());
+
+    int count = countOperationEntries(indexResult.stdout(), "staticRefTarget");
+    logger.info("staticRefTarget OPERATION entries: {}", count);
+
+    assertEquals(
+        "staticRefTarget must appear in WAL exactly once"
+            + " (captured by execution advice, not double-dispatched)",
+        1,
+        count);
+  }
+
+  /**
    * Records a WAL with the test application and asserts that a woven method invoked from within a
    * lambda body ({@code x -> app.lambdaTarget(x)}) produces exactly one OPERATION entry.
    *
@@ -454,6 +521,45 @@ public class ExecutionPointcutIT extends AbstractCliIT {
         "ifaceMethod should appear exactly once under interface dispatch (no double-dispatch)",
         1,
         ifaceCount);
+  }
+
+  /**
+   * Records a WAL with the test application and asserts that the framework-style callback
+   * dispatched via {@link Thread#start()} produces exactly one OPERATION entry for {@code
+   * frameworkCallbackTarget}.
+   *
+   * <p>This is the closest in-process stand-in for genuinely unwoven framework callbacks (Quarkus
+   * scheduler, JavaFX event-dispatch thread, Spring MVC handler): the JVM's native {@code
+   * Thread.run()} bridge invokes the {@code Runnable} body, and the runtime-generated lambda class
+   * that implements {@code Runnable} is not woven. The target method on the application class is
+   * therefore reachable only through execution-site advice. Asserting exactly one entry covers both
+   * capture (the entry exists) and the no-double-dispatch guarantee (no other path adds a second
+   * entry for the same invocation).
+   *
+   * @throws Exception if any step fails
+   */
+  @Test
+  public void shouldCaptureFrameworkStyleCallbackWithoutDoubleDispatch() throws Exception {
+    String walSpec = createWalSpec("exec-framework");
+
+    ProcessResult recordResult = recordWal(walSpec);
+    assertEquals("Recording should succeed", 0, recordResult.exitCode());
+    assertThat(
+        "Recording should produce expected output marker (framework callback ran)",
+        recordResult.stdout(),
+        containsString(EXPECTED_MARKER));
+
+    CliProcessResult indexResult = doVerboseIndex(walSpec);
+    assertEquals("wal-index should succeed", 0, indexResult.exitCode());
+
+    int count = countOperationEntries(indexResult.stdout(), "frameworkCallbackTarget");
+    logger.info("frameworkCallbackTarget OPERATION entries: {}", count);
+
+    assertEquals(
+        "frameworkCallbackTarget must appear in WAL exactly once"
+            + " (captured by execution advice, not double-dispatched)",
+        1,
+        count);
   }
 
   /**
