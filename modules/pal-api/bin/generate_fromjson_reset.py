@@ -117,8 +117,7 @@ def generate_fromjson_for_field(field):
           code += f'        JsonArray jsonArray = json.getAsJsonArray("{field_name}");\n'
           code += f'        this.{field_name} = new {field_type}[jsonArray.size()];\n'
           code += f'        for (int i = 0; i < jsonArray.size(); i++) {{\n'
-          code += f'          int jsonInt = jsonArray.get(i).getAsJsonInt();\n'
-          code += f'          this.{field_name}[i] = new {field_type}().fromJson(jsonInt);\n'
+          code += f'          this.{field_name}[i] = jsonArray.get(i).getAsInt();\n'
           code += f'        }}\n'
           code += f'      }}\n'
       elif field_type == 'byte':
@@ -126,8 +125,7 @@ def generate_fromjson_for_field(field):
           code += f'        JsonArray jsonArray = json.getAsJsonArray("{field_name}");\n'
           code += f'        this.{field_name} = new {field_type}[jsonArray.size()];\n'
           code += f'        for (int i = 0; i < jsonArray.size(); i++) {{\n'
-          code += f'          byte jsonByte = jsonArray.get(i).getAsByte();\n'
-          code += f'          this.{field_name}[i] = new {field_type}().fromJson(jsonByte);\n'
+          code += f'          this.{field_name}[i] = jsonArray.get(i).getAsByte();\n'
           code += f'        }}\n'
           code += f'      }}\n'
       elif field_type == 'boolean':
@@ -135,8 +133,7 @@ def generate_fromjson_for_field(field):
           code += f'        JsonArray jsonArray = json.getAsJsonArray("{field_name}");\n'
           code += f'        this.{field_name} = new {field_type}[jsonArray.size()];\n'
           code += f'        for (int i = 0; i < jsonArray.size(); i++) {{\n'
-          code += f'          boolean jsonBool = jsonArray.get(i).getAsJsonBoolean();\n'
-          code += f'          this.{field_name}[i] = new {field_type}().fromJson(jsonBool);\n'
+          code += f'          this.{field_name}[i] = jsonArray.get(i).getAsBoolean();\n'
           code += f'        }}\n'
           code += f'      }}\n'
       elif field_type == 'String':
