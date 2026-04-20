@@ -1248,7 +1248,9 @@ When a callback times out, the intercepted peer logs a warning and proceeds as i
 
 ### Only Woven Code
 
-Interception only works for code compiled with AspectJ weaving. Standard JDK classes (like `java.lang.String`) cannot be intercepted.
+Interception requires the **target class** to be compiled with AspectJ weaving. Standard JDK classes (like `java.lang.String`, `java.util.HashMap`) and third-party libraries you don't build cannot be intercepted.
+
+The **caller** does not need to be woven. Invocations from reflection (`Method.invoke`), method references, lambdas, `invokedynamic`, JNI, and framework dispatchers (Quarkus, JavaFX, Spring MVC, etc.) all trigger intercepts on a woven target, so you don't need to add a woven wrapper method just to make intercepts fire.
 
 ### Pattern Syntax
 

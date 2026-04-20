@@ -387,7 +387,7 @@ pal replay --wal file:/tmp/service-wal --threading unordered \
 | Timer-based | `scheduler-N` | Scheduled task invocations |
 | JavaFX app | `JavaFX Application Thread` | Button handlers, event callbacks |
 
-For all scenarios, the prerequisite is the same: the entry-point operations must be captured in the WAL during recording. For PAL RPC services, `--wal-incoming-rpc` handles this automatically. For web apps, Swing apps, and timer-based applications, the framework's request/event dispatch must go through PAL-woven code.
+For all scenarios, the prerequisite is the same: the entry-point operations must be captured in the WAL during recording. For PAL RPC services, `--wal-incoming-rpc` handles this automatically. For web apps, Swing apps, and timer-based applications, the entry-point handler methods (the ones the framework dispatches to) must be compiled with `pal-weave`; the framework's own dispatcher does not need to be woven, because execution-site advice captures invocations coming from unwoven callers (reflection, method references, `invokedynamic`, JNI).
 
 ### JavaFX Applications
 
