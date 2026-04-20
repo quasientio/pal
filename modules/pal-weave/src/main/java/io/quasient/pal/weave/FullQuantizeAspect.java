@@ -314,6 +314,14 @@ public class FullQuantizeAspect {
    * Around advice that intercepts constructor calls and forwards them to {@link
    * DispatchForwarder#constructor}.
    *
+   * <p>Unlike the method advice, the constructor advice does <strong>not</strong> touch {@link
+   * #TL_CURRENT_CALL_SIG}. No {@code execution(new(..))} pointcut is declared (AspectJ's
+   * {@code @Around} on constructor execution wraps the body in a synthetic method, breaking {@code
+   * final} field assignment — see the note on the execution-site advice block), so there is no
+   * exec-site consumer to pair with. Any method calls made from within the constructor body perform
+   * their own save/restore of the slot and therefore preserve the outer caller's guard value on
+   * their own.
+   *
    * @param pjp the proceeding join point representing the constructor call
    * @return the constructed object or a replacement provided by the dispatcher
    * @throws Throwable if the forwarding or target invocation fails
@@ -327,13 +335,7 @@ public class FullQuantizeAspect {
       logger.debug(parametersToString(pjp));
     }
 
-    String prev = TL_CURRENT_CALL_SIG.get();
-    TL_CURRENT_CALL_SIG.set(pjp.getSignature().toLongString());
-    try {
-      return DispatchForwarder.constructor(pjp);
-    } finally {
-      TL_CURRENT_CALL_SIG.set(prev);
-    }
+    return DispatchForwarder.constructor(pjp);
   }
 
   /*
