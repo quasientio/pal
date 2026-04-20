@@ -15,8 +15,10 @@
  */
 package io.quasient.pal.weave;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quasient.pal.common.runtime.DispatchForwarder;
 import java.lang.reflect.Modifier;
+import java.util.concurrent.ConcurrentHashMap;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.JoinPoint.StaticPart;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -86,6 +88,36 @@ public class FullQuantizeAspect {
    * runtime did not claim.
    */
   public static final String RUNTIME_INVOKE_SENTINEL = "<pal-runtime-reflective-invoke>";
+
+  /**
+   * Cache of canonical guard keys indexed by runtime receiver class and the advice's static join
+   * point.
+   *
+   * <p>On the hot path, {@link #computeMethodGuardKey(JoinPoint)} looks up the key here before
+   * allocating anything. The outer {@link ClassValue} partitions per runtime class (JVM-intrinsic
+   * fast path, no synchronization). The inner {@link ConcurrentHashMap} maps {@link
+   * JoinPoint.StaticPart} — an AspectJ-interned singleton per woven call or execution location — to
+   * the canonical key string. Entries are GC-eligible when their class becomes unreachable.
+   */
+  private static final ClassValue<ConcurrentHashMap<JoinPoint.StaticPart, String>> GUARD_KEY_CACHE =
+      new ClassValue<>() {
+        @Override
+        protected ConcurrentHashMap<JoinPoint.StaticPart, String> computeValue(Class<?> type) {
+          return new ConcurrentHashMap<>();
+        }
+      };
+
+  /**
+   * Intern map for guard keys so that call-site and execution-site advice — which use different
+   * {@link JoinPoint.StaticPart} objects but resolve to the same (runtime class, method-descriptor)
+   * pair — observe the <strong>same</strong> {@link String} reference.
+   *
+   * <p>This is what makes {@code ==} work as the fast path in {@link
+   * #callSiteAlreadyDispatched(JoinPoint)} for the common woven-to-woven direct-call case,
+   * bypassing the character walk that {@link String#equals(Object)} would otherwise perform.
+   */
+  private static final ConcurrentHashMap<String, String> INTERNED_GUARD_KEYS =
+      new ConcurrentHashMap<>();
 
   /**
    * Enters a PAL-runtime reflective invocation scope: saves the current value of {@link
@@ -471,9 +503,23 @@ public class FullQuantizeAspect {
    * impersonate the sentinel and cause exec-site advice to silently skip dispatch. Do not change
    * this comparison.
    *
+   * <p>The same {@code ==} identity check is also used as a fast path for the key comparison:
+   * because {@link #computeMethodGuardKey(JoinPoint)} canonicalises every key through {@link
+   * #INTERNED_GUARD_KEYS}, a woven-to-woven direct call observes the <em>same</em> {@link String}
+   * instance at both the call-site and the execution-site, and the reference check succeeds without
+   * a character walk. The {@code .equals(...)} fallback is retained to accept any value-equal
+   * string the test harness installs directly in the slot.
+   *
    * @param pjp the join point whose execution-site advice is consulting the guard
    * @return whether the exec-site advice should skip dispatch and simply proceed
    */
+  @SuppressFBWarnings(
+      value = "ES_COMPARING_STRINGS_WITH_EQ",
+      justification =
+          "Identity comparison is load-bearing: guard keys flow through a ClassValue cache and an"
+              + " intern map that canonicalizes them, so matching call- and exec-sites share the"
+              + " same String instance. The == check is a fast path; equals() remains as the"
+              + " correctness fallback.")
   private static boolean callSiteAlreadyDispatched(JoinPoint pjp) {
     String current = TL_CURRENT_CALL_SIG.get();
     if (current == null) {
@@ -483,7 +529,8 @@ public class FullQuantizeAspect {
     if (current == RUNTIME_INVOKE_SENTINEL) {
       return true;
     }
-    return current.equals(computeMethodGuardKey(pjp));
+    String mine = computeMethodGuardKey(pjp);
+    return current == mine || current.equals(mine);
   }
 
   /**
@@ -509,18 +556,45 @@ public class FullQuantizeAspect {
    * compile-time receiver type, causing a mismatch between the call-site and the execution-site
    * under virtual/interface dispatch and yielding double-dispatch.
    *
+   * <p><strong>Hot-path caching.</strong> The computed key is memoized in {@link #GUARD_KEY_CACHE}
+   * keyed by (runtime class, {@link JoinPoint.StaticPart}). On a cache hit (the steady-state case)
+   * no allocation occurs. On a miss, the built string is canonicalised through {@link
+   * #INTERNED_GUARD_KEYS}, so the call-site's cache entry and the exec-site's cache entry for the
+   * same (class, method-descriptor) share a single {@code String} instance — enabling the {@code
+   * ==} fast path in {@link #callSiteAlreadyDispatched(JoinPoint)}.
+   *
    * @param pjp the method call-site or execution-site join point to key
    * @return a stable guard key that agrees on both sides of a woven-to-woven invocation
    */
-  private static String computeMethodGuardKey(JoinPoint pjp) {
+  static String computeMethodGuardKey(JoinPoint pjp) {
     MethodSignature ms = (MethodSignature) pjp.getSignature();
-    Class<?> keyClass;
     Object target = pjp.getTarget();
-    if (target != null && !Modifier.isStatic(ms.getModifiers())) {
-      keyClass = target.getClass();
-    } else {
-      keyClass = ms.getDeclaringType();
+    Class<?> keyClass =
+        (target != null && !Modifier.isStatic(ms.getModifiers()))
+            ? target.getClass()
+            : ms.getDeclaringType();
+    ConcurrentHashMap<JoinPoint.StaticPart, String> forClass = GUARD_KEY_CACHE.get(keyClass);
+    JoinPoint.StaticPart sp = pjp.getStaticPart();
+    String cached = forClass.get(sp);
+    if (cached != null) {
+      return cached;
     }
+    String built = buildMethodGuardKey(keyClass, ms);
+    String canonical = INTERNED_GUARD_KEYS.computeIfAbsent(built, k -> k);
+    String prev = forClass.putIfAbsent(sp, canonical);
+    return prev != null ? prev : canonical;
+  }
+
+  /**
+   * Builds the guard-key string for the given runtime class and method signature. Separated from
+   * {@link #computeMethodGuardKey(JoinPoint)} so the hot path can remain tight and the miss path
+   * can be inlined independently.
+   *
+   * @param keyClass the class whose name forms the first segment of the key
+   * @param ms the method signature from which the method name and parameter types are read
+   * @return the freshly-built key string (not yet interned)
+   */
+  private static String buildMethodGuardKey(Class<?> keyClass, MethodSignature ms) {
     StringBuilder sb = new StringBuilder();
     sb.append(keyClass.getName()).append('#').append(ms.getName()).append('(');
     Class<?>[] params = ms.getParameterTypes();
