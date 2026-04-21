@@ -100,8 +100,7 @@ public class InstanceMethodDispatcher extends MethodDispatcher {
         generateObjectRef(target),
         args,
         Arrays.stream(args).map(this::generateObjectRef).toArray(ObjectRef[]::new),
-        includeDeclaredExceptions,
-        target != null ? target.getClass() : null);
+        includeDeclaredExceptions);
   }
 
   /**

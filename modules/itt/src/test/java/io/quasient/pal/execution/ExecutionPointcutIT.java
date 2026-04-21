@@ -477,14 +477,21 @@ public class ExecutionPointcutIT extends AbstractCliIT {
     CliProcessResult indexResult = doVerboseIndex(walSpec);
     assertEquals("wal-index should succeed", 0, indexResult.exitCode());
 
-    int virtualCount =
+    // Count entries at both the declared call-site type and the runtime receiver type.
+    // The guard suppresses exec-site dispatch, so only the call-site records an entry — and the
+    // call-site uses the declared type. A regression of the guard would produce a second entry at
+    // the runtime receiver type.
+    int baseCount =
+        countOperationEntries(indexResult.stdout(), APP_CLASS + "$VirtualBase", "virtualMethod");
+    int subCount =
         countOperationEntries(indexResult.stdout(), APP_CLASS + "$VirtualSub", "virtualMethod");
-    logger.info("VirtualSub.virtualMethod OPERATION entries: {}", virtualCount);
+    logger.info(
+        "virtualMethod OPERATION entries: VirtualBase={}, VirtualSub={}", baseCount, subCount);
 
     assertEquals(
         "virtualMethod should appear exactly once under virtual dispatch (no double-dispatch)",
         1,
-        virtualCount);
+        baseCount + subCount);
   }
 
   /**
@@ -513,14 +520,21 @@ public class ExecutionPointcutIT extends AbstractCliIT {
     CliProcessResult indexResult = doVerboseIndex(walSpec);
     assertEquals("wal-index should succeed", 0, indexResult.exitCode());
 
+    // Count entries at both the declared interface type and the runtime implementation type.
+    // See shouldNotDoubleDispatchOnVirtualDispatch for rationale.
     int ifaceCount =
+        countOperationEntries(indexResult.stdout(), APP_CLASS + "$VirtualIface", "ifaceMethod");
+    int implCount =
         countOperationEntries(indexResult.stdout(), APP_CLASS + "$VirtualIfaceImpl", "ifaceMethod");
-    logger.info("VirtualIfaceImpl.ifaceMethod OPERATION entries: {}", ifaceCount);
+    logger.info(
+        "ifaceMethod OPERATION entries: VirtualIface={}, VirtualIfaceImpl={}",
+        ifaceCount,
+        implCount);
 
     assertEquals(
         "ifaceMethod should appear exactly once under interface dispatch (no double-dispatch)",
         1,
-        ifaceCount);
+        ifaceCount + implCount);
   }
 
   /**
