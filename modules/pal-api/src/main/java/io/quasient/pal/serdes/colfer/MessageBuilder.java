@@ -797,7 +797,7 @@ public final class MessageBuilder {
       Object[] args,
       ObjectRef[] argObjRefs) {
     return buildInstanceMethodMessageEphemeral(
-        context, sender, senderObjRef, targetObjRef, args, argObjRefs, false);
+        context, sender, senderObjRef, targetObjRef, args, argObjRefs, false, null);
   }
 
   /**
@@ -823,13 +823,56 @@ public final class MessageBuilder {
       Object[] args,
       ObjectRef[] argObjRefs,
       boolean includeDeclaredExceptions) {
+    return buildInstanceMethodMessageEphemeral(
+        context,
+        sender,
+        senderObjRef,
+        targetObjRef,
+        args,
+        argObjRefs,
+        includeDeclaredExceptions,
+        null);
+  }
+
+  /**
+   * Builds an {@link ExecMessage} for invoking an instance method using execution context,
+   * optionally including declared exceptions, and recording the runtime receiver class.
+   *
+   * <p>When {@code runtimeTargetClass} is non-null, the message's class field reflects the actual
+   * runtime type of the receiver — the class whose method body executed under virtual or interface
+   * dispatch — rather than the static compile-time declaring type from the signature. This aligns
+   * the recorded operation with what actually ran and matches the runtime-class-keyed guard used to
+   * suppress double-dispatch at the call-site/execution-site boundary.
+   *
+   * @param context the execution context containing method signature information
+   * @param sender the object sending the message
+   * @param senderObjRef the reference to the sender object
+   * @param targetObjRef the object reference of the target instance on which the method is invoked
+   * @param args the array of argument values corresponding to the parameters
+   * @param argObjRefs the array of object references corresponding to the arguments
+   * @param includeDeclaredExceptions if {@code true}, extract and include declared exceptions from
+   *     method signature; if {@code false}, declaredExceptions will be empty
+   * @param runtimeTargetClass the runtime class of the receiver, or {@code null} to fall back to
+   *     the static declaring type from the signature
+   * @return an {@code ExecMessage} representing the instance method invocation with context
+   */
+  @SuppressWarnings("PMD.NoFullyQualifiedTypes")
+  public ExecMessage buildInstanceMethodMessageEphemeral(
+      Context context,
+      Object sender,
+      ObjectRef senderObjRef,
+      ObjectRef targetObjRef,
+      Object[] args,
+      ObjectRef[] argObjRefs,
+      boolean includeDeclaredExceptions,
+      Class<?> runtimeTargetClass) {
 
     // precomputed statics (no alloc)
     final MessageStatics stat = MessageStaticsFactory.forMethod(context);
 
     // ---- Fill the inner message in-place (no new) ----
     final InstanceMethodCall call = TlScratchHolder.imc();
-    call.clazz = stat.clazz;
+    call.clazz = (runtimeTargetClass != null) ? getWrappedClass(runtimeTargetClass) : stat.clazz;
     call.name = stat.name;
     call.modifiers = stat.modifiers;
     call.objectRef = targetObjRef.getRef();

@@ -78,17 +78,41 @@ public record OperationSignature(
    * Creates an {@code OperationSignature} from a live {@link ProceedingJoinPoint} and its
    * corresponding message type.
    *
-   * <p>Uses {@code pjp.getSignature().getDeclaringTypeName()} for the class name, {@code
-   * pjp.getSignature().getName()} for the executable name, and {@link
-   * ParamTypeExtractor#extractFromArgs} for the parameter types (matching the actual runtime types
-   * recorded in the WAL rather than the declared signature types).
+   * <p>For instance method operations, the class name is the runtime receiver class ({@code
+   * pjp.getTarget().getClass().getName()}) — matching the runtime-class recording performed by the
+   * message builder so replay comparisons align under virtual and interface dispatch. For all other
+   * operations (static methods, constructors, field access) the class name falls back to {@code
+   * pjp.getSignature().getDeclaringTypeName()}.
+   *
+   * <p>The executable name comes from {@code pjp.getSignature().getName()} (constructors are
+   * normalized from {@code <init>} to {@code new}), and parameter types come from {@link
+   * ParamTypeExtractor#extractFromArgs} to match the actual runtime types recorded in the WAL
+   * rather than the declared signature types.
    *
    * @param pjp the proceeding join point from AspectJ dispatch
    * @param msgType the message type classifying this operation
    * @return a new {@code OperationSignature} reflecting the live operation
    */
   public static OperationSignature fromJoinPoint(ProceedingJoinPoint pjp, MessageType msgType) {
-    String className = pjp.getSignature().getDeclaringTypeName();
+    final Object target = pjp.getTarget();
+    final String declaredTypeName = pjp.getSignature().getDeclaringTypeName();
+    String className = declaredTypeName;
+    if (msgType == MessageType.EXEC_INSTANCE_METHOD && target != null) {
+      // Prefer the runtime target class so the live signature matches the WAL-recorded
+      // runtime class under virtual and interface dispatch. Fall back to the declared
+      // type when the declared class cannot be loaded or the target is not an instance
+      // of it — this path is only exercised by unit tests that stub join points with
+      // non-existent class names and plain Object targets.
+      try {
+        Class<?> declaredType =
+            Class.forName(declaredTypeName, false, Thread.currentThread().getContextClassLoader());
+        if (declaredType.isInstance(target)) {
+          className = target.getClass().getName();
+        }
+      } catch (ClassNotFoundException ignored) {
+        // Declared class not loadable — retain declared name.
+      }
+    }
     String executableName = pjp.getSignature().getName();
     // Normalize constructor names: AspectJ returns "<init>" but the WAL records "new"
     if ("<init>".equals(executableName)) {
@@ -107,13 +131,16 @@ public record OperationSignature(
    * parameter types.
    *
    * <p>Message type is intentionally excluded from matching since the same logical operation may
-   * have different message types between recording and replay.
+   * have different message types between recording and replay. Class names and parameter type names
+   * are compared with lambda normalization so that synthetic lambda class names (which carry
+   * non-deterministic suffixes across JVM runs) match when their enclosing class and {@code
+   * $$Lambda} marker agree.
    *
    * @param other the other signature to compare against
    * @return {@code true} if class name, executable name, and parameter types are equal
    */
   public boolean matches(OperationSignature other) {
-    return Objects.equals(this.className, other.className)
+    return typeNamesMatch(this.className, other.className)
         && Objects.equals(this.executableName, other.executableName)
         && paramTypesMatch(this.paramTypes, other.paramTypes);
   }
