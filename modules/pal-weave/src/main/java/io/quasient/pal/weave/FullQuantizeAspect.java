@@ -404,7 +404,7 @@ public class FullQuantizeAspect {
    */
   @Around("voidInstanceMethodsExec()")
   public void aroundVoidInstanceMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
-    if (callSiteAlreadyDispatched(pjp)) {
+    if (isSyntheticExecution(pjp) || callSiteAlreadyDispatched(pjp)) {
       pjp.proceed();
       return;
     }
@@ -426,7 +426,7 @@ public class FullQuantizeAspect {
    */
   @Around("voidClassMethodsExec()")
   public void aroundVoidClassMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
-    if (callSiteAlreadyDispatched(pjp)) {
+    if (isSyntheticExecution(pjp) || callSiteAlreadyDispatched(pjp)) {
       pjp.proceed();
       return;
     }
@@ -449,7 +449,7 @@ public class FullQuantizeAspect {
    */
   @Around("nonVoidInstanceMethodsExec()")
   public Object aroundNonVoidInstanceMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
-    if (callSiteAlreadyDispatched(pjp)) {
+    if (isSyntheticExecution(pjp) || callSiteAlreadyDispatched(pjp)) {
       return pjp.proceed();
     }
     if (logger.isDebugEnabled()) {
@@ -471,7 +471,7 @@ public class FullQuantizeAspect {
    */
   @Around("nonVoidClassMethodsExec()")
   public Object aroundNonVoidClassMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
-    if (callSiteAlreadyDispatched(pjp)) {
+    if (isSyntheticExecution(pjp) || callSiteAlreadyDispatched(pjp)) {
       return pjp.proceed();
     }
     if (logger.isDebugEnabled()) {
@@ -480,6 +480,41 @@ public class FullQuantizeAspect {
           pjp.getStaticPart().getSignature().toShortString());
     }
     return DispatchForwarder.nonVoidClassMethod(pjp);
+  }
+
+  /**
+   * Returns {@code true} when the execution-site join point targets a synthetic method and the
+   * advice must skip dispatch. Synthetic methods are compiler-generated glue — {@code lambda$N}
+   * bodies, bridge methods for generics erasure, {@code access$N} accessor methods — and do not
+   * represent user-declared entry points.
+   *
+   * <p>Dispatching on their execution is harmful in two ways:
+   *
+   * <ul>
+   *   <li>Their parameter lists are not stable across runs. Lambda bodies invoked from framework
+   *       code (JavaFX event dispatch, Jackson / Hibernate reflection, Quarkus callbacks) receive
+   *       framework-owned objects such as {@code ActionEvent} or erased {@code Object} placeholders
+   *       whose identity exists only in unwoven code. On replay those refs resolve to nothing and
+   *       the phantom-stub path skips the entire span, discarding the genuinely replayable nested
+   *       operations inside.
+   *   <li>Their semantic meaning lives in the non-synthetic method they forward to. For a lambda
+   *       that is called from woven code, the woven call-site advice captures the synthetic call
+   *       (if anyone cares); for a lambda called from unwoven code, the first non-synthetic method
+   *       invoked inside the lambda body is the real entry point, and its own execution-site advice
+   *       already captures it at the unwoven→woven boundary.
+   * </ul>
+   *
+   * <p>Skipping here only disables the <em>execution-site</em> dispatch for synthetics. Call-site
+   * advice on a woven caller invoking a synthetic method is unchanged and still records.
+   *
+   * @param pjp the join point whose execution-site advice is consulting the synthetic check
+   * @return whether the exec-site advice should skip dispatch and simply proceed
+   */
+  private static boolean isSyntheticExecution(JoinPoint pjp) {
+    if (pjp.getSignature() instanceof MethodSignature ms) {
+      return ms.getMethod().isSynthetic();
+    }
+    return false;
   }
 
   /**
