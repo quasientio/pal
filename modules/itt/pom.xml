@@ -163,11 +163,11 @@
                         <include>**/cxn/EtcdIT.java</include>
                         <include>**/cxn/ThinPeerIT.java</include>
 
-                        <!-- Standalone peer startup tests (issue #483) -->
-                        <include>**/core/service/PeerStartupIT.java</include>
+                        <!-- Peer/service integration tests (Main*IT, PeerStartupIT, IncomingWalIT) -->
+                        <include>**/core/service/*IT.java</include>
 
-                        <!-- Incoming WAL integration tests (issue #780) -->
-                        <include>**/core/service/IncomingWalIT.java</include>
+                        <!-- Execution pointcut integration tests -->
+                        <include>**/execution/*IT.java</include>
 
                         <!-- Chronicle log integration tests -->
                         <include>**/core/transport/chronicle/ChronicleLogIT.java</include>

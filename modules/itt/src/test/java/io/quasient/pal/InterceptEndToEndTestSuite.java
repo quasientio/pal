@@ -20,6 +20,8 @@ import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.intercept.chain.AroundChainExceptionIT;
 import io.quasient.pal.intercept.chain.AroundChainIT;
+import io.quasient.pal.intercept.chain.AroundNestedCallsIT;
+import io.quasient.pal.intercept.chain.AroundWithBeforeAfterIT;
 import io.quasient.pal.intercept.endtoend.activation.ImmediateActivationIT;
 import io.quasient.pal.intercept.endtoend.constructor.AfterConstructorAsyncCallbackIT;
 import io.quasient.pal.intercept.endtoend.constructor.AfterConstructorCallbackIT;
@@ -133,6 +135,8 @@ import org.slf4j.LoggerFactory;
   // AROUND intercept chain tests (onion model)
   AroundChainIT.class,
   AroundChainExceptionIT.class,
+  AroundNestedCallsIT.class,
+  AroundWithBeforeAfterIT.class,
 
   // Immediate activation tests (verifies behavior when --in-flight-tracking is disabled)
   ImmediateActivationIT.class,
