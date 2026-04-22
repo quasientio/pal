@@ -449,6 +449,12 @@ Without `--service-thread`, entry points on executor threads are still replayed 
 2. During replay, the `ThreadAffinityDispatcher` routes these entry points through `CdiRequestContextExecutor`, which activates a CDI request context (via `RequestContextController`) and optionally begins a JTA transaction (via `UserTransaction`).
 3. The request handler executes within the activated context, producing the same nested operations as during recording.
 
+**Lazy-bean target resolution:**
+
+Frameworks like Quarkus instantiate REST handler beans lazily — Arc creates the bean the first time a request hits it. During recording the constructor runs and is woven, so the bean ends up in the replay object store; during replay no woven constructor runs first, so the recorded receiver ref can't be looked up. Without help, the dispatcher would log `Phantom object skip` and abandon the entry point.
+
+`CdiRequestContextExecutor` closes that gap by implementing the `InvocationExecutor.resolveTarget` hook. When the dispatcher cannot resolve the WAL-recorded target during a `service-request` entry point, it asks the executor to look up the bean via `CDI.current().select(declaringType).get()` and registers the returned instance against the recorded ref before resuming normal dispatch. The same hook is available to other affinity executors — Spring (`@Lazy` / `@Scope("request")`), Guice lazy providers, Dagger scoped components — by overriding `resolveTarget` against their respective container APIs.
+
 **CDI container compatibility:**
 
 `CdiRequestContextExecutor` works with any CDI 2.0+ container (Quarkus ArC, Weld, OpenWebBeans). It accesses CDI classes via reflection to avoid a compile-time dependency. If CDI is not on the classpath during replay, the executor is silently skipped and entry points execute without request context wrapping.
