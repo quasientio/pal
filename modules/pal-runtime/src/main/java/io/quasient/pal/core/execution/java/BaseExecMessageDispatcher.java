@@ -32,6 +32,7 @@ import io.quasient.pal.common.runtime.Dispatcher;
 import io.quasient.pal.common.runtime.ExecPhase;
 import io.quasient.pal.common.util.Classes;
 import io.quasient.pal.common.util.UuidUtils;
+import io.quasient.pal.core.execution.InvocationExecutor;
 import io.quasient.pal.core.intercept.AroundInterceptChain;
 import io.quasient.pal.core.intercept.InterceptCallbackDispatcher;
 import io.quasient.pal.core.intercept.InterceptCallbackDispatcher.ConsolidatedCallbackResponse;
@@ -1055,23 +1056,32 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
    * @return the target object reference, or {@code 0} if the operation has no target
    */
   private static int extractTargetRef(WalEntry operationEntry) {
-    ExecMessage msg = operationEntry.getRawMessage();
+    return extractTargetRef(operationEntry.getRawMessage());
+  }
+
+  /**
+   * Extracts the target object reference from an {@link ExecMessage}.
+   *
+   * <p>Returns the WAL ref recorded against the receiver of an instance method call or instance
+   * field operation, or {@code 0} for messages with no target (constructor, static method, static
+   * field).
+   *
+   * @param msg the execution message to inspect, may be {@code null}
+   * @return the target object reference, or {@code 0} if the message has no target
+   */
+  private static int extractTargetRef(ExecMessage msg) {
     if (msg == null) {
       return 0;
     }
-    // Instance method call
     if (msg.getInstanceMethodCall() != null) {
       return msg.getInstanceMethodCall().getObjectRef();
     }
-    // Instance field get
     if (msg.getInstanceFieldGet() != null) {
       return msg.getInstanceFieldGet().getObjectRef();
     }
-    // Instance field put
     if (msg.getInstanceFieldPut() != null) {
       return msg.getInstanceFieldPut().getObjectRef();
     }
-    // Constructor, static method, static field — no target object
     return 0;
   }
 
@@ -1463,6 +1473,92 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
   }
 
   /**
+   * Logs the phantom-skip warning, advances the cursor and gate past the entry point's completion,
+   * exits the in-flight tracker if enabled, and returns an empty response message.
+   *
+   * <p>Called when a replay-injected entry point cannot be re-executed because its target object is
+   * missing from {@link io.quasient.pal.core.replay.ReplayObjectStore} and the operation is not
+   * stubbable from WAL. Without advancing the cursor and gate, the input injector would block
+   * indefinitely waiting for the entry point to complete.
+   */
+  private ExecMessage phantomSkipEntryPoint(
+      String phantomClassName,
+      String phantomMethodName,
+      long phantomOffset,
+      ReplayAction phantomAction,
+      String phantomThreadName,
+      ExecMessage incomingCall,
+      boolean trackingEnabled,
+      String className,
+      String methodName,
+      String[] trackingParamTypes) {
+    logger.warn(
+        "Phantom object skip: operation {}.{} at offset {} has missing target and "
+            + "action={} (not stubbable), skipping entry point",
+        phantomClassName,
+        phantomMethodName,
+        phantomOffset,
+        phantomAction);
+
+    Long completionOffset = replayContext.getWalIndex().getCompletionOffset(phantomOffset);
+    if (completionOffset != null) {
+      advancePhantomStub(phantomThreadName, phantomOffset, completionOffset);
+    }
+
+    if (trackingEnabled) {
+      inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
+    }
+    ExecMessage skipResponse = new ExecMessage();
+    skipResponse.setMessageId(incomingCall.getMessageId());
+    skipResponse.setPeerUuid(incomingCall.getPeerUuid());
+    return skipResponse;
+  }
+
+  /**
+   * Asks the affinity executor to supply a live target instance for the given declaring class, used
+   * as a fallback when {@link io.quasient.pal.core.replay.ReplayObjectStore} cannot resolve the
+   * WAL-recorded target ref.
+   *
+   * <p>Returns {@code null} when the message has no thread affinity, no executor is registered for
+   * the affinity, the loading phase failed before {@code accessibleObject} was loaded (the resolver
+   * cannot help in that case), or the executor's resolver returned {@code null} or threw.
+   *
+   * @param incomingCall the entry-point execution message being dispatched
+   * @param declaringClassName the fully qualified name of the declaring class
+   * @param accessibleObject the {@link AccessibleObject} loaded for the call, or {@code null} if
+   *     loading failed earlier
+   * @return a live instance of the declaring class, or {@code null} if no resolver could supply one
+   */
+  private Object resolveManagedTarget(
+      ExecMessage incomingCall, String declaringClassName, AccessibleObject accessibleObject) {
+    if (accessibleObject == null) {
+      return null;
+    }
+    String affinity = incomingCall.getThreadAffinity();
+    if (affinity == null || affinity.isEmpty()) {
+      return null;
+    }
+    InvocationExecutor executor = threadAffinityDispatcher.executorFor(affinity);
+    if (executor == null) {
+      return null;
+    }
+    try {
+      Class<?> declaring =
+          Class.forName(declaringClassName, true, Thread.currentThread().getContextClassLoader());
+      return executor.resolveTarget(declaring);
+    } catch (ClassNotFoundException | RuntimeException ex) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "Managed-bean resolver lookup failed for {} on affinity '{}': {}",
+            declaringClassName,
+            affinity,
+            ex.getMessage());
+      }
+      return null;
+    }
+  }
+
+  /**
    * Reconstructs a return value from a WAL completion entry.
    *
    * <p>Handles the following cases:
@@ -1811,30 +1907,63 @@ abstract class BaseExecMessageDispatcher extends AbstractDispatcher
               // Fall through to normal error handling
             }
           } else {
-            // Non-stub action (e.g., RE_EXECUTE) but target doesn't exist.
-            // We can't execute, but we must still advance past the entry point
-            // so the injector doesn't wait forever.
-            logger.warn(
-                "Phantom object skip: operation {}.{} at offset {} has missing target and "
-                    + "action={} (not stubbable), skipping entry point",
-                phantomClassName,
-                phantomMethodName,
-                phantomOffset,
-                phantomAction);
-
-            Long completionOffset = replayContext.getWalIndex().getCompletionOffset(phantomOffset);
-            if (completionOffset != null) {
-              advancePhantomStub(phantomThreadName, phantomOffset, completionOffset);
+            // Non-stub action (e.g., RE_EXECUTE) but target doesn't exist. Before phantom-skipping,
+            // give the affinity executor a chance to resolve the target through its managed-bean
+            // container (CDI, Spring, etc.). This closes the gap for frameworks that instantiate
+            // beans lazily on first request — no woven constructor ever populated
+            // ReplayObjectStore.
+            Object managedTarget =
+                resolveManagedTarget(incomingCall, phantomClassName, accessibleObject);
+            boolean retryFailed = false;
+            if (managedTarget != null) {
+              int walTargetRef = extractTargetRef(incomingCall);
+              if (walTargetRef != 0) {
+                replayContext.getObjectStore().register(walTargetRef, managedTarget);
+              }
+              try {
+                target = getTargetFromMessage(incomingCall);
+                value = getValueFromMessage(incomingCall, accessibleObject);
+                if (accessibleObject != null) {
+                  accessibleObject.setAccessible(true);
+                }
+                exceptionWhileLoading = null;
+                // Restore the pending injection so the downstream invocation lambda can advance
+                // the cursor past the entry point's completion. We popped it above to perform the
+                // dedup check; falling through to normal dispatch requires it back in the queue.
+                replayContext.pushPendingInjection(phantomThreadName, phantomOffset);
+                if (logger.isDebugEnabled()) {
+                  logger.debug(
+                      "Managed-bean resolver supplied target for {}.{} at offset {} via affinity"
+                          + " '{}'; resuming normal dispatch",
+                      phantomClassName,
+                      phantomMethodName,
+                      phantomOffset,
+                      incomingCall.getThreadAffinity());
+                }
+              } catch (RuntimeException ex) {
+                if (logger.isDebugEnabled()) {
+                  logger.debug(
+                      "Loading-phase retry after resolver failed for {}.{}: {}",
+                      phantomClassName,
+                      phantomMethodName,
+                      ex.getMessage());
+                }
+                retryFailed = true;
+              }
             }
-
-            // Return null response (void-like) since we can't execute
-            if (trackingEnabled) {
-              inFlightDispatchTracker.exitDispatch(className, methodName, trackingParamTypes);
+            if (managedTarget == null || retryFailed) {
+              return phantomSkipEntryPoint(
+                  phantomClassName,
+                  phantomMethodName,
+                  phantomOffset,
+                  phantomAction,
+                  phantomThreadName,
+                  incomingCall,
+                  trackingEnabled,
+                  className,
+                  methodName,
+                  trackingParamTypes);
             }
-            ExecMessage skipResponse = new ExecMessage();
-            skipResponse.setMessageId(incomingCall.getMessageId());
-            skipResponse.setPeerUuid(incomingCall.getPeerUuid());
-            return skipResponse;
           }
         }
       }

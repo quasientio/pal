@@ -150,6 +150,56 @@ public final class CdiRequestContextExecutor implements InvocationExecutor {
   }
 
   /**
+   * {@inheritDoc}
+   *
+   * <p>Activates the CDI request context only (no JTA transaction) and looks up the bean via {@code
+   * CDI.current().select(declaringType).get()}. JTA is intentionally bypassed here — this method is
+   * invoked by the replay dispatcher purely to resolve a managed-bean target before the main
+   * invocation runs. The main invocation later goes through {@link #execute}, which starts a fresh
+   * transaction; starting one here would trigger a {@code begin()} that JTA does not support
+   * re-entering.
+   *
+   * <p>Returns {@code null} if the CDI container is not available, the request context cannot be
+   * activated, or the bean cannot be resolved.
+   */
+  @Override
+  public Object resolveTarget(Class<?> declaringType) {
+    Object requestContextController;
+    try {
+      requestContextController = lookupCdiBean(requestContextControllerClass);
+      activateMethod.invoke(requestContextController);
+    } catch (Exception e) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "CDI request context activation failed while resolving {}: {}",
+            declaringType.getName(),
+            e.getMessage());
+      }
+      return null;
+    }
+    try {
+      return lookupCdiBean(declaringType);
+    } catch (Exception e) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(
+            "CDI target resolution failed for {}: {}", declaringType.getName(), e.getMessage());
+      }
+      return null;
+    } finally {
+      try {
+        deactivateMethod.invoke(requestContextController);
+      } catch (Exception e) {
+        if (logger.isDebugEnabled()) {
+          logger.debug(
+              "CDI request context deactivation failed after resolving {}: {}",
+              declaringType.getName(),
+              e.getMessage());
+        }
+      }
+    }
+  }
+
+  /**
    * Looks up a CDI bean by type via {@code CDI.current().select(type).get()}.
    *
    * @param beanType the class to look up

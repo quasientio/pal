@@ -103,6 +103,19 @@ public class ThreadAffinityDispatcher {
   }
 
   /**
+   * Returns the executor registered for the given affinity key, or {@code null}.
+   *
+   * <p>Primarily for advanced callers that need to invoke executor-specific operations (e.g.,
+   * {@link InvocationExecutor#resolveTarget}) outside the standard {@link #execute} path.
+   *
+   * @param affinityKey the affinity key to look up
+   * @return the registered executor, or {@code null} if none
+   */
+  public InvocationExecutor executorFor(String affinityKey) {
+    return executors.get(affinityKey);
+  }
+
+  /**
    * Registers a thread name pattern that maps to an affinity key during recording.
    *
    * <p>When {@link #resolveAffinity(String)} is called with a thread name that matches the pattern,

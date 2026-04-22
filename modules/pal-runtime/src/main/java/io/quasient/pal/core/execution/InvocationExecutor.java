@@ -34,4 +34,24 @@ public interface InvocationExecutor {
    * @throws Exception if the invocation throws an exception
    */
   Object execute(Callable<Object> invocation) throws Exception;
+
+  /**
+   * Resolves a live target instance of the given declaring type, typically by consulting a
+   * framework-managed container (CDI, Spring, Guice, etc.).
+   *
+   * <p>Used by the replay dispatcher as a fallback when {@link
+   * io.quasient.pal.core.replay.ReplayObjectStore} cannot locate the target by its WAL-recorded ref
+   * — common for frameworks that instantiate beans lazily, where no woven constructor ran during
+   * setup to populate the store.
+   *
+   * <p>Default returns {@code null}, meaning this executor does not know how to resolve targets and
+   * the dispatcher should fall through to its existing phantom-skip path.
+   *
+   * @param declaringType the declaring class of the entry-point method
+   * @return a live instance of {@code declaringType}, or {@code null} if this executor does not
+   *     manage instances of that type
+   */
+  default Object resolveTarget(Class<?> declaringType) {
+    return null;
+  }
 }
