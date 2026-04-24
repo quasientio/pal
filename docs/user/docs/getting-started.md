@@ -93,32 +93,44 @@ The interactive wizard guides you through the setup:
 ```
 Welcome to PAL! Let's set up your project.
 
-? Build tool:
-  ❯ Gradle
-    Maven
+Build tool (use arrow keys, Enter to confirm)
+  ❯ GRADLE
+    MAVEN
+Project group ID [com.example]:
+Project artifact ID [pal-tutorial]:
+Project version [1.0-SNAPSHOT]:
+Will you expose methods via JSON-RPC? (use arrow keys, Enter to confirm)
+  ❯ No
+    Yes, alongside message pipeline
+    Yes, RPC only (no weaving needed)
+Will this app be interceptable by other peers? [y/N]
+Will this app intercept other peers? [y/N]
+Main class (for pal run) [com.example.Main]:
+Will you use Kafka for WAL (write-ahead log)? [y/N]
 
-? Project group ID: [com.example]
-? Project artifact ID: [pal-tutorial]
-? Project version: [1.0-SNAPSHOT]
-? Will this app be interceptable by other peers? [y/N]
-? Will this app intercept other peers? [y/N]
-? Main class (for pal run): [com.example.Main]
-? Will you use Kafka for WAL (write-ahead log)? [y/N]
+  ✓ [CREATE] pal-tutorial/build.gradle
+  ✓ [CREATE] pal-tutorial/settings.gradle
+  ✓ [CREATE] pal-tutorial/src/main/java/com/example/Main.java
+  ✓ [CREATE] pal-tutorial/config/peer-logging.xml
+  ✓ [CREATE] pal-tutorial/config/cli-logging.xml
+  ✓ [CREATE] pal-tutorial/.env.pal
+  ✓ [CREATE] pal-tutorial/gradlew
+  ✓ [CREATE] pal-tutorial/gradlew.bat
+  ✓ [CREATE] pal-tutorial/gradle/wrapper/gradle-wrapper.properties
+  ✓ [CREATE] pal-tutorial/gradle/wrapper/gradle-wrapper.jar
+  ✓ [CREATE] pal-tutorial/README.md
+Checking for pal-weave 1.0.0-SNAPSHOT...
+✓ pal-weave 1.0.0-SNAPSHOT available
 
-  ✓ Created build.gradle with AspectJ weaving
-  ✓ Created settings.gradle
-  ✓ Created src/main/java/com/example/Main.java
-  ✓ Created src/main/java/com/example/SampleService.java
-  ✓ Created config/peer-logging.xml
-  ✓ Created config/cli-logging.xml
-  ✓ Created .env.pal (environment variables)
-  ✓ Created README.md
+✓ Project initialized!
 
 Next steps:
   1. cd pal-tutorial
-  2. ./gradlew build
+  2. ./gradlew build              # Build with AspectJ weaving
   3. pal run -cp build/classes/java/main com.example.Main
 ```
+
+(The real output shows absolute paths; paths are shortened here for readability.)
 
 For scripted or CI environments, use non-interactive mode:
 
@@ -250,18 +262,23 @@ pal init
 ```
 
 ```
-Detected existing Maven project: com.acme:order-service (1.2.0)
+Detected existing MAVEN project: com.acme:order-service (1.2.0)
+Will you expose methods via JSON-RPC? (use arrow keys, Enter to confirm)
+  ❯ No
+    Yes, alongside message pipeline
+    Yes, RPC only (no weaving needed)
+Will this app be interceptable by other peers? [y/N]
+Will this app intercept other peers? [y/N]
+Main class (for pal run) [com.acme.OrderServiceMain]:
+Will you use Kafka for WAL (write-ahead log)? [y/N]
 
-? Will this app be interceptable by other peers? [y/N]
-? Will this app intercept other peers? [y/N]
-? Main class (for pal run): [com.acme.OrderServiceMain]
-? Will you use Kafka for WAL (write-ahead log)? [y/N]
-
-  ✓ [PATCH] pom.xml (added pal-weave dependency, aspectj-maven-plugin)
-  ✓ Created config/peer-logging.xml
-  ✓ Created config/cli-logging.xml
-  ✓ Created .env.pal
-  ✓ Created README.md
+  ✓ [PATCH] pom.xml
+  ✓ [CREATE] config/peer-logging.xml
+  ✓ [CREATE] config/cli-logging.xml
+  ✓ [CREATE] .env.pal
+  ✓ [CREATE] README.md
+Checking for pal-weave 1.0.0-SNAPSHOT...
+✓ pal-weave 1.0.0-SNAPSHOT available
 ```
 
 A backup of your original build file is created automatically (`pom.xml.backup` or `build.gradle.backup`). Use `--dry-run` to preview the changes before applying them:
