@@ -51,6 +51,12 @@ for arg in "$@"; do
   esac
 done
 
+# Expand leading ~ to $HOME (shell doesn't expand tilde after = in arguments)
+case "$PREFIX" in
+  "~/"*) PREFIX="$HOME/${PREFIX#"~/"}" ;;
+  "~")   PREFIX="$HOME" ;;
+esac
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Verify we're in a valid distribution directory
