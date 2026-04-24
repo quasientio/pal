@@ -131,9 +131,9 @@ public class PalCommandWiringTest {
   /**
    * Tests that the root help text uses Docker-style grouping format.
    *
-   * <p>Verifies that the help output organizes commands into sections such as "Management Commands"
-   * (entity groups: peer, log, intercept), "Commands" (run, replay), and "Shortcuts" (peers, logs,
-   * intercepts), similar to Docker CLI help formatting.
+   * <p>Verifies that the help output organizes commands into sections such as "Commands" (run,
+   * replay), "Management Commands" (entity groups: peer, log, intercept), and "Shortcuts" (peers,
+   * logs, intercepts), similar to Docker CLI help formatting.
    */
   @Test
   public void helpText_dockerStyleFormat() {

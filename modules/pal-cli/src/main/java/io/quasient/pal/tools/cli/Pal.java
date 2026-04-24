@@ -188,7 +188,7 @@ public class Pal implements Callable<Integer>, PalCommand {
    * Configures Docker-style help grouping on the given command line.
    *
    * <p>Replaces the default command list section with a grouped rendering that organizes commands
-   * into Management Commands, Commands, and Shortcuts sections.
+   * into Commands, Management Commands, and Shortcuts sections.
    *
    * @param commandLine the root command line to configure
    */
@@ -207,8 +207,8 @@ public class Pal implements Callable<Integer>, PalCommand {
     Map<String, CommandLine> subs = help.commandSpec().subcommands();
 
     StringBuilder sb = new StringBuilder();
-    appendGroup(sb, "Management Commands", subs, "peer", "log", "intercept");
     appendGroup(sb, "Commands", subs, "run", "replay", "init");
+    appendGroup(sb, "Management Commands", subs, "peer", "log", "intercept");
     appendGroup(sb, "Shortcuts", subs, "peers", "logs", "intercepts");
     return sb.toString();
   }

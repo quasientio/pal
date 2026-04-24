@@ -10,14 +10,6 @@ The PAL CLI uses an entity-operation command structure inspired by Docker:
 pal <entity> <operation> [OPTIONS] [ARGUMENTS]
 ```
 
-**Management Commands** (entity groups):
-
-| Command | Description |
-|---------|-------------|
-| `pal peer <command>` | Manage peers |
-| `pal log <command>` | Manage logs |
-| `pal intercept <command>` | Manage intercepts |
-
 **Commands**:
 
 | Command | Description |
@@ -25,6 +17,14 @@ pal <entity> <operation> [OPTIONS] [ARGUMENTS]
 | `pal run` | Run a new peer |
 | `pal replay` | Deterministic WAL replay |
 | `pal init` | Initialize a project for PAL |
+
+**Management Commands** (entity groups):
+
+| Command | Description |
+|---------|-------------|
+| `pal peer <command>` | Manage peers |
+| `pal log <command>` | Manage logs |
+| `pal intercept <command>` | Manage intercepts |
 
 **Shortcuts** (aliases for common operations):
 

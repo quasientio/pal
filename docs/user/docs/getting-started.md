@@ -58,15 +58,15 @@ Options:
   -h, --help            Show this help message and exit.
   -V, --version         Print version information and exit.
 
-Management Commands:
-  peer          Manage peers
-  log           Manage logs
-  intercept     Manage intercepts
-
 Commands:
   run           Run a new peer
   replay        Replay application deterministically from a recorded WAL
   init          Initialize a project for PAL
+
+Management Commands:
+  peer          Manage peers
+  log           Manage logs
+  intercept     Manage intercepts
 
 Shortcuts:
   peers         List peers (shorthand for 'peer ls')
