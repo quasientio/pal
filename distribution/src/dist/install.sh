@@ -80,8 +80,7 @@ mkdir -p "$PAL_LIB" "$PREFIX/bin"
 
 # Copy distribution contents
 cp -r "$SCRIPT_DIR/bin" "$SCRIPT_DIR/lib" "$SCRIPT_DIR/config" "$PAL_LIB/"
-[ -d "$SCRIPT_DIR/infra" ]    && cp -r "$SCRIPT_DIR/infra" "$PAL_LIB/"
-[ -d "$SCRIPT_DIR/licenses" ] && cp -r "$SCRIPT_DIR/licenses" "$PAL_LIB/"
+[ -d "$SCRIPT_DIR/infra" ] && cp -r "$SCRIPT_DIR/infra" "$PAL_LIB/"
 
 for f in README.md LICENSE AUTHORS THIRD_PARTY.md .env.pal; do
   [ -f "$SCRIPT_DIR/$f" ] && cp "$SCRIPT_DIR/$f" "$PAL_LIB/"
