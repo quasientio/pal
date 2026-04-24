@@ -90,6 +90,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -868,6 +869,12 @@ public class Main implements Callable<Integer> {
 
   /** Latch used to prevent premature exit when running in service mode. */
   private final CountDownLatch runAsServiceLatch = new CountDownLatch(1);
+
+  /**
+   * Guards the replay divergence report so it is printed exactly once, whether the main thread
+   * reaches the post-replay code on normal exit or the shutdown hook runs first on SIGTERM.
+   */
+  private final AtomicBoolean replayDivergenceReportPrinted = new AtomicBoolean(false);
 
   /** SLF4J logger instance. */
   private static final Logger logger = LoggerFactory.getLogger(Main.class);
@@ -2364,7 +2371,20 @@ public class Main implements Callable<Integer> {
     final ServiceManager manager = !services.isEmpty() ? createServiceManager(services) : null;
 
     // add shutdown hook
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown(manager, injector)));
+    //
+    // The hook also prints the replay divergence report: when a self-called application blocks the
+    // main thread (e.g. a Quarkus server) and the peer is stopped via SIGTERM, the main-thread
+    // post-replay path never runs, so the report must be emitted from here. An AtomicBoolean makes
+    // the print idempotent across the normal-exit path and the SIGTERM path.
+    Runtime.getRuntime()
+        .addShutdownHook(
+            new Thread(
+                () -> {
+                  shutdown(manager, injector);
+                  if (runOptions.contains(RunOptions.WITH_REPLAY)) {
+                    printReplayDivergenceReportOnce(injector);
+                  }
+                }));
 
     // start services
     if (manager != null) { // manager = null if there are no services
@@ -2468,7 +2488,9 @@ public class Main implements Callable<Integer> {
 
     // After replay, print divergence report and adjust exit code
     if (mainCalled && runOptions.contains(RunOptions.WITH_REPLAY)) {
-      returnValue = handleReplayDivergenceReport(injector, returnValue);
+      if (printReplayDivergenceReportOnce(injector) && returnValue == EXIT_SUCCESS) {
+        returnValue = EXIT_REPLAY_DIVERGENCES;
+      }
     }
 
     if (!mainCalled || asService) {
@@ -2607,26 +2629,34 @@ public class Main implements Callable<Integer> {
   }
 
   /**
-   * Retrieves the divergence report from the {@link ReplayContext} after replay completes, prints
-   * it to stderr, and adjusts the exit code if divergences were detected.
+   * Prints the replay divergence report to stderr, at most once per peer run.
+   *
+   * <p>Called from two places: the main thread after the self-called application returns, and the
+   * JVM shutdown hook. The {@link AtomicBoolean} guard ensures exactly-once emission so neither
+   * call-site is missed (SIGTERM, which bypasses the main-thread path) nor duplicated (normal exit,
+   * which runs both paths).
    *
    * @param injector the Guice injector used to obtain the {@link ReplayContext}
-   * @param currentReturnValue the current return value from the application
-   * @return the adjusted return value: {@code 2} if divergences were detected and the current
-   *     return value is {@code 0}, otherwise the original return value
+   * @return {@code true} iff this call printed a non-empty report; callers may use the result to
+   *     bump the exit code to {@link #EXIT_REPLAY_DIVERGENCES}
    */
-  private int handleReplayDivergenceReport(Injector injector, int currentReturnValue) {
+  private boolean printReplayDivergenceReportOnce(Injector injector) {
+    if (!replayDivergenceReportPrinted.compareAndSet(false, true)) {
+      return false;
+    }
     ReplayContext replayContext = injector.getInstance(ReplayContext.class);
     if (replayContext == null) {
-      return currentReturnValue;
+      return false;
     }
     DivergenceReport report = replayContext.getDivergenceDetector().getReport();
-    if (!report.isEmpty()) {
-      System.err.print(report.formatAsText());
-      if (currentReturnValue == EXIT_SUCCESS) {
-        return EXIT_REPLAY_DIVERGENCES;
-      }
+    if (report.isEmpty()) {
+      return false;
     }
-    return currentReturnValue;
+    System.err.print(report.formatAsText());
+    // Explicit flush is load-bearing on the shutdown-hook path: the JVM halts as soon as all
+    // hooks return, before stderr's own buffer is guaranteed to drain, so the report would be
+    // silently dropped on SIGTERM without this.
+    System.err.flush();
+    return true;
   }
 }
