@@ -1248,9 +1248,11 @@ When a callback times out, the intercepted peer logs a warning and proceeds as i
 
 ### Only Woven Code
 
-Interception requires the **target class** to be compiled with AspectJ weaving. Standard JDK classes (like `java.lang.String`, `java.util.HashMap`) and third-party libraries you don't build cannot be intercepted.
+Interception requires **either the caller or the target** to be compiled with AspectJ weaving. A call between two non-woven classes — for example, an unwoven third-party library invoking `java.util.HashMap` — is invisible to PAL.
 
-The **caller** does not need to be woven. Invocations from reflection (`Method.invoke`), method references, lambdas, `invokedynamic`, JNI, and framework dispatchers (Quarkus, JavaFX, Spring MVC, etc.) all trigger intercepts on a woven target, so you don't need to add a woven wrapper method just to make intercepts fire.
+When the **target** is woven, intercepts fire regardless of how the call arrives: reflection (`Method.invoke`), method references, lambdas, `invokedynamic`, JNI, and framework dispatchers (Quarkus, JavaFX, Spring MVC, etc.) all trigger them at the execution site.
+
+When the **caller** is woven, intercepts fire at the call site even if the target is a JDK or third-party class — your woven code calling `java.lang.String.length()` or a closed-source library can be intercepted.
 
 ### Pattern Syntax
 

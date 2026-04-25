@@ -31,7 +31,7 @@ Stack traces include PAL dispatch frames, which adds noise when debugging. This 
 ## Interception Limitations
 
 - Pattern matching is by class name (Ant-style wildcards), not by Java type hierarchy; intercepting a superclass does not automatically intercept subclasses unless they also match the pattern
-- Only classes compiled with PAL's AspectJ weaving can be intercepted as targets; JDK standard library classes (e.g., `java.lang.String`, `java.util.HashMap`) cannot be intercepted. The caller does not need to be woven — invocations via reflection, method references, or unwoven framework dispatchers still fire intercepts on a woven target
+- Interception requires either the caller or the target to be compiled with PAL's AspectJ weaving; only calls between two non-woven classes (e.g., an unwoven library invoking `java.util.HashMap`) cannot be intercepted. Woven callers can intercept invocations into JDK or third-party classes at the call site; woven targets can be intercepted from any source (reflection, method references, framework dispatchers)
 - Remote intercept callbacks add network round-trip latency to intercepted operations
 
 ## Scope
