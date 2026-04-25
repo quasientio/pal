@@ -84,7 +84,9 @@ public class CommandTransformer {
   private static final Pattern CLASSPATH_PLACEHOLDER_PATTERN =
       Pattern.compile(
           "(-cp\\s+)(app\\.jar|target/classes|target/test-classes"
-              + "|build/classes/java/main|service\\.jar|target/[^\\s]*\\.jar"
+              + "|build/classes/java/main|build/classes/java/test"
+              + "|build/libs/[^\\s]*\\.jar"
+              + "|service\\.jar|target/[^\\s]*\\.jar"
               + "|[a-zA-Z][a-zA-Z0-9._-]*\\.jar)");
 
   /** Pattern matching {@code -jar <path>}. */

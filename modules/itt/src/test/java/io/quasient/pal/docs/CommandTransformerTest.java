@@ -185,6 +185,33 @@ public class CommandTransformerTest {
     assertThat(allArgs.get(cpIdx + 1), is(TEST_CP));
   }
 
+  /** Verifies that Gradle {@code build/libs/<artifact>.jar} paths are substituted. */
+  @Test
+  public void shouldSubstituteGradleBuildLibsJarClasspath() {
+    DocCommand command =
+        cmd("pal run -cp build/libs/myapp-1.0-SNAPSHOT.jar com.example.HelloService");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
+
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int cpIdx = allArgs.indexOf("-cp");
+    assertTrue("Expected -cp flag in args", cpIdx >= 0);
+    assertThat(allArgs.get(cpIdx + 1), is(TEST_CP));
+  }
+
+  /** Verifies that {@code -cp build/classes/java/test} (Gradle test classes) is substituted. */
+  @Test
+  public void shouldSubstituteGradleTestClassesClasspath() {
+    DocCommand command = cmd("pal run -cp build/classes/java/test com.example.MyTest");
+    CommandTransformer.TransformedCommand result = transformer.transform(command);
+
+    assertFalse(result.isSkipped());
+    List<String> allArgs = Arrays.asList(result.getArgs());
+    int cpIdx = allArgs.indexOf("-cp");
+    assertTrue("Expected -cp flag in args", cpIdx >= 0);
+    assertThat(allArgs.get(cpIdx + 1), is(TEST_CP));
+  }
+
   /**
    * Verifies that {@code -jar target/my-app.jar} is converted to {@code -cp} with the itt-apps
    * classpath and main class appended if not already present.
