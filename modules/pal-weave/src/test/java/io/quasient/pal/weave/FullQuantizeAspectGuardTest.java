@@ -20,10 +20,13 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -375,5 +378,139 @@ public class FullQuantizeAspectGuardTest {
         "Lookalike must be a distinct object, so == sentinel check cannot collide",
         FullQuantizeAspect.RUNTIME_INVOKE_SENTINEL,
         lookalike);
+  }
+
+  /**
+   * Verifies that {@link FullQuantizeAspect#proceedWithClearedSlot(ProceedingJoinPoint)} clears the
+   * slot for the duration of {@code pjp.proceed()} and restores the previous value afterwards.
+   *
+   * <p>This is the load-bearing property for the recursion-via-unwoven-layer case. When an outer
+   * call-site has set the slot to a method's key and the matching execution-site takes the skip
+   * path, the body must run with the slot cleared. Otherwise, an unwoven re-entry into the same
+   * method from inside the body — for example, {@code Method.invoke} called on the same method —
+   * would observe the still-set key and have its own execution-site advice incorrectly suppress the
+   * dispatch.
+   */
+  @Test
+  public void shouldClearSlotDuringProceedAndRestoreAfter() throws Throwable {
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    AtomicReference<String> observedDuringProceed = new AtomicReference<>("UNSET");
+    when(pjp.proceed())
+        .thenAnswer(
+            invocation -> {
+              observedDuringProceed.set(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+              return null;
+            });
+
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("outer-call-sig");
+
+    FullQuantizeAspect.proceedWithClearedSlot(pjp);
+
+    assertNull(
+        "Slot must be cleared for the duration of pjp.proceed()", observedDuringProceed.get());
+    assertEquals(
+        "Slot must be restored to its prior value after proceed returns",
+        "outer-call-sig",
+        FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+  }
+
+  /**
+   * Verifies the helper restores the previous slot value when {@code pjp.proceed()} throws.
+   *
+   * <p>Without this guarantee, a body that fails (e.g., {@link
+   * java.lang.reflect.InvocationTargetException} percolating up from a reflective inner call) would
+   * leave the slot at {@code null}, breaking the call-site advice's expectation that its {@code
+   * finally} restores from the value seen at advice entry — a subsequent execution-site advice on
+   * the same thread could then mis-decide skip vs. dispatch.
+   */
+  @Test
+  public void shouldRestoreSlotOnExceptionFromProceedWithClearedSlot() throws Throwable {
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    RuntimeException thrown = new RuntimeException("simulated body failure");
+    when(pjp.proceed()).thenThrow(thrown);
+
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("outer-call-sig");
+
+    RuntimeException caught =
+        assertThrows(RuntimeException.class, () -> FullQuantizeAspect.proceedWithClearedSlot(pjp));
+    assertSame("Original throwable must propagate unchanged", thrown, caught);
+    assertEquals(
+        "Slot must be restored to its prior value even when proceed throws",
+        "outer-call-sig",
+        FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+  }
+
+  /**
+   * Verifies the helper is a no-op on observable slot state when the slot was already {@code null}
+   * (the common "exec-site advice fired with no in-flight outer dispatch" case).
+   */
+  @Test
+  public void shouldLeaveSlotNullWhenAlreadyNull() throws Throwable {
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    AtomicReference<String> observedDuringProceed = new AtomicReference<>("UNSET");
+    when(pjp.proceed())
+        .thenAnswer(
+            invocation -> {
+              observedDuringProceed.set(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+              return null;
+            });
+
+    assertNull(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+
+    FullQuantizeAspect.proceedWithClearedSlot(pjp);
+
+    assertNull("Slot remains null during proceed", observedDuringProceed.get());
+    assertNull(
+        "Slot remains null after proceed returns", FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+  }
+
+  /**
+   * Verifies that a nested call-site save/set/restore cycle inside the helper's proceed composes
+   * correctly with the outer clear: the inner cycle sees a {@code null} pre-value, installs and
+   * restores its own key, and the outer slot is restored to its pre-skip value at the end.
+   *
+   * <p>This mirrors the in-production flow where the body of an exec-site skip-path contains
+   * woven-to-woven calls that go through their own call-site advice.
+   */
+  @Test
+  public void shouldComposeWithNestedCallSiteSaveRestoreInsideProceed() throws Throwable {
+    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+    AtomicReference<String> observedInnerPrev = new AtomicReference<>("UNSET");
+    AtomicReference<String> observedAtInnerSet = new AtomicReference<>("UNSET");
+    AtomicReference<String> observedAfterInnerRestore = new AtomicReference<>("UNSET");
+
+    when(pjp.proceed())
+        .thenAnswer(
+            invocation -> {
+              String innerPrev = FullQuantizeAspect.TL_CURRENT_CALL_SIG.get();
+              observedInnerPrev.set(innerPrev);
+              FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("inner-call-sig");
+              try {
+                observedAtInnerSet.set(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+              } finally {
+                FullQuantizeAspect.TL_CURRENT_CALL_SIG.set(innerPrev);
+              }
+              observedAfterInnerRestore.set(FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
+              return null;
+            });
+
+    FullQuantizeAspect.TL_CURRENT_CALL_SIG.set("outer-call-sig");
+
+    FullQuantizeAspect.proceedWithClearedSlot(pjp);
+
+    assertNull(
+        "Inner call-site's saved prev must be the cleared (null) slot, not the outer key",
+        observedInnerPrev.get());
+    assertEquals(
+        "Inner call-site observes its own key after setting it",
+        "inner-call-sig",
+        observedAtInnerSet.get());
+    assertNull(
+        "After the inner call-site's restore, slot is back to the cleared value (null)",
+        observedAfterInnerRestore.get());
+    assertEquals(
+        "Outer slot is restored after proceedWithClearedSlot returns",
+        "outer-call-sig",
+        FullQuantizeAspect.TL_CURRENT_CALL_SIG.get());
   }
 }

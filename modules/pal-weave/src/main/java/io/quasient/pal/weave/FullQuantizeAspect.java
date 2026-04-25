@@ -46,19 +46,26 @@ public class FullQuantizeAspect {
   private static final Logger logger = LoggerFactory.getLogger(FullQuantizeAspect.class);
 
   /**
-   * Records a guard key identifying the innermost call-site advice currently active on the thread.
+   * Carries a guard key from a dispatching advice frame to the very next execution-site advice that
+   * fires on the same thread, so the latter can decide whether to skip dispatch (the woven-to-woven
+   * direct-call case) or dispatch itself (the unwoven-caller case).
    *
-   * <p>Each call-site advice saves the previous value, stores its own guard key (see {@link
-   * #computeMethodGuardKey(JoinPoint)}), dispatches, and restores the previous value in a {@code
-   * finally} block (prev/restore pattern). Nested woven-to-woven calls are handled naturally: the
-   * current thread-local holds the key of the deepest active call-site at all times.
+   * <p>Call-site advice writes its own guard key (see {@link #computeMethodGuardKey(JoinPoint)})
+   * just before dispatching and restores the previous value in a {@code finally} block. The
+   * execution-site advice then reads the slot and, if the key matches its own, runs the body via
+   * {@link #proceedWithClearedSlot(ProceedingJoinPoint)} which <em>clears</em> the slot for the
+   * duration of the proceed and restores it afterwards.
    *
-   * <p>Execution-site advice uses this to avoid double-dispatch. If the thread-local's key matches
-   * the execution-site's own key (computed the same way from the execution join point), the
-   * call-site already dispatched for this invocation and the advice simply proceeds. If the keys
-   * differ (or the thread-local is {@code null}), the call-site did not dispatch for this
-   * invocation — the caller is unwoven (reflection, method references, {@code invokedynamic}, JNI,
-   * JDK) — so the execution-site advice must dispatch itself.
+   * <p>The clear during proceed is what lets unwoven re-entry from inside the body — reflective
+   * self-recursion via {@link java.lang.reflect.Method#invoke}, {@link
+   * java.lang.invoke.MethodHandle}, JNI callbacks, framework dispatch — be captured by its own
+   * inner execution-site advice. Without it, the outer call-site's key would remain in the slot for
+   * the entire dispatch chain, and an inner reflective re-entry into a method whose key matches
+   * would be silently suppressed.
+   *
+   * <p>Direct woven-to-woven nested calls are unaffected: their own call-site advice re-installs
+   * the appropriate key on entry (against a now-cleared slot) and restores the previous (cleared)
+   * value on exit, so the steady-state matches what each frame expects.
    *
    * <p>The key must include the runtime receiver class rather than the static call-site type so
    * that call-site and execution-site keys agree in the presence of virtual dispatch, interface
@@ -66,10 +73,11 @@ public class FullQuantizeAspect {
    *
    * <p>The PAL runtime can set the slot to {@link #RUNTIME_INVOKE_SENTINEL} around its own
    * reflective invocation of an incoming message target (e.g. {@code
-   * MethodDispatcher.invokeIncoming} calling {@link java.lang.reflect.Method#invoke}). In that
-   * state the execution-site advice on the target body must not dispatch, because the runtime owns
-   * the recording decision for the incoming call (gated by flags such as {@code
-   * --wal-incoming-rpc}).
+   * MethodDispatcher.invokeIncoming} calling {@link java.lang.reflect.Method#invoke}). The very
+   * next execution-site advice on the target body sees the sentinel and skips dispatch, then clears
+   * the slot during the body's proceed so nested operations within the body are recorded normally;
+   * on exit the sentinel is restored, and the runtime's matching {@code endRuntimeInvoke} restores
+   * the pre-invoke value.
    */
   public static final ThreadLocal<String> TL_CURRENT_CALL_SIG = new ThreadLocal<>();
 
@@ -387,6 +395,14 @@ public class FullQuantizeAspect {
    * Method.invoke} or {@code Function.apply}) means the caller was unwoven for THIS method, and
    * the execution-site must dispatch.
    *
+   * <p>On the skip path the body is run via {@link #proceedWithClearedSlot(ProceedingJoinPoint)},
+   * which clears the thread-local for the duration of the proceed and restores it afterwards. This
+   * is what lets reflective self-recursion (e.g., a {@code Method.invoke} on the same method from
+   * inside the body) be captured by the inner execution-site: with the slot cleared, the inner
+   * advice no longer sees a matching key and dispatches itself. Direct woven-to-woven nested calls
+   * remain unaffected because their own call-site advice re-installs the appropriate key on
+   * entry.
+   *
    * <p><strong>Note on constructors:</strong> no execution-site advice is declared for {@code
    * execution(new(..))}. AspectJ's {@code @Around} over constructor execution must wrap the body
    * in a synthetic method, which prevents {@code final} field assignments from reaching {@code
@@ -405,7 +421,7 @@ public class FullQuantizeAspect {
   @Around("voidInstanceMethodsExec()")
   public void aroundVoidInstanceMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
     if (isSyntheticExecution(pjp) || callSiteAlreadyDispatched(pjp)) {
-      pjp.proceed();
+      proceedWithClearedSlot(pjp);
       return;
     }
     if (logger.isDebugEnabled()) {
@@ -427,7 +443,7 @@ public class FullQuantizeAspect {
   @Around("voidClassMethodsExec()")
   public void aroundVoidClassMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
     if (isSyntheticExecution(pjp) || callSiteAlreadyDispatched(pjp)) {
-      pjp.proceed();
+      proceedWithClearedSlot(pjp);
       return;
     }
     if (logger.isDebugEnabled()) {
@@ -450,7 +466,7 @@ public class FullQuantizeAspect {
   @Around("nonVoidInstanceMethodsExec()")
   public Object aroundNonVoidInstanceMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
     if (isSyntheticExecution(pjp) || callSiteAlreadyDispatched(pjp)) {
-      return pjp.proceed();
+      return proceedWithClearedSlot(pjp);
     }
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -472,7 +488,7 @@ public class FullQuantizeAspect {
   @Around("nonVoidClassMethodsExec()")
   public Object aroundNonVoidClassMethodsExec(ProceedingJoinPoint pjp) throws Throwable {
     if (isSyntheticExecution(pjp) || callSiteAlreadyDispatched(pjp)) {
-      return pjp.proceed();
+      return proceedWithClearedSlot(pjp);
     }
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -515,6 +531,37 @@ public class FullQuantizeAspect {
       return ms.getMethod().isSynthetic();
     }
     return false;
+  }
+
+  /**
+   * Runs {@code pjp.proceed()} with {@link #TL_CURRENT_CALL_SIG} cleared, restoring the previous
+   * value in a {@code finally} block.
+   *
+   * <p>Used by every execution-site advice on its skip path. The slot is cleared so that any
+   * unwoven re-entry into the same method from inside the body — for example, a {@code
+   * Method.invoke} self-recursion, a {@code MethodHandle.invokeExact}, JNI, or a framework callback
+   * that ends up calling back into this method — is observed by its own execution-site advice as
+   * <em>not</em> already dispatched, and therefore captured.
+   *
+   * <p>Without this clear, the outer call-site's key (or the runtime sentinel) would remain in the
+   * slot for the entire duration of the dispatch chain, and an inner reflective re-entry into a
+   * method whose key matches the slot would be silently suppressed by {@link
+   * #callSiteAlreadyDispatched(JoinPoint)} — under-counting the WAL by one entry per reflective
+   * frame. Direct woven-to-woven nested calls are unaffected: their own call-site advice
+   * re-installs the appropriate key on entry and restores the previous (cleared) value on exit.
+   *
+   * @param pjp the proceeding join point whose body to run
+   * @return the value returned by {@code pjp.proceed()} ({@code null} for void methods)
+   * @throws Throwable if the body throws
+   */
+  static Object proceedWithClearedSlot(ProceedingJoinPoint pjp) throws Throwable {
+    String prev = TL_CURRENT_CALL_SIG.get();
+    TL_CURRENT_CALL_SIG.set(null);
+    try {
+      return pjp.proceed();
+    } finally {
+      TL_CURRENT_CALL_SIG.set(prev);
+    }
   }
 
   /**
