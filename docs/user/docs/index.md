@@ -187,7 +187,7 @@ Learn more: [Interception](concepts/interception.md)
 
 ```bash
 # Run with Chronicle (no infrastructure needed)
-pal run --wal file:/tmp/dev-log -cp target/classes com.example.Dev
+pal run --wal file:/tmp/dev-log -cp build/classes/java/main com.example.Dev
 
 # Test with interception
 # Register intercepts to verify method calls
@@ -279,7 +279,7 @@ pal run --interceptable -n monitored-app -cp app.jar com.example.App
 ## Requirements
 
 - **Java**: JDK 17 or later
-- **Build**: Maven 3.x
+- **Build**: Gradle or Maven 3.x
 - **Infrastructure** (for distributed mode):
     - etcd 3.x (directory service)
     - Kafka 3.x (distributed logs)

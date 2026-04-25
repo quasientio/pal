@@ -88,7 +88,7 @@ The fastest way to get started is with `pal init`, which sets up everything you 
 pal init pal-tutorial
 ```
 
-The interactive wizard guides you through the setup:
+The interactive wizard guides you through the setup. Accept the defaults, but when prompted about JSON-RPC, choose **Yes, alongside message pipeline** — this scaffolds a sample API class and an RPC policy file we'll use later for remote calls:
 
 ```
 Welcome to PAL! Let's set up your project.
@@ -100,8 +100,8 @@ Project group ID [com.example]:
 Project artifact ID [pal-tutorial]:
 Project version [1.0-SNAPSHOT]:
 Will you expose methods via JSON-RPC? (use arrow keys, Enter to confirm)
-  ❯ No
-    Yes, alongside message pipeline
+    No
+  ❯ Yes, alongside message pipeline
     Yes, RPC only (no weaving needed)
 Will this app be interceptable by other peers? [y/N]
 Will this app intercept other peers? [y/N]
@@ -111,8 +111,10 @@ Will you use Kafka for WAL (write-ahead log)? [y/N]
   ✓ [CREATE] pal-tutorial/build.gradle
   ✓ [CREATE] pal-tutorial/settings.gradle
   ✓ [CREATE] pal-tutorial/src/main/java/com/example/Main.java
+  ✓ [CREATE] pal-tutorial/src/main/java/com/example/Api.java
   ✓ [CREATE] pal-tutorial/config/peer-logging.xml
   ✓ [CREATE] pal-tutorial/config/cli-logging.xml
+  ✓ [CREATE] pal-tutorial/config/rpc-policy.yaml
   ✓ [CREATE] pal-tutorial/.env.pal
   ✓ [CREATE] pal-tutorial/gradlew
   ✓ [CREATE] pal-tutorial/gradlew.bat
@@ -132,13 +134,16 @@ Next steps:
 
 (The real output shows absolute paths; paths are shortened here for readability.)
 
+`Main.java` is the entry point used by local mode below. `Api.java` holds a few sample public static methods (`greet`, `add`, `toUpperCase`) that we'll invoke remotely in the Distributed Mode section, gated by `config/rpc-policy.yaml`.
+
 For scripted or CI environments, use non-interactive mode:
 
 ```bash
 pal init pal-tutorial -y \
   --group-id com.example \
   --artifact-id pal-tutorial \
-  --main-class com.example.Main
+  --main-class com.example.Main \
+  --json-rpc
 ```
 
 To enable all PAL features at once (interceptable, intercepting, JSON-RPC, Kafka, scope policy):
@@ -160,11 +165,6 @@ pal init pal-tutorial --dry-run
 ```bash
 cd pal-tutorial
 ./gradlew build
-
-# Verify AspectJ weaving worked
-javap -c build/classes/java/main/com/example/SampleService.class | grep aspectOf
-
-# You should see references to PAL aspects
 ```
 
 ### 3. Run with PAL (Local Mode)
@@ -181,31 +181,16 @@ pal run --wal file:/tmp/tutorial-wal --json-rpc auto \
 You should see the application output:
 
 ```
-=== Order Processing Demo ===
-
-Processing order #1
-Product: Laptop
-Quantity: 1
-Total: $999.99
-Discount applied: $99.999
-
-Processing order #2
-Product: Mouse
-Quantity: 2
-Total: $59.98
-
-Processing order #3
-Product: Keyboard
-Quantity: 1
-Total: $149.99
-Discount applied: $14.999
-
-Total orders processed: 3
+Processing order: 1x Laptop @ $999.99
+Processing order: 5x Mouse @ $29.99
+Processing order: 2x Keyboard @ $79.99
+Orders processed: 3
+Total revenue: $1309.92
 ```
 
 **What just happened?**
 
-Every method call (`processOrder`, `applyDiscount`, `getOrderCount`) was converted to a message and logged to `/tmp/tutorial-wal`. This transformation happened at build time: the AspectJ Maven plugin wove PAL's aspects into your compiled `.class` files during the build step. At runtime, these woven classes create messages for each operation, which PAL then writes to the WAL.
+Every operation — the constructor, the `processOrder` calls, each field read and write, and the `println` calls — was converted to a message and logged to `/tmp/tutorial-wal`. This transformation happened at build time: Gradle's AspectJ weaving task wove PAL's aspects into your compiled `.class` files during the build step. At runtime, these woven classes create messages for each operation, which PAL then writes to the WAL.
 
 ### 4. Inspect the Messages
 
@@ -220,19 +205,44 @@ Output (abbreviated):
 
 ```
 [0] call Main.main
-  [1] new OrderService.<init>
-  [2] return OrderService@1
-  [3] call OrderService.processOrder@1
-    [4] call OrderService.applyDiscount@1
-    [5] return 99.999 (double)
-  [6] return void
-  [7] call OrderService.processOrder@1
-  [8] return void
-  [9] call OrderService.processOrder@1
-    [10] call OrderService.applyDiscount@1
-    [11] return 14.999 (double)
-  [12] return void
-[13] return void
+  [1] new Main
+    [2] put Main.orderCount@1 ⇦ (=0)
+    [3] put_done Main.orderCount
+    [4] put Main.totalRevenue@1 ⇦ (=0.0)
+    [5] put_done Main.totalRevenue
+  [6] return new Main@1
+  [7] call Main.processOrder@1
+    [8] get Main.orderCount@1
+    [9] return int@2(=0) (orderCount)
+    [10] put Main.orderCount@1 ⇦ (=1)
+    [11] put_done Main.orderCount
+    [12] get Main.totalRevenue@1
+    [13] return double@7(=0.0) (totalRevenue)
+    [14] put Main.totalRevenue@1 ⇦ (=999.99)
+    [15] put_done Main.totalRevenue
+    [16] get System.out
+    [17] return PrintStream@9 (out)
+    [18] call PrintStream.println@9
+    [19] return void
+  [20] return void
+  (two more processOrder subtrees, [21]–[48], follow the same shape)
+  [49] get System.out
+  [50] return PrintStream@9 (out)
+  [51] get Main.orderCount@1
+  [52] return int@20(=3) (orderCount)
+  [53] call PrintStream.println@9
+  [54] return void
+  [55] get System.out
+  [56] return PrintStream@9 (out)
+  [57] get Main.totalRevenue@1
+  [58] return double@25(=1309.92) (totalRevenue)
+  [59] call Double.valueOf
+  [60] return Double@27(=1309.92)
+  [61] call String.format
+  [62] return String@30(="1309.92")
+  [63] call PrintStream.println@9
+  [64] return void
+[65] return void
 ```
 
 Other output formats are available (`--full`, `--json`). See [CLI Reference](cli-reference.md#pal-log-print-print-messages-from-a-log) for details.
@@ -244,8 +254,8 @@ Other output formats are available (`--full`, `--json`). See [CLI Reference](cli
 You can replay the execution from the log:
 
 ```bash
-# Replay from the log (no Main.main() args needed)
-pal run --source-log file:/tmp/tutorial-wal -cp build/classes/java/main
+# Replay the recorded execution deterministically
+pal replay --wal file:/tmp/tutorial-wal -cp build/classes/java/main com.example.Main
 ```
 
 You'll see the same output as before, but this time it's being replayed from messages, not executed from Main.main().
@@ -254,7 +264,7 @@ You'll see the same output as before, but this time it's being replayed from mes
 
 ## Adding PAL to an Existing Project
 
-If you already have a Maven or Gradle project, run `pal init` in the project directory. It detects the existing build file and patches it to add PAL weaving:
+If you already have a Gradle or Maven project, run `pal init` in the project directory. It detects the existing build file and patches it to add PAL weaving:
 
 ```bash
 cd my-existing-project
@@ -262,7 +272,7 @@ pal init
 ```
 
 ```
-Detected existing MAVEN project: com.acme:order-service (1.2.0)
+Detected existing GRADLE project: com.acme:order-service (1.2.0)
 Will you expose methods via JSON-RPC? (use arrow keys, Enter to confirm)
   ❯ No
     Yes, alongside message pipeline
@@ -272,7 +282,7 @@ Will this app intercept other peers? [y/N]
 Main class (for pal run) [com.acme.OrderServiceMain]:
 Will you use Kafka for WAL (write-ahead log)? [y/N]
 
-  ✓ [PATCH] pom.xml
+  ✓ [PATCH] build.gradle
   ✓ [CREATE] config/peer-logging.xml
   ✓ [CREATE] config/cli-logging.xml
   ✓ [CREATE] .env.pal
@@ -281,16 +291,16 @@ Checking for pal-weave 1.0.0-SNAPSHOT...
 ✓ pal-weave 1.0.0-SNAPSHOT available
 ```
 
-A backup of your original build file is created automatically (`pom.xml.backup` or `build.gradle.backup`). Use `--dry-run` to preview the changes before applying them:
+A backup of your original build file is created automatically (`build.gradle.backup` or `pom.xml.backup`). Use `--dry-run` to preview the changes before applying them:
 
 ```bash
 pal init --dry-run
 ```
 
-For Gradle projects, the same flow applies — `pal init` auto-detects `build.gradle`:
+For Maven projects, the same flow applies — `pal init` auto-detects `pom.xml`:
 
 ```bash
-cd my-gradle-project
+cd my-maven-project
 pal init
 ```
 
@@ -298,7 +308,58 @@ pal init
 
 If you prefer full control over the build configuration, you can set up PAL manually instead of using `pal init`.
 
-Create a `pom.xml` with the AspectJ weaving plugin and `pal-weave` dependency:
+Create a `build.gradle` with the `ajc` weaving task and `pal-weave` dependency (this matches what `pal init` generates):
+
+```groovy
+plugins {
+    id 'java'
+}
+
+group = 'com.example'
+version = '1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+configurations {
+    aspectjTools
+    aspect
+}
+
+dependencies {
+    aspectjTools 'org.aspectj:aspectjtools:1.9.24'
+    aspect 'io.quasient.pal:pal-weave:1.0.0-SNAPSHOT'
+    implementation 'org.aspectj:aspectjrt:1.9.24'
+}
+
+// Weave after test so unit tests see unwoven classes. Skip with: ./gradlew build -x weaveClasses
+tasks.register('weaveClasses', JavaExec) {
+    dependsOn classes
+    mustRunAfter test
+    mainClass = 'org.aspectj.tools.ajc.Main'
+    classpath = configurations.aspectjTools
+    args = [
+        '-inpath', sourceSets.main.output.classesDirs.asPath,
+        '-aspectpath', configurations.aspect.asPath,
+        '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
+        '-classpath', sourceSets.main.compileClasspath.asPath,
+        '-source', java.sourceCompatibility.toString(),
+        '-target', java.targetCompatibility.toString(),
+    ]
+}
+
+tasks.named('jar') { dependsOn weaveClasses }
+```
+
+<details>
+<summary>Maven equivalent (pom.xml)</summary>
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -358,153 +419,89 @@ Create a `pom.xml` with the AspectJ weaving plugin and `pal-weave` dependency:
 </project>
 ```
 
-For Gradle, add the AspectJ post-compile weaving plugin and PAL dependency to your `build.gradle`:
+</details>
 
-```groovy
-plugins {
-    id 'java'
-    id 'io.freefair.aspectj.post-compile-weaving' version '8.6'
-}
+Then create your Java source files, build with `./gradlew build`, and run with `pal run` as described above.
 
-dependencies {
-    aspect 'io.quasient.pal:pal-weave:1.0.0-SNAPSHOT'
-    implementation 'org.aspectj:aspectjrt:1.9.24'
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-```
-
-Then create your Java source files, build with `./mvnw compile` (or `gradle build`), and run with `pal run` as described above.
-
-## Distributed Mode: Multiple Peers
+## Distributed Mode: Cross-Peer RPC
 
 Now let's see how PAL enables cross-peer method invocation.
 
-### 1. Start Infrastructure
+### 1. Run as a Service Peer
 
-Start etcd and Kafka using Docker. If you used `pal init` with `--interceptable`, `--intercepting`, or `--kafka`, your project already has an `infra/` directory with Docker Compose files. Otherwise, use the ones bundled with PAL:
-
-```bash
-# From your project's infra/ directory (if generated by pal init)
-infra/start.sh
-
-# Or from the PAL installation directory
-cd /usr/local/lib/pal/infra && ./start.sh
-
-# Verify they're running
-curl http://localhost:2379/health
-# Should return: {"health":"true"}
-```
-
-### 2. Create a Service Peer
-
-Create `src/main/java/tutorial/Calculator.java`:
+We'll expose the `Api` class that `pal init` already scaffolded under `src/main/java/com/example/Api.java`:
 
 ```java
-package tutorial;
+package com.example;
 
-public class Calculator {
-    public int add(int a, int b) {
-        System.out.println("Calculator.add(" + a + ", " + b + ")");
-        return a + b;
-    }
-
-    public int multiply(int a, int b) {
-        System.out.println("Calculator.multiply(" + a + ", " + b + ")");
-        return a * b;
-    }
+public class Api {
+    public static String greet(String name)      { return "Hello, " + name + "!"; }
+    public static int    add(int a, int b)       { return a + b; }
+    public static String toUpperCase(String txt) { return txt.toUpperCase(); }
 }
 ```
 
-Create `src/main/java/tutorial/CalculatorService.java`:
-
-```java
-package tutorial;
-
-public class CalculatorService {
-    public static void main(String[] args) {
-        Calculator calc = new Calculator();
-        System.out.println("Calculator service ready");
-
-        // Keep running to handle RPC calls
-        try {
-            Thread.sleep(Long.MAX_VALUE);
-        } catch (InterruptedException e) {
-            System.out.println("Service stopping");
-        }
-    }
-}
-```
-
-Rebuild:
+In one terminal, launch a peer that accepts JSON-RPC calls on a known port:
 
 ```bash
-./mvnw compile
+pal run --wal file:/tmp/service-wal --json-rpc 7070 \
+  --rpc-policy config/rpc-policy.yaml \
+  -cp build/classes/java/main
 ```
 
-### 3. Run the Service Peer
+A few things to notice:
 
-In one terminal:
+- **No main class** on the command line. Without one, `pal run` keeps the peer alive to handle incoming RPC — no `Thread.sleep` wrapper needed.
+- **`--rpc-policy config/rpc-policy.yaml`** points at the policy file `pal init` generated. Its `defaultAction: ALLOW` permits public methods while blocking `Unsafe`, JDK internals, and non-public members — a permissive development profile. Without any policy (or `--rpc-default-action ALLOW` on the command line), every incoming RPC is denied with `RpcAccessDeniedException`.
+- **`--json-rpc 7070`** binds the JSON-RPC WebSocket endpoint to a fixed port so the caller can reach it directly. Use `--json-rpc auto` to let PAL pick a free port (you'd then need a directory to advertise it).
+
+### 2. Call the Service Remotely
+
+In another terminal, pipe a JSON-RPC request on stdin to the peer's WebSocket address (`pal peer call` reads one request per line, so keep the JSON on a single line):
 
 ```bash
-pal run -d localhost:2379 -k localhost:29092 \
-  --wal calculator-wal --json-rpc auto -n calculator \
-  -cp target/classes \
-  tutorial.CalculatorService
+echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Api","method":"greet","args":[{"type":"java.lang.String","value":"World"}]}}' | pal peer call ws://localhost:7070
 ```
 
-You should see:
+Response:
 
+```json
+{"result":{"value":{"type":"java.lang.String","value":"\"Hello, World!\""}, ...}, "id":"1"}
 ```
-Calculator service ready
-```
 
-### 4. Call the Service Remotely
-
-In another terminal:
+Call a method with typed `int` arguments:
 
 ```bash
-# Call the add method
-pal peer call -d localhost:2379 calculator \
-  tutorial.Calculator add 10 20
-
-# Result: 30
+echo '{"jsonrpc":"2.0","id":"2","method":"call","params":{"type":"com.example.Api","method":"add","args":[{"type":"int","value":10},{"type":"int","value":20}]}}' | pal peer call ws://localhost:7070
 ```
+
+Response: `"value":"30"` — `add(10, 20) = 30`.
 
 **What happened:**
 
-1. `pal peer call` created an ExecMessage: `{class: "Calculator", method: "add", args: [10, 20]}`
-2. Looked up peer "calculator" in etcd directory
-3. Sent message to calculator peer via ZeroMQ
-4. Calculator peer received message, invoked `calc.add(10, 20)` via reflection
-5. Returned result 30
-6. Result sent back to caller
+1. `pal peer call` opened a WebSocket to `ws://localhost:7070` and sent the JSON-RPC request.
+2. The peer's RPC policy matched the request against `defaultAction: ALLOW` — permitted.
+3. PAL invoked `com.example.Api.add(10, 20)` via reflection.
+4. The result `30` came back as a typed JSON-RPC response.
 
-**Dynamic RPC:** Method invocation via reflection, useful for development and operational workflows.
+JSON-RPC over stdin gives you full control over argument types — the right choice for any method whose signature is not `static void m(String[])`. For methods that do take a `String[]`, `pal peer call` also accepts positional CLI arguments. See [CLI Reference — Invocation Modes](cli-reference.md#invocation-modes) for both forms.
 
-### 5. List Peers and Logs
+### 3. Inspect the RPC Messages
 
 ```bash
-# List all registered peers
-pal peer ls -d localhost:2379 -l
-
-# List all logs
-pal log ls -d localhost:2379 -l
+pal log print file:/tmp/service-wal --tree
 ```
 
-### 6. Inspect the RPC Messages
-
-```bash
-# Print messages from calculator's WAL
-pal log print -k localhost:29092 calculator-wal --tree
-
-# You'll see the RPC call captured:
-# [0] call Calculator.add
-# [1] return 30 (int)
 ```
+[0] call Api.greet
+[1] return String@1(="Hello, World!")
+[2] call Api.add
+[3] return int@2(=30)
+```
+
+The WAL captured every incoming RPC as a first-class message — the same substrate you saw in local mode.
+
+> **Note on addressing:** This example uses direct `ws://host:port` addressing because we haven't started etcd (the PAL directory). If you run a directory and start the peer with `-d localhost:2379 -n service`, you can call it by name instead: `pal peer call -d localhost:2379 service`. Running PAL at scale typically means multiple peers discovering each other through the directory; the direct form here is for the local-development workflow.
 
 ## Interception: Dynamic Behavior Modification
 
@@ -671,7 +668,7 @@ javap -c build/classes/java/main/tutorial/OrderService.class | grep aspectOf
 
 Common causes:
 
-- **Missing AspectJ plugin**: Ensure your Maven or Gradle build includes the AspectJ weaving plugin with `pal-weave` as an aspect library
+- **Missing AspectJ plugin**: Ensure your Gradle or Maven build includes the AspectJ weaving plugin with `pal-weave` as an aspect library
 - **Class not woven**: Only classes processed by the AspectJ plugin will have PAL's dispatch. Verify with `javap -c` as shown above
 - **Wrong plugin configuration**: The aspect library must reference `pal-weave`, not just have it as a dependency
 - **Incremental build stale**: Try a clean build (`mvn clean install`) to ensure all classes are freshly woven

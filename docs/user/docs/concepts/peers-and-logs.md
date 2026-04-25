@@ -329,7 +329,7 @@ pal run -k kafka:9092 \
 Local testing with Chronicle:
 ```bash
 pal run --wal file:/tmp/dev --json-rpc auto \
-  -cp target/classes com.example.Dev
+  -cp build/classes/java/main com.example.Dev
 ```
 
 ### Monitoring Peer

@@ -322,9 +322,9 @@ These flags declare what your application needs. Everything else — infrastruct
 
 ### Behavior
 
-**New project:** When the target directory does not contain a `pom.xml` or `build.gradle`, `pal init` creates a complete project structure including the build file, source directories, sample code (if enabled), and configuration files.
+**New project:** When the target directory does not contain a `build.gradle` or `pom.xml`, `pal init` creates a complete project structure including the build file, source directories, sample code (if enabled), and configuration files.
 
-**Existing project:** When a `pom.xml` or `build.gradle` is detected, `pal init` patches the existing build file to add PAL weaving. A backup is created (`pom.xml.backup` or `build.gradle.backup`) before modification. The patcher is idempotent — running it twice produces no duplicate elements.
+**Existing project:** When a `build.gradle` or `pom.xml` is detected, `pal init` patches the existing build file to add PAL weaving. A backup is created (`build.gradle.backup` or `pom.xml.backup`) before modification. The patcher is idempotent — running it twice produces no duplicate elements.
 
 **Derived outputs:** Infrastructure, config files, and dependencies are derived from intent flags:
 
@@ -1532,20 +1532,20 @@ pal replay [OPTIONS] class [args...]
 
 ```bash
 # Step 1: Record a WAL
-pal run --wal file:/tmp/my-wal -cp target/classes com.example.App arg1 arg2
+pal run --wal file:/tmp/my-wal -cp build/classes/java/main com.example.App arg1 arg2
 
 # Step 2: Replay from the recorded WAL
-pal replay --wal file:/tmp/my-wal -cp target/classes com.example.App arg1 arg2
+pal replay --wal file:/tmp/my-wal -cp build/classes/java/main com.example.App arg1 arg2
 ```
 
 #### Replay with a relative WAL path
 
 ```bash
 # Record a WAL in the current directory
-pal run --wal file:./app.wal -cp target/classes com.example.App arg1 arg2
+pal run --wal file:./app.wal -cp build/classes/java/main com.example.App arg1 arg2
 
 # Replay using a relative path — resolved against the current working directory
-pal replay --wal file:app.wal -cp target/classes com.example.App arg1 arg2
+pal replay --wal file:app.wal -cp build/classes/java/main com.example.App arg1 arg2
 ```
 
 #### Replay from Kafka
@@ -1568,10 +1568,10 @@ pal replay -d localhost:2379 --wal my-topic \
 
 ```bash
 # Record with one set of arguments
-pal run --wal file:/tmp/baseline -cp target/classes com.example.App input-A
+pal run --wal file:/tmp/baseline -cp build/classes/java/main com.example.App input-A
 
 # Replay with different arguments — produces divergences
-pal replay --wal file:/tmp/baseline -cp target/classes com.example.App input-B
+pal replay --wal file:/tmp/baseline -cp build/classes/java/main com.example.App input-B
 # Exit code: 2
 # stderr shows: [VALUE_MISMATCH] offset=N: expected "X" but got "Y"
 ```
@@ -1580,7 +1580,7 @@ pal replay --wal file:/tmp/baseline -cp target/classes com.example.App input-B
 
 ```bash
 pal replay --wal file:/tmp/my-wal --divergence-policy HALT \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 ### Slow-Motion Replay
@@ -1590,7 +1590,7 @@ For UI applications (JavaFX, Swing), operations can happen too fast to observe d
 ```bash
 # 2-second delay between entry points (good for visual debugging)
 pal replay --wal file:/tmp/fx-wal --fx-thread --delay 2000 \
-  -jar target/my-javafx-app.jar
+  -jar build/libs/my-javafx-app.jar
 ```
 
 The delay is specified in milliseconds. Use larger values (2000-5000ms) to observe each UI state change, smaller values (200-500ms) for faster but still visible replay.
@@ -1608,11 +1608,11 @@ The `--threading` option controls cross-thread ordering:
 
 ```bash
 # Replay a multi-threaded RPC service (ordered by default)
-pal replay --wal file:/tmp/service-wal -cp target/classes com.example.ServiceMain
+pal replay --wal file:/tmp/service-wal -cp build/classes/java/main com.example.ServiceMain
 
 # Replay without cross-thread ordering constraints
 pal replay --wal file:/tmp/service-wal --threading unordered \
-  -cp target/classes com.example.ServiceMain
+  -cp build/classes/java/main com.example.ServiceMain
 ```
 
 See the [Deterministic Replay Guide](guides/deterministic-replay.md#multi-threaded-replay) for a complete walkthrough.
@@ -1624,11 +1624,11 @@ Web frameworks like Quarkus and Vert.x dispatch HTTP requests on named executor 
 ```bash
 # Record a Quarkus service
 pal run --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
-  -jar target/quarkus-app.jar
+  -jar build/libs/quarkus-app.jar
 
 # Replay it
 pal replay --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
-  -jar target/quarkus-app.jar
+  -jar build/libs/quarkus-app.jar
 ```
 
 During recording, entry points on threads matching the pattern are tagged with `threadAffinity = "service-request"` in the WAL. During replay, the `ThreadAffinityDispatcher` wraps each tagged entry point in a CDI request context (and JTA transaction, if available), so that `@RequestScoped` beans and transactional boundaries work correctly.
@@ -1648,7 +1648,7 @@ See the [Deterministic Replay Guide](guides/deterministic-replay.md#side-effect-
 ```bash
 # Stub common non-deterministic operations (time, random, I/O, JDBC)
 pal replay --wal file:/tmp/my-wal --shield-io \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 #### YAML Policy File
@@ -1656,7 +1656,7 @@ pal replay --wal file:/tmp/my-wal --shield-io \
 ```bash
 # Apply a custom replay policy
 pal replay --wal file:/tmp/my-wal --policy policy.yaml \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 #### CLI Pattern Flags
@@ -1665,17 +1665,17 @@ pal replay --wal file:/tmp/my-wal --policy policy.yaml \
 # Stub specific operations
 pal replay --wal file:/tmp/my-wal \
   --stub "java.lang.System.currentTimeMillis,java.io.**.**" \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 
 # Re-execute only your code, stub everything else
 pal replay --wal file:/tmp/my-wal \
   --re-execute "com.example.**" --stub-all-else \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 
 # Combine approaches
 pal replay --wal file:/tmp/my-wal --shield-io \
   --re-execute "com.example.TimeService.**" \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 #### Unsafe Stub Override
@@ -1683,7 +1683,7 @@ pal replay --wal file:/tmp/my-wal --shield-io \
 ```bash
 # Proceed despite unsafe stub warnings
 pal replay --wal file:/tmp/my-wal --policy policy.yaml --force-stub \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 ### Notes
@@ -1865,7 +1865,7 @@ pal peer stats -d localhost:2379 my-peer -j
 
 ```bash
 # Start development peer
-pal run -d localhost:2379 -k localhost:29092 -n dev-peer --zmq-rpc auto -cp target/classes
+pal run -d localhost:2379 -k localhost:29092 -n dev-peer --zmq-rpc auto -cp build/classes/java/main
 
 # List running peers
 pal peer ls -d localhost:2379
@@ -1885,7 +1885,7 @@ pal log rm -d localhost:2379 dev-peer-wal
 
 ```bash
 # Run test class and capture to log
-pal run -d localhost:2379 -k localhost:29092 --wal test-run -cp target/test-classes com.example.MyTest
+pal run -d localhost:2379 -k localhost:29092 --wal test-run -cp build/classes/java/test com.example.MyTest
 
 # Replay and analyze
 pal log print -d localhost:2379 test-run --full -t CLASS_METHOD

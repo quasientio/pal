@@ -119,7 +119,7 @@ pal run -d prod-etcd:2379 -k prod-kafka:9092 --wal my-wal -cp app.jar com.exampl
 
 ```bash
 export PAL_HEAP_OPTS="-Xmx512m"
-pal run --wal file:/tmp/dev-wal --json-rpc auto -cp target/classes com.example.Main
+pal run --wal file:/tmp/dev-wal --json-rpc auto -cp build/classes/java/main com.example.Main
 ```
 
 ### Low-latency: switch to ZGC

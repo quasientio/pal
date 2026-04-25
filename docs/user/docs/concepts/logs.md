@@ -190,7 +190,7 @@ Example use cases:
 ```bash
 # Development
 pal run --wal file:/tmp/dev-log --json-rpc auto \
-  -cp target/classes com.example.Service
+  -cp build/classes/java/main com.example.Service
 
 # Production
 pal run -d etcd:2379 -k kafka:9092 \
@@ -430,7 +430,7 @@ kafka-topics.sh --bootstrap-server localhost:29092 \
 Use Chronicle Queue:
 ```bash
 pal run --wal file:/tmp/dev --json-rpc auto \
-  -cp target/classes com.example.Dev
+  -cp build/classes/java/main com.example.Dev
 ```
 
 Fast iteration, no infrastructure needed.

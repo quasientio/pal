@@ -34,7 +34,7 @@ Run the application with `--wal` to capture a WAL:
 
 ```bash
 pal run --wal file:/tmp/my-wal \
-  -cp target/classes com.example.App arg1 arg2
+  -cp build/classes/java/main com.example.App arg1 arg2
 ```
 
 This records every quantized operation and its return value to a Chronicle Queue at `/tmp/my-wal`.
@@ -53,7 +53,7 @@ If your application receives input via RPC (ZMQ, JSON-RPC, or WebSocket), ensure
 ```bash
 pal run --wal file:/tmp/service-wal --wal-incoming-rpc \
   --json-rpc auto --rpc-threads 4 \
-  -cp target/classes com.example.ServiceMain
+  -cp build/classes/java/main com.example.ServiceMain
 ```
 
 With `--wal-incoming-rpc`, each incoming RPC call is recorded as an **entry-point operation** in the WAL. These entry-point markers are essential for multi-threaded replay — they tell the replay system which operations were external inputs that need to be re-injected during replay.
@@ -67,7 +67,7 @@ Use `--no-wal-incoming-cli` to exclude the `main()` invocation from the WAL:
 ```bash
 pal run --wal file:/tmp/service-wal --no-wal-incoming-cli \
   --json-rpc auto --rpc-threads 4 \
-  -cp target/classes com.example.ServiceMain
+  -cp build/classes/java/main com.example.ServiceMain
 ```
 
 This is recommended when `main()` is purely setup code. Omitting it keeps the WAL focused on the actual RPC entry points and avoids potential complications during multi-threaded replay where the self-caller's entry-point span could interfere with cursor alignment.
@@ -86,12 +86,12 @@ Use recording scope to filter the WAL down to what matters:
 # Record only application code
 pal run --wal file:/tmp/my-wal \
   --scope "com.mycompany.**" --scope-default skip \
-  -cp target/classes com.example.App arg1 arg2
+  -cp build/classes/java/main com.example.App arg1 arg2
 
 # Record application code + I/O boundaries (JDBC, HTTP, file, time, etc.)
 pal run --wal file:/tmp/my-wal \
   --scope "com.mycompany.**" --scope-io --scope-default skip \
-  -cp target/classes com.example.App arg1 arg2
+  -cp build/classes/java/main com.example.App arg1 arg2
 ```
 
 **Critical**: When replaying a scope-filtered WAL, the same `--scope` flags must be passed to `pal replay`. The replay system uses the scope to know which operations have WAL entries and which should execute directly without WAL matching. Mismatched flags produce cascading divergences.
@@ -100,7 +100,7 @@ pal run --wal file:/tmp/my-wal \
 # Replay with matching scope
 pal replay --wal file:/tmp/my-wal \
   --scope "com.mycompany.**" --scope-io --scope-default skip \
-  -cp target/classes com.example.App arg1 arg2
+  -cp build/classes/java/main com.example.App arg1 arg2
 ```
 
 See [Recording Scope](../concepts/recording-scope.md) for complete documentation on scope flags, YAML policies, field operation filtering, and the relationship with `--shield-io`.
@@ -111,14 +111,14 @@ See [Recording Scope](../concepts/recording-scope.md) for complete documentation
 
 ```bash
 pal replay --wal file:/tmp/my-wal \
-  -cp target/classes com.example.App arg1 arg2
+  -cp build/classes/java/main com.example.App arg1 arg2
 ```
 
 Relative Chronicle WAL paths are resolved against the current working directory, so if the WAL is in the current directory you can simply use:
 
 ```bash
 pal replay --wal file:my-wal \
-  -cp target/classes com.example.App arg1 arg2
+  -cp build/classes/java/main com.example.App arg1 arg2
 ```
 
 If the application produces the same operations with the same return values, the exit code is `0` and no divergences are reported.
@@ -130,7 +130,7 @@ For UI applications (JavaFX, Swing), operations can happen too fast to observe d
 ```bash
 # 2-second delay between entry points (good for visual debugging)
 pal replay --wal file:/tmp/fx-wal --fx-thread --delay 2000 \
-  -jar target/my-javafx-app.jar
+  -jar build/libs/my-javafx-app.jar
 ```
 
 The delay is specified in milliseconds. Use larger values (2000-5000ms) when you want to observe each UI state change, smaller values (200-500ms) for faster replay that's still visible. A value of `0` (the default) disables the delay.
@@ -165,14 +165,14 @@ When the live execution differs from the WAL, divergences are reported to stderr
 
 ```bash
 # Record baseline
-pal run --wal file:/tmp/baseline -cp target/classes com.example.Calculator "2+3"
+pal run --wal file:/tmp/baseline -cp build/classes/java/main com.example.Calculator "2+3"
 # Output: 5
 
 # Modify the code (e.g., change add to multiply)
-./mvnw compile
+./gradlew build
 
 # Replay against baseline
-pal replay --wal file:/tmp/baseline -cp target/classes com.example.Calculator "2+3"
+pal replay --wal file:/tmp/baseline -cp build/classes/java/main com.example.Calculator "2+3"
 # Exit code: 2
 # stderr: [VALUE_MISMATCH] offset=42: expected "5" but got "6"
 ```
@@ -182,8 +182,8 @@ pal replay --wal file:/tmp/baseline -cp target/classes com.example.Calculator "2
 Recording with one input and replaying with another will produce divergences wherever the execution paths differ:
 
 ```bash
-pal run --wal file:/tmp/recorded -cp target/classes com.example.App "hello"
-pal replay --wal file:/tmp/recorded -cp target/classes com.example.App "goodbye"
+pal run --wal file:/tmp/recorded -cp build/classes/java/main com.example.App "hello"
+pal replay --wal file:/tmp/recorded -cp build/classes/java/main com.example.App "goodbye"
 # Exit code: 2 (arguments flow through the code and produce different return values)
 ```
 
@@ -193,15 +193,15 @@ Control how the replay system responds to divergences:
 
 ```bash
 # Default: log divergences and continue
-pal replay --wal file:/tmp/my-wal -cp target/classes com.example.App
+pal replay --wal file:/tmp/my-wal -cp build/classes/java/main com.example.App
 
 # Stop on first divergence (useful with debugger attached)
 pal replay --wal file:/tmp/my-wal --divergence-policy HALT \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 
 # Silently record divergences (check exit code only)
 pal replay --wal file:/tmp/my-wal --divergence-policy IGNORE \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 ## Inspecting WAL Structure
@@ -259,7 +259,7 @@ Use the `HALT` divergence policy so the replay stops at the first difference, th
 # Start replay with debug port
 JAVA_TOOL_OPTIONS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005" \
   pal replay --wal file:/tmp/my-wal --divergence-policy HALT \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 Connect your IDE debugger to port 5005 and step through the code. The replay is transparent to the debugger — it looks like normal execution, but every operation is verified against the WAL.
@@ -268,27 +268,27 @@ Connect your IDE debugger to port 5005 and step through the code. The replay is 
 
 ```bash
 # 1. Build the application
-./mvnw clean compile
+./gradlew clean build
 
 # 2. Record a known-good execution
 pal run --wal file:/tmp/golden-run \
-  -cp target/classes com.example.OrderProcessor "TX|A|gum=1.00|0|"
+  -cp build/classes/java/main com.example.OrderProcessor "TX|A|gum=1.00|0|"
 
 # 3. Inspect the WAL
 pal log index file:/tmp/golden-run
 
 # 4. Verify replay matches (sanity check)
 pal replay --wal file:/tmp/golden-run \
-  -cp target/classes com.example.OrderProcessor "TX|A|gum=1.00|0|"
+  -cp build/classes/java/main com.example.OrderProcessor "TX|A|gum=1.00|0|"
 # Exit code: 0
 
 # 5. Make a code change
 vim src/main/java/com/example/OrderProcessor.java
-./mvnw compile
+./gradlew build
 
 # 6. Replay to find what changed
 pal replay --wal file:/tmp/golden-run \
-  -cp target/classes com.example.OrderProcessor "TX|A|gum=1.00|0|"
+  -cp build/classes/java/main com.example.OrderProcessor "TX|A|gum=1.00|0|"
 # Exit code: 2 — divergences show exactly where behavior differs
 ```
 
@@ -321,7 +321,7 @@ Multi-threaded replay requires that incoming RPC calls were recorded as entry-po
 # Record with RPC input captured (--wal-incoming-rpc is on by default)
 pal run --wal file:/tmp/service-wal \
   --json-rpc auto --rpc-threads 4 \
-  -cp target/classes com.example.ServiceMain
+  -cp build/classes/java/main com.example.ServiceMain
 ```
 
 Without `--wal-incoming-rpc`, the WAL will not contain entry-point markers for input threads, and replay will only cover the self-caller thread.
@@ -332,7 +332,7 @@ Without `--wal-incoming-rpc`, the WAL will not contain entry-point markers for i
 # 1. Start the service and record a WAL
 pal run --wal file:/tmp/service-wal \
   --json-rpc auto --rpc-threads 3 \
-  -cp target/classes com.example.ServiceMain
+  -cp build/classes/java/main com.example.ServiceMain
 
 # 2. Send requests to the service (from another terminal)
 pal peer call ws://localhost:9001 com.example.Service processOrder "order-1"
@@ -347,7 +347,7 @@ pal log index file:/tmp/service-wal
 
 # 5. Replay — the replay system injects the recorded RPC calls
 pal replay --wal file:/tmp/service-wal \
-  -cp target/classes com.example.ServiceMain
+  -cp build/classes/java/main com.example.ServiceMain
 ```
 
 During step 5, the replay system:
@@ -369,11 +369,11 @@ The `--threading` option controls cross-thread ordering during multi-threaded re
 ```bash
 # Default: ordered replay (preserves recorded execution order)
 pal replay --wal file:/tmp/service-wal \
-  -cp target/classes com.example.ServiceMain
+  -cp build/classes/java/main com.example.ServiceMain
 
 # Unordered: faster, but cross-thread order may differ
 pal replay --wal file:/tmp/service-wal --threading unordered \
-  -cp target/classes com.example.ServiceMain
+  -cp build/classes/java/main com.example.ServiceMain
 ```
 
 ### Supported Scenarios
@@ -397,14 +397,14 @@ JavaFX applications require the `--fx-thread` flag during both recording and rep
 
 ```bash
 pal run --wal file:/tmp/fx-wal --fx-thread \
-  -jar target/my-javafx-app.jar
+  -jar build/libs/my-javafx-app.jar
 ```
 
 **Replaying a JavaFX application:**
 
 ```bash
 pal replay --wal file:/tmp/fx-wal --fx-thread \
-  -jar target/my-javafx-app.jar
+  -jar build/libs/my-javafx-app.jar
 ```
 
 Without `--fx-thread`, UI interactions recorded on the JavaFX Application Thread will not be replayed correctly — the replay system would inject them on a PAL-managed thread, which cannot interact with the JavaFX scene graph.
@@ -431,14 +431,14 @@ Web frameworks (Quarkus, Vert.x, etc.) dispatch HTTP requests on named executor 
 
 ```bash
 pal run --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
-  -jar target/quarkus-app.jar
+  -jar build/libs/quarkus-app.jar
 ```
 
 **Replaying a web service:**
 
 ```bash
 pal replay --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
-  -jar target/quarkus-app.jar
+  -jar build/libs/quarkus-app.jar
 ```
 
 Without `--service-thread`, entry points on executor threads are still replayed (multi-threaded replay handles that), but they will not have CDI request context or transactional boundaries — `@RequestScoped` beans will fail to inject, and `@Transactional` methods will run outside a transaction.
@@ -529,7 +529,7 @@ The simplest way to enable side-effect shielding is the `--shield-io` flag, whic
 
 ```bash
 pal replay --wal file:/tmp/my-wal --shield-io \
-  -cp target/classes com.example.App arg1 arg2
+  -cp build/classes/java/main com.example.App arg1 arg2
 ```
 
 This stubs time operations (`System.currentTimeMillis()`, `System.nanoTime()`, and `java.time.*.now()` methods like `LocalTime.now()`, `Instant.now()`, etc.), random generators (`Math.random()`, `Random.**`, `ThreadLocalRandom.**`), I/O streams (`java.io` readers/writers), network operations (`java.net.**`), and `DriverManager.getConnection()` — all from WAL-recorded values. Everything else is re-executed normally.
@@ -540,7 +540,7 @@ For JavaFX applications, use `--shield-fx` to stub wall-clock-dependent animatio
 
 ```bash
 pal replay --wal file:/tmp/my-wal --shield-io --shield-fx --fx-thread \
-  -jar target/my-javafx-app.jar
+  -jar build/libs/my-javafx-app.jar
 ```
 
 This stubs `Animation.setOnFinished()` (and similar callback setters) and `AnimationTimer.start/stop`. Animations still run for visual effects, but their completion callbacks are prevented from firing, avoiding spurious "extra operation" divergences after the WAL cursor is exhausted.
@@ -582,7 +582,7 @@ Apply it with `--policy`:
 
 ```bash
 pal replay --wal file:/tmp/my-wal --policy policy.yaml \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 **Pattern syntax:** Class and method patterns use Ant-style matching:
@@ -603,21 +603,21 @@ For quick one-off configurations without a YAML file:
 # Stub specific classes
 pal replay --wal file:/tmp/my-wal \
   --stub "java.lang.System.currentTimeMillis,java.lang.Math.random" \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 
 # Re-execute specific classes, stub everything else
 pal replay --wal file:/tmp/my-wal \
   --re-execute "com.example.**" --stub-all-else \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 
 # Combine --shield-io with explicit re-execute overrides
 pal replay --wal file:/tmp/my-wal --shield-io \
   --re-execute "com.example.TimeService.**" \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 
 # JavaFX app: shield I/O and animations
 pal replay --wal file:/tmp/my-wal --shield-io --shield-fx --fx-thread \
-  -jar target/my-javafx-app.jar
+  -jar build/libs/my-javafx-app.jar
 ```
 
 **Flag priority** (highest to lowest):
@@ -638,7 +638,7 @@ Any subsequent operation on a phantom object is automatically stubbed, regardles
 # Stub only the connection factory — everything downstream cascades
 pal replay --wal file:/tmp/my-wal \
   --stub "java.sql.DriverManager.getConnection" \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 ### Unsafe Stub Warnings
@@ -662,7 +662,7 @@ WARNING: Stubbing com.example.Enricher.enrich() at offset 42 is unsafe.
 ```bash
 # Force replay despite unsafe stub warnings
 pal replay --wal file:/tmp/my-wal --policy policy.yaml --force-stub \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 ### Common Policy Configurations
@@ -673,7 +673,7 @@ Stub all I/O and non-deterministic operations, re-execute application logic:
 
 ```bash
 pal replay --wal file:/tmp/my-wal --shield-io \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 #### Replay with Database Shielding
@@ -696,7 +696,7 @@ rules:
 
 ```bash
 pal replay --wal file:/tmp/my-wal --policy db-shield.yaml \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 #### Minimal Re-Execution (Stub Everything Else)
@@ -706,7 +706,7 @@ Only re-execute your application code, stub all library and framework calls:
 ```bash
 pal replay --wal file:/tmp/my-wal \
   --re-execute "com.example.**" --stub-all-else \
-  -cp target/classes com.example.App
+  -cp build/classes/java/main com.example.App
 ```
 
 #### Validation Mode (Stub + Verify)

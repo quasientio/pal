@@ -67,7 +67,48 @@ public class CalculatorService {
 
 ### Configure AspectJ Weaving
 
-In `pom.xml`:
+In `build.gradle`:
+
+```groovy
+plugins {
+    id 'java'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+configurations {
+    aspectjTools
+    aspect
+}
+
+dependencies {
+    aspectjTools 'org.aspectj:aspectjtools:1.9.24'
+    aspect 'io.quasient.pal:pal-weave:0.1.0-SNAPSHOT'
+    implementation 'io.quasient.pal:pal-api:0.1.0-SNAPSHOT'
+    implementation 'org.aspectj:aspectjrt:1.9.24'
+}
+
+tasks.register('weaveClasses', JavaExec) {
+    dependsOn classes
+    mainClass = 'org.aspectj.tools.ajc.Main'
+    classpath = configurations.aspectjTools
+    args = [
+        '-inpath', sourceSets.main.output.classesDirs.asPath,
+        '-aspectpath', configurations.aspect.asPath,
+        '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
+        '-classpath', sourceSets.main.compileClasspath.asPath,
+        '-source', '17', '-target', '17',
+    ]
+}
+
+tasks.named('jar') { dependsOn weaveClasses }
+```
+
+<details>
+<summary>Maven equivalent (pom.xml)</summary>
 
 ```xml
 <dependencies>
@@ -107,10 +148,12 @@ In `pom.xml`:
 </build>
 ```
 
+</details>
+
 ### Build
 
 ```bash
-./mvnw clean install
+./gradlew build
 ```
 
 ## Step 2: Start the Calculator Service
@@ -123,7 +166,7 @@ pal run -d localhost:2379 -k localhost:29092 \
   --interceptable \
   --in-flight-tracking \
   -n calculator \
-  -cp target/calculator-1.0-SNAPSHOT.jar \
+  -cp build/libs/calculator-1.0-SNAPSHOT.jar \
   com.example.calculator.CalculatorService
 ```
 
@@ -252,10 +295,10 @@ public class CalculatorClient {
 ### Run Client
 
 ```bash
-./mvnw clean install
+./gradlew build
 
 pal run -d localhost:2379 \
-  -cp target/client-1.0-SNAPSHOT.jar \
+  -cp build/libs/client-1.0-SNAPSHOT.jar \
   com.example.client.CalculatorClient
 
 # Output:
@@ -314,7 +357,7 @@ public class MonitorService {
 
 ```bash
 pal run -d localhost:2379 --json-rpc auto -n monitor \
-  -cp target/monitor-1.0-SNAPSHOT.jar \
+  -cp build/libs/monitor-1.0-SNAPSHOT.jar \
   com.example.monitor.MonitorService
 
 # Output:
@@ -332,7 +375,7 @@ Stop the calculator service (Ctrl-C), then replay from the log:
 ```bash
 pal run --source-log calculator-wal \
   -k localhost:29092 \
-  -cp target/calculator-1.0-SNAPSHOT.jar \
+  -cp build/libs/calculator-1.0-SNAPSHOT.jar \
   com.example.calculator.CalculatorService
 
 # All previous operations are replayed
@@ -352,19 +395,19 @@ Start multiple calculator instances:
 # Terminal 1
 pal run -d localhost:2379 -k localhost:29092 \
   --wal calc-wal-1 --json-rpc auto -n calculator-1 \
-  -cp target/calculator-1.0-SNAPSHOT.jar \
+  -cp build/libs/calculator-1.0-SNAPSHOT.jar \
   com.example.calculator.CalculatorService
 
 # Terminal 2
 pal run -d localhost:2379 -k localhost:29092 \
   --wal calc-wal-2 --json-rpc auto -n calculator-2 \
-  -cp target/calculator-1.0-SNAPSHOT.jar \
+  -cp build/libs/calculator-1.0-SNAPSHOT.jar \
   com.example.calculator.CalculatorService
 
 # Terminal 3
 pal run -d localhost:2379 -k localhost:29092 \
   --wal calc-wal-3 --json-rpc auto -n calculator-3 \
-  -cp target/calculator-1.0-SNAPSHOT.jar \
+  -cp build/libs/calculator-1.0-SNAPSHOT.jar \
   com.example.calculator.CalculatorService
 ```
 

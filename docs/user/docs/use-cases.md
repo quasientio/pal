@@ -91,7 +91,7 @@ pal run --interceptable --wal service-b-log --json-rpc auto -cp service-b.jar Ma
 # (Intercept calls to Service C, return canned responses)
 
 # Terminal 4: Run tests against Service B
-./mvnw test
+./gradlew test
 ```
 
 You're testing real Service B code, but with controlled responses from dependencies.
@@ -499,13 +499,13 @@ The power of PAL is that these capabilities work together because they emerge fr
 **Development:**
 ```bash
 # Develop locally with Chronicle (fast iteration)
-pal run --wal file:/tmp/dev-log --json-rpc auto -cp target/classes Main
+pal run --wal file:/tmp/dev-log --json-rpc auto -cp build/classes/java/main Main
 ```
 
 **Testing:**
 ```bash
 # Test with interception (no mocks needed)
-pal run --interceptable --wal file:/tmp/test-log -cp target/test-classes Tests
+pal run --interceptable --wal file:/tmp/test-log -cp build/classes/java/test Tests
 ```
 
 **Staging:**

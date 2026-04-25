@@ -509,7 +509,37 @@ public class MockCallback {
 
 Your application needs AspectJ weaving for interception to work. With `pal run`, this is automatic.
 
-If building a JAR manually, configure AspectJ in your `pom.xml`:
+If building a JAR manually, configure AspectJ in your `build.gradle`:
+
+```groovy
+configurations {
+    aspectjTools
+    aspect
+}
+
+dependencies {
+    aspectjTools 'org.aspectj:aspectjtools:1.9.24'
+    aspect 'io.quasient.pal:pal-weave:${pal.version}'
+    implementation 'org.aspectj:aspectjrt:1.9.24'
+}
+
+tasks.register('weaveClasses', JavaExec) {
+    dependsOn classes
+    mainClass = 'org.aspectj.tools.ajc.Main'
+    classpath = configurations.aspectjTools
+    args = [
+        '-inpath', sourceSets.main.output.classesDirs.asPath,
+        '-aspectpath', configurations.aspect.asPath,
+        '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
+        '-classpath', sourceSets.main.compileClasspath.asPath,
+    ]
+}
+
+tasks.named('jar') { dependsOn weaveClasses }
+```
+
+<details>
+<summary>Maven equivalent (pom.xml)</summary>
 
 ```xml
 <plugin>
@@ -525,6 +555,8 @@ If building a JAR manually, configure AspectJ in your `pom.xml`:
     </configuration>
 </plugin>
 ```
+
+</details>
 
 ### Peer Must Be Interceptable
 

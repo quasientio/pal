@@ -146,7 +146,7 @@ public class UserServiceTest {
             "-d", "localhost:2379",
             "--interceptable",
             "--json-rpc", "auto",
-            "-cp", "target/app.jar",
+            "-cp", "build/libs/app.jar",
             "com.example.app.Main"
         );
         Process process = pb.start();
@@ -626,7 +626,7 @@ public void printCallbacks() {
 ### Verify Weaving
 
 ```bash
-javap -c target/classes/com/example/MyClass.class | grep aspectOf
+javap -c build/classes/java/main/com/example/MyClass.class | grep aspectOf
 ```
 
 Should show AspectJ calls.

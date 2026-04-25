@@ -477,8 +477,8 @@ public class Main {
 
 **Same code, running with PAL:**
 ```bash
-# Compile with AspectJ weaving
-./mvnw compile  # aspectj-maven-plugin configured
+# Build with AspectJ weaving
+./gradlew build  # weaveClasses task configured
 
 # Run with PAL
 pal run --wal payment-log --interceptable --json-rpc auto -cp app.jar Main

@@ -40,7 +40,7 @@ cd my-existing-project
 pal init
 ```
 
-This adds the `pal-weave` dependency and AspectJ weaving plugin to your `pom.xml` or `build.gradle` automatically (a backup is created before patching). Use `--dry-run` to preview the changes first.
+This adds the `pal-weave` dependency and AspectJ weaving plugin to your `build.gradle` or `pom.xml` automatically (a backup is created before patching). Use `--dry-run` to preview the changes first.
 
 For full control over the build configuration, see the [Manual Setup](#manual-setup) section below.
 
@@ -81,7 +81,7 @@ export PATH="/path/to/pal/bin:$PATH"
 
 ```bash
 pal run --wal file:/tmp/dev-wal \
-  -cp target/myapp-1.0-SNAPSHOT.jar \
+  -cp build/libs/myapp-1.0-SNAPSHOT.jar \
   com.example.HelloService hello world
 ```
 
@@ -139,7 +139,7 @@ Stop the peer (Ctrl-C), then replay:
 
 ```bash
 pal run --source-log file:/tmp/dev-wal \
-  -cp target/myapp-1.0-SNAPSHOT.jar \
+  -cp build/libs/myapp-1.0-SNAPSHOT.jar \
   com.example.HelloService
 ```
 
@@ -151,7 +151,7 @@ For verifying that code changes don't alter behavior, use `pal replay` instead. 
 
 ```bash
 pal replay --wal file:/tmp/dev-wal \
-  -cp target/myapp-1.0-SNAPSHOT.jar \
+  -cp build/libs/myapp-1.0-SNAPSHOT.jar \
   com.example.HelloService hello world
 ```
 
@@ -174,7 +174,7 @@ public static void processMessage(String msg) {
 ### 2. Rebuild
 
 ```bash
-./mvnw clean compile
+./gradlew build
 ```
 
 AspectJ weaving happens automatically.
@@ -183,11 +183,11 @@ AspectJ weaving happens automatically.
 
 ```bash
 pal run --wal file:/tmp/test-wal \
-  -cp target/classes \
+  -cp build/classes/java/main \
   com.example.HelloService test
 ```
 
-**Tip**: Use `target/classes` instead of JAR for fastest iteration.
+**Tip**: Use `build/classes/java/main` instead of JAR for fastest iteration.
 
 ### 4. Verify
 
@@ -219,7 +219,7 @@ public class HelloServiceTest {
             "pal", "run",
             "--wal", "file:" + testWalPath,
             "--interceptable",
-            "-cp", "target/classes",
+            "-cp", "build/classes/java/main",
             "com.example.HelloService", "test-input"
         );
         Process peer = pb.start();
@@ -276,7 +276,7 @@ Run PAL peer from your IDE for breakpoint debugging:
 **IntelliJ Run Configuration**:
 
 - **Main class**: `io.quasient.pal.cli.Pal`
-- **Program arguments**: `run --wal file:/tmp/debug-wal -cp target/classes com.example.HelloService arg1`
+- **Program arguments**: `run --wal file:/tmp/debug-wal -cp build/classes/java/main com.example.HelloService arg1`
 - **VM options**: (Chronicle exports as needed, see `bin/pal` for reference)
 
 Set breakpoints in your application code and debug normally.
@@ -310,7 +310,7 @@ Run with custom logging:
 
 ```bash
 export PAL_PEER_LOGGING_CONFIG=".local/conf/peer-logging.xml"
-pal run --wal file:/tmp/debug-wal -cp target/classes com.example.HelloService
+pal run --wal file:/tmp/debug-wal -cp build/classes/java/main com.example.HelloService
 ```
 
 ### Print All Messages
@@ -319,7 +319,7 @@ Watch messages in real-time:
 
 ```bash
 # Terminal 1: Run peer
-pal run --wal file:/tmp/live-wal -cp target/classes com.example.HelloService
+pal run --wal file:/tmp/live-wal -cp build/classes/java/main com.example.HelloService
 
 # Terminal 2: Follow log
 pal log print file:/tmp/live-wal -f --full
@@ -335,13 +335,13 @@ Chronicle Queue's low latency makes it ideal for benchmarking:
 # Warm up
 for i in {1..1000}; do
   pal run --wal file:/tmp/warmup \
-    -cp target/classes com.example.HelloService test
+    -cp build/classes/java/main com.example.HelloService test
 done
 
 # Benchmark
 time for i in {1..10000}; do
   pal run --wal file:/tmp/bench \
-    -cp target/classes com.example.HelloService test
+    -cp build/classes/java/main com.example.HelloService test
 done
 ```
 
@@ -353,7 +353,7 @@ Measure pure application performance without network overhead.
 
 ```bash
 # Easier than absolute paths
-pal run --wal file:dev-wal -cp target/classes com.example.Main
+pal run --wal file:dev-wal -cp build/classes/java/main com.example.Main
 ```
 
 Chronicle queue created in current directory.
@@ -362,13 +362,13 @@ Chronicle queue created in current directory.
 
 ```bash
 # Run once
-pal run --wal file:session1 -cp target/classes com.example.Main input1
+pal run --wal file:session1 -cp build/classes/java/main com.example.Main input1
 
 # Replay multiple times while debugging
-pal run --source-log file:session1 -cp target/classes com.example.Main
+pal run --source-log file:session1 -cp build/classes/java/main com.example.Main
 
 # Or use deterministic replay to verify behavior
-pal replay --wal file:session1 -cp target/classes com.example.Main input1
+pal replay --wal file:session1 -cp build/classes/java/main com.example.Main input1
 ```
 
 No need to re-create test data.
@@ -378,29 +378,29 @@ No need to re-create test data.
 ```bash
 # Start fresh
 rm -rf /tmp/test-wal
-pal run --wal file:/tmp/test-wal -cp target/classes com.example.Main
+pal run --wal file:/tmp/test-wal -cp build/classes/java/main com.example.Main
 ```
 
-### 4. Use target/classes for Speed
+### 4. Use build/classes for Speed
 
 ```bash
 # Fast (no JAR packaging)
-./mvnw compile
-pal run --wal file:dev -cp target/classes com.example.Main
+./gradlew compileJava
+pal run --wal file:dev -cp build/classes/java/main com.example.Main
 
 # Slower
-./mvnw package
-pal run --wal file:dev -cp target/app.jar com.example.Main
+./gradlew build
+pal run --wal file:dev -cp build/libs/app.jar com.example.Main
 ```
 
 ### 5. Incremental Compilation
 
 ```bash
 # Only recompile changed files
-./mvnw compile
+./gradlew compileJava
 
 # Full clean when needed
-./mvnw clean compile
+./gradlew clean build
 ```
 
 ## When to Switch to Distributed
@@ -422,12 +422,12 @@ pal run --wal file:dev -cp target/app.jar com.example.Main
 **Hybrid approach**:
 ```bash
 # Develop locally
-pal run --wal file:dev-wal -cp target/classes com.example.Service
+pal run --wal file:dev-wal -cp build/classes/java/main com.example.Service
 
 # Test distributed setup
 pal run -d localhost:2379 -k localhost:29092 \
   --wal service-wal --json-rpc auto \
-  -cp target/service.jar com.example.Service
+  -cp build/libs/service.jar com.example.Service
 ```
 
 ## Common Issues
@@ -472,21 +472,62 @@ rm -rf /tmp/old-queue
 **Solution**: Verify weaving:
 ```bash
 # Check bytecode
-javap -c target/classes/com/example/MyClass.class | grep aspectOf
+javap -c build/classes/java/main/com/example/MyClass.class | grep aspectOf
 
 # Should see AspectJ calls
 ```
 
 If not, rebuild with AspectJ plugin:
 ```bash
-./mvnw clean compile
+./gradlew clean build
 ```
 
 ## Manual Setup
 
 If you prefer full control over the build configuration instead of using `pal init`, you can set up PAL weaving manually.
 
-**Maven (`pom.xml`):**
+**Gradle (`build.gradle`):**
+
+```groovy
+plugins {
+    id 'java'
+}
+
+configurations {
+    aspectjTools
+    aspect
+}
+
+dependencies {
+    aspectjTools 'org.aspectj:aspectjtools:1.9.24'
+    aspect 'io.quasient.pal:pal-weave:1.0.0-SNAPSHOT'
+    implementation 'org.aspectj:aspectjrt:1.9.24'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.register('weaveClasses', JavaExec) {
+    dependsOn classes
+    mustRunAfter test
+    mainClass = 'org.aspectj.tools.ajc.Main'
+    classpath = configurations.aspectjTools
+    args = [
+        '-inpath', sourceSets.main.output.classesDirs.asPath,
+        '-aspectpath', configurations.aspect.asPath,
+        '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
+        '-classpath', sourceSets.main.compileClasspath.asPath,
+        '-source', '17', '-target', '17',
+    ]
+}
+
+tasks.named('jar') { dependsOn weaveClasses }
+```
+
+<details>
+<summary>Maven equivalent (pom.xml)</summary>
 
 ```xml
 <dependencies>
@@ -524,26 +565,9 @@ If you prefer full control over the build configuration instead of using `pal in
 </build>
 ```
 
-**Gradle (`build.gradle`):**
+</details>
 
-```groovy
-plugins {
-    id 'java'
-    id 'io.freefair.aspectj.post-compile-weaving' version '8.6'
-}
-
-dependencies {
-    aspect 'io.quasient.pal:pal-weave:1.0.0-SNAPSHOT'
-    implementation 'org.aspectj:aspectjrt:1.9.24'
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-```
-
-Build with `./mvnw clean install` (Maven) or `gradle build` (Gradle). Your application is then ready to run with PAL.
+Build with `./gradlew build` (Gradle) or `./mvnw clean install` (Maven). Your application is then ready to run with PAL.
 
 ## Example: Complete Development Session
 
@@ -554,11 +578,11 @@ cd my-pal-app
 source .env.pal
 
 # 2. Build
-./mvnw compile
+./gradlew build
 
 # 3. Run and test locally
 pal run --wal file:dev-wal \
-  -cp target/classes com.example.Main
+  -cp build/classes/java/main com.example.Main
 
 # 4. Check results
 pal log print file:dev-wal --compact
@@ -567,17 +591,17 @@ pal log print file:dev-wal --compact
 vim src/main/java/com/example/SampleService.java
 
 # 6. Rebuild
-./mvnw compile
+./gradlew build
 
 # 7. Test changes
 pal run --wal file:dev-wal2 \
-  -cp target/classes com.example.Main
+  -cp build/classes/java/main com.example.Main
 
 # 8. Compare logs
 diff <(pal log print file:dev-wal) <(pal log print file:dev-wal2)
 
-# 9. When satisfied, package
-./mvnw package
+# 9. When satisfied, package (already included in ./gradlew build)
+./gradlew build
 
 # 10. Ready for distributed testing or deployment
 ```
