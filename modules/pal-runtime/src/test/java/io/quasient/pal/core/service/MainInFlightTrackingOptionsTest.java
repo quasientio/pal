@@ -91,12 +91,48 @@ public class MainInFlightTrackingOptionsTest {
   }
 
   /**
-   * Tests that validateInput() adds WITH_IN_FLIGHT_TRACKING to runOptions when enabled by default.
+   * Tests that validateInput() adds WITH_IN_FLIGHT_TRACKING to runOptions when intercepts are
+   * enabled (the default for in-flight tracking is true).
    *
    * @throws Exception if reflection or method invocation fails
    */
   @Test
-  public void validateInput_addsInFlightTrackingToRunOptions_byDefault() throws Exception {
+  public void validateInput_addsInFlightTrackingToRunOptions_whenInterceptsEnabled()
+      throws Exception {
+    Main main = new Main();
+    new CommandLine(main).parseArgs();
+
+    // Enable intercepts: requires both a pal directory URL and the interceptable flag.
+    Field palDirectoryUrlField = Main.class.getDeclaredField("palDirectoryUrl");
+    palDirectoryUrlField.setAccessible(true);
+    palDirectoryUrlField.set(main, "localhost:2379");
+    Field interceptableField = Main.class.getDeclaredField("interceptable");
+    interceptableField.setAccessible(true);
+    interceptableField.set(main, true);
+
+    Method method = Main.class.getDeclaredMethod("validateInput");
+    method.setAccessible(true);
+    method.invoke(main);
+
+    Field field = Main.class.getDeclaredField("runOptions");
+    field.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Set<RunOptions> runOptions = (Set<RunOptions>) field.get(main);
+
+    assertThat(runOptions, notNullValue());
+    assertThat(runOptions.contains(RunOptions.WITH_INTERCEPTS), is(true));
+    assertThat(runOptions.contains(RunOptions.WITH_IN_FLIGHT_TRACKING), is(true));
+  }
+
+  /**
+   * Tests that validateInput() does NOT add WITH_IN_FLIGHT_TRACKING when intercepts are disabled,
+   * even though in-flight tracking defaults to true. The option has no effect without intercepts,
+   * so it is gated on WITH_INTERCEPTS to keep the logged run options reflective of actual behavior.
+   *
+   * @throws Exception if reflection or method invocation fails
+   */
+  @Test
+  public void validateInput_skipsInFlightTracking_whenInterceptsDisabled() throws Exception {
     Main main = new Main();
     new CommandLine(main).parseArgs();
 
@@ -110,8 +146,8 @@ public class MainInFlightTrackingOptionsTest {
     Set<RunOptions> runOptions = (Set<RunOptions>) field.get(main);
 
     assertThat(runOptions, notNullValue());
-    // Default is true, so option should be added
-    assertThat(runOptions.contains(RunOptions.WITH_IN_FLIGHT_TRACKING), is(true));
+    assertThat(runOptions.contains(RunOptions.WITH_INTERCEPTS), is(false));
+    assertThat(runOptions.contains(RunOptions.WITH_IN_FLIGHT_TRACKING), is(false));
   }
 
   /**

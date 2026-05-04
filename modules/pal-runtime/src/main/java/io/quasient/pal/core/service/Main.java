@@ -1516,8 +1516,10 @@ public class Main implements Callable<Integer> {
       runOptions.add(RunOptions.WITH_SESSIONS);
     }
 
-    // enable in-flight tracking if configured (defaults to true if not explicitly set)
-    if (inFlightTracking == null || inFlightTracking) {
+    // enable in-flight tracking if configured (defaults to true if not explicitly set);
+    // only meaningful when intercepts are enabled, so gate on WITH_INTERCEPTS
+    if (runOptions.contains(RunOptions.WITH_INTERCEPTS)
+        && (inFlightTracking == null || inFlightTracking)) {
       runOptions.add(RunOptions.WITH_IN_FLIGHT_TRACKING);
     }
 
