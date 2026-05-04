@@ -38,9 +38,9 @@ public class InitConfigTest {
    * Verifies that an {@code InitConfig} built with only the required fields (groupId, artifactId,
    * mainClass) has correct default values for all optional fields.
    *
-   * <p>Expected defaults: version is {@code "1.0-SNAPSHOT"}, sampleApp is {@code true},
-   * interceptable is {@code false}, intercepting is {@code false}, kafka is {@code false},
-   * scopePolicy is {@code false}, loggingConfig is {@code true}, buildTool is {@code MAVEN}.
+   * <p>Expected defaults: version is {@code "1.0"}, sampleApp is {@code true}, interceptable is
+   * {@code false}, intercepting is {@code false}, kafka is {@code false}, scopePolicy is {@code
+   * false}, loggingConfig is {@code true}, buildTool is {@code MAVEN}.
    */
   @Test
   public void testDefaultValues() {
@@ -53,7 +53,7 @@ public class InitConfigTest {
             .build();
 
     // Then: default values are correct
-    assertThat(config.getProjectVersion(), is("1.0-SNAPSHOT"));
+    assertThat(config.getProjectVersion(), is("1.0"));
     assertThat(config.isSampleApp(), is(true));
     assertThat(config.isInterceptable(), is(false));
     assertThat(config.isIntercepting(), is(false));

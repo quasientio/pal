@@ -70,7 +70,7 @@ public class InitEndToEndTest {
    * Default PAL version when running in test context (no JAR manifest available). Mirrors the
    * fallback value used by {@code Init.resolvePalVersion()}.
    */
-  private static final String DEFAULT_PAL_VERSION = "1.0.0-SNAPSHOT";
+  private static final String DEFAULT_PAL_VERSION = "1.0.0";
 
   /**
    * Executes {@code pal init} with the given arguments, capturing stdout and stderr. Uses

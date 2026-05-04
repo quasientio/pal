@@ -53,7 +53,7 @@ public final class InitConfig {
   /** Maven/Gradle artifact ID (e.g., {@code "my-app"}). */
   private final String artifactId;
 
-  /** Project version string (e.g., {@code "1.0-SNAPSHOT"}). */
+  /** Project version string (e.g., {@code "1.0"}). */
   private final String projectVersion;
 
   /** Fully-qualified main class name, or {@code null} for as-service mode. */
@@ -477,7 +477,7 @@ public final class InitConfig {
   public static final class Builder {
 
     /** Default project version. */
-    private static final String DEFAULT_VERSION = "1.0-SNAPSHOT";
+    private static final String DEFAULT_VERSION = "1.0";
 
     /** Default AspectJ version. */
     private static final String DEFAULT_ASPECTJ_VERSION = "1.9.24";

@@ -88,7 +88,7 @@ import picocli.CommandLine.Spec;
 public class Init extends AbstractPalSubcommand {
 
   /** Default PAL version fallback when manifest is unavailable. */
-  static final String DEFAULT_PAL_VERSION = "1.0.0-SNAPSHOT";
+  static final String DEFAULT_PAL_VERSION = "1.0.0";
 
   /** Default AspectJ version. */
   private static final String DEFAULT_ASPECTJ_VERSION = "1.9.24";
@@ -144,7 +144,7 @@ public class Init extends AbstractPalSubcommand {
   @Option(
       names = {"--version"},
       paramLabel = "VERSION",
-      description = "Project version (default: 1.0-SNAPSHOT)")
+      description = "Project version (default: 1.0)")
   private String projectVersion;
 
   /** Fully-qualified main class name. */

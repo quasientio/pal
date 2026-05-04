@@ -396,7 +396,7 @@ public class InitTest {
   /**
    * Verifies that the PAL version is resolved from the package manifest.
    *
-   * <p>When no manifest is available (dev mode), it should fall back to "1.0.0-SNAPSHOT".
+   * <p>When no manifest is available (dev mode), it should fall back to "1.0.0".
    */
   @Test
   public void testVersionResolvedFromManifest() {

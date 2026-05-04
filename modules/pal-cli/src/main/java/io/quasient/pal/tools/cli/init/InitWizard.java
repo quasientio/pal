@@ -54,7 +54,7 @@ public final class InitWizard {
   private static final String DEFAULT_ARTIFACT_ID = "my-pal-app";
 
   /** Default project version. */
-  private static final String DEFAULT_VERSION = "1.0-SNAPSHOT";
+  private static final String DEFAULT_VERSION = "1.0";
 
   /** Default simple class name appended to the group ID for the main class default. */
   private static final String DEFAULT_MAIN_CLASS_SIMPLE = "Main";

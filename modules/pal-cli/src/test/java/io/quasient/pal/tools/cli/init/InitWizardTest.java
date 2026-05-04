@@ -193,7 +193,7 @@ public class InitWizardTest {
     InitConfig config = wizard.run();
 
     // Then: defaults applied
-    assertThat(config.getProjectVersion(), is("1.0-SNAPSHOT"));
+    assertThat(config.getProjectVersion(), is("1.0"));
     assertThat(config.isSampleApp(), is(true));
     assertThat(config.isLoggingConfig(), is(true));
     assertThat(config.getBuildTool(), is(BuildTool.GRADLE));
@@ -650,7 +650,7 @@ public class InitWizardTest {
     // build tool, artifactId, version, rpc, intercepting, mainClass, kafka
     provider.enqueueSelect(BuildTool.MAVEN); // build tool (not overridden)
     provider.enqueueText("my-app"); // artifactId (not overridden)
-    provider.enqueueText("1.0-SNAPSHOT"); // version (not overridden)
+    provider.enqueueText("1.0"); // version (not overridden)
     provider.enqueueSelect("No"); // rpc (not overridden)
     // interceptable is overridden — no prompt
     provider.enqueueYesNo(false); // intercepting (not overridden)
@@ -681,7 +681,7 @@ public class InitWizardTest {
     provider.enqueueSelect(BuildTool.MAVEN); // build tool
     provider.enqueueText("com.example"); // groupId
     provider.enqueueText("my-app"); // artifactId
-    provider.enqueueText("1.0-SNAPSHOT"); // version
+    provider.enqueueText("1.0"); // version
     provider.enqueueSelect("No"); // rpc
     provider.enqueueYesNo(false); // interceptable
     provider.enqueueYesNo(false); // intercepting
