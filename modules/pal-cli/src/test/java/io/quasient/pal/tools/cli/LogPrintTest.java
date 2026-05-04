@@ -15,12 +15,36 @@
  */
 package io.quasient.pal.tools.cli;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.fail;
 
+import io.quasient.pal.common.runtime.ExecPhase;
+import io.quasient.pal.common.util.UuidUtils;
+import io.quasient.pal.messages.OutboundMsg;
+import io.quasient.pal.messages.colfer.Class;
+import io.quasient.pal.messages.colfer.ConstructorCall;
+import io.quasient.pal.messages.colfer.ExecMessage;
+import io.quasient.pal.messages.colfer.Message;
+import io.quasient.pal.messages.colfer.ReturnValue;
+import io.quasient.pal.messages.types.MessageType;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
+import net.openhft.chronicle.queue.ChronicleQueue;
+import net.openhft.chronicle.queue.ExcerptAppender;
+import net.openhft.chronicle.queue.impl.single.SingleChronicleQueueBuilder;
+import net.openhft.chronicle.wire.WireType;
 import org.junit.Test;
 import picocli.CommandLine;
 
@@ -185,6 +209,198 @@ public class LogPrintTest {
       fail("Expected RuntimeException");
     } catch (RuntimeException e) {
       assertThat(e.getMessage().contains("Log identifier is required"), is(true));
+    }
+  }
+
+  // ==================== --with-return Behavior Tests ====================
+
+  /**
+   * Tests that {@code --with-return} stops after printing the requested offset when that offset is
+   * itself a return/done message.
+   *
+   * <p>The forward-scan only makes sense when the requested offset is an operation: it walks
+   * subsequent messages tracking nesting depth until the matching return is found. When the offset
+   * is already a return value, there is no operation to find a return for; the command must print
+   * just that record. Without this guard, the scan would incorrectly print the very next message
+   * after the requested offset (which may be a wholly unrelated return from a different operation).
+   */
+  @Test
+  public void runCommand_withReturn_offsetAtReturnValue_printsOnlyThatRecord() throws Exception {
+    // Given: a Chronicle queue with two consecutive return values (offsets 0 and 1)
+    Path queueDir = Files.createTempDirectory("logprint-with-return-at-return");
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream captured = new ByteArrayOutputStream();
+    try {
+      UUID peerId = UUID.randomUUID();
+      writeReturnValueMessage(queueDir, peerId);
+      writeReturnValueMessage(queueDir, peerId);
+
+      LogPrint cmd = new LogPrint();
+      cmd.logIdentifier = "file:" + queueDir;
+      cmd.offset = 0L;
+      cmd.withReturn = true;
+
+      // When: runCommand() is invoked with --with-return at a return-value offset
+      System.setOut(new PrintStream(captured, true, UTF_8));
+      int result = cmd.runCommand();
+
+      // Then: exit code 0 and exactly the requested record is printed (offset 1 is not bled in)
+      assertThat(result, is(0));
+      String output = captured.toString(UTF_8);
+      long recordCount =
+          Stream.of(output.split("\n")).filter(line -> line.startsWith("offset=")).count();
+      assertThat(recordCount, is(1L));
+      assertThat(output, containsString("offset=0 "));
+      assertThat(output, not(containsString("offset=1 ")));
+    } finally {
+      System.setOut(originalOut);
+      deleteDirectory(queueDir);
+    }
+  }
+
+  /**
+   * Tests that {@code --with-return} still scans forward for the matching return when the requested
+   * offset points to an operation message.
+   *
+   * <p>This is the original/intended behavior of {@code --with-return}: when at a constructor (or
+   * any operation), walk subsequent messages until depth reaches zero, then print that matching
+   * return value too.
+   */
+  @Test
+  public void runCommand_withReturn_offsetAtOperation_printsOperationAndReturn() throws Exception {
+    // Given: a Chronicle queue with a constructor at offset 0 and its return at offset 1
+    Path queueDir = Files.createTempDirectory("logprint-with-return-at-op");
+    PrintStream originalOut = System.out;
+    ByteArrayOutputStream captured = new ByteArrayOutputStream();
+    try {
+      UUID peerId = UUID.randomUUID();
+      writeConstructorMessage(queueDir, peerId, "com.example.Foo");
+      writeReturnValueMessage(queueDir, peerId);
+
+      LogPrint cmd = new LogPrint();
+      cmd.logIdentifier = "file:" + queueDir;
+      cmd.offset = 0L;
+      cmd.withReturn = true;
+
+      // When: runCommand() is invoked with --with-return at an operation offset
+      System.setOut(new PrintStream(captured, true, UTF_8));
+      int result = cmd.runCommand();
+
+      // Then: both the operation and its return value are printed
+      assertThat(result, is(0));
+      String output = captured.toString(UTF_8);
+      long recordCount =
+          Stream.of(output.split("\n")).filter(line -> line.startsWith("offset=")).count();
+      assertThat(recordCount, is(2L));
+      assertThat(output, containsString("offset=0 "));
+      assertThat(output, containsString("offset=1 "));
+    } finally {
+      System.setOut(originalOut);
+      deleteDirectory(queueDir);
+    }
+  }
+
+  // ==================== Test Helpers ====================
+
+  /**
+   * Writes an EXEC_CONSTRUCTOR message to a Chronicle queue.
+   *
+   * @param queueDir the queue directory
+   * @param peerId the peer UUID
+   * @param className the class name for the constructor
+   */
+  private static void writeConstructorMessage(Path queueDir, UUID peerId, String className) {
+    try (ChronicleQueue q =
+        SingleChronicleQueueBuilder.single(queueDir.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      ExcerptAppender app = q.createAppender();
+
+      ExecMessage execMsg = new ExecMessage();
+      execMsg.setThreadName("main");
+      execMsg.setPeerUuid(UuidUtils.toBytes(peerId));
+      execMsg.setMessageId(UUID.randomUUID().toString());
+      execMsg.setCurrentTime(System.currentTimeMillis() * 1_000_000L);
+
+      ConstructorCall cc = new ConstructorCall();
+      Class clazz = new Class();
+      clazz.setName(className);
+      cc.setClazz(clazz);
+      execMsg.setConstructorCall(cc);
+
+      Message wrapper =
+          new Message()
+              .withMessageType(MessageType.EXEC_CONSTRUCTOR.getId())
+              .withExecMessage(execMsg);
+
+      OutboundMsg outboundMsg =
+          new OutboundMsg(
+              MessageType.EXEC_CONSTRUCTOR,
+              ExecPhase.BEFORE,
+              null,
+              execMsg.getMessageId(),
+              null,
+              wrapper);
+      outboundMsg.appendTo(app);
+    }
+  }
+
+  /**
+   * Writes an EXEC_RETURN_VALUE message (void return) to a Chronicle queue.
+   *
+   * @param queueDir the queue directory
+   * @param peerId the peer UUID
+   */
+  private static void writeReturnValueMessage(Path queueDir, UUID peerId) {
+    try (ChronicleQueue q =
+        SingleChronicleQueueBuilder.single(queueDir.toFile())
+            .wireType(WireType.BINARY_LIGHT)
+            .build()) {
+      ExcerptAppender app = q.createAppender();
+
+      ExecMessage execMsg = new ExecMessage();
+      execMsg.setThreadName("main");
+      execMsg.setPeerUuid(UuidUtils.toBytes(peerId));
+      execMsg.setMessageId(UUID.randomUUID().toString());
+      execMsg.setCurrentTime(System.currentTimeMillis() * 1_000_000L);
+      execMsg.setReturnValue(new ReturnValue().withIsVoid(true));
+
+      Message wrapper =
+          new Message()
+              .withMessageType(MessageType.EXEC_RETURN_VALUE.getId())
+              .withExecMessage(execMsg);
+
+      OutboundMsg outboundMsg =
+          new OutboundMsg(
+              MessageType.EXEC_RETURN_VALUE,
+              ExecPhase.AFTER,
+              null,
+              execMsg.getMessageId(),
+              null,
+              wrapper);
+      outboundMsg.appendTo(app);
+    }
+  }
+
+  /**
+   * Recursively deletes a directory and its contents (best-effort cleanup for tests).
+   *
+   * @param dir the directory to delete
+   * @throws IOException if walking the directory fails
+   */
+  private static void deleteDirectory(Path dir) throws IOException {
+    if (Files.exists(dir)) {
+      try (Stream<Path> walk = Files.walk(dir)) {
+        walk.sorted(Comparator.reverseOrder())
+            .forEach(
+                p -> {
+                  try {
+                    Files.deleteIfExists(p);
+                  } catch (IOException e) {
+                    // best-effort cleanup
+                  }
+                });
+      }
     }
   }
 }

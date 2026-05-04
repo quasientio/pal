@@ -16,10 +16,12 @@
 package io.quasient.pal.cli;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import com.google.common.base.Splitter;
 import io.quasient.pal.PeerProcess;
@@ -28,7 +30,9 @@ import io.quasient.pal.cxn.directory.PalDirectory;
 import io.quasient.pal.tools.cli.AbstractPalSubcommand;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
@@ -51,6 +55,15 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
   /** Main class whose main() calls alwaysThrows() which throws RuntimeException. */
   private static final String THROWING_MAIN_CLASS =
       "io.quasient.foobar.apps.quantized.rpc.ThrowingMain";
+
+  /**
+   * Main class that exercises the full {@code --with-return} matrix in a single run: constructors,
+   * instance methods, class methods, and instance field reads/writes via mutations on a
+   * public-field Order (so {@code EXEC_PUT_FIELD}/{@code EXEC_PUT_FIELD_DONE} are captured in the
+   * WAL).
+   */
+  private static final String MUTATING_CLASS =
+      "io.quasient.foobar.apps.quantized.replay.MutatingApp";
 
   /** Peer process handle for the currently running peer, if any. */
   private PeerProcess peerProcess;
@@ -319,6 +332,53 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
         runLogPrint("-d", palDir, walName, "-o", "0", "--with-return", "--full");
     assertEquals(0, result.exitCode());
     assertThat(result.stdout().length(), greaterThan(0));
+  }
+
+  /**
+   * Verifies the {@code --with-return} contract across message types against a real Kafka WAL.
+   *
+   * <p>For every operation-style message type produced by {@link #MUTATING_CLASS} (constructor,
+   * instance method, class method, instance field read/write — i.e. anything that has a matching
+   * {@code RETURN_VALUE} or {@code _DONE} message), {@code pal log print -o N --with-return} must
+   * emit exactly two records: the operation itself and its corresponding completion.
+   *
+   * <p>For each return-style type ({@code RETURN_VALUE}, {@code PUT_FIELD_DONE}) the same command
+   * must emit exactly one record (the offset itself) — the offset already represents a completion,
+   * so there is nothing to scan forward for. To make the assertion bite the original regression we
+   * pick a return-style offset whose immediate successor is also a return-style record (the
+   * scenario in which the pre-fix code printed the unrelated successor).
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testLogPrint_kafkaLog_withReturn_acrossMessageTypes() throws Exception {
+    String palDir = getPalDirectoryUrl();
+    String kafkaServers = getKafkaServers();
+    String walName = "test-print-matrix-" + generateId();
+    UUID peerId = UUID.randomUUID();
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "-k",
+            kafkaServers,
+            "--wal",
+            walName,
+            "--rpc-default-action",
+            "ALLOW",
+            "-cp",
+            getIttAppsClasspath(),
+            MUTATING_CLASS,
+            "widget",
+            "100");
+    joinPeer(peerProcess, 15);
+    peerProcess = null;
+
+    Thread.sleep(1000);
+
+    assertWithReturnMatrix("-d", palDir, walName);
   }
 
   /**
@@ -743,6 +803,39 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
         runLogPrint("-d", palDir, chronicleName, "-o", "0", "--with-return", "--full");
     assertEquals(0, result.exitCode());
     assertThat(result.stdout().length(), greaterThan(0));
+  }
+
+  /**
+   * Chronicle counterpart to {@link #testLogPrint_kafkaLog_withReturn_acrossMessageTypes}. Runs the
+   * same operation/return-style matrix against a Chronicle-backed WAL.
+   *
+   * @throws Exception if test execution fails
+   */
+  @Test
+  public void testLogPrint_chronicleLog_withReturn_acrossMessageTypes() throws Exception {
+    String palDir = getPalDirectoryUrl();
+    String chronicleName = "test-print-chr-matrix-" + generateId();
+    trackChronicleLog(chronicleName);
+    UUID peerId = UUID.randomUUID();
+
+    peerProcess =
+        launchPeer(
+            peerId,
+            "-d",
+            palDir,
+            "--wal",
+            "file:" + chronicleName,
+            "--rpc-default-action",
+            "ALLOW",
+            "-cp",
+            getIttAppsClasspath(),
+            MUTATING_CLASS,
+            "widget",
+            "100");
+    joinPeer(peerProcess, 15);
+    peerProcess = null;
+
+    assertWithReturnMatrix("-d", palDir, "file:" + chronicleName);
   }
 
   /**
@@ -1437,4 +1530,165 @@ public class MessageStreamPrinterIT extends AbstractCliIT {
    * @param content the trimmed line content
    */
   private record TreeLine(int indent, String content) {}
+
+  /**
+   * Operation-style message types that {@link #MUTATING_CLASS} is known to produce. {@code
+   * --with-return} at any of these must emit exactly two records: the operation and its matching
+   * return / done message.
+   */
+  private static final List<String> WITH_RETURN_OPERATION_TYPES =
+      List.of("CONSTRUCTOR", "INSTANCE_METHOD", "CLASS_METHOD", "GET_FIELD", "PUT_FIELD");
+
+  /**
+   * Return-style message types covered by the regression: at offsets of these types {@code
+   * --with-return} must emit only the record itself.
+   */
+  private static final List<String> WITH_RETURN_RETURNY_TYPES =
+      List.of("RETURN_VALUE", "PUT_FIELD_DONE");
+
+  /**
+   * Asserts the {@code --with-return} contract across message types for the given log identifier.
+   * For each operation type expects {@code op + matching return} (2 records); for each return-style
+   * type expects only the record itself (1 record), using offsets whose successor is also a
+   * return-style record so that the pre-fix bug would actually fire.
+   *
+   * @param logArgs prefix args identifying the log: typically {@code "-d", palDir, walOrFilePath}
+   * @throws Exception if a {@code pal log print} invocation fails
+   */
+  private void assertWithReturnMatrix(String... logArgs) throws Exception {
+    Set<Long> returnyOffsets = new HashSet<>();
+    for (String type : WITH_RETURN_RETURNY_TYPES) {
+      returnyOffsets.addAll(parseCompactOffsets(runLogPrintWithTypes(type, logArgs)));
+    }
+
+    for (String type : WITH_RETURN_OPERATION_TYPES) {
+      List<Long> offsets = parseCompactOffsets(runLogPrintWithTypes(type, logArgs));
+      assertThat("expected at least one " + type + " in WAL", offsets.size(), greaterThan(0));
+      long offset = offsets.get(0);
+
+      CliProcessResult result = runLogPrintAt(offset, logArgs);
+      assertEquals("type=" + type + " exit code", 0, result.exitCode());
+      assertThat(
+          "type=" + type + " expected op+return; stdout=\n" + result.stdout(),
+          countCompactRecords(result.stdout()),
+          is(2));
+      assertThat(
+          "type=" + type + " expected op offset present",
+          result.stdout(),
+          containsString("offset=" + offset + " "));
+    }
+
+    for (String type : WITH_RETURN_RETURNY_TYPES) {
+      long offset = findFirstOffsetWithReturnySuccessor(type, returnyOffsets, logArgs);
+
+      CliProcessResult result = runLogPrintAt(offset, logArgs);
+      assertEquals("type=" + type + " exit code", 0, result.exitCode());
+      assertThat(
+          "type=" + type + " expected only the requested record; stdout=\n" + result.stdout(),
+          countCompactRecords(result.stdout()),
+          is(1));
+      assertThat(
+          "type=" + type + " expected requested offset present",
+          result.stdout(),
+          containsString("offset=" + offset + " "));
+    }
+  }
+
+  /**
+   * Runs {@code pal log print} on the given log filtered to a single message type (COMPACT format).
+   *
+   * @param type the {@code --types} value (without the {@code EXEC_} prefix)
+   * @param logArgs prefix args identifying the log
+   * @return the CLI result
+   * @throws Exception if the invocation fails
+   */
+  private CliProcessResult runLogPrintWithTypes(String type, String... logArgs) throws Exception {
+    String[] args = new String[logArgs.length + 2];
+    System.arraycopy(logArgs, 0, args, 0, logArgs.length);
+    args[logArgs.length] = "--types";
+    args[logArgs.length + 1] = type;
+    return runLogPrint(args);
+  }
+
+  /**
+   * Runs {@code pal log print -o N --with-return} on the given log (COMPACT format).
+   *
+   * @param offset the offset to print from
+   * @param logArgs prefix args identifying the log
+   * @return the CLI result
+   * @throws Exception if the invocation fails
+   */
+  private CliProcessResult runLogPrintAt(long offset, String... logArgs) throws Exception {
+    String[] args = new String[logArgs.length + 3];
+    System.arraycopy(logArgs, 0, args, 0, logArgs.length);
+    args[logArgs.length] = "-o";
+    args[logArgs.length + 1] = String.valueOf(offset);
+    args[logArgs.length + 2] = "--with-return";
+    return runLogPrint(args);
+  }
+
+  /**
+   * Finds the first offset of the given message type whose immediate successor in the log is also a
+   * return-style record. The pre-fix bug only manifests under this adjacency, so this is what we
+   * feed to {@code --with-return} to make the assertion meaningful.
+   *
+   * @param type the message type to look for (without the {@code EXEC_} prefix)
+   * @param returnyOffsets offsets of all return-style records in the log
+   * @param logArgs prefix args identifying the log
+   * @return the first offset of {@code type} whose {@code offset+1} is in {@code returnyOffsets}
+   * @throws Exception if the discovery invocation fails
+   */
+  private long findFirstOffsetWithReturnySuccessor(
+      String type, Set<Long> returnyOffsets, String... logArgs) throws Exception {
+    List<Long> offsets = parseCompactOffsets(runLogPrintWithTypes(type, logArgs));
+    for (Long o : offsets) {
+      if (returnyOffsets.contains(o + 1L)) {
+        return o;
+      }
+    }
+    fail(
+        "expected a "
+            + type
+            + " offset whose successor is a return-style record; got offsets="
+            + offsets);
+    return -1L;
+  }
+
+  /**
+   * Counts the number of records present in a COMPACT-formatted {@code pal log print} stdout
+   * stream. Each record is exactly one line that starts with {@code offset=}.
+   *
+   * @param stdout the captured stdout from a {@code pal log print} invocation in COMPACT format
+   * @return the number of records found
+   */
+  private static int countCompactRecords(String stdout) {
+    int count = 0;
+    for (String line : Splitter.on('\n').split(stdout)) {
+      if (line.startsWith("offset=")) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Parses the offsets from a COMPACT-formatted {@code pal log print} stdout stream, in input
+   * order. Lines that do not start with {@code offset=} are ignored.
+   *
+   * @param result the result of a {@code pal log print} invocation in COMPACT format
+   * @return the offsets extracted from each {@code offset=N ...} line
+   */
+  private static List<Long> parseCompactOffsets(CliProcessResult result) {
+    assertEquals(0, result.exitCode());
+    List<Long> offsets = new ArrayList<>();
+    for (String line : Splitter.on('\n').split(result.stdout())) {
+      if (!line.startsWith("offset=")) {
+        continue;
+      }
+      int eq = line.indexOf('=');
+      int sp = line.indexOf(' ', eq);
+      offsets.add(Long.parseLong(line.substring(eq + 1, sp)));
+    }
+    return offsets;
+  }
 }

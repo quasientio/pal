@@ -342,7 +342,10 @@ class LogPrint extends AbstractPrintCommand {
               if (offset != null) {
                 if (currentOffset == offset) {
                   printRecord(rec.key(), rec.value(), currentOffset);
-                  if (!withReturn) {
+                  if (!withReturn || isReturnType(rec.value())) {
+                    // Either --with-return wasn't requested, or the message at the
+                    // requested offset is itself already a return/done — nothing
+                    // further to scan for.
                     done.set(true);
                   } else {
                     // Start nesting-depth scan for matching return value
@@ -477,11 +480,13 @@ class LogPrint extends AbstractPrintCommand {
           if (logicalOffset == offset) {
             // Found the requested offset, print it
             printRecord(logMessage, logicalOffset);
-            if (withReturn) {
+            if (withReturn && !isReturnType(logMessage)) {
               // Start nesting-depth scan for matching return value
               withReturnDepth = 1;
             } else if (!follow) {
-              // Not in follow mode, we're done after printing the requested offset
+              // Not in follow mode, we're done after printing the requested offset.
+              // Includes the case where the message at the offset is itself a
+              // return/done — there is nothing further to scan for.
               break;
             }
           } else if (withReturn && withReturnDepth > 0) {
