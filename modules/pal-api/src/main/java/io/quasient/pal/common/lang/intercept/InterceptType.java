@@ -38,12 +38,21 @@ public enum InterceptType {
   /**
    * Asynchronous interception that occurs before the target method is executed. Intended for use in
    * non-blocking execution contexts.
+   *
+   * <p><b>No ordering guarantee.</b> Async callbacks are fire-and-forget and the runtime caches a
+   * DEALER socket per dispatch thread; when the intercepted peer runs RPC requests on multiple
+   * worker threads ({@code --rpc-threads > 1}), callbacks for two intercepted operations can arrive
+   * at the callback peer in either order. Tests and consumers must correlate callbacks by content
+   * (e.g. message id, intercepted value) rather than arrival index.
    */
   BEFORE_ASYNC((byte) 4),
 
   /**
    * Asynchronous interception that occurs after the target method has successfully executed.
    * Suitable for scenarios requiring non-blocking post-execution actions.
+   *
+   * <p><b>No ordering guarantee.</b> See {@link #BEFORE_ASYNC} — the same architectural
+   * non-ordering applies to {@code AFTER_ASYNC}.
    */
   AFTER_ASYNC((byte) 5);
 

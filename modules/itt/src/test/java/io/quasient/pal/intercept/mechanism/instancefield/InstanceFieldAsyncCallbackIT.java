@@ -37,6 +37,7 @@ import io.quasient.pal.messages.types.MessageType;
 import io.quasient.pal.serdes.Unwrapper;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
@@ -418,45 +419,23 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
         is(expectedCallbacks));
 
     if (path == InvocationPath.HOT_PATH) {
-      // 6a. Verify callback structure for HOT_PATH (2 callbacks)
-      Message initCallback = callbacks.get(0);
-      assertThat("PUT callback message should not be null", initCallback, is(notNullValue()));
+      // 6a. Verify callback structure for HOT_PATH (2 callbacks).
+      //
+      // Async callbacks are fire-and-forget and the runtime caches a DEALER socket per dispatch
+      // thread; with --rpc-threads > 1 the callback for the field-initializer PUT and the callback
+      // for the setter PUT can arrive at this peer in either order. Correlate by put-value rather
+      // than by arrival index. See InterceptType.BEFORE_ASYNC.
+      Message initCallback = findPutCallbackByValue(callbacks, 1);
       assertThat(
-          "PUT callback should be INTERCEPT_CALLBACK_REQUEST type",
+          "init PUT callback should be INTERCEPT_CALLBACK_REQUEST type",
           initCallback.getMessageType(),
           is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
+
+      Message setterCallback = findPutCallbackByValue(callbacks, newValue);
       assertThat(
-          "First callback should be InstanceFieldPut",
-          initCallback.getInterceptCallbackRequestMessage().getExec().getInstanceFieldPut(),
-          is(notNullValue()));
-
-      // Verify value passed to fieldput is the initializer value (triggered by ctor)
-      Obj putValueObj =
-          initCallback
-              .getInterceptCallbackRequestMessage()
-              .getExec()
-              .getInstanceFieldPut()
-              .getValueObject();
-      Object value = Unwrapper.unwrapObject(putValueObj);
-      assertThat("First callback put value should be 1 (initializer value in class)", value, is(1));
-
-      // The second callback is from the field put triggered by the setter we invoke
-      Message setterCallback = callbacks.get(1);
-      assertThat("Callback message should not be null", setterCallback, is(notNullValue()));
-      assertThat(
-          "Second callback should be InstanceFieldPut",
-          setterCallback.getInterceptCallbackRequestMessage().getExec().getInstanceFieldPut(),
-          is(notNullValue()));
-
-      // Verify value passed to fieldput is the value we call the setter with
-      putValueObj =
-          setterCallback
-              .getInterceptCallbackRequestMessage()
-              .getExec()
-              .getInstanceFieldPut()
-              .getValueObject();
-      value = Unwrapper.unwrapObject(putValueObj);
-      assertThat("Second callback put value should be value passed to setter", value, is(newValue));
+          "setter PUT callback should be INTERCEPT_CALLBACK_REQUEST type",
+          setterCallback.getMessageType(),
+          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
     } else {
       // 6b. Verify callback structure for INCOMING_RPC (1 callback)
       Message callback = callbacks.get(0);
@@ -569,28 +548,23 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
         is(expectedCallbacks));
 
     if (path == InvocationPath.HOT_PATH) {
-      // 5a. Verify callback structure for HOT_PATH (2 callbacks)
-
-      // First callback from field initializer during ctor
-      Message initCallback = callbacks.get(0);
-      assertThat("PUT_DONE callback message should not be null", initCallback, is(notNullValue()));
-      assertThat(
-          "PUT_DONE callback should be INTERCEPT_CALLBACK_REQUEST type",
-          initCallback.getMessageType(),
-          is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
-      assertThat(
-          "First callback should be InstanceFieldPutDone",
-          initCallback.getInterceptCallbackRequestMessage().getExec().getInstanceFieldPutDone(),
-          is(notNullValue()));
-
-      // Second callback from the setter we invoke
-      Message setterCallback = callbacks.get(1);
-      assertThat(
-          "PUT_DONE callback message should not be null", setterCallback, is(notNullValue()));
-      assertThat(
-          "Callback should be InstanceFieldPutDone",
-          setterCallback.getInterceptCallbackRequestMessage().getExec().getInstanceFieldPutDone(),
-          is(notNullValue()));
+      // 5a. Verify callback structure for HOT_PATH (2 callbacks).
+      //
+      // AFTER_ASYNC callbacks have no arrival-order guarantee (see InterceptType.AFTER_ASYNC); the
+      // assertions here are intentionally order-agnostic — every callback must be an
+      // InstanceFieldPutDone INTERCEPT_CALLBACK_REQUEST. Do not add value-specific assertions
+      // keyed by callbacks.get(i): correlate by content (e.g. instanceFieldPutId) instead.
+      for (Message callback : callbacks) {
+        assertThat("PUT_DONE callback message should not be null", callback, is(notNullValue()));
+        assertThat(
+            "PUT_DONE callback should be INTERCEPT_CALLBACK_REQUEST type",
+            callback.getMessageType(),
+            is(MessageType.INTERCEPT_CALLBACK_REQUEST.getId()));
+        assertThat(
+            "Callback should be InstanceFieldPutDone",
+            callback.getInterceptCallbackRequestMessage().getExec().getInstanceFieldPutDone(),
+            is(notNullValue()));
+      }
     } else {
       // 5b. Verify callback structure for INCOMING_RPC (1 callback)
       Message callback = callbacks.get(0);
@@ -622,5 +596,36 @@ public class InstanceFieldAsyncCallbackIT extends AbstractInterceptIT {
     }
 
     logger.info("===== testAfterAsyncCallbackOnPut [{}]: TEST COMPLETED SUCCESSFULLY =====", path);
+  }
+
+  /**
+   * Finds the unique async PUT callback in {@code callbacks} whose intercepted value matches {@code
+   * expectedValue}, and asserts there is exactly one match. Used to correlate fire-and-forget async
+   * callbacks by content instead of arrival index, since {@link InterceptType#BEFORE_ASYNC}
+   * provides no ordering guarantee.
+   *
+   * @param callbacks the received async callbacks (each must wrap an InstanceFieldPut exec)
+   * @param expectedValue the put-value to match
+   * @return the matching callback message
+   */
+  private static Message findPutCallbackByValue(List<Message> callbacks, Object expectedValue)
+      throws ClassNotFoundException {
+    Message match = null;
+    for (Message cb : callbacks) {
+      Obj valueObj =
+          cb.getInterceptCallbackRequestMessage().getExec().getInstanceFieldPut().getValueObject();
+      Object actual = Unwrapper.unwrapObject(valueObj);
+      if (Objects.equals(expectedValue, actual)) {
+        if (match != null) {
+          throw new AssertionError(
+              "Multiple PUT callbacks with value " + expectedValue + " in: " + callbacks);
+        }
+        match = cb;
+      }
+    }
+    if (match == null) {
+      throw new AssertionError("No PUT callback with value " + expectedValue + " in: " + callbacks);
+    }
+    return match;
   }
 }

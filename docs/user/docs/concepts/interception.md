@@ -131,6 +131,8 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
 
 **Limitations**: Cannot modify arguments, return values, or throw exceptions (fire-and-forget).
 
+**Ordering**: Async callbacks for two different intercepted operations can arrive at the callback peer in *either* order — even if the operations themselves ran in a strict sequence. Correlate received callbacks by content (e.g. message id, intercepted argument), never by arrival index. If you need a total order across operations, use a synchronous type (`BEFORE`, `AFTER`, or `AROUND`).
+
 ### Choosing Synchronous vs Asynchronous
 
 As a general rule, the choice between synchronous and asynchronous intercept types maps to whether the callback needs to influence execution or merely observe it:
