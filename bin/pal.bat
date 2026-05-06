@@ -109,7 +109,7 @@ rem   Chronicle exports -> category vars -> vmoptions file -> PAL_JAVA_OPTS
 rem ---------------------------------------------------------------------------
 set JAVA_OPTS=%CHRONICLE_EXPORTS%
 if "%COMMAND%" == "run" (
-  set JAVA_OPTS=!JAVA_OPTS! %PAL_HEAP_OPTS% %PAL_GC_OPTS% -XX:+IgnoreUnrecognizedVMOptions -Xverify:none %PAL_JMX_OPTS%
+  set JAVA_OPTS=!JAVA_OPTS! %PAL_HEAP_OPTS% %PAL_GC_OPTS% %PAL_JMX_OPTS%
 )
 set JAVA_OPTS=%JAVA_OPTS% %AGENT_OPT% %LOGGING_OPTS% %PAL_VMOPTIONS% %PAL_JAVA_OPTS%
 
