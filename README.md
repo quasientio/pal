@@ -72,6 +72,11 @@ Because operations are instrumented, they can be:
 - **Intercepted** → Dynamic behavior modification at runtime
 - **Inspected** → Real-time observability of execution
 
+## Examples & demos
+
+- **[pal-examples](https://github.com/quasientio/pal-examples)** — runnable example apps (CafeFlow, FraudWatch) used in the demo video
+- **[pal-pocs](https://github.com/quasientio/pal-pocs)** — proof-of-concept apps including the intercept controller
+
 ## Quick Start
 
 ### Prerequisites
@@ -188,5 +193,4 @@ Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 
 - **Discord:** [Join the PAL community](https://discord.gg/cHrbfsB2ev)
 - **Documentation:** [Full docs](https://quasientio.github.io/pal/)
-- **Examples:** [pal-examples repository](https://github.com/quasientio/pal-examples)
 - **Contact:** [manuel@quasient.com](mailto:manuel@quasient.com)
