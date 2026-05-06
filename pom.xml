@@ -22,7 +22,7 @@
     <groupId>io.quasient.pal</groupId>
     <artifactId>pal</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <name>pal</name>
     <description>Message-passing runtime for Java - turns operations into messages for logging, routing, interception, and replay</description>
     <url>https://github.com/quasientio/pal</url>
@@ -52,7 +52,7 @@
 
     <properties>
         <!-- PROJECT VERSION -->
-        <pal.version>1.0.0</pal.version>
+        <pal.version>1.0.1-SNAPSHOT</pal.version>
 
         <!-- BUILD VERSIONS -->
         <java.version>17</java.version>
