@@ -336,14 +336,19 @@ public class RpcPolicyPresetsTest {
   }
 
   /**
-   * Verifies that {@code allPresetNames} returns 8 preset categories after adding deny-nonpublic.
+   * Verifies that {@code allPresetNames} returns 7 user-configurable presets. The mandatory
+   * deny-pal-internals rules are not exposed as a preset — they are enforced unconditionally by
+   * {@link RpcPolicy} and cannot be selected via YAML or CLI.
    */
   @Test
-  public void allPresetNamesShouldReturnEightPresets() {
+  public void allPresetNamesShouldReturnSevenPresets() {
     Set<String> names = RpcPolicyPresets.allPresetNames();
 
-    assertThat(names.size(), is(8));
+    assertThat(names.size(), is(7));
     assertTrue("Should contain deny-nonpublic", names.contains("deny-nonpublic"));
+    assertFalse(
+        "Should not contain deny-pal-internals (always-on, not a preset)",
+        names.contains("deny-pal-internals"));
   }
 
   /**

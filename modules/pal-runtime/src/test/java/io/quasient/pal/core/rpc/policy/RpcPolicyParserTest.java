@@ -680,11 +680,13 @@ public class RpcPolicyParserTest {
   }
 
   /**
-   * Verifies that setting {@code deny-pal-internals: false} in the YAML presets section does not
-   * disable the mandatory denial of PAL internal classes.
+   * Verifies that the mandatory denial of PAL internal classes is unaffected by a {@code
+   * deny-pal-internals: false} entry in the YAML presets section. {@code deny-pal-internals} is not
+   * a registered preset; the parser silently ignores it (since the value is {@code false}), and the
+   * mandatory rules in {@link RpcPolicy} continue to block PAL internals.
    */
   @Test
-  public void shouldDenyPalInternalsEvenWhenPresetExplicitlyDisabled() {
+  public void shouldDenyPalInternalsEvenWhenLegacyPresetEntryIsFalse() {
     String yaml =
         """
         version: 1
@@ -696,7 +698,8 @@ public class RpcPolicyParserTest {
     RpcPolicy policy = RpcPolicyParser.parseYaml(yaml);
 
     assertThat(
-        "PAL internal class should be denied even when preset explicitly disabled",
+        "PAL internal class should be denied even when a deny-pal-internals: false entry is"
+            + " present",
         policy.evaluate(
             "io.quasient.pal.core.Main",
             "run",

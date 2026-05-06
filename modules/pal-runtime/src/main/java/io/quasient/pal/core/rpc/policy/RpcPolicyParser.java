@@ -176,12 +176,6 @@ public final class RpcPolicyParser {
       if (presetsObj instanceof Map) {
         Map<String, Object> presets = (Map<String, Object>) presetsObj;
         for (Map.Entry<String, Object> preset : presets.entrySet()) {
-          if ("deny-pal-internals".equals(preset.getKey())
-              && Boolean.FALSE.equals(preset.getValue())) {
-            LOG.warn(
-                "Ignoring 'deny-pal-internals: false' in YAML policy — this preset is always"
-                    + " enforced and cannot be disabled");
-          }
           if (Boolean.TRUE.equals(preset.getValue())) {
             rules.addAll(RpcPolicyPresets.resolvePreset(preset.getKey()));
           }
