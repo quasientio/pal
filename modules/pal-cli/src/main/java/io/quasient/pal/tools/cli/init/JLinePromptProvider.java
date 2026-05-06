@@ -90,8 +90,8 @@ public final class JLinePromptProvider implements PromptProvider {
   private final boolean fallbackMode;
 
   /**
-   * Marker for the highlighted option in select prompts. Uses {@code "  ❯ "} when the terminal
-   * encoding is UTF-8, falls back to {@code "  > "} otherwise so non-UTF-8 hosts don't render the
+   * Marker for the highlighted option in select prompts. Uses {@code " ❯ "} when the terminal
+   * encoding is UTF-8, falls back to {@code " > "} otherwise so non-UTF-8 hosts don't render the
    * marker as a question mark.
    */
   private final String selectMarker;
@@ -140,7 +140,7 @@ public final class JLinePromptProvider implements PromptProvider {
   }
 
   /**
-   * Returns {@code "  ❯ "} if the active charset can render the glyph, otherwise {@code "  > "}.
+   * Returns {@code " ❯ "} if the active charset can render the glyph, otherwise {@code " > "}.
    * Falls back conservatively on hosts with non-UTF-8 default locales.
    */
   private static String pickSelectMarker(Terminal term) {
