@@ -1,40 +1,25 @@
-# Configuration Reference
+# Properties Reference
 
-PAL peers read runtime configuration from a properties file at startup. The built-in defaults ship inside the PAL JAR and are suitable for most workloads. For production tuning, you can overlay any subset of these properties without modifying the JAR.
-
-## How Properties Are Loaded
-
-Properties are resolved in three layers. Later layers override earlier ones:
-
-1. **Built-in defaults** -- bundled in the PAL JAR (`pal.properties` on the classpath)
-2. **External overlay** -- a file specified by `--properties <path>` or the `PAL_PROPERTIES` environment variable. Only the properties you list are overridden; everything else keeps its built-in default.
-3. **System properties** -- `-D` flags passed via `PAL_JAVA_OPTS`. Only keys that already exist in the loaded properties are picked up (you cannot introduce new keys this way).
+PAL peers read runtime configuration from a properties file at startup. Built-in defaults ship inside the PAL JAR; you can overlay any subset of them via `--properties <path>` (or `PAL_PROPERTIES`) for persistent tuning, or via `-D` flags in `PAL_JAVA_OPTS` for one-off overrides. `-D` only takes effect on keys that already exist in the loaded properties — you cannot introduce new keys that way.
 
 ```bash
-# Override a few properties from a file
+# File overlay
 pal run --properties /etc/pal/tuning.properties --wal my-wal -cp app.jar
 
-# Or via environment variable
-export PAL_PROPERTIES=/etc/pal/tuning.properties
-pal run --wal my-wal -cp app.jar
-
-# One-off override via system property
+# One-off via system property
 PAL_JAVA_OPTS="-Dwal.kafka.compression_type=lz4" pal run --wal my-wal -cp app.jar
 ```
 
-Your overlay file only needs the properties you want to change:
+Overlay files only need the properties you want to change:
 
 ```properties
-# /etc/pal/tuning.properties -- production overrides
 wal.kafka.linger_ms=50
 wal.kafka.batch_size=256000
 pub.batch_size=8192
 peer.keepalive.seconds=30
 ```
 
-See the [JVM Configuration](guides/jvm-configuration.md) guide for tuning heap, GC, and JVM options. See the [CLI Reference](cli-reference.md) for command-line flags and environment variables.
-
----
+See [JVM Configuration](jvm-configuration.md) for heap, GC, and JVM options, and [CLI Reference](cli-reference.md) for command-line flags and environment variables.
 
 ## Peer
 
@@ -42,8 +27,6 @@ See the [JVM Configuration](guides/jvm-configuration.md) guide for tuning heap, 
 |----------|---------|-------------|
 | `peer.keepalive.seconds` | `60` | TTL (in seconds) of this peer's lease in the PAL directory. The peer sends keep-alive heartbeats at roughly half this interval. Lowering the value makes the directory detect crashed peers faster, but increases etcd traffic. |
 | `log.threadPoolSize` | `1` | Number of threads in the pool that processes log RPC messages. Increase if log operations become a bottleneck. |
-
----
 
 ## ZeroMQ Context
 
@@ -54,8 +37,6 @@ These properties configure the process-wide ZeroMQ context shared by all sockets
 | `ZMQ_LINGER` | `1000` | Time in milliseconds the context waits for pending outbound messages to be sent when a socket closes. `0` discards unsent messages immediately; `-1` waits indefinitely. |
 | `ZMQ_RCVHWM` | `10000` | Default receive high-water mark (max queued inbound messages) for sockets created on this context. |
 | `ZMQ_SNDHWM` | `10000` | Default send high-water mark (max queued outbound messages) for sockets created on this context. |
-
----
 
 ## Kafka Source Log Reader
 
@@ -72,8 +53,6 @@ Properties that control how the peer reads messages from a Kafka source log. The
 !!! note
     The key and value deserializers are hard-coded in `KafkaSourceLogReader` (PAL's custom serdes). Overriding them would break message deserialization.
 
----
-
 ## WAL (Write-Ahead Log)
 
 ### Queue
@@ -82,10 +61,9 @@ Messages pass through an in-memory MPSC (multiple-producer, single-consumer) que
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `wal.queue.type` | `chunked` | Queue implementation. `chunked` allocates memory in chunks on demand (good for variable load). `unbounded` grows without limit. |
+| `wal.queue.type` | `chunked` | Queue implementation (case-insensitive). `chunked` grows in chunks up to `wal.queue.max` (good for variable load). `growable` grows up to `wal.queue.max` with a single backing array. `fixed` uses a fixed-capacity ring sized at `wal.queue.initial` (lowest per-offer cost). `none` disables the WAL queue. |
 | `wal.queue.initial` | `16384` | Initial capacity of the WAL queue (number of message slots). |
-| `wal.queue.max` | `1048576` | Maximum capacity of the WAL queue. |
-| `wal.queue.chunk` | `4096` | Chunk allocation size (slots per chunk) when the `chunked` queue type grows. |
+| `wal.queue.max` | `1048576` | Maximum capacity of the WAL queue. Applies to `chunked` and `growable` types. |
 | `wal.flush_on_close` | `true` | Whether to drain and flush pending messages before shutting down the WAL writer. Set to `false` for faster shutdown at the cost of losing buffered messages. |
 
 ### Offset Publisher
@@ -116,8 +94,6 @@ These properties apply when using a Kafka WAL (`--wal <topic>` with `-k`). They 
 | `wal.kafka.compression_type` | `zstd` | Compression algorithm for WAL messages. Values: `zstd`, `snappy`, `lz4`, `gzip`, `none`. |
 | `wal.kafka.buffer_memory` | `128000000` | Total bytes the producer can use for buffering records waiting to be sent (default ~128 MB). |
 
----
-
 ## Message Publisher (PUB)
 
 The message publisher broadcasts messages to subscribers over ZeroMQ PUB sockets.
@@ -128,10 +104,9 @@ Like the WAL queue, publisher messages pass through an MPSC queue. Sizes must be
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `pub.queue.type` | `chunked` | Queue implementation: `chunked` or `unbounded`. |
+| `pub.queue.type` | `chunked` | Queue implementation (case-insensitive): `chunked`, `growable`, or `fixed`. See [WAL Queue](#queue) for the differences. `none` is rejected for the PUB queue. |
 | `pub.queue.initial` | `16384` | Initial capacity of the PUB queue. |
-| `pub.queue.max` | `1048576` | Maximum capacity of the PUB queue. |
-| `pub.queue.chunk` | `8192` | Chunk allocation size when the `chunked` queue grows. |
+| `pub.queue.max` | `1048576` | Maximum capacity of the PUB queue. Applies to `chunked` and `growable` types. |
 
 ### Publisher
 
@@ -155,7 +130,7 @@ When the publisher queue approaches capacity, the drop policy determines how to 
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `pub.drop.policy` | `drop_old` | What to do when the queue reaches the high-water mark. `drop_old` discards the oldest messages to make room. `block` blocks producers until space is available. |
+| `pub.drop.policy` | `drop_old` | What to do when the queue reaches the high-water mark (case-insensitive). `drop_old` discards the oldest messages to make room. `drop_new` drops the incoming message instead. `none` spins until space is available (effectively blocks the producer). |
 | `pub.drop.hwm_pct` | `97` | Queue fullness percentage that triggers dropping. At 97%, the publisher starts shedding messages. |
 | `pub.drop.keep_pct` | `92` | After dropping, the publisher keeps the newest messages down to this percentage of capacity. Must be less than `pub.drop.hwm_pct`. |
 

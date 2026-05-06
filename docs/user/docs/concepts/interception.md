@@ -1,12 +1,12 @@
 # Interception
 
-Interception lets you insert callbacks before, after, or around any method call at runtime - without changing code or recompiling.
+Interception lets you insert callbacks before, after, or around any method call, constructor invocation, or field access at runtime - without changing code or recompiling.
 
-> **Scope:** Interception applies to classes compiled with PAL's AspectJ weaving. It provides dynamic, runtime-registered callbacks—not static AOP aspects defined in your application code. Interception is powerful for testing, debugging, hot-patching, and monitoring, but it is not a general-purpose AOP framework or a replacement for compile-time design patterns. For trade-offs and constraints, see [Trade-offs and Limitations](trade-offs.md) and the [Limitations](#limitations) section below.
+> **Scope:** PAL interception is **networked AOP** — callbacks run in a separate peer (potentially on a different machine) and are registered at runtime through the directory, not woven into the target at compile time. The shape suits cross-cutting concerns that would otherwise need a service-mesh sidecar — telemetry, authorization, rate limiting, fault injection, A/B routing, hot-patching — but applies them at the operation level (method calls, constructor invocations, and field reads/writes) rather than the network-request level. It is not a drop-in replacement for compile-time aspects when you want in-process structural cross-cuts. For the constraints the model imposes (the target must be woven; matching is pattern-based, not type-hierarchy-based) see the [Limitations](#limitations) section.
 
 ## What is Interception?
 
-Imagine you want to know every time a method is called in a running application:
+Imagine you want to know every time a method is called, a constructor invoked, or a field read or written in a running application:
 
 - To verify it's called with correct arguments
 - To measure how long it takes
@@ -17,15 +17,108 @@ PAL's interception system lets you register these callbacks **dynamically** whil
 
 ## How Interception Works
 
-1. Your application is compiled with AspectJ weaving (automatic with `pal run`)
-2. You register an intercept pattern in the directory
-3. PAL matches method calls against the pattern
-4. When matched, PAL sends a callback message to your peer
-5. Your peer receives the callback and can inspect/modify behavior
+1. Your application's `.class` files are woven with AspectJ at build time (post-compile).
+2. You register an intercept pattern in the directory.
+3. PAL matches method calls, constructor invocations, and field accesses against the pattern.
+4. When matched, PAL sends a callback message to your peer.
+5. Your peer receives the callback and can inspect/modify behavior.
 
 **Key**: You don't modify the target code. You register intercepts from outside.
 
+## Enabling Interception
+
+### Application Must Be Woven
+
+Your application's `.class` files must be woven with AspectJ for interception to work. Weaving is a build-time step that runs post-compile — the AspectJ Gradle/Maven plugin transforms compiled `.class` files in place against the `pal-weave` aspect library. `pal run` does not weave; it provides the matching runtime aspect classpath the woven code needs.
+
+To configure weaving in your `build.gradle`:
+
+```groovy
+configurations {
+    aspectjTools
+    aspect
+}
+
+dependencies {
+    aspectjTools 'org.aspectj:aspectjtools:1.9.24'
+    aspect 'io.quasient.pal:pal-weave:${pal.version}'
+    implementation 'org.aspectj:aspectjrt:1.9.24'
+}
+
+tasks.register('weaveClasses', JavaExec) {
+    dependsOn classes
+    mainClass = 'org.aspectj.tools.ajc.Main'
+    classpath = configurations.aspectjTools
+    args = [
+        '-inpath', sourceSets.main.output.classesDirs.asPath,
+        '-aspectpath', configurations.aspect.asPath,
+        '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
+        '-classpath', sourceSets.main.compileClasspath.asPath,
+    ]
+}
+
+tasks.named('jar') { dependsOn weaveClasses }
+```
+
+<details>
+<summary>Maven equivalent (pom.xml fragments)</summary>
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>io.quasient.pal</groupId>
+        <artifactId>pal-weave</artifactId>
+        <version>${pal.version}</version>
+    </dependency>
+</dependencies>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>aspectj-maven-plugin</artifactId>
+            <version>1.15.0</version>
+            <configuration>
+                <complianceLevel>17</complianceLevel>
+                <source>17</source>
+                <target>17</target>
+                <aspectLibraries>
+                    <aspectLibrary>
+                        <groupId>io.quasient.pal</groupId>
+                        <artifactId>pal-weave</artifactId>
+                    </aspectLibrary>
+                </aspectLibraries>
+            </configuration>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>compile</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+```
+
+</details>
+
+### Peer Must Be Interceptable
+
+Start peer with interception enabled:
+
+```bash
+pal run -d localhost:2379 --interceptable -cp app.jar com.example.App
+```
+
+The `--interceptable` flag enables the intercept matcher service.
+
 ## Intercept Types
+
+The examples in this section all use `InterceptableMethodCall`. The same intercept types apply to constructors and field reads/writes:
+
+- **Constructors** — also wrapped in `InterceptableMethodCall`, but with `"new"` as the name (PAL's convention for constructor matching). For example, `new InterceptableMethodCall("new", List.of("java.lang.Integer"))` matches a single-Integer constructor on the configured class.
+- **Fields** — substitute `InterceptableFieldOp("balance", FieldOpType.GET)` (or `FieldOpType.SET` for writes) in the `InterceptRequest`. BEFORE fires before the read/write, AFTER after, and AROUND can substitute the read value or block the write.
 
 ### BEFORE
 
@@ -49,7 +142,7 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
 - Log entry to method
 - Authorization checks
 
-**Timing**: Blocks target method until callback completes.
+**Timing**: Blocks target method until callback completes (synchronous). Use `BEFORE_ASYNC` for fire-and-forget callbacks (e.g., logging method entry without blocking execution).
 
 ### AFTER
 
@@ -97,13 +190,7 @@ InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
 - Transform arguments before and return values after execution
 - Circuit breaker pattern
 
-**Timing**: Callback decides whether to call `proceed()` (execute method) or `skipProceed()` (return custom value).
-
-**Key methods**:
-
-- `ctx.proceed()` - Execute method, returns `ProceedResult` with return value or exception
-- `ctx.setReturnValue(value)` + `skipProceed()` - Skip method and return custom value
-- `ctx.setArg(index, value)` - Modify arguments before `proceed()`
+**Timing**: The callback decides whether to call `ctx.proceed()` (execute the method or next AROUND layer) or to return `InterceptCallbackResponse.skipProceed()` to short-circuit with a value set via `ctx.setReturnValue(...)`. See [Processing Callbacks](#processing-callbacks) for the full method table.
 
 ### BEFORE_ASYNC and AFTER_ASYNC
 
@@ -143,15 +230,214 @@ As a general rule, the choice between synchronous and asynchronous intercept typ
 
 When in doubt, start with asynchronous — it has zero impact on the target method's latency and cannot break application behavior. Move to synchronous only when you need the callback's result before the operation can proceed.
 
+## Registering Intercepts
+
+### From Java Code
+
+```java
+// 1. Connect to directory
+PalDirectory directory = new PalDirectory("localhost:2379");
+
+// 2. Create intercept request
+InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Service",
+    "com.example.ServiceCallback",
+    "handleProcessRequest",
+    new InterceptableMethodCall("processRequest", Collections.emptyList()));
+
+// 3. Register
+directory.createIntercept(intercept);
+
+// 4. Callbacks will now be sent to your peer
+```
+
+### Pattern Matching
+
+Class and method patterns are ant-style: `*` matches a single segment, `**` matches multiple segments. Parameter types are matched literally (no wildcards) and must be fully qualified (`java.lang.String`, not `String`); primitives use their keyword names (`int`, `long`, etc.). Omitting parameter types (empty list) matches all overloads.
+
+| Class pattern | Member name pattern | Parameter types | Matches |
+|---|---|---|---|
+| `com.example.Calculator` | `add` | (empty) | Every overload of `Calculator.add` |
+| `com.example.Calculator` | `add` | `["int", "int"]` | Only `Calculator.add(int, int)` |
+| `com.example.*` | `process*` | (empty) | Every class directly in `com.example`, every method whose name starts with `process` |
+| `com.example.**.*` | `*` | (empty) | Every class in `com.example` and any subpackage, every method |
+
+The same pattern syntax applies to both methods and fields — the `Interceptable` subtype passed to `InterceptRequest` (`InterceptableMethodCall` vs `InterceptableFieldOp`) tells PAL which kind of operation to match.
+
+In code, the class pattern is the fourth argument to `InterceptRequest`, and the member name pattern with its parameter types is wrapped in `InterceptableMethodCall`:
+
+```java
+new InterceptRequest<>(
+    UUID.randomUUID(),
+    callbackPeerUuid,
+    InterceptType.BEFORE,
+    "com.example.Calculator",                        // class pattern
+    "com.example.CalculatorCallback",
+    "handle",
+    new InterceptableMethodCall("add",               // method pattern
+        Arrays.asList("int", "int")));               // parameter types
+```
+
+## Receiving Callbacks
+
+### Setup Callback Peer
+
+```java
+// Callback methods must be public static, accept InterceptContext, return InterceptCallbackResponse
+public class CalculatorCallback {
+    public static InterceptCallbackResponse handle(InterceptContext ctx) {
+        System.out.println("Method called: " + ctx.getArgs());
+        return new InterceptCallbackResponse();
+    }
+}
+```
+
+Run the callback peer:
+```bash
+pal run -d localhost:2379 --zmq-rpc auto --rpc-default-action ALLOW \
+  -n callback-peer \
+  -cp callback.jar com.example.CallbackPeer
+```
+
+Two flags are essential:
+
+- **`--zmq-rpc auto`** — Intercept callbacks are delivered as ZMQ-RPC messages, so the callback peer must expose a ZMQ-RPC endpoint. `auto` binds to a free port; you can also pass a specific port number.
+- **`--rpc-default-action ALLOW`** — The intercepted peer must be permitted to invoke the callback class on this peer. `ALLOW` is convenient for development. For production, replace it with a policy file (`--rpc-policy <file>`) that explicitly admits the intercepting peer to the callback's class and method. See [RPC Policy](rpc-policy.md) for the full policy model.
+
+### Processing Callbacks
+
+When a matched operation runs, the callback receives an `InterceptContext`. The methods available depend on the intercept type:
+
+| Method | Purpose | BEFORE | AFTER | AROUND | *_ASYNC |
+|---|---|:---:|:---:|:---:|:---:|
+| `getArgs()` | Read the call's arguments | ✓ | ✓ | ✓ | ✓ |
+| `setArg(i, v)` | Mutate an argument | ✓ | — | ✓ (before `proceed`) | — |
+| `getReturnValue()` | Read the method's return value | — | ✓ | ✓ (after `proceed`) | — |
+| `setReturnValue(v)` | Override the return value | — | ✓ | ✓ | — |
+| `setExceptionToThrow(t)` | Cause an exception to propagate | ✓ | ✓ | ✓ | — |
+| `proceed()` | Execute the method (or next AROUND layer); returns `ProceedResult` | — | — | ✓ | — |
+| `getLocalMetadata()` | Inspect the intercepted operation (class, member name, etc.) | ✓ | ✓ | ✓ | ✓ |
+
+The context is phase-aware: calling an unsupported method (e.g., `getReturnValue()` from a BEFORE callback) throws `InterceptTypeNotSupportedException`. Within an AROUND callback, calling `setArg()` after `proceed()` throws `InterceptPhaseViolationException`.
+
+The callback's return value tells PAL how to continue:
+
+- `new InterceptCallbackResponse()` — proceed normally (execute the method or next AROUND layer).
+- `InterceptCallbackResponse.skipProceed()` — AROUND only; skip the method (and any inner AROUND layers) and return whatever was set via `setReturnValue()`.
+
+See [Writing Callback Handlers](../guides/writing-callback-handlers.md) for the full API.
+
+## Common Use Cases
+
+### Testing: Verify Method Calls
+
+`startApplicationPeer()` and `startCallbackPeer()` below stand in for your test harness — typically methods on a shared base class that launch `pal run` subprocesses and return their UUIDs.
+
+```java
+@Test
+public void serviceIsCalledWithExpectedArgs() {
+    UUID appPeer = startApplicationPeer();
+    UUID callbackPeer = startCallbackPeer();
+
+    directory.createIntercept(new InterceptRequest<>(
+        UUID.randomUUID(), callbackPeer, InterceptType.BEFORE,
+        "com.example.Service", "com.example.ServiceCallback", "handle",
+        new InterceptableMethodCall("processRequest", Collections.emptyList())));
+
+    app.doSomething();
+
+    // ServiceCallback.handle stores each invocation's args for assertion
+    assertEquals(1, ServiceCallback.getCalls().size());
+    assertArrayEquals(expectedArgs, ServiceCallback.getCalls().get(0));
+}
+```
+
+### Monitoring: Track Performance
+
+A pair of `BEFORE` / `AFTER` intercepts on the same callback peer measures wall-clock latency for every method on `Service`:
+
+```java
+// Pair: record start in BEFORE, log elapsed in AFTER. Same callback class.
+directory.createIntercept(new InterceptRequest<>(
+    UUID.randomUUID(), monitorPeer, InterceptType.BEFORE,
+    "com.example.Service", "com.example.MonitorCallback", "onBefore",
+    new InterceptableMethodCall("*", Collections.emptyList())));
+
+directory.createIntercept(new InterceptRequest<>(
+    UUID.randomUUID(), monitorPeer, InterceptType.AFTER,
+    "com.example.Service", "com.example.MonitorCallback", "onAfter",
+    new InterceptableMethodCall("*", Collections.emptyList())));
+
+public class MonitorCallback {
+    private static final Map<String, Long> starts = new ConcurrentHashMap<>();
+
+    public static InterceptCallbackResponse onBefore(InterceptContext ctx) {
+        starts.put(Thread.currentThread().getName(), System.nanoTime());
+        return new InterceptCallbackResponse();
+    }
+
+    public static InterceptCallbackResponse onAfter(InterceptContext ctx) {
+        Long t0 = starts.remove(Thread.currentThread().getName());
+        if (t0 != null) {
+            log.info("{} took {} ms",
+                ctx.getLocalMetadata().methodName(),
+                (System.nanoTime() - t0) / 1_000_000);
+        }
+        return new InterceptCallbackResponse();
+    }
+}
+```
+
+### Debugging: Audit Trail
+
+Use `BEFORE_ASYNC` so audit logging never blocks the audited code:
+
+```java
+directory.createIntercept(new InterceptRequest<>(
+    UUID.randomUUID(), auditPeer, InterceptType.BEFORE_ASYNC,
+    "com.example.**.*", "com.example.AuditCallback", "log",
+    new InterceptableMethodCall("*", Collections.emptyList())));
+
+public class AuditCallback {
+    public static InterceptCallbackResponse log(InterceptContext ctx) {
+        logger.info("{} called with {}",
+            ctx.getLocalMetadata().methodName(),
+            Arrays.toString(ctx.getArgs()));
+        return new InterceptCallbackResponse();
+    }
+}
+```
+
+### Testing: Mock Return Values
+
+`AROUND` with `skipProceed()` substitutes a value without invoking the real method:
+
+```java
+directory.createIntercept(new InterceptRequest<>(
+    UUID.randomUUID(), mockPeer, InterceptType.AROUND,
+    "com.example.DatabaseService", "com.example.MockCallback", "stub",
+    new InterceptableMethodCall("queryDatabase", Collections.emptyList())));
+
+public class MockCallback {
+    public static InterceptCallbackResponse stub(InterceptContext ctx) {
+        ctx.setReturnValue(mockData);
+        return InterceptCallbackResponse.skipProceed();
+    }
+}
+```
+
 ## Multiple Intercepts and Ordering
 
 When multiple intercepts match the same operation, they execute in a specific order determined by three factors:
 
 ### Execution Order
 
-1. **Local vs Remote**: Local intercepts (callback peer = intercepted peer) always execute **before** remote intercepts
-2. **Priority**: Within each local/remote group, intercepts with lower priority values execute first (default priority is `0`)
-3. **Registration order**: Intercepts with the same priority execute in the order they were registered (tie-breaker)
+1. **Local vs Remote**: Local intercepts (callback peer = intercepted peer) always execute **before** remote intercepts.
+2. **Priority**: Within each local/remote group, intercepts with lower priority values execute first (default priority is `0`).
+3. **Registration order**: Intercepts with the same priority execute in the order they were registered (tie-breaker).
 
 ```
 BEFORE phase:
@@ -235,18 +521,18 @@ For AROUND intercepts, priority determines the layer in the onion model:
 
 ```
 ┌─ AROUND priority=-100 (outermost) ──────────────────┐
-│  BEFORE logic runs FIRST                             │
-│  ctx.proceed() ─────────────────────────────────────▶│
-│    ┌─ AROUND priority=0 ────────────────────────┐    │
-│    │  ctx.proceed() ───────────────────────────▶ │    │
-│    │    ┌─ AROUND priority=100 (innermost) ──┐   │    │
-│    │    │  ctx.proceed() ──────────────────────────▶ [METHOD]
-│    │    │  AFTER logic                       │   │    │
-│    │    └────────────────────────────────────┘   │    │
-│    │  AFTER logic                                │    │
-│    └─────────────────────────────────────────────┘    │
-│  AFTER logic runs LAST                                │
-└───────────────────────────────────────────────────────┘
+│  BEFORE logic runs FIRST                            │
+│  ctx.proceed() ────────────────────────────────────▶│
+│    ┌─ AROUND priority=0 ────────────────────────┐   │
+│    │  ctx.proceed() ───────────────────────────▶│   │
+│    │    ┌─ AROUND priority=100 (innermost) ──┐  │   │
+│    │    │  ctx.proceed() ───────────────────────▶ [METHOD]
+│    │    │  AFTER logic                       │   │  │
+│    │    └────────────────────────────────────┘   │  │
+│    │  AFTER logic                                │  │
+│    └─────────────────────────────────────────────┘  │
+│  AFTER logic runs LAST                              │
+└─────────────────────────────────────────────────────┘
 ```
 
 ### AROUND Chaining (Onion Model)
@@ -255,10 +541,10 @@ Multiple AROUND intercepts form a **chain** where each `proceed()` invokes the n
 
 ```
 ┌─ Local AROUND #1 (outermost) ───────────────────────────┐
-│  BEFORE logic                                            │
+│  BEFORE logic                                           │
 │  ctx.proceed() ─────────────────────────────────────────┼──▶
 │    ┌─ Local AROUND #2 ──────────────────────────────┐   │
-│    │  BEFORE logic                                   │   │
+│    │  BEFORE logic                                  │   │
 │    │  ctx.proceed() ────────────────────────────────┼───┼──▶
 │    │    ┌─ Remote AROUND #1 (innermost) ────────┐   │   │
 │    │    │  ctx.proceed() ───────────────────────┼───┼───┼──▶ [METHOD]
@@ -273,9 +559,9 @@ Multiple AROUND intercepts form a **chain** where each `proceed()` invokes the n
 
 **Key behaviors**:
 
-- **Argument mutations propagate inward**: Each layer sees cumulative mutations from outer layers
-- **Return values propagate outward**: Each layer can modify the return value from inner layers
-- **Skip affects all inner layers**: When any layer calls `skipProceed()`, all inner layers (including the method) are bypassed
+- **Argument mutations propagate inward**: Each layer sees cumulative mutations from outer layers.
+- **Return values propagate outward**: Each layer can modify the return value from inner layers.
+- **Skip affects all inner layers**: When any layer calls `skipProceed()`, all inner layers (including the method) are bypassed.
 
 ### Argument Mutation in AROUND Chains
 
@@ -295,282 +581,6 @@ Multiple AROUND intercepts form a **chain** where each `proceed()` invokes the n
 // Final result = 30
 ```
 
-## Registering Intercepts
-
-### From Java Code
-
-```java
-// 1. Connect to directory
-PalDirectory directory = new PalDirectory("localhost:2379");
-
-// 2. Create intercept request
-InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
-    UUID.randomUUID(),
-    callbackPeerUuid,
-    InterceptType.BEFORE,
-    "com.example.Service",
-    "com.example.ServiceCallback",
-    "handleProcessRequest",
-    new InterceptableMethodCall("processRequest", Collections.emptyList()));
-
-// 3. Register
-directory.createIntercept(intercept);
-
-// 4. Callbacks will now be sent to your peer
-```
-
-### Pattern Matching
-
-Use ant-style patterns to match classes and methods:
-
-#### Exact Match (all overloads)
-```java
-// clazz and InterceptableMethodCall name
-"com.example.Calculator", ..., new InterceptableMethodCall("add", Collections.emptyList())
-```
-Matches all overloads of `Calculator.add` regardless of parameter types. An empty parameter list acts as a wildcard.
-
-#### Wildcard
-```java
-// clazz and InterceptableMethodCall name
-"com.example.*", ..., new InterceptableMethodCall("process*", Collections.emptyList())
-```
-Matches all classes in `com.example` package with methods starting with "process" (any parameter types).
-
-#### Exact Match with Parameter Types
-```java
-// clazz and InterceptableMethodCall name + parameterTypes
-"com.example.Calculator", ..., new InterceptableMethodCall("add", Arrays.asList("int", "int"))
-```
-Matches only `Calculator.add(int, int)`. Other overloads like `add(double, double)` are not intercepted. Parameter types must be fully qualified (e.g., `java.lang.String`, not `String`). Omit parameter types (empty list) to match all overloads.
-
-#### Recursive
-```java
-// clazz and InterceptableMethodCall name
-"com.example.**.*", ..., new InterceptableMethodCall("*", Collections.emptyList())
-```
-Matches all classes in `com.example` and subpackages, all methods (any parameter types).
-
-## Receiving Callbacks
-
-### Setup Callback Peer
-
-```java
-// Callback methods must be public static, accept InterceptContext, return InterceptCallbackResponse
-public class CalculatorCallback {
-    public static InterceptCallbackResponse handle(InterceptContext ctx) {
-        System.out.println("Method called: " + ctx.getArgs());
-        return new InterceptCallbackResponse();
-    }
-}
-```
-
-Run the callback peer:
-```bash
-pal run -d localhost:2379 --json-rpc auto -n callback-peer \
-  -cp callback.jar com.example.CallbackPeer
-```
-
-### Processing Callbacks
-
-When a matched method is called, your callback peer receives an `InterceptContext` providing:
-
-- `getArgs()`: Arguments array
-- `setArg(index, value)`: Mutate an argument (BEFORE, AROUND before proceed)
-- `getReturnValue()`: Return value (AFTER, AROUND after proceed)
-- `setReturnValue(value)`: Override return value (AFTER, AROUND after proceed)
-- `proceed()`: Execute the method or next layer in the chain (AROUND only), returns `ProceedResult`
-
-The context is phase-aware — calling unsupported operations (e.g., `getReturnValue()` in BEFORE) throws `InterceptTypeNotSupportedException`.
-
-See [Writing Callback Handlers](../guides/writing-callback-handlers.md) for the full API.
-
-## Common Use Cases
-
-### Testing: Verify Method Calls
-
-```java
-@Test
-public void testServiceCalledWithCorrectArgs() {
-    // 1. Start application under test
-    UUID appPeerUuid = startApplicationPeer();
-
-    // 2. Start callback peer
-    UUID callbackPeerUuid = startCallbackPeer();
-
-    // 3. Register intercept
-    InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
-        UUID.randomUUID(),
-        callbackPeerUuid,
-        InterceptType.BEFORE,
-        "com.example.Service",
-        "com.example.ServiceCallback",
-        "handle",
-        new InterceptableMethodCall("processRequest", Collections.emptyList()));
-    directory.createIntercept(intercept);
-
-    // 4. Trigger application behavior
-    app.doSomething();
-
-    // 5. Verify callback was received (your callback stores calls for assertion)
-    assertEquals(1, ServiceCallback.getCalls().size());
-    assertArrayEquals(expectedArgs, ServiceCallback.getCalls().get(0));
-}
-```
-
-### Monitoring: Track Performance
-
-```java
-// Measure method execution time
-InterceptRequest<InterceptableMethodCall> beforeIntercept = new InterceptRequest<>(
-    UUID.randomUUID(),
-    monitorPeerUuid,
-    InterceptType.BEFORE,
-    "com.example.Service",
-    "com.example.MonitorCallback",
-    "handleBeforeCallback",
-    new InterceptableMethodCall("*", Collections.emptyList()));
-
-InterceptRequest<InterceptableMethodCall> afterIntercept = new InterceptRequest<>(
-    UUID.randomUUID(),
-    monitorPeerUuid,
-    InterceptType.AFTER,
-    "com.example.Service",
-    "com.example.MonitorCallback",
-    "handleAfterCallback",
-    new InterceptableMethodCall("*", Collections.emptyList()));
-
-// In monitor peer:
-public class MonitorCallback {
-    private static final Map<String, Long> startTimes = new ConcurrentHashMap<>();
-
-    public static InterceptCallbackResponse handleBeforeCallback(InterceptContext ctx) {
-        startTimes.put(Thread.currentThread().getName(), System.nanoTime());
-        return new InterceptCallbackResponse();
-    }
-
-    public static InterceptCallbackResponse handleAfterCallback(InterceptContext ctx) {
-        Long startTime = startTimes.remove(Thread.currentThread().getName());
-        if (startTime != null) {
-            long duration = System.nanoTime() - startTime;
-            System.out.println("Call took " + (duration / 1_000_000) + "ms");
-        }
-        return new InterceptCallbackResponse();
-    }
-}
-```
-
-### Debugging: Audit Trail
-
-```java
-// Log all method calls
-InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
-    UUID.randomUUID(),
-    auditPeerUuid,
-    InterceptType.BEFORE,
-    "com.example.**.*",
-    "com.example.AuditCallback",
-    "handleCallback",
-    new InterceptableMethodCall("*", Collections.emptyList()));
-
-// In audit peer:
-public class AuditCallback {
-    public static InterceptCallbackResponse handleCallback(InterceptContext ctx) {
-        log.info("Intercepted call with args: {}", Arrays.toString(ctx.getArgs()));
-        return new InterceptCallbackResponse();
-    }
-}
-```
-
-### Testing: Mock Return Values
-
-```java
-// Mock expensive operation
-InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
-    UUID.randomUUID(),
-    mockPeerUuid,
-    InterceptType.AROUND,
-    "com.example.DatabaseService",
-    "com.example.MockCallback",
-    "handleAroundCallback",
-    new InterceptableMethodCall("queryDatabase", Collections.emptyList()));
-
-// In mock peer:
-public class MockCallback {
-    public static InterceptCallbackResponse handleAroundCallback(InterceptContext ctx) {
-        // Return mock data instead of hitting database
-        ctx.setReturnValue(mockData);
-        return InterceptCallbackResponse.skipProceed();
-    }
-}
-```
-
-## Enabling Interception
-
-### Application Must Be Woven
-
-Your application needs AspectJ weaving for interception to work. With `pal run`, this is automatic.
-
-If building a JAR manually, configure AspectJ in your `build.gradle`:
-
-```groovy
-configurations {
-    aspectjTools
-    aspect
-}
-
-dependencies {
-    aspectjTools 'org.aspectj:aspectjtools:1.9.24'
-    aspect 'io.quasient.pal:pal-weave:${pal.version}'
-    implementation 'org.aspectj:aspectjrt:1.9.24'
-}
-
-tasks.register('weaveClasses', JavaExec) {
-    dependsOn classes
-    mainClass = 'org.aspectj.tools.ajc.Main'
-    classpath = configurations.aspectjTools
-    args = [
-        '-inpath', sourceSets.main.output.classesDirs.asPath,
-        '-aspectpath', configurations.aspect.asPath,
-        '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
-        '-classpath', sourceSets.main.compileClasspath.asPath,
-    ]
-}
-
-tasks.named('jar') { dependsOn weaveClasses }
-```
-
-<details>
-<summary>Maven equivalent (pom.xml)</summary>
-
-```xml
-<plugin>
-    <groupId>org.codehaus.mojo</groupId>
-    <artifactId>aspectj-maven-plugin</artifactId>
-    <configuration>
-        <aspectLibraries>
-            <aspectLibrary>
-                <groupId>io.quasient.pal</groupId>
-                <artifactId>pal-weave</artifactId>
-            </aspectLibrary>
-        </aspectLibraries>
-    </configuration>
-</plugin>
-```
-
-</details>
-
-### Peer Must Be Interceptable
-
-Start peer with interception enabled:
-
-```bash
-pal run -d localhost:2379 --interceptable \
-  -cp app.jar com.example.App
-```
-
-The `--interceptable` flag enables the intercept matcher service.
-
 ## Intercept Activation Safety
 
 By default, PAL waits for in-flight operations to finish before activating a new intercept. This applies to methods, constructors, and field operations. It ensures no execution sees a partially-activated intercept -- for example, a BEFORE callback fires but the method was already past that point.
@@ -579,10 +589,10 @@ By default, PAL waits for in-flight operations to finish before activating a new
 
 When a new intercept is registered, PAL:
 
-1. **Fences** the matching operations so no new calls can start
-2. **Waits** for all currently executing matching calls to complete (drain)
-3. **Activates** the intercept once all in-flight calls finish
-4. **Unfences** so new calls proceed with the intercept active
+1. **Fences** the matching operations so no new calls can start.
+2. **Waits** for all currently executing matching calls to complete (drain).
+3. **Activates** the intercept once all in-flight calls finish.
+4. **Unfences** so new calls proceed with the intercept active.
 
 This guarantees that every call either completes entirely without the intercept or executes entirely with it -- never a mix.
 
@@ -709,99 +719,13 @@ try (InterceptLease lease = directory.createIntercept(intercept, 300)) {
 
 When a TTL expires without being refreshed:
 
-1. etcd deletes the intercept key
-2. The peer's `InterceptInformer` receives a DELETE watch event
-3. `InterceptMatcher` unregisters the intercept
-4. No further callbacks fire for the expired intercept
-5. The corresponding `InterceptLease` entry is removed from `PalDirectory`
+1. etcd deletes the intercept key.
+2. The peer's `InterceptInformer` receives a DELETE watch event.
+3. `InterceptMatcher` unregisters the intercept.
+4. No further callbacks fire for the expired intercept.
+5. The corresponding `InterceptLease` entry is removed from `PalDirectory`.
 
 This is the same deletion path used for manual removal — the system does not distinguish between TTL expiry and explicit deletion.
-
-## Managing Intercepts
-
-### List Active Intercepts
-
-List intercepts via the CLI or Java API:
-
-```bash
-# List all intercepts
-pal intercept ls -d localhost:2379
-
-# List with details (includes TTL column)
-pal intercept ls -d localhost:2379 -l
-```
-
-Or query programmatically:
-
-```java
-List<InterceptRequest> intercepts = directory.listIntercepts();
-```
-
-### Remove Intercept
-
-```java
-directory.removeIntercept(interceptUuid);
-```
-
-### Update Intercept
-
-Remove the old one and create a new one:
-
-```java
-directory.removeIntercept(oldInterceptUuid);
-directory.createIntercept(newInterceptRequest);
-```
-
-## Performance Impact
-
-### Overhead
-
-- **Woven method calls**: ~10-50ns per call (always paid)
-- **Pattern matching**: ~100-500ns per call (if intercepts registered)
-- **BEFORE callback**: Full RPC roundtrip (~100μs-1ms)
-- **AFTER callback**: Message send only (~10-100μs, async)
-
-### Optimization Tips
-
-1. **Use specific patterns**: Narrow patterns match fewer calls
-2. **Remove unused intercepts**: Reduces matching overhead
-3. **Use AFTER for monitoring**: Doesn't block the caller
-4. **Batch callbacks**: Register one intercept for multiple methods
-
-## Debugging Interception
-
-### Intercept Not Firing
-
-**Check 1**: Is application woven?
-```bash
-javap -c MyClass.class | grep aspectOf
-```
-Should see AspectJ calls. If not, rebuild with AspectJ plugin.
-
-**Check 2**: Is peer interceptable?
-```bash
-pal peer ls -d localhost:2379 -l
-```
-Look for intercept support indicator.
-
-**Check 3**: Does pattern match?
-```bash
-# Enable debug logging in peer
-<logger name="io.quasient.pal.core.InterceptMatcher" level="DEBUG"/>
-```
-
-### Callback Peer Not Receiving
-
-**Check 1**: Is callback peer running?
-```bash
-pal peer ls -d localhost:2379 | grep callback-peer
-```
-
-**Check 2**: Is callback peer's RPC endpoint correct?
-```bash
-pal peer ls -d localhost:2379 -l
-```
-Verify RPC endpoint is accessible.
 
 ## Exception Propagation
 
@@ -809,27 +733,35 @@ When callback handlers throw exceptions, PAL provides policies to control whethe
 
 ### Exception Propagation Policies
 
-**PROPAGATE_CONTROLLED_ONLY** (default) - Only propagate exceptions that are explicitly set via `ctx.setExceptionToThrow()` and the callback completes successfully:
+**PROPAGATE_CONTROLLED_ONLY** (default) — propagates exceptions only when **both** conditions hold: the callback completed without throwing **and** it explicitly called `ctx.setExceptionToThrow()`. Any callback crash discards the result, including any explicit exception set before the crash.
 
 ```java
-// This will propagate
+// Propagates: callback completes cleanly, explicit exception set
 ctx.setExceptionToThrow(new SecurityException("Access denied"));
 return new InterceptCallbackResponse();
 
-// This will NOT propagate (callback crashed)
+// Does NOT propagate: callback crashed
+throw new RuntimeException("Callback bug");
+
+// Does NOT propagate: explicit exception was set, but callback then crashed
+ctx.setExceptionToThrow(new ValidationException("..."));
+throw new RuntimeException("Bug after setExceptionToThrow");
+```
+
+**Use when**: production systems where callback stability matters and only deliberate, cleanly-signaled exceptions should reach application code. Recommended default.
+
+**PROPAGATE_EXPLICIT_ONLY** — propagates any exception that was explicitly set via `ctx.setExceptionToThrow()`, **even if the callback subsequently crashed**. Accidental crashes alone (with no explicit set) are logged but do not propagate.
+
+```java
+// Propagates: explicit exception was set, even though callback then crashed
+ctx.setExceptionToThrow(new ValidationException("..."));
+throw new RuntimeException("Bug after setExceptionToThrow");
+
+// Does NOT propagate: accidental crash with no explicit set
 throw new RuntimeException("Callback bug");
 ```
 
-**Use when**: You want callbacks to signal errors explicitly while protecting against callback bugs.
-
-**PROPAGATE_EXPLICIT_ONLY** - Only propagate exceptions explicitly set via `ctx.setExceptionToThrow()`:
-
-```java
-// Same behavior as PROPAGATE_CONTROLLED_ONLY but stricter
-// Even if callback completes normally, only explicit exceptions propagate
-```
-
-**Use when**: You need fine-grained control over which exceptions propagate.
+**Use when**: explicit exceptions must always propagate, even in the face of buggy callback code that crashes after signaling.
 
 **PROPAGATE_ALL** - Propagate all exceptions, including callback crashes:
 
@@ -893,8 +825,8 @@ pal run --exception-policy PROPAGATE_ALL \
         -cp app.jar
 
 # Via environment variables
-export EXCEPTION_POLICY=PROPAGATE_ALL
-export CHECKED_EXCEPTION_POLICY=REJECT
+export PAL_EXCEPTION_POLICY=PROPAGATE_ALL
+export PAL_CHECKED_EXCEPTION_POLICY=REJECT
 
 # Via system properties
 -Dpal.intercept.exception-policy.default=PROPAGATE_ALL
@@ -959,7 +891,7 @@ new InterceptRequest<>(
 public class MetricsCallback {
     public static InterceptCallbackResponse handle(InterceptContext ctx) {
         // Even if metrics system crashes, don't break application
-        metrics.record(ctx.getMethod(), ctx.getReturnValue());
+        metrics.record(ctx.getLocalMetadata().methodName(), ctx.getReturnValue());
         return new InterceptCallbackResponse();
     }
 }
@@ -986,7 +918,7 @@ public class ExceptionWrapperCallback {
         ProceedResult result = ctx.proceed();
 
         if (result.hasException()) {
-            Throwable original = result.getException();
+            Throwable original = result.getThrownException();
             // Wrap low-level exceptions in domain exceptions
             ctx.setExceptionToThrow(
                 new ServiceException("Operation failed", original)
@@ -1054,6 +986,32 @@ new InterceptRequest<>(
 
 This is because async intercepts don't block the caller, so there's no synchronous path to propagate exceptions.
 
+## Callback Timeouts
+
+By default, the intercepted peer waits 3000ms for a callback peer to respond to synchronous BEFORE/AFTER callbacks. This can be configured at two levels:
+
+**Global default** via `pal run --callback-timeout-ms <ms>` (or env var `PAL_CALLBACK_TIMEOUT_MS`):
+
+- `--callback-timeout-ms 3000` — wait up to 3 seconds (default)
+- `--callback-timeout-ms 0` — no timeout (infinite wait)
+
+**Per-intercept override** via the `callbackTimeout` field in intercept bundles:
+```yaml
+defaults:
+  callbackTimeout: "5s"
+
+intercepts:
+  - target: "com.example.Calculator.add"
+    type: BEFORE
+    callbackTimeout: "500ms"  # overrides default for this intercept
+```
+
+Supported duration units: `ms`, `s`, `m`, `h`, `d`.
+
+Timeout resolution order: per-intercept override → bundle defaults → global peer setting.
+
+When a callback times out, the intercepted peer logs a warning and proceeds as if the callback returned `shouldProceed=true` with no mutations.
+
 ## Intercept Bundles
 
 When working with multiple intercepts, defining them individually can become tedious and error-prone. **Intercept bundles** let you declare a group of related intercepts and manage them as a unit --- either via YAML files on the CLI, or programmatically from Java code.
@@ -1104,7 +1062,7 @@ intercepts:
 
 Each entry under `intercepts` uses the `target` field in `ClassName.memberName` format. The `defaults` section sets values inherited by all intercepts unless individually overridden.
 
-The optional `params` field restricts matching to a specific method overload. When `params` is omitted, the intercept matches all overloads of the target method. Parameter types must be fully qualified (e.g., `com.acme.payment.Order`, not `Order`).
+The optional `params` field restricts matching to a specific method or constructor overload. When `params` is omitted, the intercept matches all overloads of the target method or constructor. Parameter types must be fully qualified (e.g., `com.acme.payment.Order`, not `Order`).
 
 ### Bundle Commands
 
@@ -1220,31 +1178,99 @@ RemoveResult removed = manager.removeByBundle("fraud-check-v1");
 
 The programmatic API uses the same `InterceptManager` as the CLI commands. Applying a bundle is idempotent regardless of whether it was applied via YAML or the builder API.
 
-## Callback Timeouts
+## Managing Intercepts
 
-By default, the intercepted peer waits 3000ms for a callback peer to respond to synchronous BEFORE/AFTER callbacks. This can be configured at two levels:
+### List Active Intercepts
 
-**Global default** via `pal run --callback-timeout-ms <ms>` (or env var `PAL_CALLBACK_TIMEOUT_MS`):
+List intercepts via the CLI or Java API:
 
-- `--callback-timeout-ms 3000` — wait up to 3 seconds (default)
-- `--callback-timeout-ms 0` — no timeout (infinite wait)
+```bash
+# List all intercepts
+pal intercept ls -d localhost:2379
 
-**Per-intercept override** via the `callbackTimeout` field in intercept bundles:
-```yaml
-defaults:
-  callbackTimeout: "5s"
-
-intercepts:
-  - target: "com.example.Calculator#add"
-    type: BEFORE
-    callbackTimeout: "500ms"  # overrides default for this intercept
+# List with details (includes TTL column)
+pal intercept ls -d localhost:2379 -l
 ```
 
-Supported duration units: `ms`, `s`, `m`, `h`, `d`.
+Or query programmatically:
 
-Timeout resolution order: per-intercept override → bundle defaults → global peer setting.
+```java
+// All intercepts in the directory
+Set<InterceptRequest> all = directory.listAllIntercepts();
 
-When a callback times out, the intercepted peer logs a warning and proceeds as if the callback returned `shouldProceed=true` with no mutations.
+// Only intercepts whose callback peer is the given peer
+Set<InterceptRequest> forPeer = directory.listInterceptsForPeer(callbackPeerUuid);
+```
+
+### Remove Intercept
+
+```java
+// Both UUIDs are required: the callback peer and the intercept itself
+directory.deleteIntercept(callbackPeerUuid, interceptUuid);
+```
+
+### Update Intercept
+
+Remove the old one and create a new one:
+
+```java
+directory.deleteIntercept(callbackPeerUuid, oldInterceptUuid);
+directory.createIntercept(newInterceptRequest);
+```
+
+## Performance Impact
+
+### Overhead
+
+Interception adds cost in three places. Concrete numbers depend on the JVM, host, payload size, and whether the callback peer is local or remote, so the descriptions below are qualitative.
+
+- **Woven call sites** (always paid): A small bytecode-level thunk runs whether or not any intercept is active. The cost is negligible compared to typical method bodies.
+- **Pattern matching** (only when intercepts are registered): On every woven call, PAL checks the active intercept set. Cost grows with the number of registered intercepts and depends on pattern specificity — a narrow pattern is cheaper to evaluate than a broad wildcard.
+- **Callback dispatch** (only when an intercept matches):
+  - **Synchronous** (`BEFORE`, `AFTER`, `AROUND`): a full RPC roundtrip to the callback peer; the intercepted call blocks until it completes.
+  - **Asynchronous** (`BEFORE_ASYNC`, `AFTER_ASYNC`): a one-way send; the intercepted call does not wait.
+
+### Optimization Tips
+
+1. **Use specific patterns**: Narrow patterns match fewer calls and are cheaper to evaluate.
+2. **Remove unused intercepts**: Reduces matching overhead on every woven call.
+3. **Use async types for observability**: `BEFORE_ASYNC`/`AFTER_ASYNC` don't block the caller.
+4. **Batch callbacks**: Register one intercept for multiple methods
+
+## Debugging Interception
+
+### Intercept Not Firing
+
+**Check 1**: Is application woven?
+```bash
+javap -c MyClass.class | grep aspectOf
+```
+Should see AspectJ calls. If not, rebuild with AspectJ plugin.
+
+**Check 2**: Is peer interceptable?
+```bash
+pal peer ls -d localhost:2379 -l
+```
+Look for intercept support indicator.
+
+**Check 3**: Does pattern match?
+```bash
+# Enable debug logging in peer
+<logger name="io.quasient.pal.core.intercept.InterceptMatcher" level="DEBUG"/>
+```
+
+### Callback Peer Not Receiving
+
+**Check 1**: Is callback peer running?
+```bash
+pal peer ls -d localhost:2379 | grep callback-peer
+```
+
+**Check 2**: Is callback peer's RPC endpoint correct?
+```bash
+pal peer ls -d localhost:2379 -l
+```
+Verify RPC endpoint is of type ZMQ and accessible.
 
 ## Limitations
 
@@ -1276,9 +1302,10 @@ Callback argument and return value serialization is limited to simple types (pri
 
 Anyone with directory access can register intercepts on any peer. To restrict:
 
-1. Use network security (firewall etcd access)
-2. Implement authorization in your intercept handler
-3. Don't run untrusted code with `--interceptable`
+1. Enable etcd authentication (RBAC) and restrict which credentials can write under the intercept keyspace.
+2. Use network security — firewall etcd access and use mTLS — so untrusted clients cannot reach the directory.
+3. Implement authorization in your intercept handler so even an unauthorized registration cannot trigger privileged operations.
+4. Don't run untrusted code with `--interceptable`.
 
 ## Further Reading
 
@@ -1286,5 +1313,4 @@ Anyone with directory access can register intercepts on any peer. To restrict:
 - [RPC](rpc.md) - How callbacks are delivered
 - [CLI Reference: Intercept Commands](../cli-reference.md#pal-intercept-apply-apply-intercept-bundle) - Full reference for bundle CLI commands
 - [Writing Callback Handlers](../guides/writing-callback-handlers.md) - Implementing callback logic with practical examples
-- [Testing Guide](../guides/testing-with-interception.md) - Practical testing patterns
 - [Local Development](../guides/local-development.md) - Setting up for interception

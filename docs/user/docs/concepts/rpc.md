@@ -1,19 +1,19 @@
 # Remote Procedure Calls (RPC)
 
-PAL's RPC system enables method invocation across peers, primarily supporting intercept callbacks, development workflows, testing, and operational tooling.
+PAL's RPC system enables method invocation across peers. It is the transport for intercept callbacks and is also useful for development workflows, testing, debugging, and operational tooling.
+
+For production inter-service communication needing type safety, schema evolution, or high-throughput optimization, use purpose-built RPC frameworks (gRPC, Thrift) alongside PAL — see [Understanding PAL → What PAL Is Not](../understanding-pal.md#what-pal-is-not) for the full framing.
 
 ## How RPC Works
 
-> **Positioning:** PAL's RPC system is infrastructure that supports PAL's core capabilities—intercept callbacks, development workflows, testing, debugging, and operational tooling. It provides flexible, dynamic method invocation between peers without requiring service definitions or code generation. For production inter-service communication requiring type safety, schema evolution, and high-throughput optimization, purpose-built RPC frameworks (gRPC, Thrift, etc.) are more appropriate. PAL's RPC is complementary to these frameworks, not a replacement.
-
 When your code calls a method, PAL:
 
-1. Intercepts the call (via AspectJ weaving)
-2. Serializes the method name and arguments
-3. Sends the message to the target peer
-4. Target peer deserializes and executes
-5. Result is serialized and returned
-6. Your code receives the result
+1. Intercepts the call (via AspectJ weaving).
+2. Serializes the method name and arguments.
+3. Sends the message to the target peer.
+4. Target peer deserializes and executes.
+5. Result is serialized and returned.
+6. Your code receives the result.
 
 **From your perspective**: It looks like a normal method call.
 
@@ -51,7 +51,12 @@ For programmatic usage from Java, see [Binary RPC (MessageBuilder)](rpc-binary.m
 
 Start peer with JSON-RPC:
 ```bash
+# Random port (auto) — discover with `pal peer ls -l` or check the peer's startup log
 pal run -d localhost:2379 --json-rpc auto \
+  -cp app.jar com.example.Service
+
+# Fixed port — easier when the call command needs a known address
+pal run -d localhost:2379 --json-rpc 9001 \
   -cp app.jar com.example.Service
 ```
 
@@ -75,8 +80,8 @@ PAL provides programmatic APIs for both RPC formats, at varying levels of abstra
 
 Each layer produces the same wire-format messages — they differ only in how much bookkeeping the caller does:
 
-- **Raw JSON** — you construct the JSON, manage request IDs, and track ObjectRefs yourself. See [JSON-RPC API Reference](#json-rpc-api-reference) below.
-- **JsonRpcMessageFactory** — you call Java methods that return `JsonRpcRequest` objects; the factory handles JSON structure and ID generation. See [JsonRpcMessageFactory](#jsonrpcmessagefactory) in the API Reference.
+- **Raw JSON** — you construct the JSON, manage request IDs, and track ObjectRefs yourself. See [JSON-RPC Reference](rpc-json.md).
+- **JsonRpcMessageFactory** — you call Java methods that return `JsonRpcRequest` objects; the factory handles JSON structure and ID generation. See [JsonRpcMessageFactory](rpc-json.md#jsonrpcmessagefactory).
 - **RpcChain DSL** — you describe a sequence of operations; the DSL handles ObjectRef resolution, request ordering, and result extraction. See [RpcChain DSL](rpc-chain.md).
 
 ### Binary RPC layer
@@ -108,20 +113,14 @@ pal peer call -d localhost:2379 peer-name \
   com.example.Processor data1 data2
 ```
 
-**Note**: CLI mode only works with methods that have `String[]` signature.
+**Note**: this argument-passing form only works with methods that have a `static void method(String[] args)` signature. For arbitrary signatures, see [Via JSON-RPC](#via-json-rpc) below or [CLI Reference → JSON-RPC Stdin Mode](../cli-reference.md#2-json-rpc-stdin-mode).
 
 ### From Java Code
 
-For arbitrary method signatures, use PAL's API or JSON-RPC:
+PAL provides Java APIs over both wire formats:
 
-```java
-// Using ThinPeer (PAL client)
-ThinPeer peer = new ThinPeer(peerUuid, rpcEndpoint);
-
-// Call method
-Object result = peer.call("com.example.Calculator", "add",
-    new Object[]{5, 3});
-```
+- **Binary (ZeroMQ)**: see [Binary RPC (MessageBuilder)](rpc-binary.md) for `ThinPeer` setup and `MessageBuilder` examples.
+- **JSON-RPC**: see [RpcChain DSL](rpc-chain.md) for multi-step workflows, or [JsonRpcMessageFactory](rpc-json.md#jsonrpcmessagefactory) for single requests.
 
 ### Via JSON-RPC
 
@@ -163,43 +162,53 @@ Direct UUID lookup - faster if you already know it.
 
 ### By Address
 
+Address a peer directly by host and port. This **bypasses etcd / PalDirectory entirely** — no `-d` flag, no name lookup, no UUID resolution. Useful when the directory is unavailable, when you're talking to a peer that runs unregistered, or for the lowest-overhead client path.
+
 ```bash
-# Binary RPC
+# Binary RPC (ZeroMQ)
 pal peer call tcp://192.168.1.100:5555 \
   com.example.Service doWork
 
-# JSON-RPC
+# JSON-RPC (WebSocket)
 pal peer call ws://192.168.1.100:9001 \
   com.example.Service doWork
 ```
 
-No directory needed - direct connection.
+The same direct addressing is available from Java code by setting `peer.setZmqRpcAddress(...)` or `peer.setJsonrpcAddress(...)` on a `PeerInfo` and passing it to `ThinPeer.withInitialPeer(...)` — see [Binary RPC → Direct connection by address](rpc-binary.md#direct-connection-by-address) and [RpcChain → Direct connection by address](rpc-chain.md#direct-connection-by-address).
 
 ## RPC vs Log Communication
 
-### Synchronous RPC
+PAL offers two transport paths for invoking remote methods: direct peer-to-peer (`pal peer call`) and via a log (`pal log call`). Both can be synchronous or fire-and-forget; the difference is *what* carries the message and *who* must be running.
 
-**Direct peer-to-peer**:
+### Direct peer-to-peer (`pal peer call`)
+
 ```bash
 pal peer call -d localhost:2379 peer-name \
   com.example.Service process
 ```
 
-- Blocks until response received
-- Low latency
-- Peer must be running
+- Always waits for a response (no fire-and-forget mode).
+- Lowest latency: a single ZMQ or WebSocket round-trip.
+- Target peer must be running and reachable.
 
-### Asynchronous Log
+### Via log (`pal log call`)
 
-**Fire-and-forget via log**:
 ```bash
+# Synchronous: send via log, then wait for the response on the log
+pal log call -d localhost:2379 work-queue \
+  com.example.Worker process
+
+# Fire-and-forget: send via log, do not wait for response
 pal log call -d localhost:2379 work-queue --forget-response \
   com.example.Worker process
 ```
 
-- Doesn't wait for response
-- Higher throughput
-- Works even if consumer isn't running yet
+- Synchronous by default — the client polls the log for a response message matching its request ID. Like `pal peer call`, it returns the result.
+- With `--forget-response`, the client returns as soon as the message is appended to the log, without waiting for a response.
+- Persistent: the request survives even if no consumer is currently running. The first peer to consume the topic will execute it.
+- Higher latency than direct RPC because the message and (optionally) the response both travel through the log backend (Kafka or Chronicle).
+
+Use `pal peer call` for low-latency synchronous calls to a known, running peer. Use `pal log call` when the request must be durable, when the consumer may not be running yet, or when you want fire-and-forget semantics.
 
 ## Method Call Types
 
@@ -285,12 +294,45 @@ Check with `pal peer ls` to see available peers.
 
 | Aspect | Binary | JSON |
 |--------|--------|------|
-| Latency | ~100μs | ~500μs |
-| Throughput | ~100K msgs/sec | ~20K msgs/sec |
+| Latency | Microsecond-range | Higher (text parsing overhead) |
+| Throughput | Higher | Lower (text parsing, larger messages) |
 | Readability | No | Yes |
 | Debugging | Harder | Easier |
 
-**Recommendation**: Use binary for production, JSON for debugging.
+Concrete numbers will be published with benchmark results.
+
+**Recommendation**: Use binary for the hot path (intercept callbacks, internal traffic) and when performance matters; use JSON-RPC for debugging, tooling, and quickly wiring up cross-language clients. Both wire formats are language-agnostic in principle — Colfer has bindings in many languages and ZeroMQ is broadly portable — but PAL currently ships only a Java client (`ThinPeer`) for binary RPC, so non-Java clients today are easier with JSON-RPC.
+
+### Handler Threads (`--rpc-threads`)
+
+When a peer receives RPC traffic, it dispatches incoming messages on a pool of handler threads. Pool size is configured at peer startup with `--rpc-threads` (default: `1`, env: `PAL_RPC_THREADS`). Increase it when a peer needs to handle concurrent RPC calls — e.g., a service serving multiple clients, or a callback peer driven by intercept callbacks under load:
+
+```bash
+# Single thread (default) — RPC calls processed serially
+pal run -d localhost:2379 --json-rpc auto -cp app.jar com.example.Service
+
+# 4 handler threads — up to 4 concurrent calls in flight
+pal run -d localhost:2379 --json-rpc auto --rpc-threads 4 -cp app.jar com.example.Service
+```
+
+The flag applies to both `--zmq-rpc` and `--json-rpc` listeners.
+
+**ZeroMQ fair-queueing:** for the binary path, the ZeroMQ socket distributes incoming messages fairly (round-robin) across the handler threads. This is a built-in ZMQ feature — distinct from typical socket pool patterns where a connection sticks to one handler — and provides automatic intra-peer load balancing across `--rpc-threads` without any application code.
+
+### Thread Affinity (`--fx-thread`)
+
+By default an incoming RPC call runs on whichever handler thread picks it up. For some workloads — notably JavaFX UIs — the call must instead execute on a specific named thread (e.g., the JavaFX Application Thread, which is the only thread allowed to mutate the scene graph). Callers indicate this with a thread-affinity hint on the request, and the peer routes matching calls accordingly.
+
+Enable the JavaFX Application Thread router with `--fx-thread`:
+
+```bash
+pal run -d localhost:2379 --json-rpc auto --fx-thread --rpc-threads 2 \
+  -jar build/libs/my-javafx-app.jar
+```
+
+When `--fx-thread` is set, RPC calls tagged with `fx-thread` affinity are dispatched onto the real JavaFX Application Thread via `Platform.runLater()`; calls without that tag use the regular handler pool. Pair it with `--rpc-threads 2+`: when a UI operation occupies the FX thread for a long time, the extra handler threads keep non-UI RPC traffic flowing instead of starving behind it.
+
+Callers from Java set affinity via the [RpcChain DSL](rpc-chain.md#thread-affinity)'s `.onFxThread()` / `.withThreadAffinity(name)` methods.
 
 ### Connection Pooling
 
@@ -302,34 +344,43 @@ PAL reuses connections:
 
 ### Batching
 
-For bulk operations, use log-based communication:
+For bulk operations, two CLI patterns work well:
+
+**Log-based fire-and-forget** — append many messages to a log; consumer drains them at its own rate:
 
 ```bash
-# Write many messages to log
 for i in {1..1000}; do
   pal log call work-queue --forget-response \
     com.example.Worker process $i
 done
 ```
 
+**Piped JSON-RPC** — pipe a stream of JSON-RPC requests through stdin to `pal peer call` or `pal log call`. The CLI sends each request as it arrives, so a single invocation can carry many operations:
+
+```bash
+# One JSON-RPC request per line on stdin
+cat <<EOF | pal peer call -d localhost:2379 worker
+{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Worker","method":"process","args":[{"type":"int","value":1}]}}
+{"jsonrpc":"2.0","id":"2","method":"call","params":{"type":"com.example.Worker","method":"process","args":[{"type":"int","value":2}]}}
+{"jsonrpc":"2.0","id":"3","method":"call","params":{"type":"com.example.Worker","method":"process","args":[{"type":"int","value":3}]}}
+EOF
+```
+
+See [CLI Reference → JSON-RPC Stdin Mode](../cli-reference.md#2-json-rpc-stdin-mode) for the full stdin protocol.
+
 Consumer processes in batch.
 
 ## Security
 
-### Network Security
+PAL has two distinct security concerns: **transport security** (who can connect) and **authorization** (what callers can invoke).
 
-- Binary RPC uses raw TCP (consider VPN/firewall)
-- JSON-RPC uses WebSocket (can add TLS)
-- No built-in authentication (use network-level security)
+### Transport security
 
-### Method Access Control
+Binary RPC runs over raw TCP via ZeroMQ; JSON-RPC runs over WebSocket. PAL does not perform peer authentication or transport encryption itself — restrict access via network-level controls (firewall, VPN, mTLS-terminating proxy in front of WebSocket) before exposing a peer's RPC ports outside a trusted boundary.
 
-PAL provides an [RPC policy system](rpc-policy.md) that controls which operations remote callers can invoke. Policies are defined in YAML files and support:
+### Authorization
 
-- Ant-style pattern matching for classes and methods
-- Built-in safety presets that block dangerous operations (`System.exit`, `Runtime.exec`, etc.)
-- Channel-scoped rules (different policies for ZMQ vs WebSocket)
-- Member category filtering (methods, constructors, fields)
+Authorization is handled by PAL's [RPC policy system](rpc-policy.md), which controls which operations remote callers can invoke. Policies are defined in YAML and support Ant-style class/member patterns, built-in safety presets (e.g. block `System.exit`, `Runtime.exec`), per-channel rules (ZMQ vs WebSocket), and member-category filtering (methods, constructors, fields).
 
 ```bash
 # Quick setup: block dangerous operations
@@ -373,20 +424,21 @@ pal run -k kafka:9092 --source-log work-queue \
   -cp worker.jar com.example.Worker
 ```
 
-### Load Balancing
+### Scaling: Multiple Workers
 
-Start multiple instances with same name:
+PAL enforces unique peer names — at most one peer holds a given name at a time. A second registration with the same name is rejected by the directory (`DuplicatePeerNameException`). To run multiple workers, give each peer a distinct name and distribute calls across them in your client code:
+
 ```bash
 # Terminal 1
-pal run -d etcd:2379 --json-rpc auto -n worker \
+pal run -d etcd:2379 --json-rpc auto -n worker-1 \
   -cp worker.jar com.example.Worker
 
 # Terminal 2
-pal run -d etcd:2379 --json-rpc auto -n worker \
+pal run -d etcd:2379 --json-rpc auto -n worker-2 \
   -cp worker.jar com.example.Worker
 ```
 
-PAL directory maintains all instances. (Note: Currently no automatic load balancing - client gets first match).
+PAL has no built-in load balancer; for automatic distribution, prefer the log-based "Async Worker Queue" pattern above — multiple consumer peers can share a single Kafka topic without coordination.
 
 ## Debugging RPC
 
@@ -397,15 +449,6 @@ Enable verbose output:
 pal peer call -d localhost:2379 peer-name -v \
   com.example.Service process
 ```
-
-### Print RPC Traffic
-
-Subscribe to peer's message stream:
-```bash
-pal peer print -d localhost:2379 peer-uuid -f
-```
-
-See all messages sent and received in real-time.
 
 ### Check Connectivity
 
@@ -419,26 +462,32 @@ pal peer ls -d localhost:2379 -l
 
 ## Limitations
 
-### CLI Mode
+### CLI args mode is `String[]`-only
 
-Only supports methods with `String[]` parameter:
+`pal peer call` and `pal log call` have two modes. The default **args mode** — positional arguments after the class name — only invokes methods with the signature `static void method(String[] args)`:
 
 ```java
-// Works
+// Works in args mode
 public static void main(String[] args) { }
 public static void process(String[] args) { }
 
-// Doesn't work from CLI
+// Doesn't work in args mode
 public static int add(int a, int b) { }
 ```
 
-Use JSON-RPC for arbitrary signatures.
+For arbitrary signatures (any return type, any parameters, constructors, field access), use **JSON-RPC stdin mode** by piping a JSON-RPC request — `pal peer call` and `pal log call` both accept this. See [CLI Reference → JSON-RPC Stdin Mode](../cli-reference.md#2-json-rpc-stdin-mode).
 
 ### Object Serialization
 
-Complex objects must be serializable. Primitives, Strings, and arrays work automatically.
+PAL serializes RPC arguments and return values by value when they are:
 
-For custom objects, PAL creates ObjectRefs (UUIDs) instead of copying data.
+- **Simple types**: `null`, primitives, primitive wrappers (`Integer`, `Long`, etc.), and `String`.
+- **Arrays** of any element type, up to 1000 elements.
+- **Collections and Maps** with JSON-serializable contents, up to 1000 elements/entries.
+
+Anything else — custom POJOs, framework objects, arbitrary object graphs — is not serialized by value. Instead, PAL returns an integer `ObjectRef` identifying the object on the remote peer; subsequent calls reference it by ref without copying data. Oversized arrays or collections (more than 1000 elements) throw `NonWrappableObjectException` unless an ObjectRef is supplied for the value.
+
+ObjectRefs are scoped to the peer that owns the object — a ref returned by peer B is meaningful only when sent back to B in a subsequent call. You cannot use that ref to reference the object on a third peer.
 
 ### Reflection-Based Dispatch
 
@@ -446,727 +495,16 @@ PAL's RPC uses reflection to invoke methods on the target peer. There is no comp
 
 ### No Schema Evolution
 
-If a method signature changes (parameters added, types changed, method renamed), all callers must be updated manually. There is no schema versioning, compatibility checking, or migration tooling like what gRPC's `.proto` files or Thrift's IDL provide.
+If a method signature changes (parameters added, types changed, method renamed), all callers must be updated manually. PAL has no schema versioning or compatibility checking — caller and callee must agree on signatures out of band.
 
 ### No Built-In Resilience Patterns
 
-PAL's RPC does not include retry logic, circuit breaking, or load balancing. These are application-layer concerns. The "Load Balancing" note in Common Patterns above is honest: currently there is no automatic load balancing—the client gets the first match. If you need these patterns, use a purpose-built RPC framework or implement them in your application code.
-
-### Complex Object Transfer
-
-Only simple types (primitives, strings, arrays of these) are fully serialized across peers. Complex objects become ObjectRefs—peer-local UUID references that are not transferable between peers. This means you cannot pass a complex domain object to a remote peer and have it reconstructed there; the remote peer gets a reference that is only meaningful on the originating peer.
-
-## JSON-RPC API Reference
-
-This section is the complete reference for PAL's JSON-RPC 2.0 API. All examples below show raw JSON messages as they appear on the WebSocket wire.
-
-### Message Structure
-
-Every request follows the JSON-RPC 2.0 envelope:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "req-1",
-  "method": "<method>",
-  "params": { ... }
-}
-```
-
-Every response is either a **result** or an **error** (never both):
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "req-1",
-  "result": { ... }
-}
-```
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "req-1",
-  "error": { ... }
-}
-```
-
-### Methods
-
-PAL recognises five top-level methods: `new`, `call`, `get`, `put`, and `control`.
-
-#### `new` — Constructor
-
-Creates a new object on the peer. Returns an ObjectRef that can be used in subsequent calls.
-
-```json
-{
-  "jsonrpc": "2.0", "id": "1",
-  "method": "new",
-  "params": {
-    "type": "com.example.Calculator"
-  }
-}
-```
-
-With constructor arguments:
-
-```json
-{
-  "jsonrpc": "2.0", "id": "2",
-  "method": "new",
-  "params": {
-    "type": "com.example.User",
-    "args": [
-      {"type": "java.lang.String", "value": "john"},
-      {"type": "int", "value": 30}
-    ]
-  }
-}
-```
-
-**Response** — the `ref` field is the ObjectRef ID:
-
-```json
-{
-  "jsonrpc": "2.0", "id": "2",
-  "result": {
-    "void": false,
-    "value": {
-      "type": "com.example.User",
-      "null": false,
-      "ref": 42
-    }
-  }
-}
-```
-
-#### `call` — Method Invocation
-
-##### Static method
-
-Omit `instance` to call a static method:
-
-```json
-{
-  "jsonrpc": "2.0", "id": "3",
-  "method": "call",
-  "params": {
-    "type": "com.example.Calculator",
-    "method": "add",
-    "args": [
-      {"type": "int", "value": 5},
-      {"type": "int", "value": 3}
-    ]
-  }
-}
-```
-
-**Response** — value result:
-
-```json
-{
-  "jsonrpc": "2.0", "id": "3",
-  "result": {
-    "void": false,
-    "value": {
-      "type": "int",
-      "null": false,
-      "value": "8"
-    }
-  }
-}
-```
-
-##### Instance method
-
-Include `instance` with the ObjectRef ID from a prior `new` or `call`:
-
-```json
-{
-  "jsonrpc": "2.0", "id": "4",
-  "method": "call",
-  "params": {
-    "type": "java.util.ArrayList",
-    "method": "add",
-    "instance": 42,
-    "args": [
-      {"type": "java.lang.String", "value": "hello"}
-    ]
-  }
-}
-```
-
-##### Void method
-
-When the method returns void, the response has `"void": true`:
-
-```json
-{
-  "jsonrpc": "2.0", "id": "4",
-  "result": {
-    "void": true
-  }
-}
-```
-
-##### Returning an ObjectRef
-
-When a method returns a non-primitive object, the response includes a `ref`:
-
-```json
-{
-  "jsonrpc": "2.0", "id": "5",
-  "result": {
-    "void": false,
-    "value": {
-      "type": "com.example.Calculator",
-      "null": false,
-      "ref": 99
-    }
-  }
-}
-```
-
-##### Returning null
-
-```json
-{
-  "jsonrpc": "2.0", "id": "6",
-  "result": {
-    "void": false,
-    "value": {
-      "type": "java.lang.String",
-      "null": true
-    }
-  }
-}
-```
-
-#### `get` — Field Read
-
-##### Static field
-
-```json
-{
-  "jsonrpc": "2.0", "id": "7",
-  "method": "get",
-  "params": {
-    "type": "com.example.Config",
-    "field": "VERSION"
-  }
-}
-```
-
-##### Instance field
-
-Include `instance` to read from a specific object:
-
-```json
-{
-  "jsonrpc": "2.0", "id": "8",
-  "method": "get",
-  "params": {
-    "type": "com.example.User",
-    "field": "name",
-    "instance": 42
-  }
-}
-```
-
-#### `put` — Field Write
-
-##### Static field
-
-The `value` field is a typed argument (same format as `args` entries):
-
-```json
-{
-  "jsonrpc": "2.0", "id": "9",
-  "method": "put",
-  "params": {
-    "type": "com.example.Config",
-    "field": "debugMode",
-    "value": {"type": "boolean", "value": true}
-  }
-}
-```
-
-##### Instance field
-
-```json
-{
-  "jsonrpc": "2.0", "id": "10",
-  "method": "put",
-  "params": {
-    "type": "com.example.User",
-    "field": "name",
-    "instance": 42,
-    "value": {"type": "java.lang.String", "value": "jane"}
-  }
-}
-```
-
-Setting a field to null:
-
-```json
-{
-  "jsonrpc": "2.0", "id": "11",
-  "method": "put",
-  "params": {
-    "type": "com.example.User",
-    "field": "nickname",
-    "instance": 42,
-    "value": {"type": "java.lang.String", "value": null}
-  }
-}
-```
-
-`put` always returns a void result.
-
-#### `control` — Session Management
-
-Control messages manage object lifecycle on the peer. They use `method: "control"` at the top level, with a sub-method in `params`.
-
-##### Delete an object
-
-Removes a single object from the peer's session. Subsequent operations on this ObjectRef will fail with `NullPointerException`.
-
-```json
-{
-  "jsonrpc": "2.0", "id": "12",
-  "method": "control",
-  "params": {
-    "method": "delete_object",
-    "args": [{"ref": 42}]
-  }
-}
-```
-
-##### Delete a session
-
-Removes **all** objects from the caller's session on the peer.
-
-```json
-{
-  "jsonrpc": "2.0", "id": "13",
-  "method": "control",
-  "params": {
-    "method": "delete_session"
-  }
-}
-```
-
-##### Trigger garbage collection
-
-Requests the peer to run `System.gc()`.
-
-```json
-{
-  "jsonrpc": "2.0", "id": "14",
-  "method": "control",
-  "params": {
-    "method": "gc"
-  }
-}
-```
-
-All control messages return a void result.
-
-### Argument Types
-
-Arguments appear in the `args` array and in the `value` field of `put` requests. Each argument is an object with `type` and `value`, or an object reference with `ref`.
-
-#### Primitives and wrappers
-
-```json
-{"type": "int",     "value": 42}
-{"type": "long",    "value": 9223372036854775807}
-{"type": "double",  "value": 3.14}
-{"type": "float",   "value": 1.5}
-{"type": "boolean", "value": true}
-{"type": "byte",    "value": 127}
-{"type": "short",   "value": 32767}
-{"type": "char",    "value": "A"}
-```
-
-Wrapper types use the fully-qualified name:
-
-```json
-{"type": "java.lang.Integer", "value": 42}
-{"type": "java.lang.Double",  "value": 3.14}
-```
-
-#### Strings
-
-```json
-{"type": "java.lang.String", "value": "hello"}
-{"type": "String", "value": "hello"}
-```
-
-#### Null values
-
-Specify the type but set the value to `null`:
-
-```json
-{"type": "java.lang.Integer", "value": null}
-{"type": "java.lang.String",  "value": null}
-```
-
-#### Object references
-
-Pass a previously obtained ObjectRef by its ID:
-
-```json
-{"ref": 42}
-```
-
-This allows chaining: create an object with `new`, then pass it as an argument to a `call`.
-
-#### Arrays
-
-Arrays use `type` to specify the array type and `value` as a JSON array:
-
-```json
-{"type": "int[]",    "value": [1, 2, 3]}
-{"type": "double[]", "value": [1.5, 2.5, 3.5]}
-{"type": "String[]", "value": ["a", "b", "c"]}
-```
-
-Null and empty arrays:
-
-```json
-{"type": "int[]", "value": null}
-{"type": "int[]", "value": []}
-```
-
-##### Numeric suffixes
-
-When using inline numeric values in arrays (without explicit `type` wrappers), append a suffix to disambiguate the numeric type:
-
-| Suffix | Type |
-|--------|------|
-| `d` | double (`3.14d`) |
-| `f` | float (`1.5f`) |
-| `l` | long (`100l`) |
-
-Integer values need no suffix. Example:
-
-```json
-{"type": "double[]", "value": [239823d, 38723d, 2323d]}
-{"type": "float[]",  "value": [23f, 1f, 3f]}
-{"type": "long[]",   "value": [2398239l, -23l]}
-```
-
-#### Collections
-
-##### ArrayList
-
-```json
-{
-  "type": "java.util.ArrayList",
-  "value": [
-    {"type": "java.lang.Integer", "value": 39},
-    {"type": "java.lang.Integer", "value": 5},
-    {"type": "java.lang.Integer", "value": 58}
-  ]
-}
-```
-
-##### HashMap
-
-```json
-{
-  "type": "java.util.HashMap",
-  "value": {
-    "key1": 39.0,
-    "key2": 5.8,
-    "key3": 42.98
-  }
-}
-```
-
-### Params Reference
-
-Summary of all `params` fields:
-
-| Field | Type | Used by | Description |
-|-------|------|---------|-------------|
-| `type` | string | `new`, `call`, `get`, `put` | Fully-qualified class name |
-| `method` | string | `call`, `control` | Method name to invoke |
-| `field` | string | `get`, `put` | Field name to read or write |
-| `instance` | integer | `call`, `get`, `put` | ObjectRef ID for instance operations (omit for static) |
-| `args` | array | `new`, `call`, `control` | Typed argument array |
-| `value` | object | `put` | Typed argument for the new field value |
-
-Required fields per method:
-
-| Method | Required | Optional |
-|--------|----------|----------|
-| `new` | `type` | `args` |
-| `call` | `type`, `method` | `instance`, `args` |
-| `get` | `type`, `field` | `instance` |
-| `put` | `type`, `field`, `value` | `instance` |
-| `control` | `method` | `args` |
-
-### Error Response Format
-
-When an operation fails, the response contains an `error` object with a standard JSON-RPC 2.0 error code, a human-readable message, and a `data` object with details:
-
-```json
-{
-  "jsonrpc": "2.0", "id": "1",
-  "error": {
-    "code": -32601,
-    "message": "Method not found",
-    "data": {
-      "throwable_type": "java.lang.ClassNotFoundException",
-      "message": "com.example.DoesNotExist",
-      "request_id": "1",
-      "stack_trace": ["..."],
-      "cause": null
-    }
-  }
-}
-```
-
-#### Error codes
-
-| Code | Name | When |
-|------|------|------|
-| -32700 | Parse error | Malformed JSON (syntax error) |
-| -32600 | Invalid Request | Missing or unrecognised `method` field |
-| -32602 | Invalid params | Missing required params (`type`, `field`, `value`), invalid characters in type name, Java reserved keyword used as type |
-| -32601 | Method not found | `ClassNotFoundException`, `NoSuchMethodException`, `NoSuchFieldException` |
-| -32603 | Internal error | Unexpected server-side failure |
-| -32000 | Server error | Generic server error |
-| -32001 | RPC access denied | Operation blocked by [RPC policy](rpc-policy.md) |
-
-#### Common error scenarios
-
-**Class not found:**
-
-```json
-{"code": -32601, "message": "Method not found",
- "data": {"throwable_type": "java.lang.ClassNotFoundException",
-          "message": "com.example.DoesNotExist"}}
-```
-
-**No matching method/constructor:**
-
-```json
-{"code": -32601, "message": "Method not found",
- "data": {"throwable_type": "java.lang.NoSuchMethodException",
-          "message": "No matching constructor found"}}
-```
-
-**Runtime exception in remote method:**
-
-```json
-{"code": -32000, "message": "Server error",
- "data": {"throwable_type": "java.lang.ArithmeticException",
-          "message": "/ by zero",
-          "stack_trace": ["..."]}}
-```
-
-**Missing required field:**
-
-```json
-{"code": -32602, "message": "Invalid params",
- "data": {"message": "Field is missing in 'get' request"}}
-```
-
-### Input Validation
-
-The peer validates requests before dispatching. The following are rejected with `-32602 Invalid params`:
-
-- Missing `params` object entirely
-- Missing `type` in `params`
-- `type` containing invalid characters (e.g., `:`, `/`)
-- `type` that is a Java reserved keyword (e.g., `try`, `class`)
-- `call` without `method` in params
-- `get` without `field` in params
-- `put` without `field` or `value` in params
-
-Invalid or unrecognised top-level `method` values (anything other than `new`, `call`, `get`, `put`, `control`) are rejected with `-32600 Invalid Request`.
-
-### Member Visibility
-
-PAL's JSON-RPC dispatch can access members of **any** Java visibility level — public, protected, package-private, and private. This is powerful for testing and debugging, but should be restricted in production.
-
-Use the [RPC policy system](rpc-policy.md) to control which visibility levels are accessible. The `deny-nonpublic` preset restricts RPC to public members only:
-
-```bash
-pal run -d localhost:2379 --json-rpc auto \
-  --rpc-policy-preset deny-nonpublic,deny-unsafe \
-  -cp app.jar com.example.Main
-```
-
-See [RPC Policy — Visibility Filtering](rpc-policy.md#visibility-filtering) for fine-grained control.
-
-### Typical Session
-
-A complete interaction often follows this pattern:
-
-```
-Client                              Peer
-  │                                   │
-  │── new Calculator ────────────────▶│
-  │◀──────────────── ref:42 ──────────│
-  │                                   │
-  │── call add(5,3) on ref:42 ──────▶│
-  │◀──────────────── value:8 ─────────│
-  │                                   │
-  │── get "result" on ref:42 ───────▶│
-  │◀──────────────── value:8 ─────────│
-  │                                   │
-  │── control delete_object ref:42 ─▶│
-  │◀──────────────── void ────────────│
-```
-
-For multi-step workflows in Java code, the [RpcChain DSL](rpc-chain.md) handles ObjectRef management automatically.
-
-### JsonRpcMessageFactory
-
-**Module**: `pal-api` — `io.quasient.pal.serdes.jsonrpc.JsonRpcMessageFactory`
-
-The factory is a static utility class that builds `JsonRpcRequest` objects programmatically. It sits between raw JSON and the RpcChain DSL: you get type-safe request construction and automatic ID generation, but you still send each request individually and manage ObjectRefs yourself.
-
-#### Building arguments
-
-Arguments are constructed with `Argument.builder()`:
-
-```java
-import io.quasient.pal.messages.jsonrpc.Argument;
-
-// Typed value
-Argument intArg = Argument.builder().withValue(42).withType("int").build();
-Argument strArg = Argument.builder().withValue("hello").withType("java.lang.String").build();
-
-// Null value (type required)
-Argument nullArg = Argument.builder().withValue(null).withType("java.lang.Integer").build();
-
-// Object reference (from a prior response)
-Argument refArg = Argument.builder().withRef(objectRef).build();
-
-// Collection
-ArrayList<Integer> list = new ArrayList<>(List.of(1, 2, 3));
-Argument listArg = Argument.builder().withValue(list).withType("java.util.ArrayList").build();
-```
-
-#### Constructor call
-
-```java
-import io.quasient.pal.serdes.jsonrpc.JsonRpcMessageFactory;
-
-// No-arg constructor
-JsonRpcRequest req = JsonRpcMessageFactory.buildConstructorCall(
-    "com.example.Calculator", List.of());
-
-// With arguments
-JsonRpcRequest req = JsonRpcMessageFactory.buildConstructorCall(
-    "com.example.User",
-    List.of(
-        Argument.builder().withValue("Alice").withType("java.lang.String").build(),
-        Argument.builder().withValue(30).withType("int").build()
-    ));
-```
-
-#### Static method call
-
-```java
-JsonRpcRequest req = JsonRpcMessageFactory.buildClassMethodCall(
-    "com.example.Calculator", "add",
-    List.of(
-        Argument.builder().withValue(5).withType("int").build(),
-        Argument.builder().withValue(3).withType("int").build()
-    ));
-```
-
-#### Instance method call
-
-Pass an `ObjectRef` (from a constructor or method response) or a raw integer ID:
-
-```java
-// With ObjectRef
-JsonRpcRequest req = JsonRpcMessageFactory.buildInstanceMethodCall(
-    "java.util.ArrayList", "add", objectRef,
-    List.of(Argument.builder().withValue("item").withType("java.lang.String").build()));
-
-// With integer ID
-JsonRpcRequest req = JsonRpcMessageFactory.buildInstanceMethodCall(
-    "java.util.ArrayList", "size", 42, List.of());
-```
-
-#### Field access
-
-```java
-// Static get / put
-JsonRpcRequest get = JsonRpcMessageFactory.buildStaticFieldGet(
-    "com.example.Config", "VERSION");
-
-JsonRpcRequest put = JsonRpcMessageFactory.buildStaticFieldPut(
-    "com.example.Config", "debugMode",
-    Argument.builder().withValue(true).withType("boolean").build());
-
-// Instance get / put
-JsonRpcRequest get = JsonRpcMessageFactory.buildInstanceFieldGet(
-    "com.example.User", objectRef, "name");
-
-JsonRpcRequest put = JsonRpcMessageFactory.buildInstanceFieldPut(
-    "com.example.User", objectRef, "name",
-    Argument.builder().withValue("Bob").withType("java.lang.String").build());
-```
-
-#### Control messages
-
-```java
-// Delete a single object from the session
-JsonRpcRequest req = JsonRpcMessageFactory.buildDeleteObjectCommandMessage(objectRef);
-
-// Delete the entire session
-JsonRpcRequest req = JsonRpcMessageFactory.buildDeleteSessionCommandMessage();
-
-// Trigger garbage collection
-JsonRpcRequest req = JsonRpcMessageFactory.buildGcCommandMessage();
-```
-
-#### Sending requests
-
-The factory builds requests; sending them is done via `ThinPeer`:
-
-```java
-// Send to peer and wait for response
-JsonRpcResponse response = thinPeer.sendJsonRpcRequestToPeer(request).get();
-
-// Check result
-if (response.getError() != null) {
-    // Handle error
-    System.err.println(response.getError().getData().getMessage());
-} else if (response.getResult().getIsVoid()) {
-    // Void return
-} else {
-    // Extract value or ref
-    ResponseObject value = response.getResult().getValue();
-    Integer ref = value.getRef();       // ObjectRef ID (if object)
-    String type = value.getType();      // Return type
-}
-```
-
-#### When to use the factory vs RpcChain
-
-Use the factory when you need to:
-
-- Send a single request (no chaining needed)
-- Control request timing or ordering yourself
-- Interleave RPC calls with other logic between each step
-- Work at a lower level than the DSL allows
-
-Use the [RpcChain DSL](rpc-chain.md) when you have multi-step workflows with object dependencies — it eliminates the ObjectRef tracking boilerplate that the factory requires you to do manually.
+PAL's RPC does not include retry, circuit breaking, or automatic load balancing. These are application-layer concerns; for traffic shaping, distribute calls in your client code or front the peer with a log-based queue (see "Async Worker Queue" above).
 
 ## Further Reading
 
 - [Binary RPC (MessageBuilder)](rpc-binary.md) - Binary RPC API for high-performance Java-to-Java communication
+- [JSON-RPC Reference](rpc-json.md) - Wire-format reference for the JSON-RPC API
 - [RpcChain DSL](rpc-chain.md) - Java DSL for multi-step JSON-RPC workflows with automatic ObjectRef tracking
 - [RPC Policy](rpc-policy.md) - Access control for RPC operations
 - [Peers and Logs](peers-and-logs.md) - Understanding peers

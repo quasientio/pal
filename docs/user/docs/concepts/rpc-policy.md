@@ -6,11 +6,11 @@ PAL's RPC policy system controls which operations remote callers can invoke on a
 
 When a peer exposes RPC endpoints (ZeroMQ or JSON-RPC WebSocket), any client that can reach the endpoint can invoke any accessible method. Without a policy:
 
-- `System.exit()` can be called remotely, killing the peer
-- `Runtime.exec()` can execute arbitrary OS commands
-- `ProcessBuilder` can spawn processes
-- `ClassLoader` can load arbitrary classes
-- Internal PAL classes can be accessed
+- `System.exit()` can be called remotely, killing the peer.
+- `Runtime.exec()` can execute arbitrary OS commands.
+- `ProcessBuilder` can spawn processes.
+- `ClassLoader` can load arbitrary classes.
+- Internal PAL classes can be accessed.
 
 An RPC policy defines exactly what callers are allowed to do, following a **deny-by-default** security model.
 
@@ -55,12 +55,23 @@ pal run -d localhost:2379 --zmq-rpc auto \
   -cp app.jar com.example.Main
 ```
 
+## CLI Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--rpc-policy <path>` | — | Path to YAML policy file. Hot-reloaded by default; see [Hot Reloading](#hot-reloading) |
+| `--rpc-policy-preset <names>` | — | Comma-separated preset names (e.g. `deny-unsafe,deny-jdk-internals`) |
+| `--rpc-default-action <action>` | `DENY` | `ALLOW` or `DENY` — applied when no rule matches |
+| `--rpc-policy-watch-interval <ms>` | `2000` | Poll interval for the YAML watcher; `0` disables hot reloading |
+
+These flags can be combined. When both a YAML file and CLI presets are provided, user-defined rules from the YAML file are evaluated first, followed by preset rules, followed by the default action.
+
 ## YAML Policy Schema
 
 ### Top-Level Structure
 
 ```yaml
-version: 1                    # Schema version (required)
+version: 1                    # Schema version (optional; currently advisory, not validated)
 defaultAction: DENY           # Action when no rule matches: ALLOW or DENY
 presets:                       # Built-in deny-list presets
   deny-unsafe: true
@@ -74,10 +85,10 @@ rules:                         # Ordered list of rules (first match wins)
 | Field | Required | Type | Default | Description |
 |-------|----------|------|---------|-------------|
 | `class` | Yes (or `pattern`) | string | -- | Ant-style class pattern (e.g., `com.example.**`) |
-| `method` | No | string | `**` (all members) | Method/field name pattern |
+| `method` | No | string | `**` (all members) | Member-name pattern. Despite the name, this matches methods, fields, and constructors equally — there is no `field` or `member` alias |
 | `pattern` | No | string | -- | Combined `class.method` pattern (alternative to separate `class`/`method`) |
 | `action` | Yes | string | -- | `ALLOW`, `DENY`, `LOG_AND_ALLOW`, `LOG_AND_DENY` |
-| `channel` | No | string or list | all channels | `ZMQ_SOCKET_RPC`, `WEBSOCKET_RPC`, `LOG_RPC`, `CLI_RPC` |
+| `channel` | No | string or list | all channels | `ZMQ_SOCKET_RPC`, `WEBSOCKET_RPC`, `LOG_RPC` (see [Channel-Scoped Rules](#channel-scoped-rules)) |
 | `members` | No | list | all types | `METHOD`, `STATIC_METHOD`, `CONSTRUCTOR`, `FIELD_GET`, `FIELD_SET` |
 | `visibility` | No | string or list | all visibilities | Java member visibility levels to match (optional, defaults to all) |
 
@@ -105,6 +116,8 @@ Patterns use Ant-style path matching with `.` as the separator:
 
 Matching is **case-insensitive**.
 
+The combined `pattern:` form splits at the **last dot** to derive class and member. So `pattern: "myMethod"` (no dots) is parsed as a class-only pattern with member defaulting to `**` — almost certainly not what you want. To match a member name across all classes, use the separate form: `class: "**"` + `method: "myMethod"`.
+
 ### Rule Format Options
 
 You can specify class and member patterns separately or combined:
@@ -125,9 +138,9 @@ rules:
 
 Rules are evaluated in **first-match-wins** order:
 
-1. Rules are checked in the order they appear in the YAML file
-2. The first rule whose pattern, channel, member, and visibility filters all match determines the action
-3. If no rule matches, the `defaultAction` applies
+1. Rules are checked in the order they appear in the YAML file.
+2. The first rule whose pattern, channel, member, and visibility filters all match determines the action.
+3. If no rule matches, the `defaultAction` applies.
 
 ```yaml
 rules:
@@ -144,6 +157,25 @@ rules:
 
 In this example, `Calculator.divide` is denied while all other `Calculator` methods are allowed.
 
+## Actions
+
+| Action | Behavior |
+|--------|----------|
+| `ALLOW` | Allow the operation to proceed |
+| `DENY` | Deny the operation; throws `RpcAccessDeniedException` |
+| `LOG_AND_ALLOW` | Log the operation via SLF4J, then allow |
+| `LOG_AND_DENY` | Log the operation via SLF4J, then deny |
+
+The `LOG_AND_*` actions are useful for auditing or for testing a policy before enforcing it.
+
+**What the caller sees on a deny.** Over JSON-RPC the response carries the standard error envelope with code `-32001` and message `"RPC access denied"`. Over binary RPC the same `RpcAccessDeniedException` is reported in the response's error field. In-process callers (e.g. via `RpcChain` or direct dispatch) receive the exception directly.
+
+## Default Behavior
+
+When **no policy is configured** (no `--rpc-policy`, no `--rpc-policy-preset`, no `--rpc-default-action`), all RPC operations are denied by default. To allow RPC calls, configure a policy with explicit ALLOW rules or pass `--rpc-default-action ALLOW`.
+
+When a policy **is** configured, the `defaultAction` applies to any operation that doesn't match a rule. Use `DENY` (the default) for a secure allowlist model, `ALLOW` for a blocklist model.
+
 ## Built-In Presets
 
 Presets are predefined deny rules for common threat categories. They are evaluated **after** user-defined rules, so your explicit ALLOW rules take precedence.
@@ -152,14 +184,13 @@ Presets are predefined deny rules for common threat categories. They are evaluat
 |--------|----------------|
 | `deny-unsafe` | `System.exit`, `System.setSecurityManager`, `Runtime.exec`, `Runtime.halt`, `Runtime.load`, `Runtime.loadLibrary`, `Runtime.addShutdownHook`, `ProcessBuilder.*`, `Process.*`, `Thread.stop`, `Thread.suspend`, `Thread.resume`, `ThreadGroup.destroy` |
 | `deny-jdk-internals` | `com.sun.**`, `sun.**`, `jdk.**` |
-| `deny-classloading` | `ClassLoader.*`, `URLClassLoader.*`, `Class.forName`, `Class.newInstance` |
+| `deny-classloading` | `ClassLoader.**`, `URLClassLoader.**`, `Class.forName`, `Class.newInstance` |
 | `deny-reflection` | `java.lang.reflect.**`, `java.lang.invoke.**` |
-| `deny-serialization` | `java.io.ObjectInputStream.*` |
+| `deny-serialization` | `java.io.ObjectInputStream.**` |
 | `deny-scripting` | `javax.script.**` |
 | `deny-nonpublic` | Denies RPC access to non-public members (protected, package-private, private) |
-| `deny-pal-internals` | `io.quasient.pal.**` — **always ON**, cannot be disabled (see below) |
 
-> **Mandatory preset — `deny-pal-internals`:** The `deny-pal-internals` rules are always enforced, regardless of CLI flags or YAML policy configuration. They are prepended before any user-supplied rules, so explicit `ALLOW` rules targeting `io.quasient.pal.**` have no effect. Setting `deny-pal-internals: false` in a YAML policy is silently ignored (a warning is logged). This ensures PAL runtime internals can never be invoked via RPC.
+> **PAL internals are always denied.** RPC access to `io.quasient.pal.**` is unconditionally blocked, independently of presets, user-supplied rules, and the default action. The deny rules are prepended before any other rules, so explicit `ALLOW` rules targeting that namespace are unreachable. This protection cannot be turned off.
 
 Enable presets via YAML or CLI:
 
@@ -202,9 +233,8 @@ Available channels:
 | `ZMQ_SOCKET_RPC` | Binary RPC over ZeroMQ |
 | `WEBSOCKET_RPC` | JSON-RPC over WebSocket |
 | `LOG_RPC` | Messages arriving from a source log (Kafka/Chronicle) |
-| `CLI_RPC` | Bootstrap calls from the CLI (main class invocation) |
-
-**Note**: `REPLAY_INJECTION` is always exempt from policy checks. Replayed messages represent operations that already executed and are not external requests.
+| `CLI_RPC` | Bootstrap call from the CLI (`main()` entry). **Exempt** — always permitted; rules targeting it have no effect |
+| `REPLAY_INJECTION` | Messages re-dispatched from the source log during replay. **Exempt** — already-executed operations, not external requests; rules targeting it have no effect |
 
 ## Member Category Filtering
 
@@ -253,32 +283,15 @@ rules:
 
 When `visibility` is omitted, the rule matches all visibility levels (same as specifying `ALL`).
 
-## Actions
-
-| Action | Behavior |
-|--------|----------|
-| `ALLOW` | Allow the operation to proceed |
-| `DENY` | Deny the operation; throws `RpcAccessDeniedException` |
-| `LOG_AND_ALLOW` | Log the operation via SLF4J, then allow |
-| `LOG_AND_DENY` | Log the operation via SLF4J, then deny |
-
-The `LOG_AND_*` actions are useful for auditing or for testing a policy before enforcing it.
-
-## Default Behavior
-
-When **no policy is configured** (no `--rpc-policy`, no `--rpc-policy-preset`, no `--rpc-default-action`), all RPC operations are denied by default. To allow RPC calls, configure a policy with explicit ALLOW rules or pass `--rpc-default-action ALLOW`.
-
-When a policy **is** configured, the `defaultAction` applies to any operation that doesn't match a rule. Use `DENY` (the default) for a secure allowlist model, `ALLOW` for a blocklist model.
-
 ## Metadata Filtering
 
 The RPC policy also filters **class metadata** responses. When a remote client requests the class metadata for a peer (used for introspection and tooling), only classes and members that the policy allows are included. Clients never discover methods they cannot call.
 
 This means:
 
-- Classes with no accessible members are omitted entirely
-- Methods, constructors, and fields blocked by the policy are excluded
-- The metadata reflects exactly what is callable under the current policy
+- Classes with no accessible members are omitted entirely.
+- Methods, constructors, and fields blocked by the policy are excluded.
+- The metadata reflects exactly what is callable under the current policy.
 
 ## Example Policies
 
@@ -335,25 +348,11 @@ rules:
     action: ALLOW
 ```
 
-## CLI Flags
-
-| Flag | Description |
-|------|-------------|
-| `--rpc-policy <path>` | Path to RPC policy YAML file |
-| `--rpc-policy-preset <names>` | Comma-separated preset names (e.g., `deny-unsafe,deny-jdk-internals`) |
-| `--rpc-default-action <action>` | Default action when no rule matches: `ALLOW` or `DENY` (default: `DENY`) |
-
-These flags can be combined. When both a YAML file and CLI presets are provided, user-defined rules from the YAML file have highest priority, followed by preset rules, followed by the default action.
-
 ## Security Considerations
 
 ### Object Reference Bypass
 
-An attacker could try to GET a field that returns a dangerous object (e.g., a `Runtime` instance), then call methods on the returned object reference in subsequent RPC calls. The RPC policy prevents this because:
-
-1. Getting the field requires one RPC call -- checked against the policy
-2. Calling a method on the returned object requires another RPC call -- also checked
-3. The `deny-unsafe` preset blocks **all** members on dangerous classes (`ProcessBuilder.**`, `Process.**`), including field access
+Every RPC call is policy-checked independently. An attacker who reads a field returning a dangerous object (e.g. a `Runtime` instance) and then tries to invoke methods on it makes two RPC calls — the field GET, then the method call — and both are evaluated against the policy. The `deny-unsafe` preset uses `ProcessBuilder.**` / `Process.**` patterns to deny *all* members (methods, constructors, fields), closing the bypass.
 
 ### Visibility-Aware Policies
 
@@ -399,84 +398,25 @@ pal run -d localhost:2379 --zmq-rpc auto \
 
 With a restrictive YAML policy:
 
-- `defaultAction: DENY` -- deny by default
-- Enable all relevant presets (including `deny-nonpublic` to restrict access to public members only)
-- Explicitly ALLOW only your application's public API packages
-- Use channel-scoped rules if different transports have different trust levels
-- Use `visibility` filters to expose only the intended access level per rule
+- `defaultAction: DENY` -- deny by default.
+- Enable all relevant presets (including `deny-nonpublic` to restrict access to public members only).
+- Explicitly ALLOW only your application's public API packages.
+- Use channel-scoped rules if different transports have different trust levels.
+- Use `visibility` filters to expose only the intended access level per rule.
 
 ## Hot Reloading
 
-When a peer is started with an RPC policy YAML file (`--rpc-policy`), PAL automatically watches the file for changes and reloads the policy at runtime. No restart is required — edits to the YAML file take effect within seconds.
+When `--rpc-policy <path>` is set, PAL polls the file's last-modified timestamp every 2 seconds and reloads the policy when it changes. The interval is configurable via `--rpc-policy-watch-interval <ms>`; setting it to `0` disables hot reloading and the policy is loaded only once at startup.
 
-### How It Works
-
-PAL polls the policy file's last-modified timestamp at a configurable interval (default: every 2 seconds). When a change is detected:
-
-1. The YAML file is re-parsed
-2. CLI presets (`--rpc-policy-preset`) and the default action (`--rpc-default-action`) are preserved
-3. The new policy atomically replaces the old one
-4. All subsequent RPC checks and metadata responses use the updated policy
-
-### Operational Workflow
-
-```bash
-# Start a peer with a policy file
-pal run -d localhost:2379 --zmq-rpc auto \
-  --rpc-policy rpc-policy.yaml \
-  -cp app.jar com.example.Main
-```
-
-To update the policy at runtime:
-
-1. Edit `rpc-policy.yaml` (add, remove, or modify rules)
-2. Save the file
-3. Wait for the reload confirmation in the peer's logs:
-   ```
-   INFO  RPC policy reloaded from rpc-policy.yaml (5 rules, default action: DENY)
-   ```
-
-4. The new policy is now active
-
-### Error Handling
-
-If the edited YAML file contains errors (invalid syntax, unknown fields), the peer keeps the **current** policy and logs an error:
+On reload, the YAML is re-parsed and the new policy atomically replaces the old one. CLI presets (`--rpc-policy-preset`) and the default action (`--rpc-default-action`) are preserved across reloads. Subsequent RPC checks and metadata responses use the updated policy. A successful reload logs:
 
 ```
-ERROR Failed to reload RPC policy from rpc-policy.yaml; keeping current policy
+INFO  RPC policy reloaded from rpc-policy.yaml (5 rules, default action: DENY)
 ```
 
-The watcher continues polling, so fixing the YAML and saving again will trigger a successful reload.
-
-If the policy file is deleted, no reload is triggered — the last successfully loaded policy remains active.
-
-### Configuring the Poll Interval
-
-The default poll interval is 2 seconds. To change it:
-
-```bash
-# Poll every 5 seconds
-pal run -d localhost:2379 --zmq-rpc auto \
-  --rpc-policy rpc-policy.yaml \
-  --rpc-policy-watch-interval 5000 \
-  -cp app.jar com.example.Main
-```
-
-### Disabling File Watching
-
-To disable automatic reloading entirely, set the interval to 0:
-
-```bash
-pal run -d localhost:2379 --zmq-rpc auto \
-  --rpc-policy rpc-policy.yaml \
-  --rpc-policy-watch-interval 0 \
-  -cp app.jar com.example.Main
-```
-
-With watching disabled, the policy is loaded once at startup and never reloaded.
+If the new YAML fails to parse, the peer logs `ERROR Failed to reload RPC policy from <path>; keeping current policy` and continues with the previous policy — saving a fixed file later triggers another reload attempt. Deleting the watched file is a no-op; the last successfully loaded policy remains active.
 
 ## Further Reading
 
 - [Remote Procedure Calls](rpc.md) -- RPC fundamentals
 - [CLI Reference](../cli-reference.md) -- Complete `pal run` options
-- [Interception](interception.md) -- Dynamic behavior modification (complementary to policy)

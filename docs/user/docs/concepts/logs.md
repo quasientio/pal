@@ -1,19 +1,16 @@
 # Log Backends
 
-PAL supports two log backends: **Chronicle Queue** (local, ultra-fast) and **Kafka** (distributed, networked). Choosing the right one depends on your use case.
+PAL supports two log backends: **Chronicle Queue** (local, memory-mapped files) and **Kafka** (distributed, networked). The choice depends on whether you need a local single-machine log or a distributed log that multiple peers and external systems can consume.
 
 ## Chronicle Queue
 
-- **What**: Memory-mapped file-based message queue
-- **Where**: Local filesystem
-- **Speed**: Ultra-fast (nanoseconds)
-- **Use for**: Local development, single-machine applications, high-throughput scenarios
+Chronicle Queue is a memory-mapped, file-based message queue that lives on the local filesystem. It is exceptionally fast and requires no infrastructure to run.
 
 ### When to Use Chronicle
 
 - **Local development**: No Kafka cluster needed
 - **Single-machine applications**: Everything runs on one computer
-- **High-throughput testing**: Millions of messages per second
+- **High-throughput workloads**: Many messages per second with minimal overhead
 - **Debugging**: Capture and replay execution locally
 - **Benchmarking**: Minimal overhead for performance testing
 
@@ -24,6 +21,7 @@ PAL supports two log backends: **Chronicle Queue** (local, ultra-fast) and **Kaf
 - **Indexed**: Fast seeking to specific positions
 - **Persistent**: Survives restarts
 - **No network**: Pure filesystem operations
+- **Multi-reader (local)**: Multiple processes on the same host can tail the same queue concurrently
 
 ### Using Chronicle Queue
 
@@ -58,45 +56,50 @@ my-wal/
 ### Chronicle Queue Operations
 
 **Create a queue** (by writing to it):
+
 ```bash
 pal run --wal file:/tmp/my-queue -cp app.jar com.example.Main
 ```
 
 **Read from queue**:
+
 ```bash
 pal run --source-log file:/tmp/my-queue -cp app.jar
 ```
 
 **Print queue contents**:
+
 ```bash
-pal log print file:/tmp/my-queue --full
+pal log print file:/tmp/my-queue --json
 ```
 
-**Delete old queue**:
+**Delete old queue** (preferred — also cleans up the etcd registration if any):
+
 ```bash
-rm -rf /tmp/my-queue
+pal log rm file:/tmp/my-queue
 ```
+
+Or remove the directory directly: `rm -rf /tmp/my-queue`.
 
 ## Kafka
 
-- **What**: Distributed streaming platform
-- **Where**: Kafka cluster (multiple servers)
-- **Speed**: Fast (milliseconds)
-- **Use for**: Distributed systems, multi-peer communication, production deployments
+Kafka is a distributed streaming platform. PAL writes WALs as Kafka topics, making the operation stream available to any Kafka consumer and to the broader Kafka ecosystem.
+
+### Single-Partition Design
+
+PAL writes to and reads from a single partition (partition 0) of each Kafka topic. This guarantees strict total ordering of the operation stream within a topic. Throughput on a single topic is bounded by single-partition performance — to scale aggregate throughput, use multiple topics (typically one WAL per peer) rather than partitioning a single topic.
 
 ### When to Use Kafka
 
 - **Distributed systems**: Multiple machines
-- **Multiple consumers**: Many peers reading same log
-- **Pub/sub**: Broadcast messages to subscribers
+- **Cross-host consumers**: Peers and tools on other machines reading the same log
+- **Pub/Sub**: Broadcast messages to subscribers
 - **Persistence across machines**: Replication and durability
 - **Integration**: Connect with other Kafka-based systems
-- **Scalability**: Horizontal scaling with partitions
 
 ### Kafka Features
 
 - **Distributed**: Data replicated across brokers
-- **Scalable**: Add partitions for parallelism
 - **Durable**: Configurable replication factor
 - **Pub/Sub**: Multiple consumers per topic
 - **Retention**: Configurable (time or size based)
@@ -111,8 +114,7 @@ pal run -k localhost:29092 --wal my-wal -cp app.jar
 
 # With directory and Kafka
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal my-wal --json-rpc auto \
-  -cp app.jar com.example.Service
+  --wal my-wal -cp app.jar com.example.Service
 ```
 
 ### Kafka Topics
@@ -124,15 +126,17 @@ PAL creates Kafka topics automatically:
 pal run -k localhost:29092 --wal service-wal -cp service.jar
 
 # Topic "service-wal" is created automatically
-# Default: 1 partition, replication factor 1
+# Always 1 partition; replication factor 1 by default
 ```
 
 List Kafka topics:
+
 ```bash
 kafka-topics.sh --bootstrap-server localhost:29092 --list
 ```
 
 View messages:
+
 ```bash
 kafka-console-consumer.sh --bootstrap-server localhost:29092 \
   --topic my-wal --from-beginning
@@ -144,111 +148,13 @@ kafka-console-consumer.sh --bootstrap-server localhost:29092 \
 |---------|----------------|-------|
 | **Deployment** | Local files | Distributed cluster |
 | **Setup** | Zero config | Requires Kafka installation |
-| **Latency** | Sub-microsecond | Milliseconds |
-| **Throughput** | 5-10M msgs/sec | 100K-1M msgs/sec |
-| **Consumers** | Single machine | Multiple, distributed |
+| **Latency** | Very low (memory-mapped, no network) | Higher (network round-trip) |
+| **Throughput** | Very high (single-machine ceiling) | Per-topic single-partition ceiling; aggregate scales with more topics |
+| **Consumers** | Multiple, single-host only | Multiple, networked |
 | **Durability** | Local disk | Replicated across brokers |
 | **Scalability** | Vertical (faster disk) | Horizontal (more brokers) |
 | **Use case** | Dev, testing, single-machine | Production, distributed systems |
 | **Dependencies** | None | Kafka cluster |
-
-## Choosing a Backend
-
-### Use Chronicle Queue When:
-
-- ✅ Developing locally
-- ✅ Running on single machine
-- ✅ Need maximum performance
-- ✅ Want zero infrastructure
-- ✅ Debugging/replaying execution
-- ✅ Benchmarking with minimal overhead
-
-### Use Kafka When:
-
-- ✅ Building distributed system
-- ✅ Multiple machines involved
-- ✅ Need pub/sub semantics
-- ✅ Want data replication
-- ✅ Integrating with Kafka ecosystem
-- ✅ Running in production
-
-## Kafka WAL as an Integration Surface
-
-Because Kafka-backed WALs are standard Kafka topics, they participate in the Kafka ecosystem. You can use Kafka Streams to build real-time processors over the operation stream, Kafka Connect to sink operations to databases or search engines, or any Kafka consumer to build custom tooling. This makes the WAL useful beyond PAL's built-in features—it's an open integration surface for your operations data.
-
-Example use cases:
-
-- **Kafka Streams**: Real-time aggregation or transformation of the operation stream
-- **Kafka Connect**: Sink operations to Elasticsearch for full-text search, to a database for analytics, or to S3 for archival
-- **Custom consumers**: Build monitoring dashboards, anomaly detection, or compliance reporting on top of the operation stream
-- **ksqlDB**: Run SQL queries over the live operation stream for ad-hoc analysis
-
-## Mixed Scenarios
-
-### Develop with Chronicle, Deploy with Kafka
-
-```bash
-# Development
-pal run --wal file:/tmp/dev-log --json-rpc auto \
-  -cp build/classes/java/main com.example.Service
-
-# Production
-pal run -d etcd:2379 -k kafka:9092 \
-  --wal service-wal --json-rpc auto \
-  -cp service.jar com.example.Service
-```
-
-Same application code, different log backend.
-
-### Log Transformation
-
-Read from Kafka, write to Chronicle (or vice versa):
-
-```bash
-# Kafka → Chronicle (for local analysis)
-pal run -k kafka:9092 \
-  --source-log prod-log \
-  --wal file:/tmp/local-copy \
-  -cp app.jar
-
-# Chronicle → Kafka (publish local execution)
-pal run -k kafka:9092 \
-  --source-log file:/tmp/local-log \
-  --wal kafka-topic \
-  -cp app.jar
-```
-
-## Log Operations
-
-### Write-Ahead Log (WAL)
-
-What the peer writes:
-
-```bash
-pal run --wal file:/tmp/my-wal -cp app.jar
-```
-
-All operations executed by this peer are written to the WAL.
-
-### Source Log
-
-What the peer reads:
-
-```bash
-pal run --source-log file:/tmp/my-source -cp app.jar
-```
-
-Peer replays messages from source log.
-
-### Both
-
-```bash
-# Transform: read from one, write to another
-pal run --source-log file:/input --wal file:/output -cp app.jar
-
-# Or use shorthand for same log:
-pal run -l file:/my-log -cp app.jar
-```
 
 ## Seeking and Offsets
 
@@ -269,11 +175,7 @@ pal run -k localhost:29092 --source-log my-log \
   --start-offset 1000 -cp app.jar
 ```
 
-### Special Offsets
-
-- **0**: Start from beginning
-- **-1**: Start from latest (skip old messages)
-- **Default**: Start from beginning
+For special offset values (e.g., reading from the beginning or from the latest message), see the [CLI Reference](../cli-reference.md).
 
 ## Printing Logs
 
@@ -303,41 +205,81 @@ pal log print -d localhost:2379 my-log --full
 pal log print -d localhost:2379 my-log -f
 ```
 
-## Managing Logs
+## Managing & Retention
 
 ### Chronicle Queue Cleanup
 
-```bash
-# Delete old queue files
-rm -rf /tmp/old-queue/
+Prefer `pal log rm` to delete a queue — it removes the queue directory and also cleans up any etcd registration:
 
-# Or delete specific day's file
-rm /tmp/my-queue/20251030.cq4
+```bash
+pal log rm file:/tmp/old-queue
 ```
 
-Queue continues working with remaining files.
+For surgical filesystem operations (e.g., deleting a specific day's roll file while keeping the queue active), use direct commands:
+
+```bash
+# Remove one day's roll file — queue continues with remaining files
+rm /tmp/my-queue/20251030.cq4
+
+# Or remove the whole directory directly (bypasses PAL)
+rm -rf /tmp/old-queue/
+```
 
 ### Kafka Topic Management
 
+Strongly prefer `pal log rm` to delete a Kafka log — it removes the Kafka topic *and* deletes the corresponding `LogInfo` entry in etcd:
+
 ```bash
-# Delete topic
+pal log rm -d localhost:2379 old-log
+```
+
+This matters when the log was originally registered in etcd (created by a peer running with `-d` or `PAL_DIRECTORY` env var) and etcd is currently reachable. In that case, deleting only the Kafka topic with `kafka-topics.sh` leaves a stale `LogInfo` entry that can mislead later peers and CLI commands looking up the log by name. The direct path is appropriate only when the log was never registered in etcd, or when etcd is currently unreachable:
+
+```bash
 kafka-topics.sh --bootstrap-server localhost:29092 \
   --delete --topic old-topic
-
-# Or use PAL
-pal log rm -d localhost:2379 old-log
 ```
 
 ### Log Retention
 
-**Chronicle**: Manual - delete old files when done
+**Chronicle**: Manual — delete old daily-rolled files when no longer needed.
 
-**Kafka**: Automatic - configure retention policy:
+**Kafka**: Automatic — configure a retention policy in Kafka:
+
 ```properties
 # In Kafka server.properties
 log.retention.hours=168  # 7 days
 log.retention.bytes=1073741824  # 1GB
 ```
+
+## Mixed Scenarios
+
+### Develop with Chronicle, Deploy with Kafka
+
+The same application code can run against either backend by changing CLI flags:
+
+```bash
+# Development
+pal run --wal file:/tmp/dev-log \
+  -cp build/classes/java/main com.example.Service
+
+# Production
+pal run -d etcd:2379 -k kafka:9092 --wal service-wal \
+  -cp service.jar com.example.Service
+```
+
+For peers that bridge the two backends (read from one, write to the other), see the **Log Transformer** pattern in [Peers and Logs](peers-and-logs.md#log-transformer).
+
+## Kafka Ecosystem Integration
+
+Because Kafka-backed WALs are standard Kafka topics, they participate in the Kafka ecosystem. The WAL becomes an open integration surface for your operations data, useful well beyond PAL's built-in features.
+
+Example use cases:
+
+- **Kafka Streams**: Real-time aggregation or transformation of the operation stream
+- **Kafka Connect**: Sink operations to Elasticsearch for full-text search, to a database for analytics, or to S3 for archival
+- **Custom consumers**: Build monitoring dashboards, anomaly detection, or compliance reporting on top of the operation stream
+- **ksqlDB**: Run SQL queries over the live operation stream for ad-hoc analysis
 
 ## Performance Tuning
 
@@ -357,11 +299,9 @@ log.retention.bytes=1073741824  # 1GB
 
 ### Kafka
 
-**Partitions for parallelism**:
-```bash
-kafka-topics.sh --bootstrap-server localhost:29092 \
-  --create --topic my-log --partitions 10
-```
+**Single partition per topic**:
+
+PAL uses a single partition per Kafka topic (see [Single-Partition Design](#single-partition-design)). To scale aggregate throughput, add more peers — each with its own WAL topic — rather than adding partitions to a single topic.
 
 **Producer batching**:
 
@@ -370,20 +310,21 @@ kafka-topics.sh --bootstrap-server localhost:29092 \
 
 **Consumer groups**:
 
-- Multiple consumers share partitions
-- Parallel processing
+With a single partition per topic, only one consumer in a consumer group can actively read at a time. Consumer groups remain useful for failover — if the active consumer dies, another in the group takes over from the last committed offset — but they do not provide parallel reads for a PAL log.
 
 ## Troubleshooting
 
 ### Chronicle Queue Errors
 
 **"Chronicle queue does not exist"**:
+
 ```bash
 # Create it first by writing to it
 pal run --wal file:/tmp/new-queue -cp app.jar
 ```
 
 **"Permission denied"**:
+
 ```bash
 # Check permissions
 ls -la /tmp/my-queue
@@ -391,80 +332,49 @@ chmod -R u+rw /tmp/my-queue
 ```
 
 **"Disk full"**:
+
 ```bash
 # Check disk space
 df -h
-# Delete old queue files
+
+# Delete old queues (preferred — also cleans up etcd if registered)
+pal log rm file:/tmp/old-queue
+
+# Or remove directly
 rm -rf /tmp/old-queues/
 ```
 
 ### Kafka Errors
 
-**"ERROR_NO_KAFKA_SERVERS_GIVEN"**:
+**`ERROR_NO_KAFKA_SERVERS_GIVEN`** (exit code 6):
+
 ```bash
 # Provide Kafka servers
-export KAFKA_SERVERS="localhost:29092"
+export PAL_KAFKA_SERVERS="localhost:29092"
 # Or use CLI option
 pal run -k localhost:29092 ...
 ```
 
-**"ERROR_UNREACHABLE_KAFKA"**:
+**`ERROR_INITIALIZING_LOGS`** (exit code 7) — typically Kafka unreachable or topic-init failure:
+
 ```bash
 # Check Kafka is running
 docker ps | grep kafka
-# Or
+# Or test broker connectivity
 kafka-broker-api-versions.sh --bootstrap-server localhost:29092
 ```
 
 **"Topic not found"**:
 PAL creates topics automatically. If error persists, create manually:
+
 ```bash
 kafka-topics.sh --bootstrap-server localhost:29092 \
   --create --topic my-log
 ```
 
-## Best Practices
-
-### Development
-
-Use Chronicle Queue:
-```bash
-pal run --wal file:/tmp/dev --json-rpc auto \
-  -cp build/classes/java/main com.example.Dev
-```
-
-Fast iteration, no infrastructure needed.
-
-### Testing
-
-Use Chronicle Queue for unit/integration tests:
-```bash
-@Before
-public void setUp() {
-    walPath = Files.createTempDirectory("test-wal");
-    peer = startPeer("--wal", "file:" + walPath);
-}
-
-@After
-public void tearDown() {
-    stopPeer(peer);
-    deleteDirectory(walPath);
-}
-```
-
-### Production
-
-Use Kafka with replication:
-```bash
-# Replication factor 3 for durability
-kafka-topics.sh --bootstrap-server kafka:9092 \
-  --create --topic prod-log \
-  --replication-factor 3 --partitions 10
-```
-
 ## Further Reading
 
-- [Peers and Logs](peers-and-logs.md) - Understanding log roles
-- [RPC](rpc.md) - Log-based messaging vs RPC
-- [Local Development Guide](../guides/local-development.md) - Using Chronicle locally
-- [Distributed Application Guide](../guides/distributed-application.md) - Using Kafka in production
+- [Peers and Logs](peers-and-logs.md) — Conceptual overview, WAL vs Source Log roles, log transformer pattern
+- [Recording Scope](recording-scope.md) — Filter what gets recorded to the WAL
+- [Local Development Guide](../guides/local-development.md) — Using Chronicle locally
+- [Distributed Application Guide](../guides/distributed-application.md) — Using Kafka in production

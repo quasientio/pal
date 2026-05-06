@@ -17,7 +17,7 @@ Think of recording scope as a filter on the output side: everything runs, but on
 
 ## Why Use Recording Scope
 
-**Reduce WAL size**: A typical Java application generates thousands of JDK internal operations per business operation. Recording only your application code can reduce WAL size by 90% or more.
+**Reduce WAL size**: Recording only your application code can reduce WAL size by 90% or more.
 
 **Faster replay**: Smaller WALs mean faster replay indexing and fewer entries to match during deterministic replay.
 
@@ -129,6 +129,8 @@ rules:
       - CONSTRUCTOR
 ```
 
+**Case sensitivity:** YAML action values (`defaultAction`, `action`) must be uppercase (`RECORD`, `SKIP`). The CLI flag values (`--scope-default record|skip`) are case-insensitive — they're normalized internally.
+
 ### Rule Fields
 
 | Field | Required | Default | Description |
@@ -238,24 +240,7 @@ rules:
 
 ## Field Operations
 
-Recording scope applies to **field reads and writes** in addition to methods and constructors. Field operations are a significant source of WAL entries — every `getfield` and `getstatic` in woven code produces an entry. Filtering these can substantially reduce WAL size.
-
-In the YAML policy, use `categories: [FIELD_GET]` or `categories: [FIELD_SET]` to target field operations specifically:
-
-```yaml
-rules:
-  # Record field writes on domain objects (audit trail)
-  - class: "com.mycompany.model.**"
-    categories: [FIELD_SET]
-    action: RECORD
-
-  # Skip field reads on JDK types (noise reduction)
-  - class: "java.**"
-    categories: [FIELD_GET]
-    action: SKIP
-```
-
-When using CLI flags (`--scope`, `--scope-exclude`), the patterns apply to all operation types including field access. To filter fields independently from methods, use a YAML policy file with `categories`.
+Field reads and writes are a significant source of WAL entries — every `getfield` and `getstatic` in woven code produces an entry — so filtering them can substantially reduce WAL size. CLI flags (`--scope`, `--scope-exclude`) match all operation types including field access; to filter fields independently of methods and constructors, use a YAML policy with `categories: [FIELD_GET]` or `[FIELD_SET]` (see [Field Operation Targeting](#field-operation-targeting)).
 
 ## Built-In I/O Boundary Rules (`--scope-io`)
 
@@ -267,10 +252,10 @@ The `--scope-io` flag adds RECORD rules for common I/O boundary operations. Thes
 | **HTTP Client** | `java.net.http.HttpClient.**`, `java.net.http.HttpRequest.**`, `java.net.http.HttpResponse.**`, `java.net.URL.openConnection`, `java.net.HttpURLConnection.**` |
 | **File I/O** | `java.io.FileInputStream.**`, `java.io.FileOutputStream.**`, `java.io.FileReader.**`, `java.io.FileWriter.**`, `java.io.RandomAccessFile.**`, `java.nio.file.Files.**`, `java.nio.channels.FileChannel.**` |
 | **Network I/O** | `java.net.Socket.**`, `java.net.ServerSocket.**`, `java.nio.channels.SocketChannel.**`, `java.nio.channels.ServerSocketChannel.**` |
-| **Time** | `System.currentTimeMillis`, `System.nanoTime`, `java.time.Clock.**`, `Instant.now`, `LocalDateTime.now`, `LocalDate.now`, `LocalTime.now`, `ZonedDateTime.now`, `OffsetDateTime.now` |
-| **Random** | `Math.random`, `java.util.Random.**`, `ThreadLocalRandom.**` |
-| **Process/Runtime** | `ProcessBuilder.**`, `Runtime.exec` |
-| **System** | `System.getProperty`, `System.getenv` |
+| **Time** | `java.lang.System.currentTimeMillis`, `java.lang.System.nanoTime`, `java.time.Clock.**`, `java.time.Instant.now`, `java.time.LocalDateTime.now`, `java.time.LocalDate.now`, `java.time.LocalTime.now`, `java.time.ZonedDateTime.now`, `java.time.OffsetDateTime.now` |
+| **Random** | `java.lang.Math.random`, `java.util.Random.**`, `java.util.concurrent.ThreadLocalRandom.**` |
+| **Process/Runtime** | `java.lang.ProcessBuilder.**`, `java.lang.Runtime.exec` |
+| **System** | `java.lang.System.getProperty`, `java.lang.System.getenv` |
 
 ## Relationship with `--shield-io` (Replay)
 
@@ -305,7 +290,7 @@ The specific patterns covered by `--scope-io` and `--shield-io` may differ sligh
 
 ## Replay Requirement
 
-**Replay must use the same `--scope` flags as recording.** This is critical for correctness.
+**Replay must use the same `--scope` flags as recording.** This is critical for correctness. Recording flags are not stored as WAL metadata, so `pal replay` cannot infer them — passing the matching flags is your responsibility.
 
 When you record with `--scope "com.mycompany.**" --scope-default skip`, operations outside that scope produce no WAL entries. During replay, the replay system needs to know which operations to match against WAL entries and which to execute directly (without WAL matching). If the scope differs between recording and replay:
 
@@ -328,45 +313,9 @@ pal replay --wal file:/tmp/my-wal \
 
 ## Usage Examples
 
-### Example 1: Record Only Application Code
+The Quick Start section above covers the most common single-flag scenarios. The examples below cover cases that go beyond a single CLI flag.
 
-The most common scenario — record your code, skip JDK and library noise:
-
-```bash
-pal run --wal file:/tmp/my-wal \
-  --scope "com.mycompany.**" --scope-default skip \
-  -cp app.jar com.example.Main
-```
-
-**Result**: WAL contains only operations on `com.mycompany.*` classes. JDK, framework, and library operations are skipped.
-
-### Example 2: Record Everything Except Noisy Internals
-
-When most operations are relevant but a few classes generate excessive noise:
-
-```bash
-pal run --wal file:/tmp/my-wal \
-  --scope-exclude "java.lang.String.**" \
-  --scope-exclude "java.util.HashMap.**" \
-  --scope-exclude "java.util.ArrayList.**" \
-  -cp app.jar com.example.Main
-```
-
-**Result**: WAL contains everything except `String`, `HashMap`, and `ArrayList` operations. The default action is inferred as `record`.
-
-### Example 3: Application Code + I/O Boundaries
-
-Record your code plus system boundaries for complete I/O tracing:
-
-```bash
-pal run --wal file:/tmp/my-wal \
-  --scope "com.mycompany.**" --scope-io --scope-default skip \
-  -cp app.jar com.example.Main
-```
-
-**Result**: WAL contains operations on `com.mycompany.*` classes plus JDBC, HTTP, file I/O, time, random, and other system boundary operations.
-
-### Example 4: YAML Policy for Complex Filtering
+### Example 1: YAML Policy for Complex Filtering
 
 When CLI flags aren't granular enough, use a YAML policy:
 
@@ -400,7 +349,7 @@ rules:
     action: RECORD
 ```
 
-### Example 5: Replay with Matching Scope
+### Example 2: Replay with Matching Scope
 
 ```bash
 # Record
@@ -417,6 +366,6 @@ pal replay --wal file:/tmp/my-wal \
 ## Further Reading
 
 - [CLI Reference](../cli-reference.md) — Complete `pal run` and `pal replay` option documentation
-- [Deterministic Replay](../guides/deterministic-replay.md) — Recording WALs, replaying, and understanding divergences
+- [Deterministic Replay](deterministic-replay.md) — Recording WALs, replaying, and understanding divergences
 - [RPC Policy](rpc-policy.md) — Similar first-match-wins pattern matching for access control
 - [Log Backends](logs.md) — Chronicle Queue vs Kafka for WAL storage

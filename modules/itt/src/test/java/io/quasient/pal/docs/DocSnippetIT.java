@@ -122,7 +122,7 @@ public class DocSnippetIT extends AbstractCliIT {
    * produce non-success exit codes. See the test log's "Non-success accepted exit codes" report for
    * the breakdown.
    */
-  private static final int EXPECTED_NON_SUCCESS_COUNT = 20;
+  private static final int EXPECTED_NON_SUCCESS_COUNT = 22;
 
   // ---------------------------------------------------------------------------
   // Static state (set once in @BeforeClass, shared across all test methods)

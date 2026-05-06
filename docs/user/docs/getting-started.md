@@ -88,7 +88,7 @@ The fastest way to get started is with `pal init`, which sets up everything you 
 pal init pal-tutorial
 ```
 
-The interactive wizard guides you through the setup. Accept the defaults, but when prompted about JSON-RPC, choose **Yes, alongside message pipeline** — this scaffolds a sample API class and an RPC policy file we'll use later for remote calls:
+The interactive wizard prompts for build tool, identifiers, and a few capability questions. For this tutorial, accept the defaults except: choose **Yes, alongside message pipeline** for JSON-RPC, answer **y** to both the *interceptable* and *intercepting* prompts, and accept `com.example.Main` as the run mode. These choices scaffold the sample classes, RPC policy, and intercept bundle we use throughout the rest of the guide:
 
 ```
 Welcome to PAL! Let's set up your project.
@@ -98,52 +98,107 @@ Build tool (use arrow keys, Enter to confirm)
     MAVEN
 Project group ID [com.example]:
 Project artifact ID [pal-tutorial]:
-Project version [1.0-SNAPSHOT]:
+Project version [1.0]:
 Will you expose methods via JSON-RPC? (use arrow keys, Enter to confirm)
     No
   ❯ Yes, alongside message pipeline
     Yes, RPC only (no weaving needed)
-Will this app be interceptable by other peers? [y/N]
-Will this app intercept other peers? [y/N]
-Main class (for pal run) [com.example.Main]:
+Will this app be interceptable by other peers? [y/N] y
+Will this app intercept other peers? [y/N] y
+Run mode (use arrow keys, Enter to confirm)
+    Run as service (no main class)
+  ❯ com.example.Main
 Will you use Kafka for WAL (write-ahead log)? [y/N]
 
   ✓ [CREATE] pal-tutorial/build.gradle
   ✓ [CREATE] pal-tutorial/settings.gradle
   ✓ [CREATE] pal-tutorial/src/main/java/com/example/Main.java
+  ✓ [CREATE] pal-tutorial/src/main/java/com/example/SampleService.java
+  ✓ [CREATE] pal-tutorial/src/main/java/com/example/SampleCallbacks.java
   ✓ [CREATE] pal-tutorial/src/main/java/com/example/Api.java
   ✓ [CREATE] pal-tutorial/config/peer-logging.xml
   ✓ [CREATE] pal-tutorial/config/cli-logging.xml
   ✓ [CREATE] pal-tutorial/config/rpc-policy.yaml
+  ✓ [CREATE] pal-tutorial/config/intercept-bundle.yaml
   ✓ [CREATE] pal-tutorial/.env.pal
+  ✓ [CREATE] pal-tutorial/infra/docker-compose.yml
+  ✓ [CREATE] pal-tutorial/infra/.env
+  ✓ [CREATE] pal-tutorial/infra/start.sh
+  ✓ [CREATE] pal-tutorial/infra/stop.sh
   ✓ [CREATE] pal-tutorial/gradlew
   ✓ [CREATE] pal-tutorial/gradlew.bat
   ✓ [CREATE] pal-tutorial/gradle/wrapper/gradle-wrapper.properties
   ✓ [CREATE] pal-tutorial/gradle/wrapper/gradle-wrapper.jar
   ✓ [CREATE] pal-tutorial/README.md
-Checking for pal-weave 1.0.0-SNAPSHOT...
-✓ pal-weave 1.0.0-SNAPSHOT available
+Checking for pal-weave 1.0.0...
+✓ pal-weave 1.0.0 available
 
 ✓ Project initialized!
 
 Next steps:
   1. cd pal-tutorial
   2. ./gradlew build              # Build with AspectJ weaving
-  3. pal run -cp build/classes/java/main com.example.Main
+  3. infra/start.sh               # Start infrastructure
+  4. source .env.pal
+  5. pal run -cp build/classes/java/main com.example.Main
+
+See README.md for WAL, interception, JSON-RPC examples, and more.
 ```
 
 (The real output shows absolute paths; paths are shortened here for readability.)
 
-`Main.java` is the entry point used by local mode below. `Api.java` holds a few sample public static methods (`greet`, `add`, `toUpperCase`) that we'll invoke remotely in the Distributed Mode section, gated by `config/rpc-policy.yaml`.
+The result is a complete project with sample code, configuration, and an `infra/` directory that brings up etcd via docker-compose:
 
-For scripted or CI environments, use non-interactive mode:
+```
+pal-tutorial/
+├── build.gradle
+├── config/
+│   ├── cli-logging.xml
+│   ├── intercept-bundle.yaml
+│   ├── peer-logging.xml
+│   └── rpc-policy.yaml
+├── gradle/wrapper/{gradle-wrapper.jar, gradle-wrapper.properties}
+├── gradlew, gradlew.bat
+├── infra/
+│   ├── docker-compose.yml
+│   ├── start.sh
+│   └── stop.sh
+├── README.md
+├── settings.gradle
+└── src/main/java/com/example/
+    ├── Api.java
+    ├── Main.java
+    ├── SampleCallbacks.java
+    └── SampleService.java
+```
+
+What the generated source files are for:
+
+- **`Main.java`** — entry point used by local mode below. Calls `SampleService.processOrder` to drive a few operations.
+- **`SampleService.java`** — the class whose method calls and field accesses the [Interception](#interception-dynamic-behavior-modification) section will intercept.
+- **`SampleCallbacks.java`** — public static callback handler that prints intercepted operations to stdout.
+- **`Api.java`** — public static methods (`greet`, `add`, `toUpperCase`) invoked over JSON-RPC in the [Distributed Mode](#distributed-mode-cross-peer-rpc) section.
+
+And the configuration files:
+
+- **`config/intercept-bundle.yaml`** — declares an intercept on `SampleService.processOrder` that delegates to `SampleCallbacks.handle`. We apply it in the interception section.
+- **`config/rpc-policy.yaml`** — gates which methods are reachable via JSON-RPC. Permits public methods by default; blocks JDK internals.
+- **`infra/start.sh`** / **`infra/stop.sh`** — start and stop the bundled etcd container used by distributed mode and interception.
+
+For scripted setups, the same flags are exposed non-interactively. The shortest form that produces the same files as the interactive walkthrough above:
+
+```bash
+pal init pal-tutorial --interceptable --intercepting --json-rpc
+```
+
+This pre-answers the y/N prompts; you'll still confirm build tool, group/artifact/version, run mode, and Kafka. To skip *every* prompt (CI mode), add `-y`:
 
 ```bash
 pal init pal-tutorial -y \
   --group-id com.example \
   --artifact-id pal-tutorial \
   --main-class com.example.Main \
-  --json-rpc
+  --interceptable --intercepting --json-rpc
 ```
 
 To enable all PAL features at once (interceptable, intercepting, JSON-RPC, Kafka, scope policy):
@@ -173,15 +228,14 @@ Let's start simple: run with Chronicle Queue (no Kafka/etcd needed).
 
 ```bash
 # Run the application with PAL
-pal run --wal file:/tmp/tutorial-wal --json-rpc auto \
-  -cp build/classes/java/main \
-  com.example.Main
+pal run --wal file:/tmp/tutorial-wal -cp build/classes/java/main com.example.Main
 ```
 
 You should see the application output:
 
 ```
 Processing order: 1x Laptop @ $999.99
+  Discount applied! Total: $899.99
 Processing order: 5x Mouse @ $29.99
 Processing order: 2x Keyboard @ $79.99
 Orders processed: 3
@@ -190,7 +244,7 @@ Total revenue: $1309.92
 
 **What just happened?**
 
-Every operation — the constructor, the `processOrder` calls, each field read and write, and the `println` calls — was converted to a message and logged to `/tmp/tutorial-wal`. This transformation happened at build time: Gradle's AspectJ weaving task wove PAL's aspects into your compiled `.class` files during the build step. At runtime, these woven classes create messages for each operation, which PAL then writes to the WAL.
+Every operation — the `processOrder` calls, each `orderCount`/`totalRevenue` field read and write inside `SampleService`, and the `println` calls — was converted to a message and logged to `/tmp/tutorial-wal`. This transformation happened at build time: Gradle's AspectJ weaving task wove PAL's aspects into your compiled `.class` files during the build step. At runtime, these woven classes create messages for each operation, which PAL then writes to the WAL.
 
 ### 4. Inspect the Messages
 
@@ -201,48 +255,38 @@ Let's see what PAL captured:
 pal log print file:/tmp/tutorial-wal --tree
 ```
 
-Output (abbreviated):
+Output (abbreviated; offsets and object IDs vary):
 
 ```
 [0] call Main.main
-  [1] new Main
-    [2] put Main.orderCount@1 ⇦ (=0)
-    [3] put_done Main.orderCount
-    [4] put Main.totalRevenue@1 ⇦ (=0.0)
-    [5] put_done Main.totalRevenue
-  [6] return new Main@1
-  [7] call Main.processOrder@1
-    [8] get Main.orderCount@1
-    [9] return int@2(=0) (orderCount)
-    [10] put Main.orderCount@1 ⇦ (=1)
-    [11] put_done Main.orderCount
-    [12] get Main.totalRevenue@1
-    [13] return double@7(=0.0) (totalRevenue)
-    [14] put Main.totalRevenue@1 ⇦ (=999.99)
-    [15] put_done Main.totalRevenue
-    [16] get System.out
-    [17] return PrintStream@9 (out)
-    [18] call PrintStream.println@9
-    [19] return void
-  [20] return void
-  (two more processOrder subtrees, [21]–[48], follow the same shape)
-  [49] get System.out
-  [50] return PrintStream@9 (out)
-  [51] get Main.orderCount@1
-  [52] return int@20(=3) (orderCount)
-  [53] call PrintStream.println@9
-  [54] return void
-  [55] get System.out
-  [56] return PrintStream@9 (out)
-  [57] get Main.totalRevenue@1
-  [58] return double@25(=1309.92) (totalRevenue)
-  [59] call Double.valueOf
-  [60] return Double@27(=1309.92)
-  [61] call String.format
-  [62] return String@30(="1309.92")
-  [63] call PrintStream.println@9
-  [64] return void
-[65] return void
+  [1] call SampleService.processOrder
+    [2] get SampleService.orderCount
+    [3] return int(=0)
+    [4] put SampleService.orderCount ⇦ (=1)
+    [5] put_done SampleService.orderCount
+    [6] get SampleService.totalRevenue
+    [7] return double(=0.0)
+    [8] put SampleService.totalRevenue ⇦ (=999.99)
+    [9] put_done SampleService.totalRevenue
+    [10] call PrintStream.println          ("Processing order: 1x Laptop @ $999.99")
+    [11] return void
+    [12] call SampleService.applyDiscount
+    [13] return double(=899.991)
+    [14] call PrintStream.println          ("  Discount applied! Total: $899.99")
+    [15] return void
+  [16] return void
+  (two more processOrder subtrees follow the same shape — Mouse and Keyboard,
+   neither triggering the discount branch)
+  ...
+  [N]   get SampleService.orderCount
+  [N+1] return int(=3)
+  [N+2] call PrintStream.println           ("Orders processed: 3")
+  [N+3] return void
+  [N+4] get SampleService.totalRevenue
+  [N+5] return double(=1309.92)
+  [N+6] call PrintStream.println           ("Total revenue: $1309.92")
+  [N+7] return void
+[N+8] return void
 ```
 
 Other output formats are available (`--full`, `--json`). See [CLI Reference](cli-reference.md#pal-log-print-print-messages-from-a-log) for details.
@@ -287,8 +331,8 @@ Will you use Kafka for WAL (write-ahead log)? [y/N]
   ✓ [CREATE] config/cli-logging.xml
   ✓ [CREATE] .env.pal
   ✓ [CREATE] README.md
-Checking for pal-weave 1.0.0-SNAPSHOT...
-✓ pal-weave 1.0.0-SNAPSHOT available
+Checking for pal-weave 1.0.0...
+✓ pal-weave 1.0.0 available
 ```
 
 A backup of your original build file is created automatically (`build.gradle.backup` or `pom.xml.backup`). Use `--dry-run` to preview the changes before applying them:
@@ -316,7 +360,7 @@ plugins {
 }
 
 group = 'com.example'
-version = '1.0-SNAPSHOT'
+version = '1.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -335,7 +379,7 @@ configurations {
 
 dependencies {
     aspectjTools 'org.aspectj:aspectjtools:1.9.24'
-    aspect 'io.quasient.pal:pal-weave:1.0.0-SNAPSHOT'
+    aspect 'io.quasient.pal:pal-weave:1.0.0'
     implementation 'org.aspectj:aspectjrt:1.9.24'
 }
 
@@ -371,13 +415,13 @@ tasks.named('jar') { dependsOn weaveClasses }
 
     <groupId>com.example</groupId>
     <artifactId>pal-tutorial</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <pal.version>1.0.0-SNAPSHOT</pal.version>
+        <pal.version>1.0.0</pal.version>
         <aspectj.version>1.9.24</aspectj.version>
     </properties>
 
@@ -505,53 +549,103 @@ The WAL captured every incoming RPC as a first-class message — the same substr
 
 ## Interception: Dynamic Behavior Modification
 
-Let's see how to intercept method calls at runtime.
+Now let's intercept method calls at runtime — without modifying any application code. `pal init` already scaffolded everything we need:
 
-### 1. Create a Monitoring Peer
+- **`SampleService.processOrder`** — the target method, already called from `Main.java`.
+- **`SampleCallbacks.handle`** — a public static callback that prints intercepted operations to stdout.
+- **`config/intercept-bundle.yaml`** — declares the intercept that wires the two together.
 
-Create `src/main/java/tutorial/MonitorCallback.java`:
+We'll start the directory, launch a callback peer, apply the bundle, then run `Main` and watch the callback fire.
 
-```java
-package tutorial;
+### 1. Start the Directory
 
-import io.quasient.pal.common.lang.intercept.InterceptCallbackResponse;
-import io.quasient.pal.common.lang.intercept.InterceptContext;
-
-public class MonitorCallback {
-    // Callback methods must be public static, accept InterceptContext,
-    // and return InterceptCallbackResponse
-    public static InterceptCallbackResponse onCalculatorCall(InterceptContext ctx) {
-        System.out.println("[MONITOR] Intercepted with args: "
-            + java.util.Arrays.toString(ctx.getArgs()));
-        return new InterceptCallbackResponse();
-    }
-}
-```
-
-Register the intercept using a YAML bundle file `monitor-intercept.yaml`:
-
-```yaml
-bundle: "calculator-monitor"
-defaults:
-  peer: "monitor"
-
-intercepts:
-  - target: tutorial.Calculator.*
-    type: BEFORE
-    callback:
-      class: tutorial.MonitorCallback
-      method: onCalculatorCall
-```
+Interception uses the directory (etcd) to register intercepts and to resolve callback peers by name. The project's `infra/` directory contains a docker-compose for exactly this:
 
 ```bash
-pal intercept apply -d localhost:2379 monitor-intercept.yaml
+infra/start.sh
 ```
 
-### 2. Run with Interception
+This brings up an etcd reachable at `localhost:2379`. Run `infra/stop.sh` when you're done.
 
-*Note: Full interception example requires additional API setup. See [Testing with Interception](guides/testing-with-interception.md) for complete code.*
+### 2. Launch the Callback Peer
 
-The key point: You can register intercepts at runtime that execute callbacks before, after, or around any method call.
+The scaffolded bundle's `peer:` field is the project's artifact ID (`pal-tutorial`), so the callback peer must register under that name. In a new terminal, start a peer with no main class — it stays alive to receive callbacks — and a `--zmq-rpc` endpoint so the application peer can reach it:
+
+```bash
+pal run -d localhost:2379 -n pal-tutorial --zmq-rpc auto \
+  --wal file:/tmp/cb-wal \
+  -cp build/classes/java/main
+```
+
+### 3. Apply the Intercept Bundle
+
+In another terminal, apply the bundle that `pal init` generated:
+
+```bash
+pal intercept apply -d localhost:2379 config/intercept-bundle.yaml
+```
+
+You should see:
+
+```
+Applied: 1 created, 0 skipped, 0 failed
+```
+
+For reference, that bundle declares (open `config/intercept-bundle.yaml` to see):
+
+```yaml
+bundle: "pal-tutorial-intercepts"
+defaults:
+  peer: "pal-tutorial"
+intercepts:
+  - target: com.example.SampleService.processOrder
+    type: BEFORE
+    callback:
+      class: com.example.SampleCallbacks
+      method: handle
+```
+
+### 4. Run `Main` with Interception Enabled
+
+Run the application again, this time registered in the directory and marked `--interceptable` so it picks up the registered intercept:
+
+```bash
+pal run -d localhost:2379 --interceptable -cp build/classes/java/main com.example.Main
+```
+
+Main runs the same three `processOrder` calls as before, then exits.
+
+### 5. Observe the Callback
+
+In the callback peer's terminal, three intercept callbacks now appear — one per `processOrder` call:
+
+```
+[intercept] BEFORE callback, args=[Laptop, 1, 999.99]
+[intercept] BEFORE callback, args=[Mouse, 5, 29.99]
+[intercept] BEFORE callback, args=[Keyboard, 2, 79.99]
+```
+
+That output came from `SampleCallbacks.handle` running on the callback peer, in response to method calls on the application peer — no edits to `SampleService.java`, no rebuild, no restart needed to attach the observer.
+
+A `BEFORE` intercept observes but does not alter the call. Switch the bundle's `type:` to `AROUND` and use `ctx.setReturnValue(...)` (see [Interception](concepts/interception.md#around)) to mock or transform results instead. Re-apply with `pal intercept apply` — the bundle is idempotent.
+
+### 6. Remove the Intercept
+
+Detach the callback — live, no peer restart required:
+
+```bash
+pal intercept rm -d localhost:2379 -f config/intercept-bundle.yaml
+```
+
+Subsequent runs of `Main` execute un-intercepted.
+
+### 7. Stop the Infrastructure
+
+When you're done, shut down the callback peer (Ctrl-C in its terminal) and stop etcd:
+
+```bash
+infra/stop.sh
+```
 
 ## Common Operations
 
@@ -611,8 +705,8 @@ pal peer rm -d localhost:2379 my-peer-uuid
 # Remove a log from directory (doesn't delete Kafka topic)
 pal log rm -d localhost:2379 my-log
 
-# Clean local Chronicle logs
-rm -rf /tmp/tutorial-wal
+# Remove a Chronicle log (deletes files and, if registered, the directory entry)
+pal log rm file:/tmp/tutorial-wal
 ```
 
 ## Troubleshooting
@@ -624,7 +718,7 @@ rm -rf /tmp/tutorial-wal
 curl http://localhost:2379/health
 
 # If not, start it
-infra/bin/start-etcd-and-kafka-docker.sh
+infra/start.sh
 ```
 
 ### "ERROR_NO_KAFKA_SERVERS_GIVEN" (exit code 6)
@@ -644,7 +738,7 @@ Common causes:
 docker ps | grep kafka
 
 # If not, start infrastructure
-infra/bin/start-etcd-and-kafka-docker.sh
+infra/start.sh
 ```
 
 **Chronicle source log doesn't exist:**
@@ -668,32 +762,34 @@ javap -c build/classes/java/main/tutorial/OrderService.class | grep aspectOf
 
 Common causes:
 
-- **Missing AspectJ plugin**: Ensure your Gradle or Maven build includes the AspectJ weaving plugin with `pal-weave` as an aspect library
-- **Class not woven**: Only classes processed by the AspectJ plugin will have PAL's dispatch. Verify with `javap -c` as shown above
-- **Wrong plugin configuration**: The aspect library must reference `pal-weave`, not just have it as a dependency
-- **Incremental build stale**: Try a clean build (`mvn clean install`) to ensure all classes are freshly woven
+- **Missing AspectJ plugin**: Ensure your Gradle or Maven build includes the AspectJ weaving plugin with `pal-weave` as an aspect library.
+- **Class not woven**: Only classes processed by the AspectJ plugin will have PAL's dispatch. Verify with `javap -c` as shown above.
+- **Wrong plugin configuration**: The aspect library must reference `pal-weave`, not just have it as a dependency.
+- **Incremental build stale**: Try a clean build (`./gradlew clean build` or `mvn clean install`) to ensure all classes are freshly woven.
 
 ### Interception Not Working
 
-1. Ensure class was compiled with AspectJ weaving
-2. Ensure peer started with `--interceptable` flag
-3. Check intercept pattern matches class/method names
-4. Enable debug logging in logback.xml:
-
-```xml
-<logger name="io.quasient.pal.core.InterceptMatcher" level="DEBUG"/>
-```
+1. Ensure class was compiled with AspectJ weaving.
+2. Ensure peer started with `--interceptable` flag.
+3. Ensure etcd is up.
+4. Verify intercept is registered (see `pal intercept ls`)
+5. Ensure the callback peer is launched with `--zmq-rpc`
+6. Check intercept pattern matches class/method names.
+7. Enable debug logging in logback.xml:
+   ```xml
+   <logger name="io.quasient.pal.core.intercept.InterceptMatcher" level="DEBUG"/>
+   ```
 
 ### Infrastructure Failure Modes
 
-For detailed information about what happens when etcd or Kafka become unavailable (at startup or while running), see [Trade-offs and Limitations — Failure Modes](concepts/trade-offs.md#failure-modes).
+For detailed information about what happens when etcd or Kafka become unavailable (at startup or while running), see [Trade-offs and Limitations — Failure Modes](understanding-pal.md#failure-modes).
 
 ## Next Steps
 
 Now that you've experienced PAL's core capabilities:
 
-1. **Understand the concepts:** Read [Understanding PAL](understanding-pal.md) for deep dive
-2. **Explore use cases:** See [Use Cases](use-cases.md) for your role (developer, SRE, architect)
+1. **Understand the concepts:** Read [Understanding PAL](understanding-pal.md) for deep dive.
+2. **Explore use cases:** See [Use Cases](use-cases.md) for your role (developer, SRE, architect).
 3. **Learn the details:**
    - [Peers and Logs](concepts/peers-and-logs.md)
    - [RPC](concepts/rpc.md)
@@ -702,7 +798,6 @@ Now that you've experienced PAL's core capabilities:
 4. **Follow guides:**
    - [Local Development](guides/local-development.md)
    - [Distributed Application](guides/distributed-application.md)
-   - [Testing with Interception](guides/testing-with-interception.md)
 
 ## Summary
 

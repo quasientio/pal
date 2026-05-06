@@ -22,7 +22,7 @@ Same code, but now every operation is a first-class entity. This has profound im
 
 The principle of treating operations as messages is foundational to computing. Smalltalk (1970s) pioneered "everything is a message." Erlang/OTP built a production-grade ecosystem on message-passing and process isolation. Akka brought actor-model message-passing to the JVM. Dapr provides a sidecar-based approach for polyglot systems.
 
-PAL's specific contribution is *retrofitting* message-passing onto existing Java code through post-compile bytecode weaving, without requiring developers to adopt a new programming model, language, or framework. This comes with trade-offs (see [Trade-offs and Limitations](concepts/trade-offs.md)) but enables incremental adoption: you can add PAL to an existing project and selectively use its capabilities without rewriting code.
+PAL's specific contribution is *retrofitting* message-passing onto existing Java code through post-compile bytecode weaving, without requiring developers to adopt a new programming model, language, or framework. This comes with trade-offs (see [Trade-offs and Limitations](#trade-offs-and-limitations) below) but enables incremental adoption: you can add PAL to an existing project and selectively use its capabilities without rewriting code.
 
 ## Quantization: How Operations Become Messages
 
@@ -175,15 +175,15 @@ echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{
 # Target peer executes message, returns result
 ```
 
-The CLI is one way to make RPC calls. PAL also provides programmatic APIs at different levels of abstraction—see [Making RPC Calls](concepts/rpc.md#making-rpc-calls), [JsonRpcMessageFactory](concepts/rpc.md#jsonrpcmessagefactory), and the [RpcChain DSL](concepts/rpc-chain.md).
+The CLI is one way to make RPC calls. PAL also provides programmatic APIs at different levels of abstraction—see [Making RPC Calls](concepts/rpc.md#making-rpc-calls), [JsonRpcMessageFactory](concepts/rpc-json.md#jsonrpcmessagefactory), and the [RpcChain DSL](concepts/rpc-chain.md).
 
 RPC is explicit—you target a specific peer by name or UUID. There is no transparent location independence; you always know when a call crosses a network boundary.
 
 **Enables:**
 
-- **Cross-peer invocation:** Call any method on a remote peer by name—no service definitions or code generation required
-- **Intercept callbacks:** Intercepts on one peer can trigger callbacks on another, enabling cross-peer behavior modification
-- **Development and operational workflows:** Invoke methods, inspect state, and test behavior on running peers, programmatically or from the CLI
+- **Cross-peer invocation:** Call any method on a remote peer by name—no service definitions or code generation required.
+- **Intercept callbacks:** Intercepts on one peer can trigger callbacks on another, enabling cross-peer behavior modification.
+- **Development and operational workflows:** Invoke methods, inspect state, and test behavior on running peers, programmatically or from the CLI.
 
 ### Messages Can Be Intercepted
 
@@ -248,6 +248,8 @@ Because intercept callbacks can mutate arguments, skip execution, or override re
 - **caching:** e.g. return stored results without executing
 
 ...just to name a few can all be built on top of it.
+
+Because callbacks live on a *separate* peer rather than alongside the target, this is **networked AOP**: cross-cutting concerns are delivered by other processes (potentially on other machines) rather than by code woven into the target's JVM. It is the same shape of horizontal extension a service mesh provides for network requests, applied here at the operation level — method calls, constructor invocations, and field reads/writes — rather than at the network layer.
 
 ## The Architecture
 
@@ -406,11 +408,11 @@ palDirectory.createIntercept(intercept);
 
 **Intercept types:**
 
-- **BEFORE:** Callback runs before method, synchronously (blocks)
-- **AFTER:** Callback runs after method, synchronously
-- **AROUND:** Callback can replace method entirely, return different result
-- **BEFORE_ASYNC:** Fire-and-forget BEFORE—callback is sent but execution proceeds without waiting for a response (cannot mutate arguments)
-- **AFTER_ASYNC:** Fire-and-forget AFTER—callback is sent but execution proceeds without waiting (cannot override return value)
+- **BEFORE:** Callback runs before method, synchronously (blocks).
+- **AFTER:** Callback runs after method, synchronously.
+- **AROUND:** Callback can replace method entirely, return different result.
+- **BEFORE_ASYNC:** Fire-and-forget BEFORE—callback is sent but execution proceeds without waiting for a response (cannot mutate arguments).
+- **AFTER_ASYNC:** Fire-and-forget AFTER—callback is sent but execution proceeds without waiting (cannot override return value).
 
 **Pattern matching:**
 
@@ -443,7 +445,7 @@ calculator.add(5, 3);
 
 // Colfer (binary)
 0x12 0x0A 0x43 0x61 0x6C 0x63 0x75 0x6C 0x61...
-(70 bytes, 2μs to serialize)
+(compact binary; microsecond-range serialization)
 
 // JSON-RPC
 {
@@ -452,7 +454,7 @@ calculator.add(5, 3);
   "params": [5, 3],
   "id": 1
 }
-(85 bytes, 50μs to serialize)
+(human-readable text; larger size and slower serialization than Colfer)
 ```
 
 ## Transparency: No Code Changes Required
@@ -514,10 +516,10 @@ import io.quasient.pal.*  // ✗ (in application code)
 
 While your application source code remains unchanged, the build and compiled output do change:
 
-- **Build configuration**: Your Maven or Gradle build adds the AspectJ weaving plugin and declares `pal-weave` as an aspect library dependency
-- **Compiled `.class` files**: Woven bytecode contains PAL dispatch calls that depend on PAL's runtime aspects
-- **Reversibility**: Removing the weaving plugin and rebuilding produces standard Java classes that work without PAL
-- **Nature of the trade-off**: This is a build-time opt-in, not a source-code-level dependency. Your `.java` files never import PAL, but your `.class` files contain PAL's weaving
+- **Build configuration**: Your Gradle or Maven build adds the AspectJ weaving plugin and declares `pal-weave` as an aspect library dependency.
+- **Compiled `.class` files**: Woven bytecode contains PAL dispatch calls that depend on PAL's runtime aspects.
+- **Reversibility**: Removing the weaving plugin and rebuilding produces standard Java classes that work without PAL.
+- **Nature of the trade-off**: This is a build-time opt-in, not a source-code-level dependency. Your `.java` files never import PAL, but your `.class` files contain PAL's weaving.
 
 ## How PAL Relates to Other Technologies
 
@@ -525,7 +527,7 @@ PAL builds on ideas from message-passing systems (Smalltalk, Erlang, Akka) but d
 
 PAL's RPC is not a replacement for purpose-built RPC frameworks like gRPC, which offer schema evolution, code generation, and strong typing. PAL's RPC serves a different purpose: it enables intercept callbacks between peers, supports development and debugging workflows, and provides operational tooling for PAL-managed applications.
 
-PAL's interception system is more dynamic than traditional AspectJ usage. Where AspectJ aspects are typically defined in application code and woven at build time, PAL's intercepts are registered at runtime via a directory service and can be added or removed without recompilation.
+PAL's interception system differs from traditional AspectJ in two ways together: it is **runtime-registered** (through the directory service rather than baked into the build) and **networked** (the advice runs on a separate peer, communicating with the target via RPC). That combination opens space for cross-cutting concerns historically delivered by service-mesh sidecars — telemetry, authorization, rate limiting, A/B routing, fault injection — but applied at operation granularity (method calls, constructor invocations, and field accesses) rather than network granularity. Add or remove these concerns at runtime without redeploying the target.
 
 ## When to Use PAL
 
@@ -544,21 +546,74 @@ All PAL features are off by default. Weaving is a build-time step, but at runtim
 
 - You don't need any of PAL's capabilities
 
-## Performance Considerations
+## Trade-offs and Limitations
 
-**Performance characteristics** depend heavily on configuration (which features are enabled) and workload. PAL adds overhead at each dispatch point—the magnitude depends on whether WAL writing, PUB publishing, or intercept matching is active. With no features enabled (standalone mode), overhead is primarily the AspectJ dispatch cost. See the [JVM Configuration](guides/jvm-configuration.md) guide for tuning options. Benchmark results will be published separately.
+Every engineering decision involves trade-offs. This section documents PAL's honestly, so you can make an informed decision about whether PAL is right for your use case.
 
-For a detailed discussion of overhead sources and mitigation strategies, see [Trade-offs and Limitations](concepts/trade-offs.md).
+### Build-Time Requirements
+
+- AspectJ weaving must be configured in the build (Gradle or Maven plugin).
+- Woven `.class` files are larger than originals.
+- Build time increases slightly due to the weaving phase.
+- The `pal-weave` artifact must be declared as an aspect library dependency.
+
+### Runtime Overhead
+
+Every quantized operation passes through PAL's dispatch layer. The magnitude of overhead depends on which features are enabled:
+
+- **Standalone mode** (no WAL, no intercepts): Overhead is primarily the AspectJ dispatch cost.
+- **With WAL writing**: Adds I/O cost per operation (Chronicle Queue is nanosecond-range; Kafka adds millisecond-range async batched writes).
+- **With intercepts active**: Adds pattern matching cost per operation, plus possible RPC round-trip for remote callbacks.
+
+For CPU-bound tight loops where per-call overhead matters, consider excluding hot-path classes from weaving via AspectJ pointcut configuration. See the [JVM Configuration](jvm-configuration.md) reference for tuning options. Benchmark results will be published separately.
+
+Stack traces include PAL dispatch frames, which adds noise when debugging. This is inherent to the AspectJ weaving approach.
+
+### Serialization Constraints
+
+- Not all Java objects are serializable; PAL handles primitives, strings, and simple arrays natively.
+- Complex objects passed through RPC or intercept callbacks use ObjectRef (peer-local references) rather than full serialization.
+- Lambdas, `ThreadLocal` state, `InputStream`s, and objects with circular references cannot be transparently serialized.
+- WAL replay with `STUB_FROM_WAL` can reconstruct primitives and strings; complex objects become "phantoms" (operations on them are also stubbed).
+
+### Interception Limitations
+
+For interception-specific constraints — woven-code requirement, pattern syntax, no type-hierarchy matching, serialization limits, and the network round-trip cost of remote callbacks — see [Interception → Limitations](concepts/interception.md#limitations) and [Interception → Performance Impact](concepts/interception.md#performance-impact).
+
+### Log Backend Constraints
+
+Kafka WAL: PAL writes to and reads from a single partition (partition 0) per Kafka topic. This guarantees strict total ordering of the operation stream within a topic, but bounds per-topic throughput to single-partition performance. Scale aggregate throughput by adding more topics — typically one WAL per peer — rather than by partitioning a single topic. See [Single-Partition Design](concepts/logs.md#single-partition-design) for details.
+
+### Scope
+
+- **Java only**: PAL is designed for Java. JVM languages like Kotlin and Scala may work with AspectJ but are not tested.
+- **Single-language message format**: PAL's native message format is Java-specific; cross-language integration uses the JSON-RPC protocol.
+
+### What PAL Is Not
+
+- **Not a replacement for production RPC frameworks** (gRPC, REST): PAL's RPC is auxiliary infrastructure supporting intercept callbacks, development workflows, testing, and operational tooling. For production inter-service communication requiring type safety, schema evolution, and high-throughput optimization, use purpose-built RPC frameworks alongside PAL.
+- **Not a replacement for APM/observability platforms** (Datadog, New Relic, etc.): PAL captures operations at a different granularity and for different purposes. The WAL is an operation log, not a metrics/tracing pipeline.
+- **Not a service mesh in the traditional sense**: PAL does not proxy network traffic, so it does not provide network-layer features like load balancing, mTLS termination, or service-to-service routing policies. However, many of the *outcomes* a service mesh delivers — telemetry, authorization, rate limiting, fault injection, A/B routing — can be achieved through PAL's networked interception, applied at the operation level (method calls, constructor invocations, field reads, field writes) rather than the network-request level. See [Interception](concepts/interception.md).
+
+### Failure Modes
+
+Understanding what happens when infrastructure becomes unavailable:
+
+- **etcd unreachable at startup**: Peer exits immediately with exit code 14 (fail-fast). The peer does not start in degraded mode.
+- **Kafka unreachable at startup**: Peer exits immediately with exit code 7 (fail-fast).
+- **etcd goes down while peer is running**: Peer's lease expires after TTL (60s default). Intercepts stop updating. Peer continues executing but cannot register new intercepts or be discovered.
+- **Kafka goes down while peer is running**: WAL writes will back-pressure. Behavior depends on Kafka producer configuration (blocking vs. dropping).
+- **Standalone mode** (no etcd, no Kafka): Peer runs normally with only Chronicle Queue or no logging. This is the simplest and most resilient mode.
 
 ## Next Steps
 
 Now that you understand PAL's core concepts:
 
-1. **Get hands-on:** Follow the [Getting Started](getting-started.md) tutorial
-2. **Explore use cases:** Read [Use Cases](use-cases.md) for your role
+1. **Get hands-on:** Follow the [Getting Started](getting-started.md) tutorial.
+2. **Explore use cases:** Read [Use Cases](use-cases.md) for your role.
 3. **Learn the details:**
    - [Peers and Logs](concepts/peers-and-logs.md) - Core entities
    - [RPC](concepts/rpc.md) - Remote procedure calls
    - [Interception](concepts/interception.md) - Dynamic behavior modification
    - [Logs](concepts/logs.md) - Chronicle vs Kafka
-4. **Try it yourself:** Work through the [Local Development Guide](guides/local-development.md)
+4. **Try it yourself:** Work through the [Local Development Guide](guides/local-development.md).

@@ -21,25 +21,24 @@ ExecMessage msg = {
 };
 ```
 
-This single transformation enables capabilities that are not available in standard JVMs. All features are off by default—you enable only what you need, and pay no runtime cost for features you don't use.
+This single transformation enables capabilities that are not available in standard JVMs. All features are off by default—you enable only what you need, and unused features carry minimal overhead. The runtime is lightweight: ~42 MB JAR, ~160 ms launch-to-ready for a detached peer with no infrastructure (AMD Ryzen 5 7600, JDK 17).
 
 ## What You Can Do
 
 **Development & Testing:**
-- Test real code without mocks (replay messages instead of stubbing dependencies)
+- Test real code without mocks (intercept dependencies at runtime instead of stubbing)
 - Debug with time-travel (replay any execution from the write-ahead log)
 - Inspect method calls at runtime (observe message flow)
 
 **Production:**
-- Hot-patch bugs in 60 seconds (intercept and replace behavior without restart)
+- Hot-patch behavior at runtime (intercept and replace operations without restart)
 - Audit every operation (messages provide compliance trail)
-- Trace requests across distributed systems (messages carry context)
 
 **Architecture:**
 - Event-source your application automatically (for operations within recording scope)
 - Invoke methods on remote peers (cross-peer RPC via ZMQ or JSON-RPC)
 
-Without modifying your application source code (AspectJ weaving is configured at build time). No annotations, no interfaces in your source files.
+Without modifying your application source code (AspectJ weaving is configured at build time — see [Getting Started](https://quasientio.github.io/pal/getting-started/)). No annotations, no interfaces in your source files.
 
 ## How It Works
 
@@ -59,7 +58,7 @@ Without modifying your application source code (AspectJ weaving is configured at
         ▼                   ▼             ▼
   ┌──────────┐        ┌──────────┐  ┌──────────┐
   │   LOG    │        │  REPLAY  │  │ INTERCEPT│
-  │  (WAL)   │        │ (verify) │  │ (modify) │
+  │  (WAL)   │        │ (re-run) │  │ (modify) │
   └──────────┘        └──────────┘  └──────────┘
        │                   │              │
        ▼                   ▼              ▼
@@ -78,7 +77,7 @@ Because operations are instrumented, they can be:
 ### Prerequisites
 
 - Java 17 or higher
-- Docker (optional; needed for intercepts and Kafka logs)
+- Docker (optional; for running etcd and Kafka)
 
 ### Option 1: Download Binary Distribution
 
@@ -113,20 +112,33 @@ cd pal
 export PATH="$(pwd)/bin:$PATH"
 ```
 
-### Run Your First PAL Application
+### Scaffold a Project
+
+`pal init` generates a Maven project pre-wired with AspectJ weaving and the right dependencies:
 
 ```bash
-# Start infrastructure (etcd + Kafka in Docker)
-infra/bin/start-etcd-and-kafka-docker.sh
+pal init my-app
+cd my-app
+./gradlew build
+```
 
-# Run a simple peer
+Answer **y** to the Kafka prompt (or pass `--all`) to also generate `infra/start.sh` and `infra/stop.sh` that bring up etcd and Kafka via Docker.
+
+### Run Your First Peer
+
+Local mode (Chronicle, no infrastructure needed):
+
+```bash
+pal run --wal file:/tmp/my-wal -cp build/classes/java/main com.example.MyApp
+```
+
+Distributed mode (etcd + Kafka):
+
+```bash
+infra/start.sh
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal my-log \
-  -cp target/my-app.jar \
-  com.example.Main
-
-# Or use Chronicle for local development (no etcd nor Kafka needed)
-pal run --wal file:/tmp/my-wal -cp target/my-app.jar com.example.Main
+  --wal my-wal --json-rpc auto -n my-service \
+  -cp build/classes/java/main com.example.MyApp
 ```
 
 ## Documentation
@@ -145,8 +157,6 @@ pal run --wal file:/tmp/my-wal -cp target/my-app.jar com.example.Main
 
 **Logs:** Durable, ordered streams of messages. Backed by Kafka (distributed) or Chronicle Queue (local, high-performance).
 
-**Quantization:** The process of converting operations (method calls, field access, constructors) into discrete messages.
-
 **Interception:** Dynamic registration of callbacks that execute before, after, or around operations. Enables hot-patching production code.
 
 **RPC:** Methods on remote peers can be invoked programmatically, supporting intercept callbacks, development workflows, and operational tooling.
@@ -160,15 +170,6 @@ Because operations are messages, they can be logged (enabling time-travel debugg
 ### Prior Art & Motivation
 
 The idea of reifying operations as messages has deep roots: Smalltalk, Erlang/OTP, Akka, and others. PAL applies this principle to existing Java code through build-time bytecode weaving, enabling message-passing capabilities as runtime options rather than architectural commitments.
-
-## Architecture
-
-PAL consists of:
-- **pal-weave:** AspectJ aspects that intercept operations at build time
-- **pal-runtime:** Message creation, dispatch, logging, and interception at runtime
-- **pal-api:** Core types, interfaces, common utilities, and message serialization (Colfer/JSON-RPC)
-- **pal-client:** Directory service (etcd), RPC clients with fluent DSL, and peer management
-- **pal-cli:** Command-line interface for running peers and inspecting logs
 
 ## License
 
@@ -188,3 +189,4 @@ Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - **Discord:** [Join the PAL community](https://discord.gg/cHrbfsB2ev)
 - **Documentation:** [Full docs](https://quasientio.github.io/pal/)
 - **Examples:** [pal-examples repository](https://github.com/quasientio/pal-examples)
+- **Contact:** [manuel@quasient.com](mailto:manuel@quasient.com)

@@ -1,5 +1,7 @@
 # Use Cases
 
+> **WARNING — Uncurated content.** This page is awaiting curation before publishing. Examples and API references may be inaccurate.
+
 PAL's core abstraction—operations as messages—enables different capabilities for different roles. This page shows how developers, SREs, and architects can leverage PAL for their specific needs.
 
 ## For Developers: Testing Without Mocks
@@ -565,7 +567,7 @@ All of these emerge from one abstraction: **operations as messages**.
 
 Choose your path:
 
-- **Developer:** Start with [Local Development Guide](guides/local-development.md)
-- **SRE:** See [Testing with Interception](guides/testing-with-interception.md) for hot-patching patterns
-- **Architect:** Read [Distributed Application Guide](guides/distributed-application.md)
-- **All:** Understand the foundation in [Understanding PAL](understanding-pal.md)
+- **Developer:** Start with [Local Development Guide](guides/local-development.md).
+- **SRE:** See [Interception](concepts/interception.md) for hot-patching and runtime-policy patterns.
+- **Architect:** Read [Distributed Application Guide](guides/distributed-application.md).
+- **All:** Understand the foundation in [Understanding PAL](understanding-pal.md).

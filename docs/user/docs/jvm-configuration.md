@@ -1,15 +1,15 @@
 # JVM Configuration
 
-PAL runs as a standard Java process launched by the `bin/pal` script. The script sets sensible defaults for heap sizing, garbage collection, and module exports, but provides three layers of customization for users who need to tune JVM behavior.
+PAL runs as a standard Java process launched by the `bin/pal` script. PAL requires **Java 17 or later**. The script sets sensible defaults for heap sizing, garbage collection, and module exports, on top of a baseline of JVM module exports required for PAL to function. Three layers of customization let you tune JVM behavior.
 
 ## Precedence
 
 JVM options are assembled in this order. Later layers override earlier ones (last wins):
 
-1. **Chronicle Queue module exports** — always applied, required for PAL to function
-2. **Category environment variables** — replaceable defaults for heap, GC, and JMX (`pal run` only)
-3. **`pal.vmoptions` file** — persistent per-installation configuration
-4. **`PAL_JAVA_OPTS` environment variable** — one-off overrides, always wins
+1. **Baseline JVM module exports** — `--add-exports` and `--add-opens` directives required by AspectJ weaving, Chronicle Queue, and reflection-based dispatch. Always applied; not user-configurable.
+2. **Category environment variables** — replaceable defaults for heap, GC, and JMX (`pal run` only).
+3. **`pal.vmoptions` file** — persistent per-installation configuration.
+4. **`PAL_JAVA_OPTS` environment variable** — one-off overrides, always wins.
 
 ## Category Environment Variables
 
@@ -43,13 +43,16 @@ pal run -cp app.jar com.example.Main
 
 JMX remote monitoring configuration. Default: built automatically from `PAL_JMX_HOST` and `PAL_JMX_PORT` if both are set, otherwise empty.
 
+!!! warning "Insecure default"
+    The auto-built JMX profile sets `com.sun.management.jmxremote.authenticate=false` and `com.sun.management.jmxremote.ssl=false`, with `local.only=true`. This is convenient for local debugging but **must not be exposed to untrusted networks**. For production, set `PAL_JMX_OPTS` directly with authentication and TLS as shown below.
+
 ```bash
-# Enable JMX with convenience variables (builds PAL_JMX_OPTS for you)
+# Enable JMX with convenience variables (builds PAL_JMX_OPTS for you — local-only, no auth/TLS)
 export PAL_JMX_HOST=localhost
 export PAL_JMX_PORT=9999
 pal run -cp app.jar com.example.Main
 
-# Or set the full JMX configuration directly
+# Production: set the full JMX configuration directly with authentication and TLS
 export PAL_JMX_OPTS="-Dcom.sun.management.jmxremote \
   -Dcom.sun.management.jmxremote.port=9999 \
   -Dcom.sun.management.jmxremote.authenticate=true \
@@ -84,7 +87,7 @@ The file contains one JVM option per line. Blank lines and lines starting with `
 -Dmy.config.path=/etc/pal/app.properties
 ```
 
-An example file with all defaults commented out ships at `config/pal.vmoptions.example`. Copy it to `config/pal.vmoptions` and uncomment the options you need.
+An example file with all defaults commented out ships at `$PAL_HOME/config/pal.vmoptions.example`. Copy it to `$PAL_HOME/config/pal.vmoptions` and uncomment the options you need.
 
 Options in this file are loaded **after** the category environment variables and **before** `PAL_JAVA_OPTS`, so they can override category defaults but are themselves overridden by `PAL_JAVA_OPTS`.
 
@@ -115,13 +118,6 @@ export PAL_GC_OPTS="-XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEn
 pal run -d prod-etcd:2379 -k prod-kafka:9092 --wal my-wal -cp app.jar com.example.Main
 ```
 
-### Local development: smaller heap, fast startup
-
-```bash
-export PAL_HEAP_OPTS="-Xmx512m"
-pal run --wal file:/tmp/dev-wal --json-rpc auto -cp build/classes/java/main com.example.Main
-```
-
 ### Low-latency: switch to ZGC
 
 ```bash
@@ -139,15 +135,21 @@ PAL_JAVA_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5
 
 Then connect from your IDE to `localhost:5005`.
 
-### JMX monitoring
+## Reference: Environment Variable Summary
 
-```bash
-export PAL_JMX_HOST=localhost
-export PAL_JMX_PORT=9999
-pal run -cp app.jar com.example.Main
-```
+This table covers the env vars read by the `bin/pal` launch script. For peer behavior and CLI flag env vars — `PAL_DIRECTORY`, `PAL_PROPERTIES`, `PAL_KAFKA_SERVERS`, `PAL_CALLBACK_TIMEOUT_MS`, and many others — see [CLI Reference → Environment Variables](cli-reference.md#environment-variables). Those influence what the peer does at runtime, not how the JVM is launched.
 
-Then connect with `jconsole localhost:9999` or VisualVM.
+| Variable | Scope | Default | Description |
+|----------|-------|---------|-------------|
+| `PAL_HEAP_OPTS` | `pal run` | `-Xmx1g` | Heap sizing flags |
+| `PAL_GC_OPTS` | `pal run` | G1GC, 200ms pause | GC selection and tuning |
+| `PAL_JMX_OPTS` | `pal run` | From `PAL_JMX_HOST`/`PORT` | Full JMX configuration (insecure auto-built default — see [PAL_JMX_OPTS](#pal_jmx_opts)) |
+| `PAL_JMX_HOST` | `pal run` | _(unset)_ | JMX hostname. Read by both the launch script and the peer (advertised in the directory) |
+| `PAL_JMX_PORT` | `pal run` | _(unset)_ | JMX port. Read by both the launch script and the peer (advertised in the directory) |
+| `PAL_JAVA_OPTS` | all commands | _(empty)_ | Catch-all, appended last |
+| `JAVA_AGENT` | all commands | _(unset)_ | Java agent JAR path (added as `-javaagent:<path>`) |
+| `PAL_PEER_LOGGING_CONFIG` | all commands | _(unset)_ | PAL peer Logback config file (exported as `-Dpeer.logging` to every JVM the script launches) |
+| `PAL_CLI_LOGGING_CONFIG` | all commands | _(unset)_ | PAL CLI Logback config file (exported as `-Dcli.logging` to every JVM the script launches) |
 
 ## Logging Configuration
 
@@ -160,30 +162,6 @@ PAL's logging is controlled by two XML configuration files:
 | `peer-logging.xml` | `pal run` (peer runtime) | `PAL_PEER_LOGGING_CONFIG` |
 | `cli-logging.xml` | CLI commands (`pal log print`, `pal call`, etc.) | `PAL_CLI_LOGGING_CONFIG` |
 
-Both files are generated by `pal init` into the `config/` directory and wired up in `.env.pal`. If neither environment variable is set, PAL falls back to built-in defaults (peer logs to `logs/peer.log`, CLI logs to `logs/cli.log`).
+Both files are generated by `pal init` into the `config/` directory and wired up in `.env.pal`. If neither environment variable is set, PAL falls back to built-in defaults that write to STDOUT at `ERROR` level (peer) and `WARN` level (CLI). Configure the environment variables to capture richer output or route it to files.
 
 Because PAL uses shaded Logback, configuration files must use PAL's appender classes (`io.quasient.pal.common.logging.PeerFileAppender`, `io.quasient.pal.common.logging.PeerConsoleAppender`) and PAL's logger namespaces (e.g., `io.quasient.pal`, `io.quasient.pal.shd.apache.kafka`). See `config/peer-logging.xml.example` and `config/cli-logging.xml.example` for the full structure.
-
-## Other Environment Variables
-
-These are not JVM options per se, but affect how the `pal` script launches the Java process:
-
-| Variable | Description |
-|----------|-------------|
-| `JAVA_AGENT` | Path to a Java agent JAR (added as `-javaagent:<path>`) |
-| `PAL_PEER_LOGGING_CONFIG` | Path to PAL peer Logback configuration file |
-| `PAL_CLI_LOGGING_CONFIG` | Path to PAL CLI Logback configuration file |
-
-## Reference: Environment Variable Summary
-
-| Variable | Scope | Default | Description |
-|----------|-------|---------|-------------|
-| `PAL_HEAP_OPTS` | `pal run` | `-Xmx1g` | Heap sizing flags |
-| `PAL_GC_OPTS` | `pal run` | G1GC, 200ms pause | GC selection and tuning |
-| `PAL_JMX_OPTS` | `pal run` | From `PAL_JMX_HOST`/`PORT` | Full JMX configuration |
-| `PAL_JMX_HOST` | `pal run` | _(unset)_ | JMX hostname (convenience) |
-| `PAL_JMX_PORT` | `pal run` | _(unset)_ | JMX port (convenience) |
-| `PAL_JAVA_OPTS` | all commands | _(empty)_ | Catch-all, appended last |
-| `JAVA_AGENT` | all commands | _(unset)_ | Java agent JAR path |
-| `PAL_PEER_LOGGING_CONFIG` | `pal run` | _(unset)_ | PAL peer Logback config file |
-| `PAL_CLI_LOGGING_CONFIG` | CLI commands | _(unset)_ | PAL CLI Logback config file |

@@ -1,455 +1,161 @@
 # Local Development Guide
 
-This guide shows you how to develop PAL applications locally without setting up etcd or Kafka. Using Chronicle Queue, you can build, test, and debug quickly on a single machine.
+This guide covers Chronicle-only workflows: developing, running, and debugging a single PAL peer locally without etcd or Kafka. If you're new to PAL, start with [Getting Started](../getting-started.md) — it walks through installation, project scaffolding (`pal init`), and a first run end-to-end. This guide picks up from there with patterns specific to fast local iteration.
 
-## Why Develop Locally?
+## Direct Mode (`file:` prefix)
 
-**Benefits of local development**:
-
-- **Zero infrastructure**: No etcd or Kafka cluster needed
-- **Fast iteration**: Compile and run immediately
-- **Easy debugging**: Standard IDE debugging works
-- **Low latency**: Chronicle Queue is ultra-fast (nanoseconds)
-- **Simple testing**: No network configuration required
-
-**When you need it**:
-
-- Building a new feature
-- Writing unit/integration tests
-- Debugging application logic
-- Performance benchmarking
-- Learning PAL
-
-## Quick Setup with `pal init`
-
-The fastest way to set up a local PAL project is with `pal init`:
+Chronicle Queue is a local file-based log backend. Anywhere a CLI command takes a log name, prefix it with `file:` and PAL talks directly to the file on disk — no PAL directory, no etcd, no service discovery:
 
 ```bash
-pal init my-local-app
-cd my-local-app
-./gradlew build
-pal run -cp build/classes/java/main com.example.Main
-```
+# Run a peer, writing the WAL to a local Chronicle queue
+pal run --wal file:/tmp/dev-wal -cp build/classes/java/main com.example.Main
 
-For Maven, use `pal init my-local-app --build-tool maven`, then `./mvnw package` and `-cp target/classes`.
+# Print messages from that queue (no -d flag, no directory needed)
+pal log print file:/tmp/dev-wal --tree
 
-For an existing project, run `pal init` in the project directory to patch your build file:
-
-```bash
-cd my-existing-project
-pal init
-```
-
-This adds the `pal-weave` dependency and AspectJ weaving plugin to your `build.gradle` or `pom.xml` automatically (a backup is created before patching). Use `--dry-run` to preview the changes first.
-
-For full control over the build configuration, see the [Manual Setup](#manual-setup) section below.
-
-## Prerequisites
-
-**Required**:
-
-- JDK 17 or later (set `JAVA_HOME`)
-- Gradle or Maven 3.x
-- PAL installed and on PATH
-
-**Not required**:
-
-- Docker
-- etcd
-- Kafka
-- Network configuration
-
-## Verify PAL Installation
-
-```bash
-$ pal help
-
-PAL (Peers And Logs) - Message-passing runtime for Java
-Usage: pal [COMMAND] [OPTIONS]
-...
-```
-
-If `pal` command not found, add PAL to your PATH:
-
-```bash
-export PATH="/path/to/pal/bin:$PATH"
-```
-
-## Basic Development Workflow
-
-### Run with Chronicle Queue
-
-```bash
-pal run --wal file:/tmp/dev-wal \
-  -cp build/libs/myapp-1.0-SNAPSHOT.jar \
-  com.example.HelloService hello world
-```
-
-**Output**:
-```
-Hello Service started
-Processing: hello
-Result: HELLO
-Processing: world
-Result: WORLD
-```
-
-### Inspect the WAL
-
-```bash
-pal log print file:/tmp/dev-wal --compact
-```
-
-See all operations logged:
-
-```
-offset=0 id=abc123 message=HelloService.processMessage("hello")
-offset=1 id=abc124 message=HelloService.processMessage("world")
-```
-
-**Note**: The `file:` prefix enables **direct mode** CLI access - you can read Chronicle logs without needing etcd or the PAL directory. This is perfect for local development!
-
-### Direct Mode CLI Commands
-
-When developing locally with Chronicle Queue, all CLI commands support direct mode access:
-
-```bash
-# Print messages from Chronicle log
-pal log print file:/tmp/dev-wal --full
-
-# Call method and write to Chronicle log
-pal log call file:/tmp/dev-wal com.example.HelloService processMessage "test"
-
-# Remove Chronicle log
+# Delete the queue when you're done
 pal log rm file:/tmp/dev-wal
 ```
 
-**Benefits of direct mode**:
+This is the easiest way to use PAL — no infrastructure, just files. The trade-off is no service discovery: peers can't find each other by name, so multi-peer scenarios need the directory. See the [Distributed Application Guide](distributed-application.md) when you're ready for that.
 
-- No etcd or PAL directory needed
-- Simple file paths (absolute or relative)
-- Works immediately after creating a peer
-- Perfect for scripts and automation
+Other commands accept the `file:` prefix too, including `pal log call` (write a method-call message into a queue) and `pal log ls` (when run against a directory it can also report on Chronicle queues registered under it). See the [CLI Reference](../cli-reference.md) for the full list.
 
-For distributed systems with multiple peers, use **registry mode** with the `-d` option to enable service discovery. See the [Distributed Application Guide](distributed-application.md) for details.
+## Local Workflow
 
-### Replay from WAL
-
-Stop the peer (Ctrl-C), then replay:
+### Run with a Chronicle WAL
 
 ```bash
-pal run --source-log file:/tmp/dev-wal \
-  -cp build/libs/myapp-1.0-SNAPSHOT.jar \
-  com.example.HelloService
-```
-
-All logged operations are re-executed.
-
-### Deterministic Replay
-
-For verifying that code changes don't alter behavior, use `pal replay` instead. This re-runs the application from `main()` and verifies every operation against the recorded WAL:
-
-```bash
-pal replay --wal file:/tmp/dev-wal \
-  -cp build/libs/myapp-1.0-SNAPSHOT.jar \
+pal run --wal file:/tmp/dev-wal \
+  -cp build/classes/java/main \
   com.example.HelloService hello world
 ```
 
-Exit code `0` means the execution matched the WAL exactly. Exit code `2` means divergences were detected. See the [Deterministic Replay Guide](deterministic-replay.md) for full details.
+Every operation in your code — method calls, field accesses, constructors — is captured as a message and appended to `/tmp/dev-wal`.
 
-## Fast Iteration Loop
+### Inspect the WAL
 
-### 1. Edit Code
+`pal log print` accepts a Chronicle path with the `file:` prefix and supports four output formats:
 
-Make changes to your Java source:
-
-```java
-public static void processMessage(String msg) {
-    System.out.println("Processing: " + msg);
-    String result = msg.toUpperCase() + "!";  // Added !
-    System.out.println("Result: " + result);
-}
-```
-
-### 2. Rebuild
+| Flag | Output |
+|------|--------|
+| `--compact` (default) | One message per line, terse |
+| `--full` | Full message detail including arguments and return values |
+| `--tree` | Indented tree showing call nesting |
+| `--json` | Machine-readable JSON |
 
 ```bash
-./gradlew build
+pal log print file:/tmp/dev-wal --tree
+pal log print file:/tmp/dev-wal --full
 ```
 
-AspectJ weaving happens automatically.
+### Replay or Re-Execute
 
-### 3. Run Immediately
+Two commands re-run a recorded WAL, with different semantics:
 
 ```bash
-pal run --wal file:/tmp/test-wal \
+# Re-dispatch the recorded messages into a fresh peer (no main class needed)
+pal run --source-log file:/tmp/dev-wal -cp build/classes/java/main
+
+# Re-execute the application from main() and verify against the recorded WAL
+pal replay --wal file:/tmp/dev-wal \
   -cp build/classes/java/main \
-  com.example.HelloService test
+  com.example.HelloService hello world
 ```
 
-**Tip**: Use `build/classes/java/main` instead of JAR for fastest iteration.
-
-### 4. Verify
-
-Check output, inspect logs, repeat.
-
-## Local Testing with Interception
-
-### Setup Test Environment
-
-No etcd or Kafka needed - just Chronicle queues:
-
-```java
-public class HelloServiceTest {
-
-    private Path testWalPath;
-    private List<ExecMessage> callbacks;
-
-    @Before
-    public void setUp() throws Exception {
-        // Create temporary Chronicle queue
-        testWalPath = Files.createTempDirectory("test-wal");
-        callbacks = new CopyOnWriteArrayList<>();
-    }
-
-    @Test
-    public void testProcessMessageCalled() throws Exception {
-        // Start application peer
-        ProcessBuilder pb = new ProcessBuilder(
-            "pal", "run",
-            "--wal", "file:" + testWalPath,
-            "--interceptable",
-            "-cp", "build/classes/java/main",
-            "com.example.HelloService", "test-input"
-        );
-        Process peer = pb.start();
-
-        // Wait for execution
-        Thread.sleep(1000);
-
-        // Read WAL to verify
-        List<String> logOutput = readChronicleLog(testWalPath);
-        assertTrue(logOutput.stream()
-            .anyMatch(msg -> msg.contains("processMessage")));
-
-        peer.destroy();
-    }
-
-    @After
-    public void tearDown() throws IOException {
-        // Cleanup
-        deleteDirectory(testWalPath);
-    }
-}
-```
-
-### Intercept Without Directory
-
-For local testing, you can use in-process interception:
-
-```java
-// Register intercept before calling method
-InterceptMatcher matcher = new InterceptMatcher();
-matcher.registerIntercept(
-    "com.example.HelloService",
-    "processMessage",
-    InterceptType.BEFORE,
-    (msg) -> {
-        System.out.println("Intercepted: " + msg.getMethod());
-        callbacks.add(msg);
-    }
-);
-
-// Execute
-HelloService.processMessage("test");
-
-// Verify
-assertEquals(1, callbacks.size());
-```
+`pal run --source-log` simply replays the messages — useful for rebuilding state or driving a peer from a recorded session. `pal replay` re-runs the application's `main()` entry and compares each operation against the recorded log; exit code `0` means the execution matched, exit code `2` means divergences were detected. See [Deterministic Replay](../concepts/deterministic-replay.md) for full details.
 
 ## Debugging Locally
 
-### Using IDE Debugger
+### Run from your IDE
 
-Run PAL peer from your IDE for breakpoint debugging:
+To debug PAL applications under breakpoints, run the CLI directly from your IDE's run configuration:
 
-**IntelliJ Run Configuration**:
+- **Main class**: `io.quasient.pal.tools.cli.Pal`
+- **Program arguments**: `run --wal file:/tmp/debug-wal -cp build/classes/java/main com.example.Main arg1`
+- **Working directory**: project root
+- **VM options**: any Chronicle/JDK module exports your version requires — see `bin/pal` for the canonical list
 
-- **Main class**: `io.quasient.pal.cli.Pal`
-- **Program arguments**: `run --wal file:/tmp/debug-wal -cp build/classes/java/main com.example.HelloService arg1`
-- **VM options**: (Chronicle exports as needed, see `bin/pal` for reference)
+Set breakpoints in your application code; the AspectJ-woven dispatch path will surface them like any other Java code.
 
-Set breakpoints in your application code and debug normally.
+### Enable debug logging
 
-### Enable Debug Logging
-
-Create local logging config:
-
-**.local/conf/peer-logging.xml**:
+PAL's runtime uses a shaded logback that's independent of your application's logging. To enable debug output for PAL internals, point `PAL_PEER_LOGGING_CONFIG` at a custom logback config:
 
 ```xml
+<!-- .local/conf/peer-logging.xml -->
 <configuration>
     <appender name="STDOUT" class="io.quasient.pal.common.logging.PeerConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-
-    <!-- Debug PAL runtime internals -->
     <logger name="io.quasient.pal" level="DEBUG"/>
-
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>
 ```
 
-**Note**: This file configures PAL's own runtime logging (which uses shaded logback), not your application's logging. Your application's logback/SLF4J configuration is independent and unaffected by PAL.
-
-Run with custom logging:
-
 ```bash
 export PAL_PEER_LOGGING_CONFIG=".local/conf/peer-logging.xml"
-pal run --wal file:/tmp/debug-wal -cp build/classes/java/main com.example.HelloService
+pal run --wal file:/tmp/debug-wal -cp build/classes/java/main com.example.Main
 ```
 
-### Print All Messages
+Your application's own logback/SLF4J configuration is unaffected.
 
-Watch messages in real-time:
+### Follow the WAL live
+
+Watch operations stream into the WAL as the peer runs:
 
 ```bash
-# Terminal 1: Run peer
-pal run --wal file:/tmp/live-wal -cp build/classes/java/main com.example.HelloService
+# Terminal 1
+pal run --wal file:/tmp/live-wal -cp build/classes/java/main com.example.Main
 
-# Terminal 2: Follow log
+# Terminal 2
 pal log print file:/tmp/live-wal -f --full
 ```
 
-See every method call, argument, and return value.
+Every method call, field access, and return value scrolls past in real time.
 
-## Performance Testing Locally
+## Tips
 
-Chronicle Queue's low latency makes it ideal for benchmarking:
-
-```bash
-# Warm up
-for i in {1..1000}; do
-  pal run --wal file:/tmp/warmup \
-    -cp build/classes/java/main com.example.HelloService test
-done
-
-# Benchmark
-time for i in {1..10000}; do
-  pal run --wal file:/tmp/bench \
-    -cp build/classes/java/main com.example.HelloService test
-done
-```
-
-Measure pure application performance without network overhead.
-
-## Tips for Fast Development
-
-### 1. Use Relative Paths
-
-```bash
-# Easier than absolute paths
-pal run --wal file:dev-wal -cp build/classes/java/main com.example.Main
-```
-
-Chronicle queue created in current directory.
-
-### 2. Reuse WAL for Replay
-
-```bash
-# Run once
-pal run --wal file:session1 -cp build/classes/java/main com.example.Main input1
-
-# Replay multiple times while debugging
-pal run --source-log file:session1 -cp build/classes/java/main com.example.Main
-
-# Or use deterministic replay to verify behavior
-pal replay --wal file:session1 -cp build/classes/java/main com.example.Main input1
-```
-
-No need to re-create test data.
-
-### 3. Clean WAL Between Tests
-
-```bash
-# Start fresh
-rm -rf /tmp/test-wal
-pal run --wal file:/tmp/test-wal -cp build/classes/java/main com.example.Main
-```
-
-### 4. Use build/classes for Speed
-
-```bash
-# Fast (no JAR packaging)
-./gradlew compileJava
-pal run --wal file:dev -cp build/classes/java/main com.example.Main
-
-# Slower
-./gradlew build
-pal run --wal file:dev -cp build/libs/app.jar com.example.Main
-```
-
-### 5. Incremental Compilation
-
-```bash
-# Only recompile changed files
-./gradlew compileJava
-
-# Full clean when needed
-./gradlew clean build
-```
+- **Use relative paths.** `--wal file:dev-wal` creates the queue in your current directory — easier than `/tmp/...` and easier to clean up.
+- **Reuse WALs across runs.** A single recorded WAL can be re-run many times via `--source-log` (replay) or verified via `pal replay`. No need to re-create test data while debugging.
+- **Skip JAR packaging during dev.** `-cp build/classes/java/main` is faster than `-cp build/libs/myapp.jar` because Gradle doesn't have to repackage the JAR after each compile.
+- **Clean WALs between runs** when you want a fresh state: `rm -rf /tmp/dev-wal` (or `pal log rm file:/tmp/dev-wal`).
 
 ## When to Switch to Distributed
 
-**Stick with Chronicle locally when**:
+Stay with Chronicle locally when:
 
-- Developing single-peer application
-- Writing unit tests
-- Debugging application logic
-- Benchmarking performance
+- You're developing a single-peer application.
+- You're debugging application logic.
+- You're writing or running unit-level tests.
 
-**Switch to etcd/Kafka when**:
+Switch to etcd + Kafka when:
 
-- Testing multi-peer interaction
-- Verifying service discovery
-- Testing distributed scenarios
-- Preparing for production deployment
+- You need to test multi-peer interaction or service discovery.
+- You're testing interception across peers (intercept registration goes through etcd).
+- You're preparing for production deployment.
 
-**Hybrid approach**:
-```bash
-# Develop locally
-pal run --wal file:dev-wal -cp build/classes/java/main com.example.Service
+For the full distributed setup, see [Distributed Application](distributed-application.md).
 
-# Test distributed setup
-pal run -d localhost:2379 -k localhost:29092 \
-  --wal service-wal --json-rpc auto \
-  -cp build/libs/service.jar com.example.Service
-```
-
-## Common Issues
+## Common Issues (Chronicle-Specific)
 
 ### "Chronicle queue does not exist"
 
-**Problem**: Trying to read from non-existent queue
+You're trying to read from a queue that hasn't been created. Create it by writing first:
 
-**Solution**: Create it first by writing:
 ```bash
-# Create queue
 pal run --wal file:/tmp/my-queue -cp app.jar com.example.Main
-
-# Then read from it
 pal run --source-log file:/tmp/my-queue -cp app.jar
 ```
 
 ### "Permission denied"
 
-**Problem**: Cannot write to queue directory
+The current user can't write to the queue directory. Check ownership:
 
-**Solution**: Check permissions:
 ```bash
 ls -la /tmp/my-queue
 chmod -R u+rw /tmp/my-queue
@@ -457,159 +163,17 @@ chmod -R u+rw /tmp/my-queue
 
 ### "Disk full"
 
-**Problem**: Chronicle queue filled disk
+Chronicle queues grow append-only and can fill a partition. Find and remove old ones:
 
-**Solution**: Delete old queues:
 ```bash
-du -sh /tmp/*.queue
+du -sh /tmp/*
 rm -rf /tmp/old-queue
-```
-
-### AspectJ Weaving Not Working
-
-**Problem**: Methods not intercepted
-
-**Solution**: Verify weaving:
-```bash
-# Check bytecode
-javap -c build/classes/java/main/com/example/MyClass.class | grep aspectOf
-
-# Should see AspectJ calls
-```
-
-If not, rebuild with AspectJ plugin:
-```bash
-./gradlew clean build
-```
-
-## Manual Setup
-
-If you prefer full control over the build configuration instead of using `pal init`, you can set up PAL weaving manually.
-
-**Gradle (`build.gradle`):**
-
-```groovy
-plugins {
-    id 'java'
-}
-
-configurations {
-    aspectjTools
-    aspect
-}
-
-dependencies {
-    aspectjTools 'org.aspectj:aspectjtools:1.9.24'
-    aspect 'io.quasient.pal:pal-weave:1.0.0-SNAPSHOT'
-    implementation 'org.aspectj:aspectjrt:1.9.24'
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-
-tasks.register('weaveClasses', JavaExec) {
-    dependsOn classes
-    mustRunAfter test
-    mainClass = 'org.aspectj.tools.ajc.Main'
-    classpath = configurations.aspectjTools
-    args = [
-        '-inpath', sourceSets.main.output.classesDirs.asPath,
-        '-aspectpath', configurations.aspect.asPath,
-        '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
-        '-classpath', sourceSets.main.compileClasspath.asPath,
-        '-source', '17', '-target', '17',
-    ]
-}
-
-tasks.named('jar') { dependsOn weaveClasses }
-```
-
-<details>
-<summary>Maven equivalent (pom.xml)</summary>
-
-```xml
-<dependencies>
-    <dependency>
-        <groupId>io.quasient.pal</groupId>
-        <artifactId>pal-weave</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
-    </dependency>
-</dependencies>
-
-<build>
-    <plugins>
-        <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>aspectj-maven-plugin</artifactId>
-            <version>1.15.0</version>
-            <configuration>
-                <complianceLevel>17</complianceLevel>
-                <aspectLibraries>
-                    <aspectLibrary>
-                        <groupId>io.quasient.pal</groupId>
-                        <artifactId>pal-weave</artifactId>
-                    </aspectLibrary>
-                </aspectLibraries>
-            </configuration>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>compile</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
-    </plugins>
-</build>
-```
-
-</details>
-
-Build with `./gradlew build` (Gradle) or `./mvnw clean install` (Maven). Your application is then ready to run with PAL.
-
-## Example: Complete Development Session
-
-```bash
-# 1. Create project with pal init
-pal init my-pal-app
-cd my-pal-app
-source .env.pal
-
-# 2. Build
-./gradlew build
-
-# 3. Run and test locally
-pal run --wal file:dev-wal \
-  -cp build/classes/java/main com.example.Main
-
-# 4. Check results
-pal log print file:dev-wal --compact
-
-# 5. Make changes to code
-vim src/main/java/com/example/SampleService.java
-
-# 6. Rebuild
-./gradlew build
-
-# 7. Test changes
-pal run --wal file:dev-wal2 \
-  -cp build/classes/java/main com.example.Main
-
-# 8. Compare logs
-diff <(pal log print file:dev-wal) <(pal log print file:dev-wal2)
-
-# 9. When satisfied, package (already included in ./gradlew build)
-./gradlew build
-
-# 10. Ready for distributed testing or deployment
 ```
 
 ## Further Reading
 
-- [Concepts: Log Backends](../concepts/logs.md) - Deep dive into Chronicle vs Kafka
-- [Deterministic Replay](deterministic-replay.md) - Verify code changes against recorded WALs
-- [Testing with Interception](testing-with-interception.md) - Automated testing patterns
-- [Distributed Application Guide](distributed-application.md) - Moving to production
-- [CLI Reference](../cli-reference.md) - All `pal run` options
+- [Getting Started](../getting-started.md) — installation, `pal init`, manual build setup
+- [Log Backends](../concepts/logs.md) — Chronicle vs Kafka deep dive
+- [Deterministic Replay](../concepts/deterministic-replay.md) — verifying re-execution against a recorded WAL
+- [Distributed Application](distributed-application.md) — moving from Chronicle to etcd + Kafka
+- [CLI Reference](../cli-reference.md) — full command and flag reference

@@ -10,7 +10,7 @@ Replay is **not** playing back a recording. The application runs naturally — t
 - The WAL is the oracle that says "this operation should produce this result."
 - Divergences mean the live execution differs from the recording.
 
-This is distinct from the existing `--source-log` mechanism, which re-dispatches individual operations from the WAL. Replay is application-driven; the application controls execution flow and the WAL verifies it.
+Replay is application-driven: the application controls execution flow and the WAL verifies it.
 
 ## When to Use Replay
 
@@ -24,9 +24,9 @@ This is distinct from the existing `--source-log` mechanism, which re-dispatches
 
 ## Prerequisites
 
-- The application must be compiled with AspectJ weaving (same `pal-weave` aspect library as during recording)
-- The same classpath should be used for recording and replay
-- No infrastructure is needed — replay reads from the WAL directly (Chronicle or Kafka) and does not require etcd, Kafka brokers, or network access beyond reading the WAL
+- The application must be compiled with AspectJ weaving (same `pal-weave` aspect library as during recording).
+- The same classpath should be used for recording and replay.
+- No infrastructure is needed — replay reads from the WAL directly (Chronicle or Kafka) and does not require etcd, Kafka brokers, or network access beyond reading the WAL.
 
 ## Recording a WAL
 
@@ -60,9 +60,7 @@ With `--wal-incoming-rpc`, each incoming RPC call is recorded as an **entry-poin
 
 #### Excluding the Self-Caller's `main()`: `--no-wal-incoming-cli`
 
-By default, the self-caller's `main()` invocation is also recorded as an entry-point operation in the WAL. For RPC services where `main()` contains only service setup code (e.g., starting an RPC listener, initializing configuration), this entry point is unnecessary — `main()` will be called naturally by the replay system via `SelfBootstrapInvoker` and does not need to be re-injected.
-
-Use `--no-wal-incoming-cli` to exclude the `main()` invocation from the WAL:
+By default, the self-caller's `main()` invocation is also recorded as an entry-point operation. For RPC services where `main()` only sets up the listener and initializes configuration, this entry point is unnecessary — `main()` is called naturally during replay and does not need re-injection. Use `--no-wal-incoming-cli` to exclude it:
 
 ```bash
 pal run --wal file:/tmp/service-wal --no-wal-incoming-cli \
@@ -70,11 +68,7 @@ pal run --wal file:/tmp/service-wal --no-wal-incoming-cli \
   -cp build/classes/java/main com.example.ServiceMain
 ```
 
-This is recommended when `main()` is purely setup code. Omitting it keeps the WAL focused on the actual RPC entry points and avoids potential complications during multi-threaded replay where the self-caller's entry-point span could interfere with cursor alignment.
-
-**Recommended for RPC services:** When using `--wal-incoming-rpc` with multi-threaded RPC services (e.g., `--rpc-threads 4`), you should also add `--no-wal-incoming-cli`. Without it, the self-caller's `main()` entry point is recorded in the WAL, but during replay the self-caller thread does not use a `ReplayInputInjector` (its `main()` is called naturally by `SelfBootstrapInvoker`). This mismatch between the WAL data and the replay mechanism can cause cursor misalignment during multi-threaded replay.
-
-**Note:** `--no-wal-incoming-cli` is **not** automatically enabled when `--wal-incoming-rpc` is specified. This is intentional: in some applications, `main()` contains business logic that should be replayed as an injected entry point rather than just running naturally. Add `--no-wal-incoming-cli` explicitly when you know that `main()` is purely setup code and does not contain injectable logic.
+Add this flag whenever `main()` is purely setup code, especially for multi-threaded RPC services where leaving the self-caller's entry-point span in the WAL can cause cursor misalignment during replay. It is **not** automatically enabled by `--wal-incoming-rpc` because some applications place business logic in `main()` that should be replayed as an injected entry point rather than running naturally.
 
 ### Recording with Scope
 
@@ -103,7 +97,7 @@ pal replay --wal file:/tmp/my-wal \
   -cp build/classes/java/main com.example.App arg1 arg2
 ```
 
-See [Recording Scope](../concepts/recording-scope.md) for complete documentation on scope flags, YAML policies, field operation filtering, and the relationship with `--shield-io`.
+See [Recording Scope](recording-scope.md) for complete documentation on scope flags, YAML policies, field operation filtering, and the relationship with `--shield-io`.
 
 ## Replaying from a WAL
 
@@ -122,18 +116,6 @@ pal replay --wal file:my-wal \
 ```
 
 If the application produces the same operations with the same return values, the exit code is `0` and no divergences are reported.
-
-### Slow-Motion Replay
-
-For UI applications (JavaFX, Swing), operations can happen too fast to observe during replay. Use the `--delay` option to add a pause before each entry-point injection:
-
-```bash
-# 2-second delay between entry points (good for visual debugging)
-pal replay --wal file:/tmp/fx-wal --fx-thread --delay 2000 \
-  -jar build/libs/my-javafx-app.jar
-```
-
-The delay is specified in milliseconds. Use larger values (2000-5000ms) when you want to observe each UI state change, smaller values (200-500ms) for faster replay that's still visible. A value of `0` (the default) disables the delay.
 
 ### Replay from Kafka
 
@@ -189,17 +171,26 @@ pal replay --wal file:/tmp/recorded -cp build/classes/java/main com.example.App 
 
 ## Divergence Policies
 
-Control how the replay system responds to divergences:
+Control how the replay system responds to divergences via `--divergence-policy`:
+
+| Value | Behavior |
+|-------|----------|
+| `WARN` (default) | Continue execution. Each divergence is logged at WARN level via SLF4J as it is detected, and a full divergence report is printed to stderr at application exit. |
+| `HALT` | Throw on the first divergence and stop execution. Useful with a debugger attached. |
+| `IGNORE` | Continue execution silently — no per-divergence logging. The summary report is still printed to stderr at exit if any divergences were observed. |
+
+For both `WARN` and `IGNORE`, the exit code is `2` if any divergences were observed.
 
 ```bash
-# Default: log divergences and continue
-pal replay --wal file:/tmp/my-wal -cp build/classes/java/main com.example.App
+# Default (WARN): inline log + report at exit
+pal replay --wal file:/tmp/my-wal --divergence-policy WARN \
+  -cp build/classes/java/main com.example.App
 
 # Stop on first divergence (useful with debugger attached)
 pal replay --wal file:/tmp/my-wal --divergence-policy HALT \
   -cp build/classes/java/main com.example.App
 
-# Silently record divergences (check exit code only)
+# No inline log, report at exit only
 pal replay --wal file:/tmp/my-wal --divergence-policy IGNORE \
   -cp build/classes/java/main com.example.App
 ```
@@ -237,7 +228,7 @@ WAL Index Summary
   Issues:      0
 ```
 
-Entry-point operations (marked in the WAL during recording with `--wal-incoming-rpc`) indicate where external input arrived. During replay, these entry points are re-injected by the `ReplayInputInjector`.
+Entry-point operations (marked in the WAL during recording with `--wal-incoming-rpc`) indicate where external input arrived. During replay, these entry points are re-injected on dedicated input threads.
 
 For per-entry detail:
 
@@ -263,6 +254,8 @@ JAVA_TOOL_OPTIONS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address
 ```
 
 Connect your IDE debugger to port 5005 and step through the code. The replay is transparent to the debugger — it looks like normal execution, but every operation is verified against the WAL.
+
+**Step filters:** Because PAL's dispatch advice is woven into every quantized call site, "Step Into" will descend into PAL classes before reaching your method body. Configure your IDE's step filter to skip `io.quasient.pal.*` so the debugger stays focused on application code. ("Step Over" works as expected and avoids this.)
 
 ## Complete Workflow Example
 
@@ -294,26 +287,26 @@ pal replay --wal file:/tmp/golden-run \
 
 ## Multi-Threaded Replay
 
-Replay supports applications that receive input on multiple threads — RPC services, web applications, Swing GUIs, and timer-based applications. During recording, the WAL captures operations from all threads. During replay, the self-caller thread (running `main()`) is application-driven as before, while input threads are **WAL-driven**: entry-point operations are injected from the WAL into the runtime.
+Replay supports applications that receive input on multiple threads — RPC services, web applications, Swing/JavaFX GUIs, and timer-based applications. During recording, the WAL captures operations from all threads. During replay, the self-caller thread (running `main()`) drives execution from the application, while input threads are **WAL-driven**: entry-point operations are injected from the WAL into the runtime.
 
 ### How It Works
 
 Replay uses a hybrid model:
 
 - **Self-caller thread** (the thread running `main()`): The application runs naturally. Operations are matched against the WAL cursor and verified, exactly as in single-threaded replay.
-- **Input threads** (RPC workers, UI threads, HTTP handlers): A `ReplayInputInjector` reads entry-point operations from the WAL and dispatches them into the system. Once injected, the method body runs through woven code, producing nested operations that are matched against the WAL cursor — the same mechanism as the self-caller thread.
+- **Input threads** (RPC workers, UI threads, HTTP handlers): An injector thread reads entry-point operations from the WAL and dispatches them into the system. Once injected, the method body runs through woven code, producing nested operations that are matched against the WAL cursor — the same mechanism as the self-caller thread.
 
 ```
 Self-caller thread:
   main() → dispatch() → WAL cursor match → execute → verify
 
 Input thread (RPC, UI, etc.):
-  ReplayInputInjector reads WAL → injects method call → dispatch() → WAL cursor match → verify
+  injector reads WAL → injects method call → dispatch() → WAL cursor match → verify
 ```
 
-Cross-thread ordering is maintained by a `ReplayGate` that ensures input injection threads do not run ahead of the self-caller thread. The gate uses WAL offsets: after each operation completes on the self-caller thread, the gate advances, allowing input injection threads whose entry points follow in the WAL to proceed.
+Cross-thread ordering is enforced so that input injection threads do not run ahead of the self-caller thread. After each operation completes on the self-caller thread, the ordering gate advances, allowing input injection threads whose entry points follow in the WAL to proceed.
 
-### Prerequisite: `--wal-incoming-rpc` During Recording
+### Prerequisite: `--wal-incoming-rpc` during recording
 
 Multi-threaded replay requires that incoming RPC calls were recorded as entry-point operations in the WAL. This is the default behavior when a WAL is configured, but if you have previously disabled it, ensure it is re-enabled:
 
@@ -352,10 +345,10 @@ pal replay --wal file:/tmp/service-wal \
 
 During step 5, the replay system:
 
-1. Runs `main()` on the self-caller thread (sets up the service)
-2. Spawns a `ReplayInputInjector` thread for each recorded input thread (`rpc-worker-1`, `rpc-worker-2`, etc.)
-3. Each injector re-dispatches the entry-point operations (the `processOrder` calls) from the WAL
-4. Nested operations within each injected call are matched against the WAL cursor and verified
+1. Runs `main()` on the self-caller thread (sets up the service).
+2. Spawns an injector thread for each recorded input thread (`rpc-worker-1`, `rpc-worker-2`, etc.).
+3. Each injector re-dispatches the recorded entry-point operations (the `processOrder` calls) from the WAL.
+4. Nested operations within each injected call are matched against the WAL cursor and verified.
 
 ### `--threading` Flag
 
@@ -412,16 +405,20 @@ Without `--fx-thread`, UI interactions recorded on the JavaFX Application Thread
 **How it works:**
 
 1. During recording, operations on the JavaFX Application Thread are marked with `threadAffinity = "fx-thread"` in the WAL.
-2. During replay, the `ThreadAffinityDispatcher` routes these entry points to the real JavaFX thread via `Platform.runLater()`.
+2. During replay, those entry points are routed back to the real JavaFX thread via `Platform.runLater()`.
 3. The UI event handlers execute on the real FX thread, producing the same nested operations as during recording.
 
-**Lambda class name normalization:**
+**Slow-motion replay:**
 
-JavaFX applications heavily use lambdas for event handlers. Lambda class names are non-deterministic across JVM runs (e.g., `DashboardController$Lambda$653/0x00007fb994397710` in one run vs `DashboardController$Lambda$562/0x00007fbd08449670` in another). PAL automatically normalizes these during signature matching by stripping the `$N/address` suffix, so that `Foo$Lambda` matches regardless of the specific lambda index or memory address.
+UI events can fire too quickly to observe during replay. Use `--delay` to pause before each entry-point injection:
 
-**Non-public access:**
+```bash
+# 2-second delay between entry points (good for visual debugging)
+pal replay --wal file:/tmp/fx-wal --fx-thread --delay 200 \
+  -jar build/libs/my-javafx-app.jar
+```
 
-Replay injections can access private fields and methods because they re-execute operations that originally ran inside the JVM with full access. RPC access control (handled by RPC policy) does not apply to replay injections.
+The delay is in milliseconds. Use 2000-5000 ms to observe each UI state change, 200-500 ms for faster but still visible replay. A value of `0` (the default) disables the delay.
 
 ### Service/Web Applications
 
@@ -443,25 +440,11 @@ pal replay --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
 
 Without `--service-thread`, entry points on executor threads are still replayed (multi-threaded replay handles that), but they will not have CDI request context or transactional boundaries — `@RequestScoped` beans will fail to inject, and `@Transactional` methods will run outside a transaction.
 
-**How it works:**
-
-1. During recording, entry points on threads matching the pattern are marked with `threadAffinity = "service-request"` in the WAL.
-2. During replay, the `ThreadAffinityDispatcher` routes these entry points through `CdiRequestContextExecutor`, which activates a CDI request context (via `RequestContextController`) and optionally begins a JTA transaction (via `UserTransaction`).
-3. The request handler executes within the activated context, producing the same nested operations as during recording.
-
-**Lazy-bean target resolution:**
-
-Frameworks like Quarkus instantiate REST handler beans lazily — Arc creates the bean the first time a request hits it. During recording the constructor runs and is woven, so the bean ends up in the replay object store; during replay no woven constructor runs first, so the recorded receiver ref can't be looked up. Without help, the dispatcher would log `Phantom object skip` and abandon the entry point.
-
-`CdiRequestContextExecutor` closes that gap by implementing the `InvocationExecutor.resolveTarget` hook. When the dispatcher cannot resolve the WAL-recorded target during a `service-request` entry point, it asks the executor to look up the bean via `CDI.current().select(declaringType).get()` and registers the returned instance against the recorded ref before resuming normal dispatch. The same hook is available to other affinity executors — Spring (`@Lazy` / `@Scope("request")`), Guice lazy providers, Dagger scoped components — by overriding `resolveTarget` against their respective container APIs.
-
-**CDI container compatibility:**
-
-`CdiRequestContextExecutor` works with any CDI 2.0+ container (Quarkus ArC, Weld, OpenWebBeans). It accesses CDI classes via reflection to avoid a compile-time dependency. If CDI is not on the classpath during replay, the executor is silently skipped and entry points execute without request context wrapping.
+With `--service-thread`, PAL activates a CDI request scope and (when available) a JTA transaction around each matched entry point, and resolves lazily-instantiated REST handler beans through the CDI container so that recorded receiver refs continue to work during replay. Any CDI 2.0+ container is supported (Quarkus ArC, Weld, OpenWebBeans); CDI APIs are accessed reflectively, so the executor is silently skipped if CDI is not on the classpath. Other DI containers (Spring, Guice, Dagger) can register their own thread-affinity executors to provide equivalent scope and lazy-resolution behavior.
 
 **Combining with `--fx-thread`:**
 
-Both flags can be used together if the application has both JavaFX UI threads and service executor threads. Each flag registers its own pattern with `ThreadAffinityDispatcher`; the first matching pattern wins.
+Both flags can be used together if the application has both JavaFX UI threads and service executor threads. Each flag registers its own thread pattern; the first matching pattern wins.
 
 ## Side-Effect Shielding (Replay Policy)
 
@@ -485,16 +468,16 @@ Each operation during replay is assigned one of five actions:
 
 Understanding when replay actions apply is critical:
 
-**Entry point injection** (operations injected by `ReplayInputInjector` via `dispatchIncoming`):
+**Entry-point injection** (the call that an input thread injects from the WAL):
 
-- Arguments **always** come from the WAL message — this is how injection works
-- The method body **always** executes with those WAL arguments
-- RE_EXECUTE vs STUB does not apply to the entry point itself
+- Arguments **always** come from the WAL message — this is how injection works.
+- The method body **always** executes with those WAL arguments.
+- RE_EXECUTE vs STUB does not apply to the entry point itself.
 
-**Nested operations** (operations inside entry points, handled via `dispatchReplay`):
+**Nested operations** (operations executed inside an entry-point's method body):
 
-- Arguments come from **live execution state** (`pjp.getArgs()`)
-- This is where RE_EXECUTE vs STUB makes a difference
+- Arguments come from **live execution state** (whatever the running code computes).
+- This is where RE_EXECUTE vs STUB makes a difference.
 
 | Aspect | RE_EXECUTE | STUB_FROM_WAL |
 |--------|------------|---------------|
@@ -538,7 +521,15 @@ pal replay --wal file:/tmp/my-wal --shield-io \
   -cp build/classes/java/main com.example.App arg1 arg2
 ```
 
-This stubs time operations (`System.currentTimeMillis()`, `System.nanoTime()`, and `java.time.*.now()` methods like `LocalTime.now()`, `Instant.now()`, etc.), random generators (`Math.random()`, `Random.**`, `ThreadLocalRandom.**`), I/O streams (`java.io` readers/writers), network operations (`java.net.**`), and `DriverManager.getConnection()` — all from WAL-recorded values. Everything else is re-executed normally.
+This stubs the following from WAL-recorded values:
+
+- **Time:** `System.currentTimeMillis()`, `System.nanoTime()`, `java.time.*.now()` (e.g. `LocalTime.now()`, `Instant.now()`).
+- **Randomness:** `Math.random()`, `Random.**`, `ThreadLocalRandom.**`.
+- **I/O streams:** `java.io` readers and writers.
+- **Network:** `java.net.**`.
+- **JDBC:** `DriverManager.getConnection()`.
+
+Everything else is re-executed normally.
 
 ### JavaFX Applications: `--shield-fx`
 
@@ -593,9 +584,9 @@ pal replay --wal file:/tmp/my-wal --policy policy.yaml \
 
 **Pattern syntax:** Class and method patterns use Ant-style matching:
 
-- `*` matches any single path segment
-- `**` matches zero or more segments
-- `?` matches a single character
+- `*` matches any single path segment.
+- `**` matches zero or more segments.
+- `?` matches a single character.
 
 Examples: `java.io.**` matches all classes under `java.io`, `com.example.Service` matches exactly that class, `process*` matches `processOrder`, `processPayment`, etc.
 
@@ -661,9 +652,9 @@ WARNING: Stubbing com.example.Enricher.enrich() at offset 42 is unsafe.
 
 **Resolution options:**
 
-1. Change the action to `RE_EXECUTE` (re-execute the operation normally)
-2. Change the action to `STUB_WITH_SIDE_EFFECTS` (stub but replay field mutations)
-3. Use `--force-stub` to proceed with acknowledged risk
+1. Change the action to `RE_EXECUTE` (re-execute the operation normally).
+2. Change the action to `STUB_WITH_SIDE_EFFECTS` (stub but replay field mutations).
+3. Use `--force-stub` to proceed with acknowledged risk.
 
 ```bash
 # Force replay despite unsafe stub warnings
@@ -735,22 +726,18 @@ rules:
 
 ## Current Limitations
 
-- **Same code version expected**: Replay works best when the recorded and replayed code are identical or have small, targeted changes. Large structural changes will produce many operation-mismatch divergences.
-- **No WAL output during replay**: Replay is read-only. A new WAL is not written during replay. This will be addressed when replay is integrated as a layer within the normal dispatch path.
+- **No WAL output during replay**: Replay is read-only. A new WAL is not written during replay.
 - **Complex object reconstruction**: Stubbed return values are reconstructed from the WAL. Primitives, strings, and JSON-serializable objects are handled. Complex objects (e.g., database connections) become phantoms — their operations are auto-stubbed via phantom cascading.
-- **Reflective construction from unwoven frameworks**: PAL captures constructors at the **call site** in woven code. Objects created reflectively from unwoven framework code — Hibernate's `PojoInstantiator` hydrating entities, Jackson's `ValueInstantiator` deserializing JSON, Quarkus Arc's proxy factories, any unwoven caller of `Constructor.newInstance` — produce no `EXEC_CONSTRUCTOR` entry in the WAL. There is no constructor-execution pointcut by design: AspectJ's `@Around` on constructor execution wraps the body in a synthetic method, which breaks `final`-field assignment.
+- **Reflective construction from unwoven frameworks**: PAL captures constructors at the **call site** in woven code. Objects instantiated reflectively from unwoven framework code (Hibernate hydrating entities, Jackson deserializing JSON, Arc/Spring/Guice proxy factories, any unwoven caller of `Constructor.newInstance`) produce no constructor entry in the WAL. By replay action:
 
-  The practical impact depends on which [replay actions](#replay-actions) are active:
+    - **`RE_EXECUTE` (default)**: pure-computation paths replay cleanly. Entity-rich applications (ORM + REST + JSON stacks) diverge — framework-assigned IDs, sequence values, and timestamps differ between recording and replay, and the divergences cascade.
+    - **`RE_EXECUTE` with `--shield-io`**: stubbing JDBC or other framework I/O prevents the framework from hydrating entities at all, producing `VALUE_MISMATCH` or `NullPointerException` cascades on top of the construction gap.
+    - **Stubbing the framework layer** (`--stub-all-else`, or targeted `--stub` patterns on ORM / serializer packages): stubs return directly from WAL values; non-reconstructable entities become phantoms and downstream operations cascade-stub via [phantom object cascading](#phantom-object-cascading). This is the recommended approach for entity-rich applications in 1.0.
 
-  - **`RE_EXECUTE` against a reproducible data source** (the default, no `--shield-io`): works for pure-computation paths but is *not* a reliable workaround for entity-rich applications. In ORM + REST + JSON stacks (e.g., Quarkus + Hibernate + Jackson), Jackson-deserialized request bodies, Hibernate-hydrated entities, and Arc proxy instances all lack `EXEC_CONSTRUCTOR` entries. Even with an identically-seeded in-memory database, framework-assigned auto-IDs, sequence values, and timestamps differ between recording and replay, and the divergences cascade across dependent HTTP calls (e.g., a recorded `GET /owners/1` returns 404 at replay because the new `POST /owners` response picked id `2`).
-  - **`RE_EXECUTE` with `--shield-io`**: even more pain. Stubbing `DriverManager.getConnection` (or other framework I/O) prevents the framework from querying at all, so it cannot hydrate entities during replay. Woven operations on missing entities then produce `VALUE_MISMATCH` or `NullPointerException` cascades on top of the reflective-construction issue.
-  - **Stubbing the framework layer** (e.g. `--stub "org.hibernate.**"` or broad `--stub-all-else`): stubs return directly from the WAL without needing a live framework. Works well when downstream woven code only consumes return values; entities that cannot be reconstructed from their serialized WAL bytes become phantoms, and subsequent operations on them cascade-stub via [phantom object cascading](#phantom-object-cascading) — usually the intended behavior in this mode.
-  - **Tooling that enumerates PAL-captured constructions** (custom state dumps, audit views): framework-constructed entities are invisible because no `EXEC_CONSTRUCTOR` was recorded.
-
-  Recommended approach for entity-rich applications in 1.0: stub the framework boundary wholesale (`--stub-all-else`, or targeted `--stub` patterns on the ORM / serializer packages) so phantom cascading handles downstream operations uniformly. Pure-computation code paths still replay cleanly under the default `RE_EXECUTE`. Closing this gap for third-party reflective construction is tracked for a post-1.0 optional `java.lang.instrument` agent that would hook `Constructor.newInstance` and framework-specific instantiators.
+    Pure-computation code paths still replay cleanly under the default. Closing this gap for third-party reflective construction is tracked for a post-1.0 optional Java agent that would hook `Constructor.newInstance` and framework-specific instantiators.
 
 ## Further Reading
 
 - [CLI Reference](../cli-reference.md) — Complete option documentation for `pal replay` and `pal log index`
-- [Local Development Guide](local-development.md) — Recording WALs during development
-- [Log Backends](../concepts/logs.md) — Chronicle Queue vs Kafka for WAL storage
+- [Local Development Guide](../guides/local-development.md) — Recording WALs during development
+- [Log Backends](logs.md) — Chronicle Queue vs Kafka for WAL storage

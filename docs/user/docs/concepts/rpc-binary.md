@@ -1,8 +1,8 @@
 # Binary RPC (MessageBuilder)
 
-PAL's binary RPC uses the [Colfer](https://github.com/pascaldekloe/colfer) serialization format over ZeroMQ sockets. It is the most compact and fastest wire format PAL supports --- designed for high-throughput, low-latency communication between peers.
+PAL's binary RPC uses the [Colfer](https://github.com/pascaldekloe/colfer) serialization format over ZeroMQ sockets. It is the most compact and fastest wire format PAL supports — designed for high-throughput, low-latency communication between peers.
 
-Unlike [JSON-RPC](rpc.md#json-rpc-api-reference) where you can hand-craft messages, binary RPC is always used through Java APIs. The `MessageBuilder` class is the primary entry point: it constructs `ExecMessage` and `ControlMessage` objects that a `ThinPeer` sends over ZeroMQ.
+Unlike [JSON-RPC](rpc-json.md) where you can hand-craft messages, binary RPC is always used through Java APIs today. The `MessageBuilder` class is the primary entry point: it constructs `ExecMessage` and `ControlMessage` objects that a `ThinPeer` sends over ZeroMQ. The wire format itself is language-agnostic — Colfer has bindings in many languages and the `.colf` schemas are checked into the PAL repo — so a non-Java client is achievable; PAL just doesn't ship one out of the box.
 
 **Module**: `pal-api` (MessageBuilder), `pal-client` (ThinPeer)
 
@@ -14,11 +14,11 @@ Binary RPC appears in several contexts:
 |---------|-------------|
 | **Peer-to-peer RPC** | Direct method invocation between peers over ZeroMQ (`--zmq-rpc`) |
 | **Intercept callbacks** | PAL dispatches intercept callbacks using binary messages |
-| **Write-ahead log (WAL)** | Messages written to Kafka are in Colfer binary format |
+| **Write-ahead log (WAL)** | Messages written to the WAL (Kafka or Chronicle) are in Colfer binary format |
 | **PUB socket** | ZeroMQ PUB socket broadcasts use binary format |
 | **CLI `pal peer call`** | The CLI uses binary RPC when connecting via `tcp://` addresses |
 
-For debugging, cross-language clients, or human-readable messages, use [JSON-RPC](rpc.md#json-rpc-api-reference) instead.
+For debugging or human-readable messages, use [JSON-RPC](rpc-json.md) instead. Cross-language clients can also use binary RPC in principle — Colfer has bindings in many languages and PAL's `.colf` schemas are checked into the repo — but PAL currently ships only a Java client (`ThinPeer`), so JSON-RPC is the path of least resistance for non-Java callers today.
 
 ## Connecting to a Peer
 
@@ -26,25 +26,17 @@ Before using MessageBuilder, set up a `ThinPeer` connected to a running peer via
 
 ### Lookup by UUID
 
-If you know the peer's UUID, look it up in the PAL directory:
+Pass the directory URL and a stub `PeerInfo` carrying just the target peer's UUID; ThinPeer resolves the UUID against the directory at `init()` time:
 
 ```java
 import io.quasient.pal.cxn.ThinPeer;
-import io.quasient.pal.cxn.directory.DirectoryConnectionProvider;
 import io.quasient.pal.common.directory.nodes.PeerInfo;
 import io.quasient.pal.messages.types.RpcType;
 
-DirectoryConnectionProvider directoryProvider =
-    new DirectoryConnectionProvider("localhost:2379");
-
-PeerInfo peer = directoryProvider.get()
-    .orElseThrow()
-    .getPeer(targetPeerUuid);
-
 ThinPeer thinPeer = new ThinPeer()
     .withUuid(UUID.randomUUID())
-    .withDirectoryProvider(directoryProvider)
-    .withInitialPeer(peer)
+    .withDirectoryUrl("localhost:2379")
+    .withInitialPeer(new PeerInfo(targetPeerUuid))
     .withOutboundRpcType(RpcType.ZMQ_RPC)
     .init();
 ```
@@ -375,6 +367,23 @@ ControlMessage request = messageBuilder.buildGcCommandMessage(clientId);
 ControlMessage response = thinPeer.sendToPeer(request);
 ```
 
+#### Ping
+
+Liveness check. The generic `buildControlCommandMessage` builder is used since there is no dedicated `buildPingCommandMessage` helper:
+
+```java
+import io.quasient.pal.messages.types.ControlCommandType;
+
+ControlMessage request = messageBuilder.buildControlCommandMessage(
+    clientId, ControlCommandType.PING);
+
+ControlMessage response = thinPeer.sendToPeer(request);
+```
+
+The response status is `OK` if the peer is reachable.
+
+> Metadata queries (`meta` method, e.g. `fetch_classes_info`) are exposed on the JSON-RPC channel only; there is no binary-RPC dispatch path for `MetaMessage` requests today. See [JSON-RPC Reference → Meta](rpc-json.md#meta-metadata-query).
+
 ## Response Handling
 
 ### ExecMessage responses
@@ -566,19 +575,22 @@ Common exceptions:
 
 ## Sending via Log
 
-In addition to direct peer-to-peer RPC, messages can be sent through a Kafka log. The ThinPeer handles this transparently:
+In addition to direct peer-to-peer RPC, messages can be sent through a log. The ThinPeer handles this transparently for both Kafka and Chronicle backends — whichever is configured on the ThinPeer's input/output logs:
 
 ```java
 // Direct peer-to-peer (synchronous, low latency)
 ExecMessage response = thinPeer.sendToPeer(request);
 
-// Via log (asynchronous, persisted to Kafka)
+// Via log, synchronous: append the request to the log and poll for a response
 LogMessage<Message> responseLogMessage =
     thinPeer.sendExecMessageToLogAndReceive(request);
 ExecMessage response = responseLogMessage.getContent().getExecMessage();
+
+// Via log, fire-and-forget: append the request and return immediately
+thinPeer.sendExecMessageToLog(request);
 ```
 
-The log path writes the message to a Kafka topic, where the target peer consumes and executes it. The response follows the reverse path. This is useful when messages need to be persisted or when the peer may not be immediately available.
+The log path writes the message to the configured backend (Kafka topic or Chronicle queue), where the target peer consumes and executes it; for the synchronous variant, the response travels back through the log and is matched by request ID. This is useful when messages need to be persisted or when the consumer may not be running yet.
 
 ## Binary vs JSON-RPC
 
@@ -586,18 +598,19 @@ Both protocols support the same operations. Choose based on your requirements:
 
 | | Binary RPC | JSON-RPC |
 |--|-----------|----------|
-| **Speed** | Fastest (microseconds) | Slower (human-readable) |
-| **Wire size** | Compact binary | Verbose JSON |
-| **Language** | Java only | Any language |
+| **Speed** | Microsecond-range | Higher latency (text parsing overhead) |
+| **Wire size** | Compact binary (Colfer) | Larger (JSON text) |
+| **Language support** | Wire format is language-agnostic (Colfer + ZeroMQ have multi-language bindings); PAL ships only a Java client today | Any language with a JSON + WebSocket library |
 | **Debugging** | Opaque bytes | Readable messages |
 | **Multi-step workflows** | Manual ObjectRef tracking | [RpcChain DSL](rpc-chain.md) available |
 | **Transport** | ZeroMQ (TCP) | WebSocket |
 
-Use binary RPC for Java-to-Java communication where performance matters. Use JSON-RPC for cross-language integration, tooling, or when readability is important.
+Use binary RPC where performance matters and a Java client fits. Use JSON-RPC for tooling, debugging, or quickly wiring up non-Java callers without writing a Colfer client first.
 
 ## Further Reading
 
-- [Remote Procedure Calls](rpc.md) -- RPC overview, formats, and JSON-RPC API reference
-- [RPC Policy](rpc-policy.md) -- Access control for RPC operations
-- [Object References](rpc.md#object-references) -- How PAL manages remote object lifecycle
-- [Peers and Logs](peers-and-logs.md) -- Understanding peers and ThinPeer
+- [Remote Procedure Calls](rpc.md) — RPC overview and how the formats relate
+- [JSON-RPC Reference](rpc-json.md) — Wire-format and Java factory for JSON-RPC
+- [RpcChain DSL](rpc-chain.md) — Java DSL for multi-step JSON-RPC workflows with automatic ObjectRef tracking
+- [RPC Policy](rpc-policy.md) — Access control for RPC operations
+- [Peers and Logs](peers-and-logs.md) — Understanding peers and ThinPeer

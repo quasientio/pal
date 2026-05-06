@@ -217,7 +217,7 @@ pal run --interceptable -cp app.jar com.example.App
 # Verify method calls, inspect state
 ```
 
-Guide: [Testing with Interception](guides/testing-with-interception.md)
+Concept: [Interception](concepts/interception.md)
 
 ## CLI Commands
 
@@ -247,7 +247,7 @@ pal log print file:/tmp/execution-log --full
 pal replay --wal file:/tmp/execution-log -cp app.jar com.example.Main arg1 arg2
 ```
 
-Guide: [Deterministic Replay](guides/deterministic-replay.md)
+Concept: [Deterministic Replay](concepts/deterministic-replay.md)
 
 ### Distributed RPC
 

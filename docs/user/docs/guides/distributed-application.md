@@ -1,484 +1,218 @@
-# Building a Distributed Application
+# Distributed Application Guide
 
-This guide walks you through building a distributed calculator service with PAL, demonstrating RPC, service discovery, and distributed logging.
+This guide picks up from [Getting Started](../getting-started.md) and shows what changes when your peers move from a single local process to a multi-peer setup connected through etcd and Kafka. It covers service discovery, multi-consumer logging, scaling, and the operational commands you'll use day-to-day.
 
-> This guide demonstrates PAL's RPC capabilities for building connected services. PAL's RPC is useful for development, testing, debugging, and operational scenarios where dynamic method invocation between peers is valuable. For production inter-service communication at scale, consider using purpose-built RPC frameworks (gRPC, etc.) alongside PAL—PAL's interception and logging capabilities complement these frameworks.
+If you haven't run `pal init` yet, do that first. This guide assumes a project scaffolded with Kafka enabled (`pal init --all`, or answer **y** to the *"Will you use Kafka for WAL?"* prompt), which generates an `infra/` directory with both etcd and Kafka.
 
-## What We'll Build
+## Why Distributed Mode
 
-A simple distributed system with:
+Local Chronicle workflows are fine for a single peer. Distributed mode adds:
 
-- **Calculator Service**: Provides add/multiply operations
-- **Client**: Calls the calculator remotely
-- **Monitor**: Observes all operations via interception
-- **Logging**: All operations logged to Kafka
+- **Service discovery** via etcd — peers find each other by name, regardless of host or port.
+- **Networked, remotely hosted logs** via Kafka — the broker can run on a separate cluster from your peers, so logs are reachable from any machine on the network. Chronicle queues are memory-mapped files on a single host; multi-reader access is local-only.
+- **Kafka ecosystem integration** — once a log is a Kafka topic, the broader ecosystem opens up: Kafka Streams and ksqlDB for stream processing, Kafka Connect for sinking to Elasticsearch / S3 / databases / data warehouses, and any client that speaks the Kafka protocol.
+- **Scale-out** — multiple instances of the same service run side by side, each registered in the directory.
 
-## Prerequisites
+When a peer publishes its address through etcd and writes its WAL to a Kafka topic, every other peer can discover it, talk to it, and observe what it does — all without the running peer being modified or restarted.
 
-- PAL installed and on PATH
-- etcd running (directory service)
-- Kafka running (distributed logs)
+```
+  ┌────────────┐
+  │   Client   │
+  └─────┬──────┘
+        │ resolves "calculator" via etcd
+        ▼
+  ┌────────────────────────────────────────────┐
+  │               etcd directory               │
+  │  peers · logs · intercept registrations    │
+  └──┬─────────────────────────────────────────┘
+     │ advertises calculator's WebSocket address
+     ▼
+  ┌────────────┐                      ┌──────────────┐
+  │ Calculator │  ──── WAL writes ──▶ │ Kafka topic  │
+  │    peer    │                      │  "calc-wal"  │
+  └────────────┘                      └──────────────┘
+```
 
-### Start Infrastructure
+## Start Infrastructure
 
 ```bash
-# In PAL directory
-source export-env.sh
-infra/bin/start-etcd-and-kafka-docker.sh
-
-# Wait ~30 seconds for services to start
-
-# Verify
-curl http://localhost:2379/health  # etcd
-docker ps | grep kafka  # Kafka
+infra/start.sh
 ```
 
-## Step 1: Create the Calculator Service
-
-### CalculatorService.java
-
-```java
-package com.example.calculator;
-
-public class CalculatorService {
-
-    public static void main(String[] args) {
-        System.out.println("Calculator Service started");
-
-        // Keep running
-        try {
-            Thread.sleep(Long.MAX_VALUE);
-        } catch (InterruptedException e) {
-            System.out.println("Shutting down");
-        }
-    }
-
-    public int add(int a, int b) {
-        System.out.println("Adding " + a + " + " + b);
-        return a + b;
-    }
-
-    public int multiply(int a, int b) {
-        System.out.println("Multiplying " + a + " * " + b);
-        return a * b;
-    }
-}
-```
-
-### Configure AspectJ Weaving
-
-In `build.gradle`:
-
-```groovy
-plugins {
-    id 'java'
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-
-configurations {
-    aspectjTools
-    aspect
-}
-
-dependencies {
-    aspectjTools 'org.aspectj:aspectjtools:1.9.24'
-    aspect 'io.quasient.pal:pal-weave:0.1.0-SNAPSHOT'
-    implementation 'io.quasient.pal:pal-api:0.1.0-SNAPSHOT'
-    implementation 'org.aspectj:aspectjrt:1.9.24'
-}
-
-tasks.register('weaveClasses', JavaExec) {
-    dependsOn classes
-    mainClass = 'org.aspectj.tools.ajc.Main'
-    classpath = configurations.aspectjTools
-    args = [
-        '-inpath', sourceSets.main.output.classesDirs.asPath,
-        '-aspectpath', configurations.aspect.asPath,
-        '-d', sourceSets.main.java.destinationDirectory.get().asFile.path,
-        '-classpath', sourceSets.main.compileClasspath.asPath,
-        '-source', '17', '-target', '17',
-    ]
-}
-
-tasks.named('jar') { dependsOn weaveClasses }
-```
-
-<details>
-<summary>Maven equivalent (pom.xml)</summary>
-
-```xml
-<dependencies>
-    <dependency>
-        <groupId>io.quasient.pal</groupId>
-        <artifactId>pal-api</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
-    </dependency>
-</dependencies>
-
-<build>
-    <plugins>
-        <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>aspectj-maven-plugin</artifactId>
-            <version>1.14.0</version>
-            <configuration>
-                <complianceLevel>17</complianceLevel>
-                <source>17</source>
-                <target>17</target>
-                <aspectLibraries>
-                    <aspectLibrary>
-                        <groupId>io.quasient.pal</groupId>
-                        <artifactId>pal-weave</artifactId>
-                    </aspectLibrary>
-                </aspectLibraries>
-            </configuration>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>compile</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
-    </plugins>
-</build>
-```
-
-</details>
-
-### Build
+This brings up etcd at `localhost:2379` and Kafka at `localhost:29092` via docker-compose. Verify:
 
 ```bash
-./gradlew build
+curl http://localhost:2379/health
+docker ps | grep -E "etcd|kafka"
 ```
 
-## Step 2: Start the Calculator Service
+Run `infra/stop.sh` to tear them down when you're done.
+
+## Run a Service Peer
 
 ```bash
 pal run -d localhost:2379 -k localhost:29092 \
-  --wal calculator-wal \
-  --zmq-rpc auto \
+  --wal calc-wal \
   --json-rpc auto \
   --interceptable \
-  --in-flight-tracking \
   -n calculator \
-  -cp build/libs/calculator-1.0-SNAPSHOT.jar \
+  -cp build/classes/java/main \
   com.example.calculator.CalculatorService
 ```
 
-**What this does**:
+What each flag does:
 
-- `-d localhost:2379`: Registers in etcd directory
-- `-k localhost:29092`: Uses Kafka for logs
-- `--wal calculator-wal`: Writes all operations to Kafka topic
-- `--zmq-rpc auto`: Enables binary RPC on random port
-- `--json-rpc auto`: Enables JSON-RPC on random port
-- `--interceptable`: Allows dynamic interception
-- `--in-flight-tracking`: Waits for in-flight calls to complete before activating new intercepts (enabled by default, shown here for clarity)
-- `-n calculator`: Service name for discovery
+| Flag | Effect |
+|------|--------|
+| `-d localhost:2379` | Register this peer in the etcd directory; pick up logs and intercepts from it |
+| `-k localhost:29092` | Use Kafka as the log backend |
+| `--wal calc-wal` | Write the WAL to Kafka topic `calc-wal` |
+| `--json-rpc auto` | Listen for JSON-RPC over WebSocket on a free port; advertise it via the directory |
+| `--interceptable` | Pick up intercept registrations targeting this peer (also enables in-flight tracking) |
+| `-n calculator` | Register under this name in the directory; clients can address by name |
 
-### Verify Service Started
+Use `--zmq-rpc auto` instead of (or alongside) `--json-rpc auto` if you want binary RPC; both can run on the same peer.
 
-```bash
-$ pal peer ls -d localhost:2379 -l
+## Discover Peers
 
-UUID                                  Name        ZMQ-RPC             JSON-RPC            Uptime
-550e8400-e29b-41d4-a716-446655440000  calculator  tcp://localhost:555 ws://localhost:9001 0:00:05
-```
-
-Service is running and ready for calls!
-
-## Step 3: Call the Service
-
-### From CLI
+The directory holds peers, logs, and intercept registrations:
 
 ```bash
-# Add 5 + 3
-$ pal peer call -d localhost:2379 calculator \
-    com.example.calculator.CalculatorService add 5 3
-
-Result: 8
-
-# Multiply 4 * 7
-$ pal peer call -d localhost:2379 calculator \
-    com.example.calculator.CalculatorService multiply 4 7
-
-Result: 28
+pal peer ls -d localhost:2379 -l
+pal log ls -d localhost:2379 -l
+pal intercept ls -d localhost:2379
 ```
 
-### Via JSON-RPC (for complex calls)
+`-l` (long) on the first two adds detail: addresses, uptime, log offsets. A peer name like `calculator` is a stable lookup target — clients reference it by name regardless of the actual host/port.
+
+Peer names are unique within a directory; registering a second peer with the same name fails with `DuplicatePeerNameException`. To run multiple instances of the same service, give each a distinct name (see [Scale Out](#scale-out) below).
+
+## Call the Service
+
+### From the CLI (JSON-RPC stdin)
+
+For typed arguments, pipe a JSON-RPC request on stdin:
 
 ```bash
-# Create calculator instance
-echo '{"jsonrpc":"2.0","id":"1","method":"new","params":{"type":"com.example.calculator.CalculatorService"}}' | \
-  pal peer call -d localhost:2379 calculator
-
-# Returns ObjectRef UUID: 660e9400-e39c-41e4-b726-556766550000
-
-# Call instance method
-echo '{"jsonrpc":"2.0","id":"2","method":"call","params":{"target":"660e9400-e39c-41e4-b726-556766550000","method":"add","args":[{"type":"int","value":10},{"type":"int","value":20}]}}' | \
-  pal peer call -d localhost:2379 calculator
-
-# Returns: 30
+echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.calculator.CalculatorService","method":"add","args":[{"type":"int","value":10},{"type":"int","value":20}]}}' \
+  | pal peer call -d localhost:2379 calculator
 ```
 
-## Step 4: View the Operation Log
+The directory resolves `calculator` to the peer's WebSocket address; the request goes over JSON-RPC; the response prints to stdout.
 
-All operations are logged to Kafka:
+The positional-argument form (`pal peer call ... ClassName arg1 arg2`) only works for methods with a `static void main(String[])` signature — it always passes `String[]` and routes to `main`. For typed signatures, use the JSON-RPC stdin form. See [JSON-RPC Reference](../concepts/rpc-json.md) for the full request shape and [CLI Reference — Invocation Modes](../cli-reference.md#invocation-modes) for both forms.
 
-```bash
-# Print calculator's WAL
-$ pal log print -d localhost:2379 calculator-wal --compact
+### From Java (RpcChain DSL)
 
-offset=0 id=abc123 message=CalculatorService.add(5, 3)
-offset=1 id=abc124 message=CalculatorService.multiply(4, 7)
-offset=2 id=abc125 message=CalculatorService.add(10, 20)
-
-# Follow live (like tail -f)
-$ pal log print -d localhost:2379 calculator-wal -f
-
-# Waiting for new messages...
-```
-
-## Step 5: Create a Client Application
-
-### CalculatorClient.java
+For multi-step Java clients, the `pal-client` module's `RpcChain` DSL handles ObjectRef tracking automatically. The pattern below looks the calculator up by name, then constructs a remote instance and calls two methods on it:
 
 ```java
-package com.example.client;
+import io.quasient.pal.common.directory.nodes.PeerInfo;
+import io.quasient.pal.cxn.ThinPeer;
+import io.quasient.pal.cxn.directory.PalDirectory;
+import io.quasient.pal.dsl.jsonrpc.RpcChain;
+import io.quasient.pal.dsl.jsonrpc.RpcChainResult;
+import io.quasient.pal.messages.types.RpcType;
+import java.util.UUID;
+import static io.quasient.pal.dsl.jsonrpc.RpcChain.args;
 
-import io.quasient.pal.cxn.PalDirectory;
-import io.quasient.pal.core.PeerInfo;
+PalDirectory directory = new PalDirectory("localhost:2379");
+PeerInfo calcPeer = directory.getPeerByName("calculator");
 
-public class CalculatorClient {
+ThinPeer thinPeer = new ThinPeer()
+    .withUuid(UUID.randomUUID())
+    .withInitialPeer(calcPeer)
+    .withOutboundRpcType(RpcType.JSON_RPC)
+    .init();
 
-    public static void main(String[] args) {
-        try {
-            // Connect to directory
-            PalDirectory directory = new PalDirectory("localhost:2379");
+try {
+    RpcChain chain = new RpcChain(thinPeer);
+    chain
+        .create("com.example.calculator.CalculatorService", "calc")
+        .call("add", "sum", args(15, 25))
+        .call("multiply", "product", args(6, 7))
+        .send();
 
-            // Find calculator service
-            PeerInfo calcPeer = directory.findPeerByName("calculator");
-            System.out.println("Found calculator at: " + calcPeer.getZmqRpcEndpoint());
-
-            // Create RPC client
-            ThinPeer client = new ThinPeer(calcPeer.getUuid(),
-                                          calcPeer.getZmqRpcEndpoint());
-
-            // Call add
-            Object result = client.call(
-                "com.example.calculator.CalculatorService",
-                "add",
-                new Object[]{15, 25}
-            );
-            System.out.println("15 + 25 = " + result);
-
-            // Call multiply
-            result = client.call(
-                "com.example.calculator.CalculatorService",
-                "multiply",
-                new Object[]{6, 7}
-            );
-            System.out.println("6 * 7 = " + result);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+    RpcChainResult result = chain.getChainResult();
+    System.out.println("15 + 25 = " + result.getValue("sum"));
+    System.out.println("6 * 7 = " + result.getValue("product"));
+} finally {
+    thinPeer.close();
+    directory.close();
 }
 ```
 
-### Run Client
+For the full DSL — lookup variants, nested calls, thread affinity, error handling — see [RpcChain DSL](../concepts/rpc-chain.md).
+
+## Inspect the WAL
+
+Operations on the calculator are appended to its Kafka WAL:
 
 ```bash
-./gradlew build
-
-pal run -d localhost:2379 \
-  -cp build/libs/client-1.0-SNAPSHOT.jar \
-  com.example.client.CalculatorClient
-
-# Output:
-# Found calculator at: tcp://localhost:5555
-# 15 + 25 = 40
-# 6 * 7 = 42
+pal log print -d localhost:2379 calc-wal --tree
 ```
 
-## Step 6: Add Monitoring
+Multiple consumers can read the same Kafka topic concurrently — other PAL peers replaying via `--source-log`, Kafka Streams jobs, ksqlDB, or anything else that speaks Kafka. This is what distinguishes a Kafka WAL from a single-process Chronicle queue.
 
-### MonitorService.java
-
-```java
-package com.example.monitor;
-
-import io.quasient.pal.core.InterceptRequest;
-import io.quasient.pal.core.InterceptType;
-import io.quasient.pal.cxn.PalDirectory;
-
-public class MonitorService {
-
-    public static void main(String[] args) throws Exception {
-        // Connect to directory
-        PalDirectory directory = new PalDirectory("localhost:2379");
-
-        // Start RPC server to receive callbacks
-        UUID myUuid = UUID.randomUUID();
-
-        // Register intercept for all calculator methods
-        InterceptRequest<InterceptableMethodCall> intercept = new InterceptRequest<>(
-            UUID.randomUUID(),
-            myUuid,
-            InterceptType.AFTER,
-            "com.example.calculator.CalculatorService",
-            "com.example.monitor.MonitorService",
-            "handleCallback",
-            new InterceptableMethodCall("*", Collections.emptyList()));
-
-        directory.createIntercept(intercept);
-        System.out.println("Monitoring all calculator operations...");
-
-        // Keep running
-        Thread.sleep(Long.MAX_VALUE);
-    }
-
-    // This method gets called automatically for each intercepted operation
-    public void handleCallback(ExecMessage msg) {
-        System.out.println("[MONITOR] " + msg.getMethod() +
-                          " called with " + Arrays.toString(msg.getArgs()) +
-                          " returned " + msg.getReturnValue());
-    }
-}
-```
-
-### Run Monitor
+Follow the topic live:
 
 ```bash
-pal run -d localhost:2379 --json-rpc auto -n monitor \
-  -cp build/libs/monitor-1.0-SNAPSHOT.jar \
-  com.example.monitor.MonitorService
-
-# Output:
-# Monitoring all calculator operations...
-
-# When calculator is called:
-# [MONITOR] add called with [15, 25] returned 40
-# [MONITOR] multiply called with [6, 7] returned 42
+pal log print -d localhost:2379 calc-wal -f --tree
 ```
 
-## Step 7: Replay Operations
+## Scale Out
 
-Stop the calculator service (Ctrl-C), then replay from the log:
-
-```bash
-pal run --source-log calculator-wal \
-  -k localhost:29092 \
-  -cp build/libs/calculator-1.0-SNAPSHOT.jar \
-  com.example.calculator.CalculatorService
-
-# All previous operations are replayed
-# Output:
-# Adding 5 + 3
-# Multiplying 4 + 7
-# Adding 10 + 20
-# Adding 15 + 25
-# Multiplying 6 + 7
-```
-
-## Step 8: Scale Out
-
-Start multiple calculator instances:
+Multiple instances of the same service register under distinct names:
 
 ```bash
 # Terminal 1
 pal run -d localhost:2379 -k localhost:29092 \
   --wal calc-wal-1 --json-rpc auto -n calculator-1 \
-  -cp build/libs/calculator-1.0-SNAPSHOT.jar \
-  com.example.calculator.CalculatorService
+  -cp build/classes/java/main com.example.calculator.CalculatorService
 
 # Terminal 2
 pal run -d localhost:2379 -k localhost:29092 \
   --wal calc-wal-2 --json-rpc auto -n calculator-2 \
-  -cp build/libs/calculator-1.0-SNAPSHOT.jar \
-  com.example.calculator.CalculatorService
-
-# Terminal 3
-pal run -d localhost:2379 -k localhost:29092 \
-  --wal calc-wal-3 --json-rpc auto -n calculator-3 \
-  -cp build/libs/calculator-1.0-SNAPSHOT.jar \
-  com.example.calculator.CalculatorService
+  -cp build/classes/java/main com.example.calculator.CalculatorService
 ```
 
-Now you have 3 calculator instances. Clients can call any of them:
+Each instance has its own Kafka WAL; clients pick which to address:
 
 ```bash
-# Call calculator-1
-pal peer call -d localhost:2379 calculator-1 \
-  com.example.calculator.CalculatorService add 1 2
-
-# Call calculator-2
-pal peer call -d localhost:2379 calculator-2 \
-  com.example.calculator.CalculatorService add 3 4
-
-# Call calculator-3
-pal peer call -d localhost:2379 calculator-3 \
-  com.example.calculator.CalculatorService add 5 6
+pal peer call -d localhost:2379 calculator-1 ...
+pal peer call -d localhost:2379 calculator-2 ...
 ```
 
-## Architecture Diagram
+Load balancing across instances is the caller's responsibility — PAL gives you the directory but doesn't dispatch on your behalf.
 
-```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │ (discovers via etcd)
-       │
-       ▼
-┌─────────────────────────────────────────┐
-│           etcd Directory                 │
-│  - calculator: tcp://localhost:5555     │
-│  - monitor: tcp://localhost:5556        │
-│  - logs: [calculator-wal, ...]          │
-└─────────────────────────────────────────┘
-       │
-       ├──────────────────┬─────────────┐
-       │                  │             │
-       ▼                  ▼             ▼
-┌────────────────┐ ┌────────────┐ ┌──────────┐
-│   Calculator   │ │  Monitor   │ │  Kafka   │
-│    Service     │ │  Service   │ │  Topics  │
-│                │ │            │ │          │
-│  - add()       │ │ (intercepts│ │ - calc-  │
-│  - multiply()  │ │  all calls)│ │   wal    │
-└────────────────┘ └────────────┘ └──────────┘
-```
+## Monitoring Across Peers
+
+To observe operations on a running peer without modifying its code, use interception. The end-to-end walkthrough is in [Getting Started → Interception](../getting-started.md#interception-dynamic-behavior-modification): scaffold a callback peer, declare an intercept bundle, apply it with `pal intercept apply`. Once applied, every matching operation on the target peer triggers a callback on the monitoring peer — live, no restart needed.
+
+For the runtime semantics (BEFORE/AFTER/AROUND, in-flight tracking, error propagation), see [Interception](../concepts/interception.md).
 
 ## Cleanup
 
 ```bash
-# Remove peers
-pal peer rm -d localhost:2379 calculator monitor --force
+# Remove peers from the directory (--force also removes still-running ones)
+pal peer rm -d localhost:2379 calculator --force
 
-# Remove logs
-pal log rm -d localhost:2379 calculator-wal
+# Remove logs from the directory (does not delete the Kafka topic itself)
+pal log rm -d localhost:2379 calc-wal
 
-# Stop infrastructure
-infra/bin/stop-etcd-and-kafka-docker.sh
+# Tear down infrastructure
+infra/stop.sh
 ```
 
-## Key Takeaways
+To purge a Kafka topic's data, use Kafka's own tooling (`kafka-topics --delete`).
 
-1. **Service Discovery**: etcd directory enables peers to find each other by name
-2. **RPC**: Invoke remote methods dynamically, useful for development and operational workflows
-3. **Logging**: All operations captured in Kafka for replay/audit
-4. **Interception**: Monitor can observe operations without modifying calculator code
-5. **Scaling**: Start multiple instances, each with its own log
+## Further Reading
 
-## Next Steps
-
-- [Testing with Interception](testing-with-interception.md) - Add automated tests
-- [Local Development](local-development.md) - Develop without Kafka using Chronicle
-- [Concepts: RPC](../concepts/rpc.md) - Deeper dive into RPC mechanisms
-- [Concepts: Interception](../concepts/interception.md) - Advanced interception patterns
+- [Getting Started](../getting-started.md) — installation, `pal init`, first peer, distributed-mode tutorial
+- [Peers and Logs](../concepts/peers-and-logs.md) — peer lifecycle, log roles, directory model
+- [Remote Procedure Calls](../concepts/rpc.md) — RPC overview and CLI usage
+- [JSON-RPC Reference](../concepts/rpc-json.md) — wire-format details and `JsonRpcMessageFactory`
+- [RpcChain DSL](../concepts/rpc-chain.md) — fluent Java API for multi-step JSON-RPC
+- [Log Backends](../concepts/logs.md) — Chronicle vs Kafka deep dive
+- [Interception](../concepts/interception.md) — runtime semantics
+- [CLI Reference](../cli-reference.md) — full command and flag reference

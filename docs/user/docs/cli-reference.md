@@ -1,6 +1,6 @@
 # CLI Reference
 
-PAL provides a command-line interface for managing peers, logs, and remote procedure calls. For a hands-on introduction to `pal run`, see the [Getting Started](getting-started.md) guide. This reference covers all CLI subcommands, starting with `pal run` WAL options.
+PAL provides a command-line interface for managing peers, logs, and remote procedure calls. For a hands-on introduction, see the [Getting Started](getting-started.md) guide. This reference covers every CLI subcommand and its flags.
 
 ## Overview
 
@@ -14,9 +14,9 @@ pal <entity> <operation> [OPTIONS] [ARGUMENTS]
 
 | Command | Description |
 |---------|-------------|
+| `pal init` | Initialize a project for PAL |
 | `pal run` | Run a new peer |
 | `pal replay` | Deterministic WAL replay |
-| `pal init` | Initialize a project for PAL |
 
 **Management Commands** (entity groups):
 
@@ -109,153 +109,14 @@ pal log print -k localhost:29092 my-log
 | `pal log call` | ✓ | ✓ | Both Chronicle and Kafka |
 | `pal peer rm` | ✓ | ✗ | Requires directory |
 | `pal log rm` | ✓ | ✓ | Both Chronicle and Kafka |
+| `pal peer prune` | ✓ | ✗ | Requires directory |
+| `pal log prune` | ✓ | ✗ | Requires directory |
 | `pal replay` | ✓ | ✓ | Both Chronicle and Kafka |
 | `pal log index` | ✓ | ✓ | Both Chronicle and Kafka |
 
-## pal run - WAL Options
-
-The `pal run` command starts a new peer. The [Getting Started](getting-started.md) guide covers basic usage. This section documents the WAL (Write-Ahead Log) options that control which messages are written to the log.
-
-### WAL Incoming Message Flags
-
-By default, when a WAL is configured (`--wal`), PAL writes **all** messages to it: both locally-initiated operations (from the peer's own application code) and incoming operations (from RPC calls or CLI bootstrap). These flags let you control which incoming messages are written.
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--wal-incoming-rpc` / `--no-wal-incoming-rpc` | `true` | Write incoming RPC calls to WAL. Covers ZMQ-RPC and JSON-RPC (WebSocket) channels. Does **not** include messages arriving via source log replay (`LOG_RPC`). |
-| `--wal-incoming-cli` / `--no-wal-incoming-cli` | `true` | Write incoming CLI bootstrap calls to WAL. Covers the `main()` invocation initiated by `SelfBootstrapInvoker` when a main class is specified on the command line. |
-| `--wal-all-incoming-rpc` | `false` | Write **all** incoming RPC calls to WAL, including `LOG_RPC` (source log replay). Implies `--wal-incoming-rpc`. Has a built-in circularity guard: if the source log and WAL are the same log, this option is ignored to prevent infinite feedback loops. |
-
-These flags only take effect when a WAL or TCP PUB destination is configured (i.e., `--wal` or `--tcp-pub` is specified). Without a destination, the flags are silently ignored.
-
-### When to Use These Flags
-
-**Default behavior (all enabled)** is correct for most use cases: the WAL captures a complete record of everything the peer did, regardless of how the operation was initiated.
-
-Disable `--wal-incoming-rpc` when:
-
-- You want the WAL to only contain locally-initiated operations
-- The caller is already logging the RPC on its side
-
-Disable `--wal-incoming-cli` when:
-
-- You don't need the bootstrap `main()` call recorded in the WAL
-- You want the WAL to start recording only after the application is initialized
-
-Enable `--wal-all-incoming-rpc` when:
-
-- You are consuming from one log (source) and writing to a different log (WAL)
-- You want replayed messages to be re-published to the WAL for downstream consumers
-
-### RPC Policy Flags
-
-Control which operations remote callers can invoke via RPC. See [RPC Policy](concepts/rpc-policy.md) for full documentation.
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--rpc-policy <path>` | -- | Path to RPC access policy YAML file |
-| `--rpc-policy-preset <names>` | -- | Comma-separated preset names to enable (e.g., `deny-unsafe,deny-jdk-internals`) |
-| `--rpc-default-action <action>` | `DENY` | Default action when no rule matches: `ALLOW` or `DENY` |
-| `--rpc-policy-watch-interval <ms>` | `2000` | Poll interval in milliseconds for watching the policy YAML file for changes. When a change is detected, the policy is reloaded automatically without restarting the peer. Set to `0` to disable file watching |
-
-When no policy flags are specified, all RPC operations are denied by default. To allow RPC calls, configure a policy with explicit ALLOW rules or pass `--rpc-default-action ALLOW`. When a policy is configured, it gates every incoming RPC message before dispatch.
-
-When a policy YAML file is specified via `--rpc-policy`, the peer automatically watches the file for changes and reloads the policy at runtime. See [RPC Policy — Hot Reloading](concepts/rpc-policy.md#hot-reloading) for details.
-
-Available presets: `deny-unsafe`, `deny-jdk-internals`, `deny-classloading`, `deny-reflection`, `deny-serialization`, `deny-scripting`, `deny-pal-internals`. Note: `deny-pal-internals` is always enforced regardless of configuration and cannot be disabled.
-
-```bash
-# Block dangerous operations
-pal run -d localhost:2379 --zmq-rpc auto \
-  --rpc-policy-preset deny-unsafe,deny-jdk-internals \
-  -cp app.jar com.example.Main
-
-# Use a YAML policy file (with automatic hot reloading)
-pal run -d localhost:2379 --zmq-rpc auto \
-  --rpc-policy rpc-policy.yaml \
-  -cp app.jar com.example.Main
-
-# Deny by default, allow only via policy rules
-pal run -d localhost:2379 --zmq-rpc auto \
-  --rpc-policy rpc-policy.yaml --rpc-default-action DENY \
-  -cp app.jar com.example.Main
-
-# Custom poll interval (5 seconds)
-pal run -d localhost:2379 --zmq-rpc auto \
-  --rpc-policy rpc-policy.yaml --rpc-policy-watch-interval 5000 \
-  -cp app.jar com.example.Main
-
-# Disable file watching (load once at startup)
-pal run -d localhost:2379 --zmq-rpc auto \
-  --rpc-policy rpc-policy.yaml --rpc-policy-watch-interval 0 \
-  -cp app.jar com.example.Main
-```
-
-### Recording Scope Flags
-
-Control which operations are written to the WAL and published via PUB. By default, all quantized operations are recorded. Recording scope lets you filter the WAL to include only relevant operations (e.g., your application code), reducing WAL size and noise. See [Recording Scope](concepts/recording-scope.md) for full documentation.
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--scope <patterns>` | -- | Ant-style class patterns for operations to record (repeatable, comma-separated). Creates RECORD rules |
-| `--scope-exclude <patterns>` | -- | Ant-style class patterns for operations to exclude from recording (repeatable, comma-separated). Creates SKIP rules. Takes priority over `--scope` |
-| `--scope-io` | `false` | Include built-in I/O boundary rules: JDBC, HTTP, file I/O, network I/O, time, random, process, system properties. All added as RECORD rules |
-| `--scope-policy <path>` | -- | Path to a YAML recording scope policy file for fine-grained control (class, member, categories, action). Lowest priority |
-| `--scope-default <record\|skip>` | inferred | Default action when no rule matches. When omitted: inferred as `skip` if `--scope` or `--scope-io` is given, `record` if only `--scope-exclude` is given |
-
-These flags only take effect when a WAL or TCP PUB destination is configured (i.e., `--wal` or `--tcp-pub` is specified). Without a destination, the flags are silently ignored.
-
-Rules are evaluated in first-match-wins order: `--scope-exclude` rules (highest priority), then `--scope` rules, then `--scope-io` preset rules, then `--scope-policy` YAML rules, then the default action.
-
-**Important**: When using recording scope with deterministic replay (`pal replay`), the same `--scope` flags must be passed to the replay command. See [Recording Scope — Replay Requirement](concepts/recording-scope.md#replay-requirement).
-
-```bash
-# Record only application code (skip everything else)
-pal run --wal file:/tmp/my-wal \
-  --scope "com.mycompany.**" --scope-default skip \
-  -cp app.jar com.example.Main
-
-# Record everything except noisy JDK internals
-pal run --wal file:/tmp/my-wal \
-  --scope-exclude "java.lang.String.**" \
-  --scope-exclude "java.util.HashMap.**" \
-  -cp app.jar com.example.Main
-
-# Record application code + I/O boundaries
-pal run --wal file:/tmp/my-wal \
-  --scope "com.mycompany.**" --scope-io --scope-default skip \
-  -cp app.jar com.example.Main
-
-# Use a YAML policy file for fine-grained control
-pal run --wal file:/tmp/my-wal \
-  --scope-policy scope-policy.yaml \
-  -cp app.jar com.example.Main
-```
-
-### Examples
-
-```bash
-# Default: all incoming messages written to WAL
-pal run -k localhost:29092 --wal my-wal --json-rpc auto -cp app.jar com.example.Main
-
-# Disable WAL writes for incoming RPC (only locally-initiated operations logged)
-pal run -k localhost:29092 --wal my-wal --no-wal-incoming-rpc --json-rpc auto \
-  -cp app.jar com.example.Main
-
-# Disable WAL writes for the CLI bootstrap main() call
-pal run -k localhost:29092 --wal my-wal --no-wal-incoming-cli --json-rpc auto \
-  -cp app.jar com.example.Main
-
-# Consume from one Kafka topic, re-publish all messages (including replayed) to another
-pal run -k localhost:29092 --source-log input-topic --wal output-topic \
-  --wal-all-incoming-rpc -cp app.jar
-```
-
----
-
 ## pal init - Initialize a Project for PAL
 
-Scaffold a new project or add PAL weaving to an existing Maven or Gradle project. In interactive mode (default), a wizard guides you through the setup. In non-interactive mode (`-y`), all choices are specified via flags.
+Scaffold a new project or add PAL weaving to an existing Gradle or Maven project. In interactive mode (default), a wizard guides you through the setup. In non-interactive mode (`-y`), all choices are specified via flags.
 
 ### Synopsis
 
@@ -276,13 +137,13 @@ pal init -y --group-id com.example   # Non-interactive mode with flags
 
 #### Project Identity
 
-| Option | Description |
-|--------|-------------|
-| `--group-id <GROUP_ID>` | Maven/Gradle group ID (e.g., `com.example`) |
-| `--artifact-id <ARTIFACT_ID>` | Maven/Gradle artifact ID (e.g., `my-app`) |
-| `--version <VERSION>` | Project version (default: `1.0-SNAPSHOT`) |
-| `--main-class <CLASS>` | Fully qualified main class name (e.g., `com.example.Main`) |
-| `--package <PACKAGE>` | Java package name (inferred from group ID if omitted) |
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--group-id <GROUP_ID>` | -- | Gradle/Maven group ID (e.g., `com.example`) |
+| `--artifact-id <ARTIFACT_ID>` | -- | Gradle/Maven artifact ID (e.g., `my-app`) |
+| `--version <VERSION>` | `1.0` | Project version |
+| `--main-class <CLASS>` | -- | Fully qualified main class name (e.g., `com.example.Main`) |
+| `--package <PACKAGE>` | _(from group ID)_ | Java package name. Inferred from group ID if omitted |
 
 #### Build
 
@@ -435,7 +296,461 @@ cd my-existing-project
 pal init --dry-run
 ```
 
----
+## pal run - Run a Peer
+
+Start a PAL peer that runs your application with PAL's message-passing runtime. The peer can run unregistered (no directory), register with etcd for service discovery, write a WAL, expose RPC endpoints, and host intercepts. For a hands-on walkthrough, see [Getting Started](getting-started.md).
+
+### Synopsis
+
+```bash
+pal run [OPTIONS] [-cp CLASSPATH] [main-class] [args...]
+pal run [OPTIONS] -jar JAR_FILE [args...]
+pal run [OPTIONS] --as-service [-cp CLASSPATH]      # No main class — peer stays alive for incoming RPC/intercepts
+pal run [OPTIONS] --source-log <name>               # Re-dispatch messages from a log into a fresh peer
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `main-class` | Fully qualified main class to run |
+| `args...` | Arguments passed to the main class |
+
+### Identity and Service Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-d, --dir <HOST:PORT>` | _(unset)_ | PAL directory URL (etcd endpoint). If unset, the peer runs unregistered |
+| `-u, --uuid <UUID>` | _(random)_ | Peer UUID. Auto-generated if omitted |
+| `-n, --name <NAME>` | _(unset)_ | Peer name in the directory. Must be unique within the directory |
+| `-c, -cp, --classpath <CLASSPATH>` | -- | Application classpath |
+| `-jar <JAR>` | -- | JAR file to run (Main-Class read from manifest). Alternative to specifying a main class |
+| `--as-service` | `false` | Run without a main class — keeps the peer alive to handle incoming RPC and intercepts |
+| `--properties <path>` | _(unset)_ | External properties file overlaying built-in defaults. See [Properties Reference](properties-reference.md) |
+| `--chronicle-base-dir <path>` | _(cwd)_ | Base directory for relative `file:` Chronicle paths |
+| `--kafka-timeout <ms>` | `5000` | Kafka health check timeout |
+| `--etcd-timeout <ms>` | `5000` | etcd health check timeout |
+
+### Log Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-w, --wal <name\|file:/path>` | _(unset)_ | Write-ahead log destination. `auto` to auto-name. Topic name for Kafka, `file:/path` for Chronicle |
+| `-s, --source-log <name>` | _(unset)_ | Source log to consume messages from. `auto`, `file:/path`, or topic name |
+| `-l, --log <name>` | _(unset)_ | Shorthand: use the same log for both `--wal` and `--source-log` |
+| `-O, --start-offset <N>` | _(start)_ | Offset to start replaying source log from. Requires `--source-log` or `--log` |
+| `--log-prefix <prefix>` | `app` | Prefix for auto-generated log names |
+| `-k, --kafka-servers <host:port>` | _(unset)_ | Kafka bootstrap servers. Required for Kafka-backed logs |
+| `--with-source-context` | `false` | Include source context (file/line) in log messages |
+
+For controlling which incoming messages are written to the WAL (`--wal-incoming-rpc`, `--wal-all-incoming-rpc`, `--wal-incoming-cli`), see [WAL Incoming Message Flags](#wal-incoming-message-flags) below.
+
+### RPC Endpoint Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-r, --zmq-rpc <[HOST:]PORT\|auto>` | _(unset)_ | ZMQ-RPC listener (binary RPC over TCP) |
+| `-j, --json-rpc <[HOST:]PORT\|auto>` | _(unset)_ | JSON-RPC WebSocket listener |
+| `-p, --tcp-pub <[HOST:]PORT\|auto>` | _(unset)_ | TCP publication endpoint (ZeroMQ PUB) |
+| `--rpc-threads <N>` | `1` | Number of RPC handler threads |
+
+For RPC policy flags (`--rpc-policy`, `--rpc-policy-preset`, `--rpc-default-action`, `--rpc-policy-watch-interval`), see [RPC Policy Flags](#rpc-policy-flags) below.
+
+### Threading Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--fx-thread` | `false` | Route RPC calls with `fx-thread` affinity to the JavaFX Application Thread |
+| `--service-thread <regex>` | _(unset)_ | Regex pattern for service-request handler thread names. Tags matching entry points with `service-request` affinity |
+
+### Interception Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--interceptable` | `false` | Enable message interception (requires PAL directory). Auto-enables `--in-flight-tracking` |
+| `--in-flight-tracking` / `--no-in-flight-tracking` | `true` when `--interceptable`, otherwise `false` | Track in-flight dispatches for safe intercept activation |
+| `--drain-timeout-ms <ms>` | `5000` | Timeout for draining in-flight dispatches before intercept activation |
+| `--callback-timeout-ms <ms>` | `3000` | Default intercept callback response timeout. `0` = infinite. Overridable per-intercept |
+| `--exception-policy <policy>` | `PROPAGATE_CONTROLLED_ONLY` | Exception propagation policy. Values: `PROPAGATE_ALL`, `PROPAGATE_EXPLICIT_ONLY`, `SWALLOW_ALL`, `PROPAGATE_CONTROLLED_ONLY` |
+| `--checked-exception-policy <policy>` | `WRAP` | Checked exception handling. Values: `WRAP`, `REJECT`, `ALLOW_ALL` |
+
+### WAL Incoming Message Flags
+
+By default, when a WAL is configured (`--wal`), PAL writes **all** messages to it: both locally-initiated operations (from the peer's own application code) and incoming operations (from RPC calls or CLI bootstrap). These flags let you control which incoming messages are written.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--wal-incoming-rpc` / `--no-wal-incoming-rpc` | `true` | Write incoming RPC calls to WAL. Covers ZMQ-RPC and JSON-RPC (WebSocket) channels. Does **not** include messages arriving via source log replay (`LOG_RPC`). |
+| `--wal-incoming-cli` / `--no-wal-incoming-cli` | `true` | Write incoming CLI bootstrap calls to WAL. Covers the `main()` invocation initiated by `SelfBootstrapInvoker` when a main class is specified on the command line. |
+| `--wal-all-incoming-rpc` | `false` | Write **all** incoming RPC calls to WAL, including `LOG_RPC` (source log replay). Implies `--wal-incoming-rpc`. Has a built-in circularity guard: if the source log and WAL are the same log, this option is ignored to prevent infinite feedback loops. |
+
+These flags only take effect when a WAL or TCP PUB destination is configured (i.e., `--wal` or `--tcp-pub` is specified). Without a destination, the flags are silently ignored.
+
+### When to Use These Flags
+
+**Default behavior (all enabled)** is correct for most use cases: the WAL captures a complete record of everything the peer did, regardless of how the operation was initiated.
+
+Disable `--wal-incoming-rpc` when:
+
+- You want the WAL to only contain locally-initiated operations.
+- The caller is already logging the RPC on its side.
+
+Disable `--wal-incoming-cli` when:
+
+- You don't need the bootstrap `main()` call recorded in the WAL.
+- You want the WAL to start recording only after the application is initialized.
+
+Enable `--wal-all-incoming-rpc` when:
+
+- You are consuming from one log (source) and writing to a different log (WAL).
+- You want replayed messages to be re-published to the WAL for downstream consumers.
+
+### RPC Policy Flags
+
+Control which operations remote callers can invoke via RPC. See [RPC Policy](concepts/rpc-policy.md) for full documentation.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--rpc-policy <path>` | -- | Path to RPC access policy YAML file |
+| `--rpc-policy-preset <names>` | -- | Comma-separated preset names to enable (e.g., `deny-unsafe,deny-jdk-internals`) |
+| `--rpc-default-action <action>` | `DENY` | Default action when no rule matches: `ALLOW` or `DENY` |
+| `--rpc-policy-watch-interval <ms>` | `2000` | Poll interval in milliseconds for watching the policy YAML file for changes. When a change is detected, the policy is reloaded automatically without restarting the peer. Set to `0` to disable file watching |
+
+When no policy flags are specified, all RPC operations are denied by default. To allow RPC calls, configure a policy with explicit ALLOW rules or pass `--rpc-default-action ALLOW`. When a policy is configured, it gates every incoming RPC message before dispatch.
+
+When a policy YAML file is specified via `--rpc-policy`, the peer automatically watches the file for changes and reloads the policy at runtime. See [RPC Policy — Hot Reloading](concepts/rpc-policy.md#hot-reloading) for details.
+
+Available presets: `deny-unsafe`, `deny-jdk-internals`, `deny-classloading`, `deny-reflection`, `deny-serialization`, `deny-scripting`, `deny-nonpublic`. PAL internal classes (`io.quasient.pal.**`) are always denied independently of any preset and cannot be re-enabled.
+
+```bash
+# Block dangerous operations
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy-preset deny-unsafe,deny-jdk-internals \
+  -cp app.jar com.example.Main
+
+# Use a YAML policy file (with automatic hot reloading)
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml \
+  -cp app.jar com.example.Main
+
+# Deny by default, allow only via policy rules
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml --rpc-default-action DENY \
+  -cp app.jar com.example.Main
+
+# Custom poll interval (5 seconds)
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml --rpc-policy-watch-interval 5000 \
+  -cp app.jar com.example.Main
+
+# Disable file watching (load once at startup)
+pal run -d localhost:2379 --zmq-rpc auto \
+  --rpc-policy rpc-policy.yaml --rpc-policy-watch-interval 0 \
+  -cp app.jar com.example.Main
+```
+
+### Recording Scope Flags
+
+Control which operations are written to the WAL and published via PUB. By default, all quantized operations are recorded. Recording scope lets you filter the WAL to include only relevant operations (e.g., your application code), reducing WAL size and noise. See [Recording Scope](concepts/recording-scope.md) for full documentation.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--scope <patterns>` | -- | Ant-style class patterns for operations to record (repeatable, comma-separated). Creates RECORD rules |
+| `--scope-exclude <patterns>` | -- | Ant-style class patterns for operations to exclude from recording (repeatable, comma-separated). Creates SKIP rules. Takes priority over `--scope` |
+| `--scope-io` | `false` | Include built-in I/O boundary rules: JDBC, HTTP, file I/O, network I/O, time, random, process, system properties. All added as RECORD rules |
+| `--scope-policy <path>` | -- | Path to a YAML recording scope policy file for fine-grained control (class, member, categories, action). Lowest priority |
+| `--scope-default <record\|skip>` | inferred | Default action when no rule matches. When omitted: inferred as `skip` if `--scope` or `--scope-io` is given, `record` if only `--scope-exclude` is given |
+
+These flags only take effect when a WAL or TCP PUB destination is configured (i.e., `--wal` or `--tcp-pub` is specified). Without a destination, the flags are silently ignored.
+
+Rules are evaluated in first-match-wins order: `--scope-exclude` rules (highest priority), then `--scope` rules, then `--scope-io` preset rules, then `--scope-policy` YAML rules, then the default action.
+
+**Important**: When using recording scope with deterministic replay (`pal replay`), the same `--scope` flags must be passed to the replay command. See [Recording Scope — Replay Requirement](concepts/recording-scope.md#replay-requirement).
+
+```bash
+# Record only application code (skip everything else)
+pal run --wal file:/tmp/my-wal \
+  --scope "com.mycompany.**" --scope-default skip \
+  -cp app.jar com.example.Main
+
+# Record everything except noisy JDK internals
+pal run --wal file:/tmp/my-wal \
+  --scope-exclude "java.lang.String.**" \
+  --scope-exclude "java.util.HashMap.**" \
+  -cp app.jar com.example.Main
+
+# Record application code + I/O boundaries
+pal run --wal file:/tmp/my-wal \
+  --scope "com.mycompany.**" --scope-io --scope-default skip \
+  -cp app.jar com.example.Main
+
+# Use a YAML policy file for fine-grained control
+pal run --wal file:/tmp/my-wal \
+  --scope-policy scope-policy.yaml \
+  -cp app.jar com.example.Main
+```
+
+### Examples
+
+```bash
+# Default: all incoming messages written to WAL
+pal run -k localhost:29092 --wal my-wal --json-rpc auto -cp app.jar com.example.Main
+
+# Disable WAL writes for incoming RPC (only locally-initiated operations logged)
+pal run -k localhost:29092 --wal my-wal --no-wal-incoming-rpc --json-rpc auto \
+  -cp app.jar com.example.Main
+
+# Disable WAL writes for the CLI bootstrap main() call
+pal run -k localhost:29092 --wal my-wal --no-wal-incoming-cli --json-rpc auto \
+  -cp app.jar com.example.Main
+
+# Consume from one Kafka topic, re-publish all messages (including replayed) to another
+pal run -k localhost:29092 --source-log input-topic --wal output-topic \
+  --wal-all-incoming-rpc -cp app.jar
+```
+
+## pal replay - Deterministic WAL Replay
+
+Re-execute an application from `main()` while verifying every operation against a previously recorded WAL. The WAL acts as an oracle: each operation that the application performs is matched against the corresponding WAL entry, and the return value is compared. Any difference is reported as a divergence.
+
+This is not "playing back a recording." The application runs naturally from `main()`, hitting the same AspectJ call sites as during the original execution. The replay system verifies that every operation produces the same result.
+
+### Synopsis
+
+```bash
+pal replay [OPTIONS] class [args...]
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-w, --wal <name\|file:/path>` | **(Required)** WAL to replay from. Use `file:/path` for Chronicle Queue or a topic name for Kafka. Relative Chronicle paths (e.g., `file:app.wal`) are resolved against the current working directory |
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka WAL topics without `-d`) |
+| `--divergence-policy <WARN\|HALT\|IGNORE>` | Action on divergence (default: `WARN`) |
+| `--threading <ordered\|unordered>` | Thread ordering for multi-threaded replay (default: `ordered`). See [Multi-Threaded Replay](#multi-threaded-replay) |
+| `--delay <milliseconds>` | Delay before each entry-point injection for slow-motion replay visualization (default: `0`, disabled). See [Slow-Motion Replay](#slow-motion-replay) |
+| `--policy <path>` | Path to a YAML replay policy file. See [Side-Effect Shielding](#side-effect-shielding) |
+| `--shield-io` | Enable built-in I/O stubbing rules (time, random, I/O streams, JDBC). See [Side-Effect Shielding](#side-effect-shielding) |
+| `--shield-fx` | Enable built-in JavaFX stubbing rules for animation/timing operations. See [Side-Effect Shielding](#side-effect-shielding) |
+| `--re-execute <patterns>` | Comma-separated Ant-style patterns for classes/methods to re-execute (highest priority) |
+| `--stub <patterns>` | Comma-separated Ant-style patterns for classes/methods to stub from WAL |
+| `--stub-all-else` | Stub all operations not matched by explicit `--re-execute` rules (sets default action to `STUB_FROM_WAL`) |
+| `--force-stub` | Proceed with replay even if unsafe stubs are detected by the side-effect analyzer |
+| `-cp, --classpath <CLASSPATH>` | Classpath for the application (required when replaying a class) |
+| `-jar <jarFile>` | JAR file to replay (Main-Class from manifest). Alternative to specifying a main class |
+| `--fx-thread` | Enable JavaFX Application Thread execution. Required for replaying JavaFX applications (default: `false`) |
+| `--service-thread <pattern>` | Regex pattern for service request handler thread names (e.g., `executor-thread-.*`). Entry points on matching threads are tagged with `service-request` affinity during recording, and wrapped in a CDI request context during replay. See [Service/Web Applications](#serviceweb-applications) |
+| `--scope <patterns>` | Ant-style class patterns for recording scope (must match the flags used during recording). See [Recording Scope](concepts/recording-scope.md) |
+| `--scope-exclude <patterns>` | Ant-style class patterns to exclude from recording scope (must match recording) |
+| `--scope-io` | Include built-in I/O boundary rules in recording scope (must match recording) |
+| `--scope-policy <path>` | Path to YAML recording scope policy file (must match recording) |
+| `--scope-default <record\|skip>` | Default recording scope action (must match recording) |
+
+**Recording scope on replay**: When the WAL was recorded with `--scope` flags, the same flags **must** be passed to `pal replay`. The replay system uses the scope to determine which operations have WAL entries (in-scope) and which should be executed directly without WAL matching (out-of-scope). Mismatched scope flags produce cascading divergences. See [Recording Scope — Replay Requirement](concepts/recording-scope.md#replay-requirement).
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `class` | Fully qualified main class to replay (required unless using `-jar`) |
+| `args...` | Application arguments passed to `main()` |
+
+### Divergence Policies
+
+| Policy | Behavior |
+|--------|----------|
+| `WARN` | Log each divergence to stderr and continue (default) |
+| `HALT` | Stop immediately on the first divergence |
+| `IGNORE` | Silently record divergences without logging |
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Replay completed with zero divergences |
+| `1` | Application error (missing class, uncaught exception) |
+| `2` | Divergences detected between live execution and WAL |
+
+### How It Works
+
+1. The WAL is loaded and indexed. Operations and their return values are paired (each method call is matched to its return value entry).
+2. The application starts from `main()` with the provided arguments.
+3. At every quantized operation (method call, constructor, field access), the replay system:
+   - Matches the live operation's signature against the next expected WAL entry.
+   - Executes the operation normally.
+   - Compares the actual return value against the WAL-recorded value.
+   - Reports a divergence if they differ.
+4. After the application completes, a divergence report is printed to stderr (if any).
+
+### Examples
+
+#### Replay from Chronicle Queue
+
+```bash
+# Step 1: Record a WAL
+pal run --wal file:/tmp/my-wal -cp build/classes/java/main com.example.App arg1 arg2
+
+# Step 2: Replay from the recorded WAL
+pal replay --wal file:/tmp/my-wal -cp build/classes/java/main com.example.App arg1 arg2
+```
+
+#### Replay with a relative WAL path
+
+```bash
+# Record a WAL in the current directory
+pal run --wal file:./app.wal -cp build/classes/java/main com.example.App arg1 arg2
+
+# Replay using a relative path — resolved against the current working directory
+pal replay --wal file:app.wal -cp build/classes/java/main com.example.App arg1 arg2
+```
+
+#### Replay from Kafka
+
+```bash
+# Step 1: Record to Kafka
+pal run -d localhost:2379 -k localhost:29092 --wal my-topic \
+  -cp app.jar com.example.App
+
+# Step 2: Replay from Kafka (with explicit servers)
+pal replay --wal my-topic -k localhost:29092 \
+  -cp app.jar com.example.App
+
+# Or with PAL directory (resolves Kafka servers automatically)
+pal replay -d localhost:2379 --wal my-topic \
+  -cp app.jar com.example.App
+```
+
+#### Detecting Divergences
+
+```bash
+# Record with one set of arguments
+pal run --wal file:/tmp/baseline -cp build/classes/java/main com.example.App input-A
+
+# Replay with different arguments — produces divergences
+pal replay --wal file:/tmp/baseline -cp build/classes/java/main com.example.App input-B
+# Exit code: 2
+# stderr shows: [VALUE_MISMATCH] offset=N: expected "X" but got "Y"
+```
+
+#### Halt on First Divergence
+
+```bash
+pal replay --wal file:/tmp/my-wal --divergence-policy HALT \
+  -cp build/classes/java/main com.example.App
+```
+
+### Slow-Motion Replay
+
+For UI applications (JavaFX, Swing), operations can happen too fast to observe during replay. Use `--delay` to add a pause before each entry-point injection:
+
+```bash
+# 2-second delay between entry points (good for visual debugging)
+pal replay --wal file:/tmp/fx-wal --fx-thread --delay 2000 \
+  -jar build/libs/my-javafx-app.jar
+```
+
+The delay is specified in milliseconds. Use larger values (2000-5000ms) to observe each UI state change, smaller values (200-500ms) for faster but still visible replay.
+
+### Multi-Threaded Replay
+
+When the WAL contains operations from multiple threads (e.g., RPC worker threads), replay automatically detects entry-point operations and spawns `ReplayInputInjector` threads to re-inject them. No additional configuration is required beyond ensuring `--wal-incoming-rpc` was enabled during recording (this is the default).
+
+The `--threading` option controls cross-thread ordering:
+
+| Value | Behavior |
+|-------|----------|
+| `ordered` (default) | Entry-point injection follows WAL-offset ordering. Preserves the recorded execution order across threads. |
+| `unordered` | Entry-point injection runs without ordering constraints. Faster, but cross-thread order may differ from the recording. |
+
+```bash
+# Replay a multi-threaded RPC service (ordered by default)
+pal replay --wal file:/tmp/service-wal -cp build/classes/java/main com.example.ServiceMain
+
+# Replay without cross-thread ordering constraints
+pal replay --wal file:/tmp/service-wal --threading unordered \
+  -cp build/classes/java/main com.example.ServiceMain
+```
+
+See [Deterministic Replay](concepts/deterministic-replay.md#multi-threaded-replay) for a complete walkthrough.
+
+### Service/Web Applications
+
+Web frameworks like Quarkus and Vert.x dispatch HTTP requests on named executor threads (e.g., `executor-thread-0`, `executor-thread-1`). Use `--service-thread` with a regex pattern matching those thread names to enable correct recording and replay:
+
+```bash
+# Record a Quarkus service
+pal run --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
+  -jar build/libs/quarkus-app.jar
+
+# Replay it
+pal replay --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
+  -jar build/libs/quarkus-app.jar
+```
+
+During recording, entry points on threads matching the pattern are tagged with `threadAffinity = "service-request"` in the WAL. During replay, the `ThreadAffinityDispatcher` wraps each tagged entry point in a CDI request context (and JTA transaction, if available), so that `@RequestScoped` beans and transactional boundaries work correctly.
+
+The `--service-thread` flag must match during both recording and replay (like `--fx-thread`). Without it during recording, the entry points will not be tagged; without it during replay, the CDI context will not be activated.
+
+See [Deterministic Replay](concepts/deterministic-replay.md#serviceweb-applications) for details on how thread affinity works.
+
+### Side-Effect Shielding
+
+By default, all operations are re-executed during replay. Side-effect shielding allows operations to be **stubbed** — returning WAL-recorded values without executing — for I/O, databases, time, randomness, and other non-deterministic or unavailable resources.
+
+See [Deterministic Replay](concepts/deterministic-replay.md#side-effect-shielding-replay-policy) for detailed configuration guidance.
+
+#### Built-in I/O Shielding
+
+```bash
+# Stub common non-deterministic operations (time, random, I/O, JDBC)
+pal replay --wal file:/tmp/my-wal --shield-io \
+  -cp build/classes/java/main com.example.App
+```
+
+#### YAML Policy File
+
+```bash
+# Apply a custom replay policy
+pal replay --wal file:/tmp/my-wal --policy policy.yaml \
+  -cp build/classes/java/main com.example.App
+```
+
+#### CLI Pattern Flags
+
+```bash
+# Stub specific operations
+pal replay --wal file:/tmp/my-wal \
+  --stub "java.lang.System.currentTimeMillis,java.io.**.**" \
+  -cp build/classes/java/main com.example.App
+
+# Re-execute only your code, stub everything else
+pal replay --wal file:/tmp/my-wal \
+  --re-execute "com.example.**" --stub-all-else \
+  -cp build/classes/java/main com.example.App
+
+# Combine approaches
+pal replay --wal file:/tmp/my-wal --shield-io \
+  --re-execute "com.example.TimeService.**" \
+  -cp build/classes/java/main com.example.App
+```
+
+#### Unsafe Stub Override
+
+```bash
+# Proceed despite unsafe stub warnings
+pal replay --wal file:/tmp/my-wal --policy policy.yaml --force-stub \
+  -cp build/classes/java/main com.example.App
+```
+
+### Notes
+
+- Replay is **read-only**: no new WAL is written during replay. The recorded WAL is consumed but not modified.
+- The application must be compiled with the same AspectJ weaving as during recording. Class version mismatches will surface as operation mismatches.
+- **Multi-threaded replay** is supported for applications that receive input on multiple threads (RPC services, web apps, Swing applications). Entry-point operations must be captured in the WAL during recording (`--wal-incoming-rpc`, enabled by default).
+- **JavaFX applications** require `--fx-thread` during both recording and replay. This routes UI event handlers to the real JavaFX Application Thread.
+- **Service/web applications** that dispatch requests on named executor threads (e.g., Quarkus, Vert.x) can use `--service-thread <pattern>` to tag those entry points with `service-request` affinity. During replay, tagged entry points are wrapped in a CDI request context and transaction.
+- When recording a WAL intended for replay, use `--no-wal-incoming-cli` if you want the WAL to contain only the hot-path operations (excluding the bootstrap `main()` wrapper). This is often the right choice for cleaner replay matching.
 
 ## pal peer ls - List Peers
 
@@ -488,7 +803,324 @@ UUID                                 Name            ZMQ-RPC              JSON-R
 - JMX: JMX monitoring endpoint
 - Uptime: Time since peer started (H:mm:ss format)
 
----
+## pal peer print - Print Messages from a Peer
+
+Subscribe to a peer's message stream and print messages in real-time.
+
+### Synopsis
+
+```bash
+pal peer print [OPTIONS] PEER
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `PEER` | Peer UUID or address (tcp:// or ws://) |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--compact` | Compact output format (default) |
+| `--json` | JSON output format |
+| `--full` | Full output format with all details |
+| `--tree` | Tree output format showing operation nesting |
+| `--types <list>` | Filter by message type (comma-separated) |
+| `-fp, --from-peer <uuid>` | Filter by peer UUID |
+| `-ft, --from-thread <name>` | Filter by thread name |
+| `--id <id>` | Filter by message ID |
+| `-v` | Verbose output |
+
+### Examples
+
+```bash
+# Subscribe to peer by UUID
+pal peer print -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
+
+# Subscribe to peer by address
+pal peer print tcp://localhost:5555
+
+# Subscribe with message type filter
+pal peer print -d localhost:2379 550e8400-e29b... --types CLASS_METHOD
+```
+
+### Notes (print commands)
+
+- **Offset behavior**:
+  - For Kafka logs: offset refers to Kafka partition offset.
+  - For Chronicle logs: offset refers to queue index.
+  - When `-o` is specified without `--with-return`, all other filters are ignored.
+- **`--with-return`**: Must be used with `--offset`. After printing the message at the given offset, scans forward for the matching completion message and prints it. Works with method calls (`RETURN_VALUE`/`THROWABLE`), field gets (`RETURN_VALUE`), and field puts (`PUT_STATIC_DONE`/`PUT_FIELD_DONE`).
+- **`--filter`**: Supports `class=<substring>`, `method=<substring>`, and `field=<substring>` patterns. The `field=` key matches only field operations (get/put static and instance fields). The `method=` key matches method names and field names. Multiple `--filter` options apply AND logic (all must match). Uses substring matching, so `class=Order` matches `com.example.OrderService`.
+- **`--tree`**: Shows operation nesting with indentation. Method calls and constructors increase depth; return values and exceptions decrease it. Incompatible with `--json` and `--full`.
+- **Follow mode** (`-f`): Waits for new messages indefinitely (use Ctrl-C to exit).
+- **Log resolution**: Can specify log by name or UUID.
+- **Chronicle vs Kafka**: The tool automatically detects log type from directory registration.
+- **Performance**: Compact format is fastest, Full format includes all context.
+
+## pal peer call - Send RPC Calls to a Peer
+
+Invoke methods on a remote peer via RPC.
+
+### Synopsis
+
+```bash
+pal peer call [OPTIONS] PEER [class args...]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `PEER` | Peer UUID, address (tcp:// or ws://), or name |
+| `class` | Fully qualified class name |
+| `args...` | Arguments passed to the method |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-r, --rpc-type <ZMQ_RPC\|JSON_RPC>` | RPC type to use |
+| `-m, --method <name>` | Method name to call (default: `main`) |
+| `-a, --add-ids` | Auto-generate missing JSON-RPC request IDs |
+| `--print-responses` / `--no-print-responses` | Print response messages (default: enabled) |
+| `-t, --num-threads <N>` | Number of parallel clients (default: `1`) |
+| `--thread-affinity <affinity>` | Thread affinity hint for the target peer |
+| `-v` | Verbose output |
+
+### Invocation Modes
+
+#### 1. CLI Mode (Static Methods)
+
+Invokes static methods with `String[]` signature using command-line arguments.
+
+**Requirements**:
+
+- Method must have signature: `static void methodName(String[] args)`.
+- Uses `-m` option to specify method name.
+- Works with both `ZMQ_RPC` and `JSON_RPC`.
+
+```bash
+# Call main method (default)
+pal peer call -d localhost:2379 my-peer com.example.MyClass arg1 arg2
+
+# Call specific method
+pal peer call -d localhost:2379 my-peer -m processArgs com.example.MyClass arg1 arg2
+
+# Explicit RPC type
+pal peer call -d localhost:2379 my-peer -r ZMQ_RPC com.example.MyClass
+```
+
+#### 2. JSON-RPC Stdin Mode
+
+Sends arbitrary JSON-RPC requests via stdin for full flexibility.
+
+**Capabilities**:
+
+- Call any method with any signature
+- Construct objects (constructors)
+- Get/set fields (static and instance)
+- Multiple operations in sequence
+
+**JSON-RPC Request Format**:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "unique-id",
+  "method": "call|new|get|put",
+  "params": {
+    "type": "com.example.ClassName",
+    "method": "methodName",
+    "args": [
+      {"type": "java.lang.String", "value": "arg1"}
+    ]
+  }
+}
+```
+
+### Examples
+
+#### Basic Method Invocation
+
+```bash
+# Call main method on peer by name
+pal peer call -d localhost:2379 my-peer com.example.App arg1 arg2
+
+# Call non-main method
+pal peer call -d localhost:2379 my-peer -m processData com.example.Processor data1 data2
+
+# Call using peer address instead of name
+pal peer call tcp://localhost:5001 com.example.App
+
+# Call using JSON-RPC endpoint
+pal peer call ws://localhost:9001 com.example.App
+```
+
+#### JSON-RPC via Stdin
+
+```bash
+# Call method with custom signature
+echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Math","method":"add","args":[{"type":"int","value":5},{"type":"int","value":3}]}}' | \
+  pal peer call -d localhost:2379 ws://localhost:9001
+
+# Construct object
+echo '{"jsonrpc":"2.0","id":"1","method":"new","params":{"type":"com.example.User"}}' | \
+  pal peer call -d localhost:2379 ws://localhost:9001
+
+# Get static field
+echo '{"jsonrpc":"2.0","id":"1","method":"get","params":{"type":"com.example.Config","field":"VERSION"}}' | \
+  pal peer call -d localhost:2379 ws://localhost:9001
+
+# Set static field
+echo '{"jsonrpc":"2.0","id":"1","method":"put","params":{"type":"com.example.Config","field":"debugMode","value":true}}' | \
+  pal peer call -d localhost:2379 ws://localhost:9001
+
+# Multiple requests (one per line)
+cat <<EOF | pal peer call -d localhost:2379 ws://localhost:9001
+{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Math","method":"add","args":[{"type":"int","value":5},{"type":"int","value":3}]}}
+{"jsonrpc":"2.0","id":"2","method":"call","params":{"type":"com.example.Math","method":"multiply","args":[{"type":"int","value":5},{"type":"int","value":3}]}}
+EOF
+
+# Auto-generate missing IDs
+cat requests.jsonl | pal peer call -d localhost:2379 ws://localhost:9001 -a
+```
+
+#### Performance Testing
+
+```bash
+# Single-threaded call
+pal peer call -d localhost:2379 my-peer com.example.Benchmark
+
+# Multi-threaded calls (10 parallel clients)
+pal peer call -d localhost:2379 my-peer -t 10 com.example.Benchmark
+```
+
+### RPC Type Selection
+
+The tool automatically infers RPC type based on:
+
+1. Explicit `-r/--rpc-type` option
+2. Peer address scheme:
+   - `tcp://` → `ZMQ_RPC`
+   - `ws://` → `JSON_RPC`
+3. Peer's registered endpoints in directory
+
+If a peer supports both RPC types, you must specify `-r` explicitly.
+
+## pal peer stats - Show Peer Message Statistics
+
+Display message statistics for a peer's message stream.
+
+### Synopsis
+
+```bash
+pal peer stats [OPTIONS] [PEER]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `PEER` | Peer UUID or address |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-t, --types <list>` | Filter by message type(s) |
+| `-fp, --from-peer <uuid>` | Filter by peer UUID |
+| `-ft, --from-thread <name>` | Filter by thread name |
+| `-j, --json-output` | Print stats as JSON |
+
+### Examples
+
+```bash
+# Show stats for a peer
+pal peer stats -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
+
+# Show stats as JSON
+pal peer stats -d localhost:2379 my-peer -j
+```
+
+## pal peer rm - Remove Peers
+
+Remove peers from the directory.
+
+### Synopsis
+
+```bash
+pal peer rm [OPTIONS] [PEER...]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `PEER` | Peer names or UUIDs to remove |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-s, --starting-with` | Treat arguments as prefixes (delete all matching) |
+| `-a, --all` | Delete all peers |
+| `-f, --force` | Skip confirmation prompts and force removal of alive peers |
+
+### Examples
+
+```bash
+# Remove peer by name
+pal peer rm -d localhost:2379 my-peer
+
+# Remove peer by UUID
+pal peer rm -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
+
+# Remove multiple peers
+pal peer rm -d localhost:2379 peer-alpha peer-beta peer-gamma
+
+# Remove all peers with prefix
+pal peer rm -d localhost:2379 -s test-peer
+
+# Force remove live peer
+pal peer rm -d localhost:2379 my-running-peer --force
+```
+
+## pal peer prune - Remove Dead Peers
+
+Remove peers from the directory whose lease has expired (typically peers whose process crashed or was killed without graceful shutdown). The `/info` and `/by-name` directory entries persist after a lease expires; this command cleans them up.
+
+### Synopsis
+
+```bash
+pal peer prune [OPTIONS]
+```
+
+### Examples
+
+```bash
+# Remove all dead peers from the directory
+pal peer prune -d localhost:2379
+```
+
+### Output
+
+```
+Pruned my-old-peer (550e8400-e29b-41d4-a716-446655440000)
+Pruned 1 dead peer(s)
+```
+
+If no dead peers are found:
+
+```
+No dead peers found
+```
+
+### Notes
+
+- Live peers (with active leases) are not affected. Use `pal peer rm --force` to remove a running peer.
+- Returns the number of errors encountered (`0` on success).
 
 ## pal log ls - List Logs
 
@@ -547,7 +1179,496 @@ Name                 UUID                                 Size       Start    --
 - End: Last available offset/index
 - Created: Creation timestamp (MMM dd HH:mm format)
 
----
+## pal log print - Print Messages from a Log
+
+Print and stream messages from Kafka or Chronicle logs.
+
+### Synopsis
+
+```bash
+pal log print [OPTIONS] LOG
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `LOG` | Log name, UUID, or `file:` path |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
+| `-o, --offset <number>` | Print message at specific offset. Combine with `-f` to wait for a future offset |
+| `-f, --follow` | Follow new messages (like `tail -f`) |
+| `--with-return` | Also print the return value or exception for the message at `--offset` |
+| `--compact` | Compact output format (default) |
+| `--json` | JSON output format |
+| `--full` | Full output format with all details |
+| `--tree` | Tree output format showing operation nesting |
+| `--filter <key=value>` | Filter messages by pattern (repeatable; `class=`, `method=`, and `field=` supported) |
+| `--formats <list>` | Filter by message format: `BINARY`, `JSON` (comma-separated) |
+| `--types <list>` | Filter by message type (comma-separated, see below) |
+| `-fp, --from-peer <uuid>` | Filter by peer UUID |
+| `-ft, --from-thread <name>` | Filter by thread name |
+| `--id <id>` | Filter by message ID |
+| `-v` | Verbose output with diagnostic information |
+
+### Message Types for Filtering
+
+- `CONSTRUCTOR` - Object construction
+- `INSTANCE_METHOD` - Instance method invocation
+- `CLASS_METHOD` - Static method invocation
+- `GET_STATIC` - Static field read
+- `GET_FIELD` - Instance field read
+- `PUT_STATIC` - Static field write
+- `PUT_FIELD` - Instance field write
+- `PUT_STATIC_DONE` - Static field write confirmation
+- `PUT_FIELD_DONE` - Instance field write confirmation
+- `RETURN_VALUE` - Method return value
+- `THROWABLE` - Exception/error
+
+### Output Formats
+
+**COMPACT** (default):
+```
+offset=42 id=abc123 message=ClassName.methodName(...)
+```
+
+**FULL**:
+```
+CONTEXT: offset: 42 key: peer-uuid
+HEADERS: {message-type: EXEC_CLASS_METHOD, message-format: BINARY, ...}
+{
+  "detailed": "json representation"
+}
+```
+
+**TREE**:
+```
+[0] com.example.App.main(String[])
+  [1] com.example.Service.process()
+    [2] com.example.Dao.query()
+    [3] ← returned
+  [4] ← returned
+[5] ← returned
+```
+
+Displays messages with indentation reflecting call nesting. Operations (method calls, constructors) increase nesting depth; return values and exceptions decrease it. Useful for understanding call hierarchies at a glance.
+
+**JSON**:
+```
+offset: 42,
+{
+  "json": "representation"
+}
+```
+
+### Examples
+
+#### Registry Mode
+
+```bash
+# Print all messages from a Kafka log in compact format
+pal log print -d localhost:2379 my-wal-log
+
+# Print messages from a Chronicle log in full format
+pal log print -d localhost:2379 my-chronicle-log --full
+
+# Print message at specific offset
+pal log print -d localhost:2379 my-log -o 100
+
+# Wait for and print message at future offset (follow mode)
+pal log print -d localhost:2379 my-log -o 999 -f
+
+# Follow new messages (like tail -f)
+pal log print -d localhost:2379 my-log -f
+
+# Print only method call messages
+pal log print -d localhost:2379 my-log --types CLASS_METHOD,INSTANCE_METHOD
+
+# Print messages in JSON format
+pal log print -d localhost:2379 my-log --json
+
+# Print messages from specific peer
+pal log print -d localhost:2379 my-log --from-peer <peer-uuid>
+
+# Verbose output with diagnostics
+pal log print -d localhost:2379 my-log -v
+
+# Print messages as an indented operation tree
+pal log print -d localhost:2379 my-log --tree
+
+# Print a specific operation and its return value
+pal log print -d localhost:2379 my-log -o 42 --with-return
+
+# Print a specific operation and its return value in full format
+pal log print -d localhost:2379 my-log -o 42 --with-return --full
+
+# Filter messages by class name (substring match)
+pal log print -d localhost:2379 my-log --filter "class=OrderService"
+
+# Filter messages by method name
+pal log print -d localhost:2379 my-log --filter "method=processOrder"
+
+# Filter messages by field name (field operations only)
+pal log print -d localhost:2379 my-log --filter "field=count"
+
+# Combine multiple filters (AND logic)
+pal log print -d localhost:2379 my-log --filter "class=OrderService" --filter "method=process"
+
+# Combine class and field filters to find field access on a specific class
+pal log print -d localhost:2379 my-log --filter "class=OrderService" --filter "field=total"
+```
+
+#### Direct Mode
+
+```bash
+# Print from Chronicle log (absolute path)
+pal log print file:/tmp/my-chronicle-log --full
+
+# Print from Chronicle log (relative path)
+pal log print file:./logs/my-log
+
+# Print from Kafka log (direct, with -k option)
+pal log print -k localhost:29092 my-kafka-topic
+
+# Print from Kafka log (using PAL_KAFKA_SERVERS environment variable)
+export PAL_KAFKA_SERVERS=localhost:29092
+pal log print my-kafka-topic
+
+# Follow new messages from Chronicle log
+pal log print file:/tmp/my-log -f
+
+# Print message at specific offset from Chronicle log
+pal log print file:/tmp/my-log -o 100
+
+# Combine direct mode with filters
+pal log print -k localhost:29092 my-topic --types CLASS_METHOD -f
+
+# Tree view from Chronicle log
+pal log print file:/tmp/my-log --tree
+
+# Operation with return value from Chronicle log
+pal log print file:/tmp/my-log -o 0 --with-return
+
+# Filter by class from Kafka log
+pal log print -k localhost:29092 my-topic --filter "class=OrderService"
+```
+
+## pal log call - Send Method Calls via a Log
+
+Write method call messages to a log (Kafka or Chronicle).
+
+### Synopsis
+
+```bash
+pal log call [OPTIONS] [LOG] [class args...]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `LOG` | Log name, topic, or `file:/path` |
+| `class` | Fully qualified class name |
+| `args...` | Arguments passed to the method |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
+| `-i, --input-log <name>` | Read responses from this log |
+| `-o, --output-log <name>` | Write requests to this log |
+| `-f, --forget-response` | Send without waiting for response (async) |
+| `-m, --method <name>` | Method name to call (default: `main`) |
+| `--print-responses` / `--no-print-responses` | Print response messages (default: enabled) |
+| `-t, --num-threads <N>` | Number of parallel clients (default: `1`) |
+| `-v` | Verbose output |
+
+### Examples
+
+#### Registry Mode
+
+```bash
+# Write method call to log (async, no response)
+pal log call -d localhost:2379 my-log -f com.example.Worker process
+
+# Write to output log, read response from input log
+pal log call -d localhost:2379 -i input-log -o output-log com.example.App
+```
+
+#### Direct Mode
+
+```bash
+# Write to Chronicle log (no PAL directory needed)
+pal log call file:/tmp/my-log -f com.example.Worker process
+
+# Write to Chronicle log (relative path)
+pal log call file:./logs/my-log com.example.App
+
+# Write to Kafka log (with -k option)
+pal log call -k localhost:29092 my-topic -f com.example.App
+
+# Write to Kafka log (using PAL_KAFKA_SERVERS environment variable)
+export PAL_KAFKA_SERVERS=localhost:29092
+pal log call my-kafka-topic com.example.Processor data1 data2
+```
+
+### Notes (call commands)
+
+- **CLI mode limitations**: Only works with `static void methodName(String[] args)` signature.
+- **JSON-RPC flexibility**: Use stdin mode with `pal peer call` for arbitrary method signatures, constructors, and field access.
+- **Peer resolution**: Can specify peer by UUID, name, or direct RPC address.
+- **Async writes**: `--forget-response` only works with log calls.
+- **Response printing**: Use `--print-responses false` to suppress output for performance testing.
+- **Multi-threading**: Each thread creates its own client instance.
+
+## pal log stats - Show Log Message Statistics
+
+Display message statistics for a log.
+
+### Synopsis
+
+```bash
+pal log stats [OPTIONS] [LOG_NAME]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `LOG_NAME` | Log name |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka logs; ignored for Chronicle) |
+| `-t, --types <list>` | Filter by message type(s) |
+| `-fp, --from-peer <uuid>` | Filter by peer UUID |
+| `-ft, --from-thread <name>` | Filter by thread name |
+| `-j, --json-output` | Print stats as JSON |
+| `-v` | Verbose output |
+
+### Examples
+
+```bash
+# Show stats for a Kafka log
+pal log stats -k localhost:29092 my-wal
+
+# Show stats for a Chronicle log
+pal log stats file:/tmp/my-wal
+
+# Show stats as JSON
+pal log stats -k localhost:29092 my-wal -j
+
+# Filter by message type
+pal log stats -k localhost:29092 my-wal -t INSTANCE_METHOD,CLASS_METHOD
+```
+
+## pal log index - Analyze WAL Structure
+
+Index a WAL and print a structural summary: entry counts, operation/completion pairing, threads, and any structural issues (orphaned or unmatched entries).
+
+### Synopsis
+
+```bash
+pal log index [OPTIONS] file:/path             # Chronicle Queue
+pal log index -k <servers> [OPTIONS] <topic>   # Kafka
+pal log index -d <url> [OPTIONS] <name>        # PalDirectory
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka topics without `-d`) |
+| `-v, --verbose` | Show per-entry detail listing before the summary |
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `name\|file:/path` | **(Required)** Log path: `file:/path` for Chronicle Queue, or topic name for Kafka |
+
+### Output
+
+**Summary** (always printed):
+
+```
+WAL Index Summary
+  Entries:     142
+  Operations:  71
+  Completions: 71
+  Pairs:       71
+  Threads:     [main]
+  Issues:      0
+```
+
+- **Entries**: Total WAL entries
+- **Operations**: Entries that open a scope (method calls, constructors, field access)
+- **Completions**: Entries that close a scope (return values, exceptions, field-write confirmations)
+- **Pairs**: Number of matched operation/completion pairs
+- **Threads**: Thread names found in the WAL
+- **Issues**: Structural problems (orphaned completions without a matching operation, or operations without a completion)
+
+**Verbose** (`-v`, printed before summary):
+
+```
+[0] OPERATION main MinimalReceiptCalculator.main(String[])
+[1] OPERATION main MinimalReceiptCalculator.parseCart(String[])
+[2] OPERATION main HashMap.new()
+[3] COMPLETION main HashMap
+...
+```
+
+Each entry shows: `[offset] kind threadName className.executableName(paramTypes)`
+
+For multi-threaded WALs recorded with `--wal-incoming-rpc`, entry-point operations (incoming RPC calls that initiate a new causal chain on a non-self-caller thread) are marked in the WAL. These entry-point markers are used by the replay system's `ReplayInputInjector` to identify which operations to re-inject during multi-threaded replay.
+
+### Examples
+
+```bash
+# Analyze a Chronicle WAL
+pal log index file:/tmp/my-wal
+
+# Analyze with per-entry detail
+pal log index --verbose file:/tmp/my-wal
+
+# Analyze a Kafka WAL
+pal log index -k localhost:29092 my-topic
+
+# Analyze via PAL directory
+pal log index -d localhost:2379 my-log-name
+```
+
+### Notes
+
+- A balanced WAL has equal Operations and Completions counts and zero Issues. Imbalances indicate the application was interrupted mid-execution or the WAL was truncated.
+- This command is useful for verifying a WAL before replay, and for understanding the structure of recorded executions.
+
+## pal log rm - Remove Logs
+
+Remove logs from the directory and their backing storage.
+
+### Synopsis
+
+```bash
+pal log rm [OPTIONS] [LOG...]
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `LOG` | Log names, UUIDs, or `file:` paths to remove |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
+| `-s, --starting-with` | Treat arguments as prefixes (delete all matching) |
+| `-a, --all` | Delete all logs |
+| `-f, --force` | Skip confirmation prompts |
+
+### Examples
+
+#### Registry Mode
+
+```bash
+# Remove single log by name
+pal log rm -d localhost:2379 my-old-log
+
+# Remove log by UUID
+pal log rm -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
+
+# Remove multiple logs
+pal log rm -d localhost:2379 log1 log2 log3
+
+# Remove all logs with prefix
+pal log rm -d localhost:2379 -s test-log
+
+# Remove all logs (dangerous!)
+pal log rm -d localhost:2379 -a --force
+```
+
+#### Direct Mode
+
+```bash
+# Remove Chronicle log (no PAL directory needed)
+pal log rm file:/tmp/my-chronicle-log
+
+# Remove Chronicle log (relative path)
+pal log rm file:./logs/old-log
+
+# Remove Kafka log (with -k option)
+pal log rm -k localhost:29092 my-kafka-topic
+
+# Remove Kafka log (using PAL_KAFKA_SERVERS environment variable)
+export PAL_KAFKA_SERVERS=localhost:29092
+pal log rm my-old-topic
+
+# Note: Direct mode removes from backing store only
+# If log was registered in PAL directory, use registry mode to fully clean up
+```
+
+### Safety Features
+
+- **Live peer protection**: Cannot remove peers with active leases without `--force`.
+- **Confirmation prompts**: Asks before deleting multiple items (unless `--force`).
+- **Error reporting**: Returns count of errors encountered.
+
+### Notes (rm commands)
+
+- **Chronicle logs**: Deletion removes queue directory and all files.
+- **Kafka logs**: Deletion removes topic from Kafka cluster.
+- **Live peers**: Must use `--force` to remove peers with active leases.
+- **Name vs UUID**: Arguments can be names or UUIDs; the tool auto-detects.
+- **Prefix matching** (`-s`): Useful for bulk cleanup of test resources.
+- **Return code**: Returns the number of errors encountered (0 = success).
+- **Direct mode**: Removes from backing store only (doesn't unregister from PAL directory if it was registered there).
+- **Registry mode vs Direct mode**: Use registry mode for full cleanup (unregister + delete backing store), use direct mode for quick local log deletion.
+
+## pal log prune - Remove Stale Log Entries
+
+Remove log entries from the directory whose backing store no longer exists: a Kafka topic that has been deleted, or a Chronicle Queue directory removed from disk. Log registrations have no lease, so dead entries persist until pruned.
+
+### Synopsis
+
+```bash
+pal log prune [OPTIONS]
+```
+
+### Examples
+
+```bash
+# Remove all stale log entries from the directory
+pal log prune -d localhost:2379
+```
+
+### Output
+
+```
+Pruned my-old-topic (550e8400-e29b-41d4-a716-446655440000)
+Pruned 1 stale log(s)
+```
+
+If no stale logs are found:
+
+```
+No stale logs found
+```
+
+### Notes
+
+- For Kafka logs, this command connects to the bootstrap servers recorded in each log entry and checks topic existence. If a Kafka cluster is unreachable, those logs are skipped with a warning.
+- For Chronicle logs, this command checks whether the queue directory exists on the local filesystem.
+- Logs still referenced by a peer are skipped (with a log warning).
+- Returns the number of errors encountered (`0` on success).
 
 ## pal intercept ls - List Intercepts
 
@@ -603,13 +1724,11 @@ UUID                                 Peer                                 Type  
 
 ### Notes (ls commands)
 
-- Lists both Kafka and Chronicle logs
-- Chronicle logs use `file:` prefix in the directory but are displayed without it
-- Long format truncates long values with ".." to fit columns
-- Logs must exist in their backing store (Kafka or Chronicle) to be displayed
-- Intercepts are listed from the etcd directory; they exist as long as the owning peer's lease is active
-
----
+- Lists both Kafka and Chronicle logs.
+- Chronicle logs use `file:` prefix in the directory but are displayed without it.
+- Long format truncates long values with ".." to fit columns.
+- Logs must exist in their backing store (Kafka or Chronicle) to be displayed.
+- Intercepts are listed from the etcd directory; they exist as long as the owning peer's lease is active.
 
 ## pal intercept apply - Apply Intercept Bundle
 
@@ -724,7 +1843,84 @@ Re-applying the same bundle is idempotent --- existing intercepts are skipped:
 Applied: 0 created, 3 skipped, 0 failed
 ```
 
----
+## pal intercept diff - Compare Bundle Against Directory
+
+Compare a YAML bundle file against the current directory state to see what would change if applied.
+
+### Synopsis
+
+```bash
+pal intercept diff [OPTIONS] FILE
+```
+
+### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `FILE` | Path to a YAML bundle file |
+
+### Examples
+
+```bash
+pal intercept diff -d localhost:2379 fraud-check.yaml
+```
+
+### Output
+
+Each intercept is shown with a marker:
+
+- `+` --- would be created (not in directory)
+- `=` --- unchanged (already exists and matches)
+- `~` --- modified (exists but differs)
+
+```
+Comparing bundle "fraud-check-v1" against directory...
+  + BEFORE com.acme.payment.OrderService.placeOrder   (would be created)
+  = AROUND com.acme.payment.OrderService.refund   (already exists, matches)
+  ~ AFTER com.acme.payment.OrderService.status   (exists, but differs: callback method changed)
+
+Summary: 1 to create, 1 unchanged, 1 to update
+```
+
+## pal intercept status - Check Bundle Status
+
+Check whether the intercepts in a bundle are currently active in the directory.
+
+### Synopsis
+
+```bash
+pal intercept status [OPTIONS]
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-f, --file FILE` | Check status of intercepts defined in a YAML bundle file |
+| `--bundle NAME` | Check status using stored bundle metadata |
+
+One of `-f` or `--bundle` must be specified.
+
+### Examples
+
+```bash
+# Check status from a YAML file
+pal intercept status -d localhost:2379 -f fraud-check.yaml
+
+# Check status by bundle name
+pal intercept status -d localhost:2379 --bundle fraud-check-v1
+```
+
+### Output
+
+```
+Bundle "fraud-check-v1" (peer: fraud-checker / 00000000-...-0002)
+  + BEFORE com.acme.payment.OrderService.placeOrder   registered
+  + AROUND com.acme.payment.OrderService.refund   registered
+  - AFTER com.acme.payment.OrderService.status   not found
+
+Status: 2/3 active
+```
 
 ## pal intercept rm - Remove Intercepts
 
@@ -777,1179 +1973,11 @@ pal intercept rm -d localhost:2379 --peer fraud-checker
 Removed: 2, not found: 0
 ```
 
----
-
-## pal intercept diff - Compare Bundle Against Directory
-
-Compare a YAML bundle file against the current directory state to see what would change if applied.
-
-### Synopsis
-
-```bash
-pal intercept diff [OPTIONS] FILE
-```
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `FILE` | Path to a YAML bundle file |
-
-### Examples
-
-```bash
-pal intercept diff -d localhost:2379 fraud-check.yaml
-```
-
-### Output
-
-Each intercept is shown with a marker:
-
-- `+` --- would be created (not in directory)
-- `=` --- unchanged (already exists and matches)
-- `~` --- modified (exists but differs)
-
-```
-Comparing bundle "fraud-check-v1" against directory...
-  + BEFORE com.acme.payment.OrderService.placeOrder   (would be created)
-  = AROUND com.acme.payment.OrderService.refund   (already exists, matches)
-  ~ AFTER com.acme.payment.OrderService.status   (exists, but differs: callback method changed)
-
-Summary: 1 to create, 1 unchanged, 1 to update
-```
-
----
-
-## pal intercept status - Check Bundle Status
-
-Check whether the intercepts in a bundle are currently active in the directory.
-
-### Synopsis
-
-```bash
-pal intercept status [OPTIONS]
-```
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-f, --file FILE` | Check status of intercepts defined in a YAML bundle file |
-| `--bundle NAME` | Check status using stored bundle metadata |
-
-One of `-f` or `--bundle` must be specified.
-
-### Examples
-
-```bash
-# Check status from a YAML file
-pal intercept status -d localhost:2379 -f fraud-check.yaml
-
-# Check status by bundle name
-pal intercept status -d localhost:2379 --bundle fraud-check-v1
-```
-
-### Output
-
-```
-Bundle "fraud-check-v1" (peer: fraud-checker / 00000000-...-0002)
-  + BEFORE com.acme.payment.OrderService.placeOrder   registered
-  + AROUND com.acme.payment.OrderService.refund   registered
-  - AFTER com.acme.payment.OrderService.status   not found
-
-Status: 2/3 active
-```
-
----
-
-## pal log print - Print Messages from a Log
-
-Print and stream messages from Kafka or Chronicle logs.
-
-### Synopsis
-
-```bash
-pal log print [OPTIONS] LOG
-```
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `LOG` | Log name, UUID, or `file:` path |
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
-| `-o, --offset <number>` | Print message at specific offset. Combine with `-f` to wait for a future offset |
-| `-f, --follow` | Follow new messages (like `tail -f`) |
-| `--with-return` | Also print the return value or exception for the message at `--offset` |
-| `--compact` | Compact output format (default) |
-| `--json` | JSON output format |
-| `--full` | Full output format with all details |
-| `--tree` | Tree output format showing operation nesting |
-| `--filter <key=value>` | Filter messages by pattern (repeatable; `class=`, `method=`, and `field=` supported) |
-| `--formats <list>` | Filter by message format: `BINARY`, `JSON` (comma-separated) |
-| `-t, --types <list>` | Filter by message type (comma-separated, see below) |
-| `--from-peer <uuid>` | Filter by peer UUID |
-| `--from-thread <name>` | Filter by thread name |
-| `--id <id>` | Filter by message ID |
-| `-v` | Verbose output with diagnostic information |
-
-### Message Types for Filtering
-
-- `CONSTRUCTOR` - Object construction
-- `INSTANCE_METHOD` - Instance method invocation
-- `CLASS_METHOD` - Static method invocation
-- `GET_STATIC` - Static field read
-- `GET_FIELD` - Instance field read
-- `PUT_STATIC` - Static field write
-- `PUT_FIELD` - Instance field write
-- `PUT_STATIC_DONE` - Static field write confirmation
-- `PUT_FIELD_DONE` - Instance field write confirmation
-- `RETURN_VALUE` - Method return value
-- `THROWABLE` - Exception/error
-
-### Output Formats
-
-**COMPACT** (default):
-```
-offset=42 id=abc123 message=ClassName.methodName(...)
-```
-
-**FULL**:
-```
-CONTEXT: offset: 42 key: peer-uuid
-HEADERS: {message-type: EXEC_CLASS_METHOD, message-format: BINARY, ...}
-{
-  "detailed": "json representation"
-}
-```
-
-**TREE**:
-```
-[0] com.example.App.main(String[])
-  [1] com.example.Service.process()
-    [2] com.example.Dao.query()
-    [3] ← returned
-  [4] ← returned
-[5] ← returned
-```
-
-Displays messages with indentation reflecting call nesting. Operations (method calls, constructors) increase nesting depth; return values and exceptions decrease it. Useful for understanding call hierarchies at a glance.
-
-**JSON**:
-```
-offset: 42,
-{
-  "json": "representation"
-}
-```
-
-### Examples
-
-#### Registry Mode
-
-```bash
-# Print all messages from a Kafka log in compact format
-pal log print -d localhost:2379 my-wal-log
-
-# Print messages from a Chronicle log in full format
-pal log print -d localhost:2379 my-chronicle-log --full
-
-# Print message at specific offset
-pal log print -d localhost:2379 my-log -o 100
-
-# Wait for and print message at future offset (follow mode)
-pal log print -d localhost:2379 my-log -o 999 -f
-
-# Follow new messages (like tail -f)
-pal log print -d localhost:2379 my-log -f
-
-# Print only method call messages
-pal log print -d localhost:2379 my-log -t CLASS_METHOD,INSTANCE_METHOD
-
-# Print messages in JSON format
-pal log print -d localhost:2379 my-log --json
-
-# Print messages from specific peer
-pal log print -d localhost:2379 my-log --from-peer <peer-uuid>
-
-# Verbose output with diagnostics
-pal log print -d localhost:2379 my-log -v
-
-# Print messages as an indented operation tree
-pal log print -d localhost:2379 my-log --tree
-
-# Print a specific operation and its return value
-pal log print -d localhost:2379 my-log -o 42 --with-return
-
-# Print a specific operation and its return value in full format
-pal log print -d localhost:2379 my-log -o 42 --with-return --full
-
-# Filter messages by class name (substring match)
-pal log print -d localhost:2379 my-log --filter "class=OrderService"
-
-# Filter messages by method name
-pal log print -d localhost:2379 my-log --filter "method=processOrder"
-
-# Filter messages by field name (field operations only)
-pal log print -d localhost:2379 my-log --filter "field=count"
-
-# Combine multiple filters (AND logic)
-pal log print -d localhost:2379 my-log --filter "class=OrderService" --filter "method=process"
-
-# Combine class and field filters to find field access on a specific class
-pal log print -d localhost:2379 my-log --filter "class=OrderService" --filter "field=total"
-```
-
-#### Direct Mode
-
-```bash
-# Print from Chronicle log (absolute path)
-pal log print file:/tmp/my-chronicle-log --full
-
-# Print from Chronicle log (relative path)
-pal log print file:./logs/my-log
-
-# Print from Kafka log (direct, with -k option)
-pal log print -k localhost:29092 my-kafka-topic
-
-# Print from Kafka log (using KAFKA_SERVERS environment variable)
-export KAFKA_SERVERS=localhost:29092
-pal log print my-kafka-topic
-
-# Follow new messages from Chronicle log
-pal log print file:/tmp/my-log -f
-
-# Print message at specific offset from Chronicle log
-pal log print file:/tmp/my-log -o 100
-
-# Combine direct mode with filters
-pal log print -k localhost:29092 my-topic -t CLASS_METHOD -f
-
-# Tree view from Chronicle log
-pal log print file:/tmp/my-log --tree
-
-# Operation with return value from Chronicle log
-pal log print file:/tmp/my-log -o 0 --with-return
-
-# Filter by class from Kafka log
-pal log print -k localhost:29092 my-topic --filter "class=OrderService"
-```
-
----
-
-## pal peer print - Print Messages from a Peer
-
-Subscribe to a peer's message stream and print messages in real-time.
-
-### Synopsis
-
-```bash
-pal peer print [OPTIONS] PEER
-```
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `PEER` | Peer UUID or address (tcp:// or ws://) |
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `--compact` | Compact output format (default) |
-| `--json` | JSON output format |
-| `--full` | Full output format with all details |
-| `--tree` | Tree output format showing operation nesting |
-| `-t, --types <list>` | Filter by message type (comma-separated) |
-| `--from-peer <uuid>` | Filter by peer UUID |
-| `--from-thread <name>` | Filter by thread name |
-| `--id <id>` | Filter by message ID |
-| `-v` | Verbose output |
-
-### Examples
-
-```bash
-# Subscribe to peer by UUID
-pal peer print -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
-
-# Subscribe to peer by address
-pal peer print tcp://localhost:5555
-
-# Subscribe with message type filter
-pal peer print -d localhost:2379 550e8400-e29b... -t CLASS_METHOD
-```
-
-### Notes (print commands)
-
-- **Offset behavior**:
-  - For Kafka logs: offset refers to Kafka partition offset
-  - For Chronicle logs: offset refers to queue index
-  - When `-o` is specified without `--with-return`, all other filters are ignored
-- **`--with-return`**: Must be used with `--offset`. After printing the message at the given offset, scans forward for the matching completion message and prints it. Works with method calls (`RETURN_VALUE`/`THROWABLE`), field gets (`RETURN_VALUE`), and field puts (`PUT_STATIC_DONE`/`PUT_FIELD_DONE`)
-- **`--filter`**: Supports `class=<substring>`, `method=<substring>`, and `field=<substring>` patterns. The `field=` key matches only field operations (get/put static and instance fields). The `method=` key matches method names and field names. Multiple `--filter` options apply AND logic (all must match). Uses substring matching, so `class=Order` matches `com.example.OrderService`
-- **`--tree`**: Shows operation nesting with indentation. Method calls and constructors increase depth; return values and exceptions decrease it. Incompatible with `--json` and `--full`
-- **Follow mode** (`-f`): Waits for new messages indefinitely (use Ctrl-C to exit)
-- **Log resolution**: Can specify log by name or UUID
-- **Chronicle vs Kafka**: The tool automatically detects log type from directory registration
-- **Performance**: Compact format is fastest, Full format includes all context
-
----
-
-## pal peer call - Send RPC Calls to a Peer
-
-Invoke methods on a remote peer via RPC.
-
-### Synopsis
-
-```bash
-pal peer call [OPTIONS] PEER [class args...]
-```
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `PEER` | Peer UUID, address (tcp:// or ws://), or name |
-| `class` | Fully qualified class name |
-| `args...` | Arguments passed to the method |
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-r, --rpc-type <ZMQ_RPC\|JSON_RPC>` | RPC type to use |
-| `-m, --method <name>` | Method name to call (default: `main`) |
-| `-a, --add-ids` | Auto-generate missing JSON-RPC request IDs |
-| `--print-responses <bool>` | Print response messages (default: `true`) |
-| `-t, --num-threads <N>` | Number of parallel clients (default: `1`) |
-| `--thread-affinity <affinity>` | Thread affinity hint for the target peer |
-| `-v` | Verbose output |
-
-### Invocation Modes
-
-#### 1. CLI Mode (Static Methods)
-
-Invokes static methods with `String[]` signature using command-line arguments.
-
-**Requirements**:
-
-- Method must have signature: `static void methodName(String[] args)`
-- Uses `-m` option to specify method name
-- Works with both `ZMQ_RPC` and `JSON_RPC`
-
-```bash
-# Call main method (default)
-pal peer call -d localhost:2379 my-peer com.example.MyClass arg1 arg2
-
-# Call specific method
-pal peer call -d localhost:2379 my-peer -m processArgs com.example.MyClass arg1 arg2
-
-# Explicit RPC type
-pal peer call -d localhost:2379 my-peer -r ZMQ_RPC com.example.MyClass
-```
-
-#### 2. JSON-RPC Stdin Mode
-
-Sends arbitrary JSON-RPC requests via stdin for full flexibility.
-
-**Capabilities**:
-
-- Call any method with any signature
-- Construct objects (constructors)
-- Get/set fields (static and instance)
-- Multiple operations in sequence
-
-**JSON-RPC Request Format**:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "unique-id",
-  "method": "call|new|get|put",
-  "params": {
-    "type": "com.example.ClassName",
-    "method": "methodName",
-    "args": [
-      {"type": "java.lang.String", "value": "arg1"}
-    ]
-  }
-}
-```
-
-### Examples
-
-#### Basic Method Invocation
-
-```bash
-# Call main method on peer by name
-pal peer call -d localhost:2379 my-peer com.example.App arg1 arg2
-
-# Call non-main method
-pal peer call -d localhost:2379 my-peer -m processData com.example.Processor data1 data2
-
-# Call using peer address instead of name
-pal peer call tcp://localhost:5001 com.example.App
-
-# Call using JSON-RPC endpoint
-pal peer call ws://localhost:9001 com.example.App
-```
-
-#### JSON-RPC via Stdin
-
-```bash
-# Call method with custom signature
-echo '{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Math","method":"add","args":[{"type":"int","value":5},{"type":"int","value":3}]}}' | \
-  pal peer call -d localhost:2379 ws://localhost:9001
-
-# Construct object
-echo '{"jsonrpc":"2.0","id":"1","method":"new","params":{"type":"com.example.User"}}' | \
-  pal peer call -d localhost:2379 ws://localhost:9001
-
-# Get static field
-echo '{"jsonrpc":"2.0","id":"1","method":"get","params":{"type":"com.example.Config","field":"VERSION"}}' | \
-  pal peer call -d localhost:2379 ws://localhost:9001
-
-# Set static field
-echo '{"jsonrpc":"2.0","id":"1","method":"put","params":{"type":"com.example.Config","field":"debugMode","value":true}}' | \
-  pal peer call -d localhost:2379 ws://localhost:9001
-
-# Multiple requests (one per line)
-cat <<EOF | pal peer call -d localhost:2379 ws://localhost:9001
-{"jsonrpc":"2.0","id":"1","method":"call","params":{"type":"com.example.Math","method":"add","args":[{"type":"int","value":5},{"type":"int","value":3}]}}
-{"jsonrpc":"2.0","id":"2","method":"call","params":{"type":"com.example.Math","method":"multiply","args":[{"type":"int","value":5},{"type":"int","value":3}]}}
-EOF
-
-# Auto-generate missing IDs
-cat requests.jsonl | pal peer call -d localhost:2379 ws://localhost:9001 -a
-```
-
-#### Performance Testing
-
-```bash
-# Single-threaded call
-pal peer call -d localhost:2379 my-peer com.example.Benchmark
-
-# Multi-threaded calls (10 parallel clients)
-pal peer call -d localhost:2379 my-peer -t 10 com.example.Benchmark
-```
-
-### RPC Type Selection
-
-The tool automatically infers RPC type based on:
-
-1. Explicit `-r/--rpc-type` option
-2. Peer address scheme:
-   - `tcp://` → `ZMQ_RPC`
-   - `ws://` → `JSON_RPC`
-3. Peer's registered endpoints in directory
-
-If a peer supports both RPC types, you must specify `-r` explicitly.
-
----
-
-## pal log call - Send Method Calls via a Log
-
-Write method call messages to a log (Kafka or Chronicle).
-
-### Synopsis
-
-```bash
-pal log call [OPTIONS] [LOG] [class args...]
-```
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `LOG` | Log name, topic, or `file:/path` |
-| `class` | Fully qualified class name |
-| `args...` | Arguments passed to the method |
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
-| `-i, --input-log <name>` | Read responses from this log |
-| `-o, --output-log <name>` | Write requests to this log |
-| `-f, --forget-response` | Send without waiting for response (async) |
-| `-m, --method <name>` | Method name to call (default: `main`) |
-| `--print-responses <bool>` | Print response messages (default: `true`) |
-| `-t, --num-threads <N>` | Number of parallel clients (default: `1`) |
-| `-v` | Verbose output |
-
-### Examples
-
-#### Registry Mode
-
-```bash
-# Write method call to log (async, no response)
-pal log call -d localhost:2379 my-log -f com.example.Worker process
-
-# Write to output log, read response from input log
-pal log call -d localhost:2379 -i input-log -o output-log com.example.App
-```
-
-#### Direct Mode
-
-```bash
-# Write to Chronicle log (no PAL directory needed)
-pal log call file:/tmp/my-log -f com.example.Worker process
-
-# Write to Chronicle log (relative path)
-pal log call file:./logs/my-log com.example.App
-
-# Write to Kafka log (with -k option)
-pal log call -k localhost:29092 my-topic -f com.example.App
-
-# Write to Kafka log (using KAFKA_SERVERS environment variable)
-export KAFKA_SERVERS=localhost:29092
-pal log call my-kafka-topic com.example.Processor data1 data2
-```
-
-### Notes (call commands)
-
-- **CLI mode limitations**: Only works with `static void methodName(String[] args)` signature
-- **JSON-RPC flexibility**: Use stdin mode with `pal peer call` for arbitrary method signatures, constructors, and field access
-- **Peer resolution**: Can specify peer by UUID, name, or direct RPC address
-- **Async writes**: `--forget-response` only works with log calls
-- **Response printing**: Use `--print-responses false` to suppress output for performance testing
-- **Multi-threading**: Each thread creates its own client instance
-
----
-
-## pal peer rm - Remove Peers
-
-Remove peers from the directory.
-
-### Synopsis
-
-```bash
-pal peer rm [OPTIONS] [PEER...]
-```
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `PEER` | Peer names or UUIDs to remove |
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-s, --starting-with` | Treat arguments as prefixes (delete all matching) |
-| `-a, --all` | Delete all peers |
-| `-f, --force` | Skip confirmation prompts and force removal of alive peers |
-
-### Examples
-
-```bash
-# Remove peer by name
-pal peer rm -d localhost:2379 my-peer
-
-# Remove peer by UUID
-pal peer rm -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
-
-# Remove multiple peers
-pal peer rm -d localhost:2379 peer-alpha peer-beta peer-gamma
-
-# Remove all peers with prefix
-pal peer rm -d localhost:2379 -s test-peer
-
-# Force remove live peer
-pal peer rm -d localhost:2379 my-running-peer --force
-```
-
----
-
-## pal log rm - Remove Logs
-
-Remove logs from the directory and their backing storage.
-
-### Synopsis
-
-```bash
-pal log rm [OPTIONS] [LOG...]
-```
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `LOG` | Log names, UUIDs, or `file:` paths to remove |
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (for direct Kafka access without `-d`) |
-| `-s, --starting-with` | Treat arguments as prefixes (delete all matching) |
-| `-a, --all` | Delete all logs |
-| `-f, --force` | Skip confirmation prompts |
-
-### Examples
-
-#### Registry Mode
-
-```bash
-# Remove single log by name
-pal log rm -d localhost:2379 my-old-log
-
-# Remove log by UUID
-pal log rm -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
-
-# Remove multiple logs
-pal log rm -d localhost:2379 log1 log2 log3
-
-# Remove all logs with prefix
-pal log rm -d localhost:2379 -s test-log
-
-# Remove all logs (dangerous!)
-pal log rm -d localhost:2379 -a --force
-```
-
-#### Direct Mode
-
-```bash
-# Remove Chronicle log (no PAL directory needed)
-pal log rm file:/tmp/my-chronicle-log
-
-# Remove Chronicle log (relative path)
-pal log rm file:./logs/old-log
-
-# Remove Kafka log (with -k option)
-pal log rm -k localhost:29092 my-kafka-topic
-
-# Remove Kafka log (using KAFKA_SERVERS environment variable)
-export KAFKA_SERVERS=localhost:29092
-pal log rm my-old-topic
-
-# Note: Direct mode removes from backing store only
-# If log was registered in PAL directory, use registry mode to fully clean up
-```
-
-### Safety Features
-
-- **Live peer protection**: Cannot remove peers with active leases without `--force`
-- **Confirmation prompts**: Asks before deleting multiple items (unless `--force`)
-- **Error reporting**: Returns count of errors encountered
-
-### Notes (rm commands)
-
-- **Chronicle logs**: Deletion removes queue directory and all files
-- **Kafka logs**: Deletion removes topic from Kafka cluster
-- **Live peers**: Must use `--force` to remove peers with active leases
-- **Name vs UUID**: Arguments can be names or UUIDs; the tool auto-detects
-- **Prefix matching** (`-s`): Useful for bulk cleanup of test resources
-- **Return code**: Returns the number of errors encountered (0 = success)
-- **Direct mode**: Removes from backing store only (doesn't unregister from PAL directory if it was registered there)
-- **Registry mode vs Direct mode**: Use registry mode for full cleanup (unregister + delete backing store), use direct mode for quick local log deletion
-
----
-
-## pal replay - Deterministic WAL Replay
-
-Re-execute an application from `main()` while verifying every operation against a previously recorded WAL. The WAL acts as an oracle: each operation that the application performs is matched against the corresponding WAL entry, and the return value is compared. Any difference is reported as a divergence.
-
-This is not "playing back a recording." The application runs naturally from `main()`, hitting the same AspectJ call sites as during the original execution. The replay system verifies that every operation produces the same result.
-
-### Synopsis
-
-```bash
-pal replay [OPTIONS] class [args...]
-```
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-w, --wal <name\|file:/path>` | **(Required)** WAL to replay from. Use `file:/path` for Chronicle Queue or a topic name for Kafka. Relative Chronicle paths (e.g., `file:app.wal`) are resolved against the current working directory |
-| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka WAL topics without `-d`) |
-| `--divergence-policy <WARN\|HALT\|IGNORE>` | Action on divergence (default: `WARN`) |
-| `--threading <ordered\|unordered>` | Thread ordering for multi-threaded replay (default: `ordered`). See [Multi-Threaded Replay](#multi-threaded-replay) |
-| `--delay <milliseconds>` | Delay before each entry-point injection for slow-motion replay visualization (default: `0`, disabled). See [Slow-Motion Replay](#slow-motion-replay) |
-| `--policy <path>` | Path to a YAML replay policy file. See [Side-Effect Shielding](#side-effect-shielding) |
-| `--shield-io` | Enable built-in I/O stubbing rules (time, random, I/O streams, JDBC). See [Side-Effect Shielding](#side-effect-shielding) |
-| `--re-execute <patterns>` | Comma-separated Ant-style patterns for classes/methods to re-execute (highest priority) |
-| `--stub <patterns>` | Comma-separated Ant-style patterns for classes/methods to stub from WAL |
-| `--stub-all-else` | Stub all operations not matched by explicit `--re-execute` rules (sets default action to `STUB_FROM_WAL`) |
-| `--force-stub` | Proceed with replay even if unsafe stubs are detected by the side-effect analyzer |
-| `-cp, --classpath <CLASSPATH>` | Classpath for the application (required when replaying a class) |
-| `-jar <jarFile>` | JAR file to replay (Main-Class from manifest). Alternative to specifying a main class |
-| `--fx-thread` | Enable JavaFX Application Thread execution. Required for replaying JavaFX applications (default: `false`) |
-| `--service-thread <pattern>` | Regex pattern for service request handler thread names (e.g., `executor-thread-.*`). Entry points on matching threads are tagged with `service-request` affinity during recording, and wrapped in a CDI request context during replay. See [Service/Web Applications](#serviceweb-applications) |
-| `--scope <patterns>` | Ant-style class patterns for recording scope (must match the flags used during recording). See [Recording Scope](concepts/recording-scope.md) |
-| `--scope-exclude <patterns>` | Ant-style class patterns to exclude from recording scope (must match recording) |
-| `--scope-io` | Include built-in I/O boundary rules in recording scope (must match recording) |
-| `--scope-policy <path>` | Path to YAML recording scope policy file (must match recording) |
-| `--scope-default <record\|skip>` | Default recording scope action (must match recording) |
-
-**Recording scope on replay**: When the WAL was recorded with `--scope` flags, the same flags **must** be passed to `pal replay`. The replay system uses the scope to determine which operations have WAL entries (in-scope) and which should be executed directly without WAL matching (out-of-scope). Mismatched scope flags produce cascading divergences. See [Recording Scope — Replay Requirement](concepts/recording-scope.md#replay-requirement).
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `class` | Fully qualified main class to replay (required unless using `-jar`) |
-| `args...` | Application arguments passed to `main()` |
-
-### Divergence Policies
-
-| Policy | Behavior |
-|--------|----------|
-| `WARN` | Log each divergence to stderr and continue (default) |
-| `HALT` | Stop immediately on the first divergence |
-| `IGNORE` | Silently record divergences without logging |
-
-### Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| `0` | Replay completed with zero divergences |
-| `1` | Application error (missing class, uncaught exception) |
-| `2` | Divergences detected between live execution and WAL |
-
-### How It Works
-
-1. The WAL is loaded and indexed. Operations and their return values are paired (each method call is matched to its return value entry).
-2. The application starts from `main()` with the provided arguments.
-3. At every quantized operation (method call, constructor, field access), the replay system:
-   - Matches the live operation's signature against the next expected WAL entry
-   - Executes the operation normally
-   - Compares the actual return value against the WAL-recorded value
-   - Reports a divergence if they differ
-4. After the application completes, a divergence report is printed to stderr (if any).
-
-### Examples
-
-#### Replay from Chronicle Queue
-
-```bash
-# Step 1: Record a WAL
-pal run --wal file:/tmp/my-wal -cp build/classes/java/main com.example.App arg1 arg2
-
-# Step 2: Replay from the recorded WAL
-pal replay --wal file:/tmp/my-wal -cp build/classes/java/main com.example.App arg1 arg2
-```
-
-#### Replay with a relative WAL path
-
-```bash
-# Record a WAL in the current directory
-pal run --wal file:./app.wal -cp build/classes/java/main com.example.App arg1 arg2
-
-# Replay using a relative path — resolved against the current working directory
-pal replay --wal file:app.wal -cp build/classes/java/main com.example.App arg1 arg2
-```
-
-#### Replay from Kafka
-
-```bash
-# Step 1: Record to Kafka
-pal run -d localhost:2379 -k localhost:29092 --wal my-topic \
-  -cp app.jar com.example.App
-
-# Step 2: Replay from Kafka (with explicit servers)
-pal replay --wal my-topic -k localhost:29092 \
-  -cp app.jar com.example.App
-
-# Or with PAL directory (resolves Kafka servers automatically)
-pal replay -d localhost:2379 --wal my-topic \
-  -cp app.jar com.example.App
-```
-
-#### Detecting Divergences
-
-```bash
-# Record with one set of arguments
-pal run --wal file:/tmp/baseline -cp build/classes/java/main com.example.App input-A
-
-# Replay with different arguments — produces divergences
-pal replay --wal file:/tmp/baseline -cp build/classes/java/main com.example.App input-B
-# Exit code: 2
-# stderr shows: [VALUE_MISMATCH] offset=N: expected "X" but got "Y"
-```
-
-#### Halt on First Divergence
-
-```bash
-pal replay --wal file:/tmp/my-wal --divergence-policy HALT \
-  -cp build/classes/java/main com.example.App
-```
-
-### Slow-Motion Replay
-
-For UI applications (JavaFX, Swing), operations can happen too fast to observe during replay. Use `--delay` to add a pause before each entry-point injection:
-
-```bash
-# 2-second delay between entry points (good for visual debugging)
-pal replay --wal file:/tmp/fx-wal --fx-thread --delay 2000 \
-  -jar build/libs/my-javafx-app.jar
-```
-
-The delay is specified in milliseconds. Use larger values (2000-5000ms) to observe each UI state change, smaller values (200-500ms) for faster but still visible replay.
-
-### Multi-Threaded Replay
-
-When the WAL contains operations from multiple threads (e.g., RPC worker threads), replay automatically detects entry-point operations and spawns `ReplayInputInjector` threads to re-inject them. No additional configuration is required beyond ensuring `--wal-incoming-rpc` was enabled during recording (this is the default).
-
-The `--threading` option controls cross-thread ordering:
-
-| Value | Behavior |
-|-------|----------|
-| `ordered` (default) | Entry-point injection follows WAL-offset ordering. Preserves the recorded execution order across threads. |
-| `unordered` | Entry-point injection runs without ordering constraints. Faster, but cross-thread order may differ from the recording. |
-
-```bash
-# Replay a multi-threaded RPC service (ordered by default)
-pal replay --wal file:/tmp/service-wal -cp build/classes/java/main com.example.ServiceMain
-
-# Replay without cross-thread ordering constraints
-pal replay --wal file:/tmp/service-wal --threading unordered \
-  -cp build/classes/java/main com.example.ServiceMain
-```
-
-See the [Deterministic Replay Guide](guides/deterministic-replay.md#multi-threaded-replay) for a complete walkthrough.
-
-### Service/Web Applications
-
-Web frameworks like Quarkus and Vert.x dispatch HTTP requests on named executor threads (e.g., `executor-thread-0`, `executor-thread-1`). Use `--service-thread` with a regex pattern matching those thread names to enable correct recording and replay:
-
-```bash
-# Record a Quarkus service
-pal run --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
-  -jar build/libs/quarkus-app.jar
-
-# Replay it
-pal replay --wal file:/tmp/service-wal --service-thread "executor-thread-.*" \
-  -jar build/libs/quarkus-app.jar
-```
-
-During recording, entry points on threads matching the pattern are tagged with `threadAffinity = "service-request"` in the WAL. During replay, the `ThreadAffinityDispatcher` wraps each tagged entry point in a CDI request context (and JTA transaction, if available), so that `@RequestScoped` beans and transactional boundaries work correctly.
-
-The `--service-thread` flag must match during both recording and replay (like `--fx-thread`). Without it during recording, the entry points will not be tagged; without it during replay, the CDI context will not be activated.
-
-See the [Deterministic Replay Guide](guides/deterministic-replay.md#serviceweb-applications) for details on how thread affinity works.
-
-### Side-Effect Shielding
-
-By default, all operations are re-executed during replay. Side-effect shielding allows operations to be **stubbed** — returning WAL-recorded values without executing — for I/O, databases, time, randomness, and other non-deterministic or unavailable resources.
-
-See the [Deterministic Replay Guide](guides/deterministic-replay.md#side-effect-shielding-replay-policy) for detailed configuration guidance.
-
-#### Built-in I/O Shielding
-
-```bash
-# Stub common non-deterministic operations (time, random, I/O, JDBC)
-pal replay --wal file:/tmp/my-wal --shield-io \
-  -cp build/classes/java/main com.example.App
-```
-
-#### YAML Policy File
-
-```bash
-# Apply a custom replay policy
-pal replay --wal file:/tmp/my-wal --policy policy.yaml \
-  -cp build/classes/java/main com.example.App
-```
-
-#### CLI Pattern Flags
-
-```bash
-# Stub specific operations
-pal replay --wal file:/tmp/my-wal \
-  --stub "java.lang.System.currentTimeMillis,java.io.**.**" \
-  -cp build/classes/java/main com.example.App
-
-# Re-execute only your code, stub everything else
-pal replay --wal file:/tmp/my-wal \
-  --re-execute "com.example.**" --stub-all-else \
-  -cp build/classes/java/main com.example.App
-
-# Combine approaches
-pal replay --wal file:/tmp/my-wal --shield-io \
-  --re-execute "com.example.TimeService.**" \
-  -cp build/classes/java/main com.example.App
-```
-
-#### Unsafe Stub Override
-
-```bash
-# Proceed despite unsafe stub warnings
-pal replay --wal file:/tmp/my-wal --policy policy.yaml --force-stub \
-  -cp build/classes/java/main com.example.App
-```
-
-### Notes
-
-- Replay is **read-only**: no new WAL is written during replay. The recorded WAL is consumed but not modified.
-- The application must be compiled with the same AspectJ weaving as during recording. Class version mismatches will surface as operation mismatches.
-- **Multi-threaded replay** is supported for applications that receive input on multiple threads (RPC services, web apps, Swing applications). Entry-point operations must be captured in the WAL during recording (`--wal-incoming-rpc`, enabled by default).
-- **JavaFX applications** require `--fx-thread` during both recording and replay. This routes UI event handlers to the real JavaFX Application Thread.
-- **Service/web applications** that dispatch requests on named executor threads (e.g., Quarkus, Vert.x) can use `--service-thread <pattern>` to tag those entry points with `service-request` affinity. During replay, tagged entry points are wrapped in a CDI request context and transaction.
-- When recording a WAL intended for replay, use `--no-wal-incoming-cli` if you want the WAL to contain only the hot-path operations (excluding the bootstrap `main()` wrapper). This is often the right choice for cleaner replay matching.
-
----
-
-## pal log index - Analyze WAL Structure
-
-Index a WAL and print a structural summary: entry counts, operation/completion pairing, threads, and any structural issues (orphaned or unmatched entries).
-
-### Synopsis
-
-```bash
-pal log index [OPTIONS] file:/path             # Chronicle Queue
-pal log index -k <servers> [OPTIONS] <topic>   # Kafka
-pal log index -d <url> [OPTIONS] <name>        # PalDirectory
-```
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-k, --kafka-servers <host:port>` | Kafka bootstrap servers (required for Kafka topics without `-d`) |
-| `-v, --verbose` | Show per-entry detail listing before the summary |
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `name\|file:/path` | **(Required)** Log path: `file:/path` for Chronicle Queue, or topic name for Kafka |
-
-### Output
-
-**Summary** (always printed):
-
-```
-WAL Index Summary
-  Entries:     142
-  Operations:  71
-  Completions: 71
-  Pairs:       71
-  Threads:     [main]
-  Issues:      0
-```
-
-- **Entries**: Total WAL entries
-- **Operations**: Entries that open a scope (method calls, constructors, field access)
-- **Completions**: Entries that close a scope (return values, exceptions, field-write confirmations)
-- **Pairs**: Number of matched operation/completion pairs
-- **Threads**: Thread names found in the WAL
-- **Issues**: Structural problems (orphaned completions without a matching operation, or operations without a completion)
-
-**Verbose** (`-v`, printed before summary):
-
-```
-[0] OPERATION main MinimalReceiptCalculator.main(String[])
-[1] OPERATION main MinimalReceiptCalculator.parseCart(String[])
-[2] OPERATION main HashMap.new()
-[3] COMPLETION main HashMap
-...
-```
-
-Each entry shows: `[offset] kind threadName className.executableName(paramTypes)`
-
-For multi-threaded WALs recorded with `--wal-incoming-rpc`, entry-point operations (incoming RPC calls that initiate a new causal chain on a non-self-caller thread) are marked in the WAL. These entry-point markers are used by the replay system's `ReplayInputInjector` to identify which operations to re-inject during multi-threaded replay.
-
-### Examples
-
-```bash
-# Analyze a Chronicle WAL
-pal log index file:/tmp/my-wal
-
-# Analyze with per-entry detail
-pal log index --verbose file:/tmp/my-wal
-
-# Analyze a Kafka WAL
-pal log index -k localhost:29092 my-topic
-
-# Analyze via PAL directory
-pal log index -d localhost:2379 my-log-name
-```
-
-### Notes
-
-- A balanced WAL has equal Operations and Completions counts and zero Issues. Imbalances indicate the application was interrupted mid-execution or the WAL was truncated.
-- This command is useful for verifying a WAL before replay, and for understanding the structure of recorded executions.
-
----
-
-## pal log stats - Show Log Message Statistics
-
-Display message statistics for a log.
-
-### Synopsis
-
-```bash
-pal log stats [OPTIONS] [LOG_NAME]
-```
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `LOG_NAME` | Log name |
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-b, --bootstrap-servers <host:port>` | Kafka bootstrap servers (default: `localhost:9092`) |
-| `-t, --types <list>` | Filter by message type(s) |
-| `-fp, --from-peer <uuid>` | Filter by peer UUID |
-| `-ft, --from-thread <name>` | Filter by thread name |
-| `-j, --json-output` | Print stats as JSON |
-| `-v` | Verbose output |
-
-### Examples
-
-```bash
-# Show stats for a log
-pal log stats -b localhost:29092 my-wal
-
-# Show stats as JSON
-pal log stats -b localhost:29092 my-wal -j
-
-# Filter by message type
-pal log stats -b localhost:29092 my-wal -t INSTANCE_METHOD,CLASS_METHOD
-```
-
----
-
-## pal peer stats - Show Peer Message Statistics
-
-Display message statistics for a peer's message stream.
-
-### Synopsis
-
-```bash
-pal peer stats [OPTIONS] [PEER]
-```
-
-### Positional Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `PEER` | Peer UUID or address |
-
-### Options
-
-| Option | Description |
-|--------|-------------|
-| `-t, --types <list>` | Filter by message type(s) |
-| `-fp, --from-peer <uuid>` | Filter by peer UUID |
-| `-ft, --from-thread <name>` | Filter by thread name |
-| `-j, --json-output` | Print stats as JSON |
-
-### Examples
-
-```bash
-# Show stats for a peer
-pal peer stats -d localhost:2379 550e8400-e29b-41d4-a716-446655440000
-
-# Show stats as JSON
-pal peer stats -d localhost:2379 my-peer -j
-```
-
----
-
-## Common Patterns
-
-### Development Workflow
-
-```bash
-# Start development peer
-pal run -d localhost:2379 -k localhost:29092 -n dev-peer --zmq-rpc auto -cp build/classes/java/main
-
-# List running peers
-pal peer ls -d localhost:2379
-
-# Call method on dev peer
-pal peer call -d localhost:2379 dev-peer com.example.TestApp
-
-# View peer's WAL
-pal log print -d localhost:2379 dev-peer-wal -f
-
-# Cleanup when done
-pal peer rm -d localhost:2379 dev-peer --force
-pal log rm -d localhost:2379 dev-peer-wal
-```
-
-### Testing and Debugging
-
-```bash
-# Run test class and capture to log
-pal run -d localhost:2379 -k localhost:29092 --wal test-run -cp build/classes/java/test com.example.MyTest
-
-# Replay and analyze
-pal log print -d localhost:2379 test-run --full -t CLASS_METHOD
-
-# View call tree
-pal log print -d localhost:2379 test-run --tree
-
-# Print specific message and its return value
-pal log print -d localhost:2379 test-run -o 42 --with-return
-
-# Filter to specific class
-pal log print -d localhost:2379 test-run --filter "class=OrderService"
-
-# Cleanup test artifacts
-pal log rm -d localhost:2379 -s test- --force
-```
-
-### Distributed System Monitoring
-
-```bash
-# List all active peers in cluster
-pal peer ls -d etcd.prod.example.com:2379 -l
-
-# Monitor specific peer's output
-pal peer print -d etcd.prod.example.com:2379 <peer-uuid>
-
-# View shared log for debugging
-pal log print -d etcd.prod.example.com:2379 shared-events -f -t THROWABLE
-```
-
-### Performance Analysis
-
-```bash
-# Benchmark with multiple threads
-pal peer call -d localhost:2379 bench-peer -t 10 com.example.Benchmark -v
-
-# Analyze log for performance metrics
-pal log print -d localhost:2379 bench-wal --compact | grep -E "method=process"
-```
-
----
-
 ## Environment Variables
 
-### JVM Configuration (`pal run`)
+### JVM and Logging
 
-These variables control how the JVM is launched for peer processes. See the [JVM Configuration](guides/jvm-configuration.md) guide for full details and examples.
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PAL_HEAP_OPTS` | `-Xmx1g` | Heap sizing (replaces default when set) |
-| `PAL_GC_OPTS` | G1GC, 200ms pause | GC selection and tuning (replaces default when set) |
-| `PAL_JMX_OPTS` | _(from HOST/PORT)_ | Full JMX configuration (replaces default when set) |
-| `PAL_JMX_HOST` | _(unset)_ | JMX hostname (convenience, used to build `PAL_JMX_OPTS`) |
-| `PAL_JMX_PORT` | _(unset)_ | JMX port (convenience, used to build `PAL_JMX_OPTS`) |
-| `PAL_JAVA_OPTS` | _(empty)_ | Catch-all JVM flags, appended last (always wins) |
-| `JAVA_AGENT` | _(unset)_ | Path to a Java agent JAR |
-
-### Logging
-
-| Variable | Flag | Default | Description |
-|----------|------|---------|-------------|
-| `PAL_PEER_LOGGING_CONFIG` | — | _(unset)_ | PAL peer Logback configuration file (not application logging) |
-| `PAL_CLI_LOGGING_CONFIG` | — | _(unset)_ | PAL CLI Logback configuration file (not application logging) |
+JVM launch flags (`PAL_HEAP_OPTS`, `PAL_GC_OPTS`, `PAL_JMX_OPTS`, `PAL_JAVA_OPTS`, `JAVA_AGENT`, etc.) and PAL's Logback configuration variables (`PAL_PEER_LOGGING_CONFIG`, `PAL_CLI_LOGGING_CONFIG`) are documented in the [JVM Configuration](jvm-configuration.md) reference.
 
 ### Peer
 
@@ -2008,18 +2036,12 @@ These variables control how the JVM is launched for peer processes. See the [JVM
 | `PAL_KAFKA_TIMEOUT_MS` | `--kafka-timeout` | `5000` | Kafka connection health check timeout in ms |
 | `PAL_ETCD_TIMEOUT_MS` | `--etcd-timeout` | `5000` | etcd connection health check timeout in ms |
 
----
-
 ## Exit Codes
 
-- `0` - Success
-- `1` - Invalid arguments or command failure
-- `>1` - Number of errors encountered (for `pal peer rm` / `pal log rm`)
+CLI commands use these conventions:
 
----
+- `0` — Success
+- `1` — Invalid arguments or command failure
+- `>1` — Number of errors encountered (for `pal peer rm`, `pal log rm`, `pal peer prune`, `pal log prune`)
 
-## See Also
-
-- Getting Started guide for `pal run` documentation
-- PAL Architecture documentation for concepts (peers, logs, messages)
-- Integration tests in `modules/itt/src/test/java/io/quasient/pal/cli/` for more examples
+`pal run` uses a richer set of exit codes for peer startup and runtime failures (e.g., `14` for unreachable etcd, `7` for log initialization errors). For the full list, see `PeerException.FatalCode` in the source. `pal replay` defines its own exit codes — see [`pal replay` → Exit Codes](#exit-codes) above.

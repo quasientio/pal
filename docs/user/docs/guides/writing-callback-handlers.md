@@ -1,5 +1,7 @@
 # Writing Callback Handlers
 
+> **WARNING — Uncurated content.** This page is awaiting curation before publishing. Examples and API references may be inaccurate.
+
 Callback handlers are where you implement the logic that runs when an intercept fires. This guide shows practical examples of callback handlers using `InterceptContext`.
 
 ## Callback Handler Basics
@@ -122,9 +124,9 @@ public class CachingCallbacks {
 
 **How it works**:
 
-1. Check cache for existing result
-2. On cache hit: set return value via `ctx.setReturnValue()` and skip execution with `skipProceed()`
-3. On cache miss: call `ctx.proceed()` to execute the method, then cache the result
+1. Check cache for existing result.
+2. On cache hit: set return value via `ctx.setReturnValue()` and skip execution with `skipProceed()`.
+3. On cache miss: call `ctx.proceed()` to execute the method, then cache the result.
 
 **Key AROUND patterns**:
 
@@ -235,9 +237,9 @@ public class AroundCallbacks {
 
 **Phase rules for AROUND intercepts**:
 
-- **Before proceed**: Can call `setArg()`, `getArgs()`, `proceed()`
-- **After proceed**: Can call `getReturnValue()`, `setReturnValue()`, `setExceptionToThrow()`
-- Cannot call `proceed()` twice
+- **Before proceed**: Can call `setArg()`, `getArgs()`, `proceed()`.
+- **After proceed**: Can call `getReturnValue()`, `setReturnValue()`, `setExceptionToThrow()`.
+- Cannot call `proceed()` twice.
 
 **How to fix**: These exceptions point to programming errors. Read the exception message to understand what operation is not allowed and why. Update your callback logic to follow the API contract.
 
@@ -566,15 +568,14 @@ new InterceptRequest<>(
 
 ## Best Practices
 
-1. **Keep callbacks fast**: BEFORE and AROUND callbacks block method execution
-2. **Use AFTER for side effects**: Logging, metrics, auditing don't need to be synchronous
-3. **Use `proceed()` in AROUND**: Call `ctx.proceed()` to execute the method, or `skipProceed()` to skip it
-4. **Always set return value before skip**: When using `skipProceed()`, first call `ctx.setReturnValue(value)`
-5. **Return empty responses**: If you don't modify execution, return `new InterceptCallbackResponse()`
-6. **Test callback isolation**: Ensure handlers don't have unexpected side effects
+1. **Keep callbacks fast**: BEFORE and AROUND callbacks block method execution.
+2. **Use AFTER for side effects**: Logging, metrics, auditing don't need to be synchronous.
+3. **Use `proceed()` in AROUND**: Call `ctx.proceed()` to execute the method, or `skipProceed()` to skip it.
+4. **Always set return value before skip**: When using `skipProceed()`, first call `ctx.setReturnValue(value)`.
+5. **Return empty responses**: If you don't modify execution, return `new InterceptCallbackResponse()`.
+6. **Test callback isolation**: Ensure handlers don't have unexpected side effects.
 
 ## See Also
 
 - [Interception Concepts](../concepts/interception.md) - Understanding intercept types
-- [Testing with Interception](testing-with-interception.md) - Using intercepts in tests
 - [RPC](../concepts/rpc.md) - How callbacks are delivered
