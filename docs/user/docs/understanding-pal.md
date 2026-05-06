@@ -531,7 +531,7 @@ PAL's interception system differs from traditional AspectJ in two ways together:
 
 ## When to Use PAL
 
-All PAL features are off by default. Weaving is a build-time step, but at runtime nothing is enabled unless you explicitly turn it on: WAL logging, interception, publishing, and RPC are each independent flags. This means adopting PAL carries no runtime cost for features you don't use, and you can enable capabilities incrementally as you need them.
+All PAL features are off by default. Weaving is a build-time step, but at runtime nothing is enabled unless you explicitly turn it on: WAL logging, interception, publishing, and RPC are each independent flags. This means unused features carry minimal overhead, and you can enable capabilities incrementally as you need them.
 
 **Use PAL when you want:**
 
@@ -546,11 +546,17 @@ All PAL features are off by default. Weaving is a build-time step, but at runtim
 
 - You don't need any of PAL's capabilities
 
+## What PAL Is Not
+
+- **Not a replacement for production RPC frameworks** (gRPC, REST): PAL's RPC is auxiliary infrastructure supporting intercept callbacks, development workflows, testing, and operational tooling. For production inter-service communication requiring type safety, schema evolution, and high-throughput optimization, use purpose-built RPC frameworks alongside PAL.
+- **Not a replacement for APM/observability platforms** (Datadog, New Relic, etc.): PAL captures operations at a different granularity and for different purposes. The WAL is an operation log, not a metrics/tracing pipeline.
+- **Not a service mesh in the traditional sense**: PAL does not proxy network traffic, so it does not provide network-layer features like load balancing, mTLS termination, or service-to-service routing policies. However, many of the *outcomes* a service mesh delivers — telemetry, authorization, rate limiting, fault injection, A/B routing — can be achieved through PAL's networked interception, applied at the operation level (method calls, constructor invocations, field reads, field writes) rather than the network-request level. See [Interception](concepts/interception.md).
+
 ## Trade-offs and Limitations
 
 Every engineering decision involves trade-offs. This section documents PAL's honestly, so you can make an informed decision about whether PAL is right for your use case.
 
-### Build-Time Requirements
+### Build Setup Requirements
 
 - AspectJ weaving must be configured in the build (Gradle or Maven plugin).
 - Woven `.class` files are larger than originals.
@@ -589,13 +595,7 @@ Kafka WAL: PAL writes to and reads from a single partition (partition 0) per Kaf
 - **Java only**: PAL is designed for Java. JVM languages like Kotlin and Scala may work with AspectJ but are not tested.
 - **Single-language message format**: PAL's native message format is Java-specific; cross-language integration uses the JSON-RPC protocol.
 
-### What PAL Is Not
-
-- **Not a replacement for production RPC frameworks** (gRPC, REST): PAL's RPC is auxiliary infrastructure supporting intercept callbacks, development workflows, testing, and operational tooling. For production inter-service communication requiring type safety, schema evolution, and high-throughput optimization, use purpose-built RPC frameworks alongside PAL.
-- **Not a replacement for APM/observability platforms** (Datadog, New Relic, etc.): PAL captures operations at a different granularity and for different purposes. The WAL is an operation log, not a metrics/tracing pipeline.
-- **Not a service mesh in the traditional sense**: PAL does not proxy network traffic, so it does not provide network-layer features like load balancing, mTLS termination, or service-to-service routing policies. However, many of the *outcomes* a service mesh delivers — telemetry, authorization, rate limiting, fault injection, A/B routing — can be achieved through PAL's networked interception, applied at the operation level (method calls, constructor invocations, field reads, field writes) rather than the network-request level. See [Interception](concepts/interception.md).
-
-### Failure Modes
+### Behavior Under Infrastructure Failures
 
 Understanding what happens when infrastructure becomes unavailable:
 
