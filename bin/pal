@@ -16,8 +16,16 @@
 #
 
 
-# Resolve PAL_HOME from script location (no env var required)
-PAL_HOME="$(cd "$(dirname "$0")/.." && pwd)"
+# Resolve PAL_HOME from script location, following symlinks (no env var required)
+SCRIPT="$0"
+while [ -L "$SCRIPT" ]; do
+  TARGET="$(readlink "$SCRIPT")"
+  case "$TARGET" in
+    /*) SCRIPT="$TARGET" ;;
+    *)  SCRIPT="$(dirname "$SCRIPT")/$TARGET" ;;
+  esac
+done
+PAL_HOME="$(cd "$(dirname "$SCRIPT")/.." && pwd)"
 
 # Determine the command (first non-option argument)
 for arg in "$@"; do

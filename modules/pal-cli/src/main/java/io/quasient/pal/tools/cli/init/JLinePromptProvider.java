@@ -19,6 +19,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
@@ -89,6 +90,13 @@ public final class JLinePromptProvider implements PromptProvider {
   private final boolean fallbackMode;
 
   /**
+   * Marker for the highlighted option in select prompts. Uses {@code "  ❯ "} when the terminal
+   * encoding is UTF-8, falls back to {@code "  > "} otherwise so non-UTF-8 hosts don't render the
+   * marker as a question mark.
+   */
+  private final String selectMarker;
+
+  /**
    * Creates a JLine prompt provider, attempting to acquire a system terminal. If the terminal
    * cannot be opened, falls back to Scanner-based prompts.
    *
@@ -113,6 +121,7 @@ public final class JLinePromptProvider implements PromptProvider {
     this.lineReader = reader;
     this.fallbackMode = useFallback;
     this.fallbackScanner = useFallback ? new Scanner(System.in, StandardCharsets.UTF_8) : null;
+    this.selectMarker = pickSelectMarker(term);
   }
 
   /**
@@ -127,6 +136,19 @@ public final class JLinePromptProvider implements PromptProvider {
     this.out = out;
     this.fallbackMode = lineReader == null;
     this.fallbackScanner = fallbackMode ? new Scanner(System.in, StandardCharsets.UTF_8) : null;
+    this.selectMarker = pickSelectMarker(this.terminal);
+  }
+
+  /**
+   * Returns {@code "  ❯ "} if the active charset can render the glyph, otherwise {@code "  > "}.
+   * Falls back conservatively on hosts with non-UTF-8 default locales.
+   */
+  private static String pickSelectMarker(Terminal term) {
+    Charset cs = term != null ? term.encoding() : Charset.defaultCharset();
+    if (cs == null) {
+      cs = Charset.defaultCharset();
+    }
+    return cs.name().toUpperCase(Locale.ROOT).contains("UTF") ? "  ❯ " : "  > ";
   }
 
   /**
@@ -284,7 +306,7 @@ public final class JLinePromptProvider implements PromptProvider {
    */
   private <T> void renderOptions(PrintWriter writer, List<T> options, int selectedIndex) {
     for (int i = 0; i < options.size(); i++) {
-      String marker = (i == selectedIndex) ? "  \u276f " : "    ";
+      String marker = (i == selectedIndex) ? selectMarker : "    ";
       writer.println(marker + options.get(i));
     }
   }
@@ -308,7 +330,7 @@ public final class JLinePromptProvider implements PromptProvider {
     // Redraw each option line, clearing old content
     for (int i = 0; i < options.size(); i++) {
       writer.print(CLEAR_LINE);
-      String marker = (i == selectedIndex) ? "  \u276f " : "    ";
+      String marker = (i == selectedIndex) ? selectMarker : "    ";
       writer.println(marker + options.get(i));
     }
     writer.flush();
