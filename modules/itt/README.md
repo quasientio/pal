@@ -29,7 +29,7 @@ __NOTE__: if you already added `$PAL_HOME/bin` and `$PAL_HOME/infra/bin` to your
     ```
 3. Ensure no stale peer is running
     ```bash
-    pkill -9 -f "pal-1.0.0-SNAPSHOT.jar"
+    pkill -9 -f "pal-.*\.jar"
     ```
 4. Restart the etcd and kafka containers
     ```bash
@@ -165,7 +165,7 @@ When multiple failures exist (especially in suite-based tests), **isolate to a s
 
 Full cleanup before a test run:
 ```bash
-pkill -9 -f "pal-1.0.0-SNAPSHOT.jar"
+pkill -9 -f "pal-.*\.jar"
 ./mvnw clean -Plogs
 infra/bin/restart-containers.sh
 ```

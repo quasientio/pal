@@ -212,7 +212,7 @@ java  -Dpeer.logging="$PAL_HOME/config/peer-logging.xml" \
       -Dwal.chronicle.base_dir="$WAL_CHRONICLE_BASE_DIR" \
       -Dwal.chronicle.sync_every="$WAL_CHRONICLE_SYNC_EVERY" \
       -Xverify:none \
-      -jar target/pal-benchmarks-1.0.0-SNAPSHOT.jar \
+      -jar target/pal-benchmarks-*.jar \
       DispatchBenchmark \
       -f "$FORKS" \
       -jvmArgsAppend "$JVM_ARGS_APPEND" \
