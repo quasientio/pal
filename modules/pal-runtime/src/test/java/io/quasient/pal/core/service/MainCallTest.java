@@ -78,10 +78,8 @@ public class MainCallTest {
     Properties p = (Properties) f.get(app);
     // Defaults from Main: wal/pub queues and pub spsc size
     assertNotNull(p.getProperty("wal.queue.initial"));
-    assertNotNull(p.getProperty("wal.queue.chunk"));
     assertNotNull(p.getProperty("wal.queue.max"));
     assertNotNull(p.getProperty("pub.queue.initial"));
-    assertNotNull(p.getProperty("pub.queue.chunk"));
     assertNotNull(p.getProperty("pub.queue.max"));
     assertNotNull(p.getProperty("pub.spsc_size"));
   }

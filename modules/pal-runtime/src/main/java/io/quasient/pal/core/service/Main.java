@@ -897,9 +897,6 @@ public class Main implements Callable<Integer> {
   /** Default initial capacity for WAL and PUB queue (must be power of 2). */
   private static final int MPSC_INITIAL_DEFAULT = 1 << 10; // 1024
 
-  /** Default chunk size for WAL and PUB queue (must be power of 2). */
-  private static final int MPSC_CHUNK_DEFAULT = 1 << 10; // 1024
-
   /** Default maximum capacity for WAL and PUB queue (must be power of 2). */
   private static final int MPSC_MAX_DEFAULT = 1 << 20; // 1 048 576
 
@@ -1078,18 +1075,12 @@ public class Main implements Callable<Integer> {
       int walInitial = readPowerOfTwo(properties, "wal.queue.initial", MPSC_INITIAL_DEFAULT);
       properties.setProperty("wal.queue.initial", String.valueOf(walInitial));
 
-      int walChunk = readPowerOfTwo(properties, "wal.queue.chunk", MPSC_CHUNK_DEFAULT);
-      properties.setProperty("wal.queue.chunk", String.valueOf(walChunk));
-
       int walMax = readPowerOfTwo(properties, "wal.queue.max", MPSC_MAX_DEFAULT);
       properties.setProperty("wal.queue.max", String.valueOf(walMax));
 
       // ------------- validate PUB Queue params --------------
       int pubInitial = readPowerOfTwo(properties, "pub.queue.initial", MPSC_INITIAL_DEFAULT);
       properties.setProperty("pub.queue.initial", String.valueOf(pubInitial));
-
-      int pubChunk = readPowerOfTwo(properties, "pub.queue.chunk", MPSC_CHUNK_DEFAULT);
-      properties.setProperty("pub.queue.chunk", String.valueOf(pubChunk));
 
       int pubMax = readPowerOfTwo(properties, "pub.queue.max", MPSC_MAX_DEFAULT);
       properties.setProperty("pub.queue.max", String.valueOf(pubMax));
