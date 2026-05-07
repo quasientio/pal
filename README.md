@@ -23,6 +23,10 @@ ExecMessage msg = {
 
 This single transformation enables capabilities that are not available in standard JVMs. All features are off by default—you enable only what you need, and unused features carry minimal overhead. The runtime is lightweight: ~42 MB JAR, ~160 ms launch-to-ready for a detached peer with no infrastructure (AMD Ryzen 5 7600, JDK 17).
 
+## Demo
+
+<a href="https://youtu.be/8TT5L5oXd2Q"><img src="https://img.youtube.com/vi/8TT5L5oXd2Q/maxresdefault.jpg" alt="PAL 1.0 — 5-minute demo" width="640"></a>
+
 ## What You Can Do
 
 **Development & Testing:**
@@ -74,7 +78,7 @@ Because operations are instrumented, they can be:
 
 ## Examples & demos
 
-- **[pal-examples](https://github.com/quasientio/pal-examples)** — runnable example apps (CafeFlow, FraudWatch) used in the demo video
+- **[pal-examples](https://github.com/quasientio/pal-examples)** — runnable example apps (CafeFlow, FraudWatch) used in the [demo video](https://youtu.be/8TT5L5oXd2Q)
 - **[pal-pocs](https://github.com/quasientio/pal-pocs)** — proof-of-concept apps including the intercept controller
 
 ## Quick Start
